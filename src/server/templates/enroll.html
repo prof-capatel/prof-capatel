@@ -16,7 +16,7 @@
 <!-- ========================================================= -->
 <!-- MODE 1: LIVE WEBCAM ENROLLMENT                            -->
 <!-- ========================================================= -->
-<div id="modeWebcamSection" style="display: grid; grid-template-columns: 1fr 1fr; gap: 28px;">
+<div id="modeWebcamSection" class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 28px;">
     <!-- Enrollment Form & Stepper -->
     <div class="card">
         <div class="card-header">
@@ -28,8 +28,18 @@
         <div class="card-body">
             <form id="enrollStudentForm">
                 <div class="form-group">
-                    <label class="form-label">Roll / Student ID Number *</label>
-                    <input type="text" id="rollNumber" class="form-control" placeholder="e.g. CS2026-001" required>
+                    <label class="form-label">User Role *</label>
+                    <select id="userRole" class="form-control" required>
+                        <option value="student" selected>Student</option>
+                        <option value="teacher">Teacher / Faculty</option>
+                        <option value="admin_staff">Administrative Staff</option>
+                        <option value="other">Other Institutional Member</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Roll Number / Staff ID *</label>
+                    <input type="text" id="rollNumber" class="form-control" placeholder="e.g. CS2026-001 or EMP-101" required>
                 </div>
 
                 <div class="form-group">
@@ -40,6 +50,11 @@
                 <div class="form-group">
                     <label class="form-label">Department</label>
                     <input type="text" id="department" class="form-control" value="Computer Science" placeholder="e.g. Computer Science">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Class / Semester / Section</label>
+                    <input type="text" id="classSemester" class="form-control" placeholder="e.g. Semester 6 - Section A">
                 </div>
 
                 <div class="form-group">
@@ -140,7 +155,7 @@
 <!-- MODE 2: BATCH 3-PHOTO FILE UPLOAD                         -->
 <!-- ========================================================= -->
 <div id="modeBatchSection" style="display: none;">
-    <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px;">
+    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px;">
         <!-- Batch Upload Form -->
         <div class="card">
             <div class="card-header">
@@ -152,8 +167,18 @@
             <div class="card-body">
                 <form id="batchUploadForm">
                     <div class="form-group">
-                        <label class="form-label">Roll / Student ID Number *</label>
-                        <input type="text" id="batchRollNumber" class="form-control" placeholder="e.g. CS2026-002" required>
+                        <label class="form-label">User Role *</label>
+                        <select id="batchUserRole" class="form-control" required>
+                            <option value="student" selected>Student</option>
+                            <option value="teacher">Teacher / Faculty</option>
+                            <option value="admin_staff">Administrative Staff</option>
+                            <option value="other">Other Institutional Member</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Roll Number / Staff ID *</label>
+                        <input type="text" id="batchRollNumber" class="form-control" placeholder="e.g. CS2026-002 or EMP-102" required>
                     </div>
 
                     <div class="form-group">
@@ -164,6 +189,11 @@
                     <div class="form-group">
                         <label class="form-label">Department</label>
                         <input type="text" id="batchDepartment" class="form-control" value="Computer Science" placeholder="e.g. Computer Science">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Class / Semester / Section</label>
+                        <input type="text" id="batchClassSemester" class="form-control" placeholder="e.g. Semester 6 - Section A">
                     </div>
 
                     <div class="form-group">
@@ -324,12 +354,21 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
     const name = document.getElementById("studentName").value.trim();
     const department = document.getElementById("department").value.trim();
     const email = document.getElementById("email").value.trim();
+    const userRole = document.getElementById("userRole").value.trim();
+    const classSemester = document.getElementById("classSemester").value.trim();
 
     try {
         const res = await fetch("/api/v1/enroll/student", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ roll_number: rollNumber, name, department, email })
+            body: JSON.stringify({
+                roll_number: rollNumber,
+                name: name,
+                department: department,
+                email: email,
+                user_role: userRole,
+                class_semester: classSemester,
+            })
         });
         const data = await res.json();
 
@@ -505,6 +544,8 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     const name = document.getElementById("batchStudentName").value.trim();
     const department = document.getElementById("batchDepartment").value.trim();
     const email = document.getElementById("batchEmail").value.trim();
+    const userRole = document.getElementById("batchUserRole").value.trim();
+    const classSemester = document.getElementById("batchClassSemester").value.trim();
 
     const submitBtn = document.getElementById("btnSubmitBatch");
     const alertBox = document.getElementById("batchResultAlert");
@@ -522,6 +563,8 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     formData.append("name", name);
     formData.append("department", department);
     if (email) formData.append("email", email);
+    formData.append("user_role", userRole);
+    formData.append("class_semester", classSemester);
 
     batchFiles.forEach((file) => {
         formData.append("images", file);

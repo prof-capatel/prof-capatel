@@ -273,12 +273,16 @@
     <!-- Mobile App Top Bar -->
     <header class="mobile-header">
         <div class="mobile-brand">
+            {% if branding and branding.logo_url %}
+            <img src="{{ branding.logo_url }}" alt="Logo" style="width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: #ffffff; padding: 2px;">
+            {% else %}
             <div class="mobile-brand-icon">
-                <i class="fa-solid fa-mobile-screen"></i>
+                <i class="fa-solid fa-graduation-cap"></i>
             </div>
+            {% endif %}
             <div class="mobile-brand-text">
-                <h2>Mobile Capture Node</h2>
-                <span>Wi-Fi Recognition Hub</span>
+                <h2>{{ branding.institution_name if branding else 'Mobile Capture Node' }}</h2>
+                <span>{{ branding.short_code if branding else 'Wi-Fi Recognition Hub' }}</span>
             </div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">

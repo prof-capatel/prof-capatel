@@ -20,6 +20,8 @@ class StudentCreate(BaseModel):
     name: str
     department: Optional[str] = "Computer Science"
     email: Optional[str] = None
+    user_role: Optional[str] = "student"
+    class_semester: Optional[str] = "General"
 
 
 class StudentUpdate(BaseModel):
@@ -27,16 +29,18 @@ class StudentUpdate(BaseModel):
     name: str
     department: Optional[str] = "Computer Science"
     email: Optional[str] = None
+    user_role: Optional[str] = "student"
+    class_semester: Optional[str] = "General"
 
 
 @router.post("/student")
 def register_student(payload: StudentCreate, db: Session = Depends(get_db)):
     """Registers a new student profile before capturing face samples."""
-    existing = db.query(Student).filter(Student.roll_number == payload.roll_number.strip()).first()
+    existing = db.query(Student).filter(Student.roll_number == payload.roll_number.strip().upper()).first()
     if existing:
         raise HTTPException(
             status_code=400,
-            detail=f"Student with Roll Number '{payload.roll_number}' already exists.",
+            detail=f"User with Roll/ID Number '{payload.roll_number}' already exists.",
         )
 
     student = Student(
@@ -44,6 +48,8 @@ def register_student(payload: StudentCreate, db: Session = Depends(get_db)):
         name=payload.name.strip(),
         department=payload.department.strip() if payload.department else "Computer Science",
         email=payload.email.strip() if payload.email else None,
+        user_role=payload.user_role.strip().lower() if payload.user_role else "student",
+        class_semester=payload.class_semester.strip() if payload.class_semester else "General",
     )
     db.add(student)
     db.commit()
@@ -51,7 +57,7 @@ def register_student(payload: StudentCreate, db: Session = Depends(get_db)):
 
     return {
         "status": "success",
-        "message": f"Student '{student.name}' registered successfully.",
+        "message": f"Profile '{student.name}' ({student.user_role}) registered successfully.",
         "student": student.to_dict(),
     }
 
@@ -134,6 +140,8 @@ async def enroll_student_batch(
     name: str = Form(...),
     department: Optional[str] = Form("Computer Science"),
     email: Optional[str] = Form(None),
+    user_role: Optional[str] = Form("student"),
+    class_semester: Optional[str] = Form("General"),
     images: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
 ):
@@ -145,6 +153,8 @@ async def enroll_student_batch(
     """
     clean_roll = roll_number.strip().upper()
     clean_name = name.strip()
+    clean_role = user_role.strip().lower() if user_role else "student"
+    clean_class = class_semester.strip() if class_semester else "General"
     
     if not clean_roll or not clean_name:
         raise HTTPException(status_code=400, detail="Student Name and Roll Number are required.")
@@ -163,11 +173,15 @@ async def enroll_student_batch(
             name=clean_name,
             department=department.strip() if department else "Computer Science",
             email=email.strip() if email else None,
+            user_role=clean_role,
+            class_semester=clean_class,
         )
         db.add(student)
         db.flush()
     else:
         student.name = clean_name
+        student.user_role = clean_role
+        student.class_semester = clean_class
         if department:
             student.department = department.strip()
         if email:
@@ -274,6 +288,10 @@ def update_student(student_id: int, payload: StudentUpdate, db: Session = Depend
     student.name = clean_name
     student.department = payload.department.strip() if payload.department else "Computer Science"
     student.email = payload.email.strip() if payload.email else None
+    if payload.user_role:
+        student.user_role = payload.user_role.strip().lower()
+    if payload.class_semester:
+        student.class_semester = payload.class_semester.strip()
 
     db.commit()
     db.refresh(student)
@@ -283,7 +301,7 @@ def update_student(student_id: int, payload: StudentUpdate, db: Session = Depend
 
     return {
         "status": "success",
-        "message": f"Student profile for '{student.name}' updated successfully.",
+        "message": f"Profile for '{student.name}' updated successfully.",
         "student": student.to_dict(),
     }
 

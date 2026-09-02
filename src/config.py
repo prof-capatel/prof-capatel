@@ -8,9 +8,10 @@ DATA_DIR = BASE_DIR / "data"
 FACES_DIR = DATA_DIR / "faces"
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"
 EXPORTS_DIR = DATA_DIR / "exports"
+BRANDING_DIR = DATA_DIR / "branding"
 
 # Ensure all persistent directories exist
-for directory in [DATABASE_DIR, DATA_DIR, FACES_DIR, SNAPSHOTS_DIR, EXPORTS_DIR]:
+for directory in [DATABASE_DIR, DATA_DIR, FACES_DIR, SNAPSHOTS_DIR, EXPORTS_DIR, BRANDING_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # Database Configuration
@@ -33,7 +34,7 @@ SERVER_PORT = 8000
 # Anti-Spoofing & Liveness Detection Settings
 ENABLE_ANTI_SPOOFING = True
 LIVENESS_THRESHOLD = 0.65            # Composite score threshold for texture, chromatic, and depth gradients
-LIVENESS_CONFIRMATION_FRAMES = 3     # Consecutive sequence frames required before marking attendance
+LIVENESS_CONFIRMATION_FRAMES = 5     # Consecutive sequence frames required before marking attendance
 
 # Edge Node Defaults
 DEFAULT_NODE_ID = "NODE-CLASSROOM-101"

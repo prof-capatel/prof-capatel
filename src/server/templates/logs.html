@@ -2,37 +2,88 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header">
-        <h3>
-            <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-primary);"></i>
-            <span>Attendance Logs Audit Trail</span>
-        </h3>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="exportData('csv')" class="btn btn-secondary">
+    <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h3>
+                <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-primary);"></i>
+                <span>Attendance Logs & Audit Trail</span>
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Complete historical record with face recognition confidence and manual override verifications.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Biometric Fallback Manual Attendance">
+                <i class="fa-solid fa-user-check"></i>
+                <span>Manual Override</span>
+            </button>
+            <button onclick="exportData('csv')" class="btn btn-secondary" title="Export Filtered CSV">
                 <i class="fa-solid fa-file-csv" style="color: var(--accent-emerald);"></i>
                 <span>Export CSV</span>
             </button>
-            <button onclick="exportData('xlsx')" class="btn btn-secondary">
+            <button onclick="exportData('xlsx')" class="btn btn-secondary" title="Export Filtered Excel">
                 <i class="fa-solid fa-file-excel" style="color: var(--accent-cyan);"></i>
                 <span>Export Excel</span>
             </button>
         </div>
     </div>
     <div class="card-body">
-        <!-- Filter Controls -->
-        <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; align-items: flex-end; background: var(--bg-subtle); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-            <div style="flex: 1; min-width: 180px;">
-                <label class="form-label">Date Filter</label>
-                <input type="date" id="filterDate" class="form-control" value="{{ today_str }}">
-            </div>
-            <div style="flex: 1; min-width: 180px;">
-                <label class="form-label">Search Roll Number</label>
-                <input type="text" id="filterRoll" class="form-control" placeholder="e.g. CS2026">
-            </div>
-            <div>
-                <button id="btnApplyFilter" class="btn btn-primary" style="padding: 10px 20px;">
-                    <i class="fa-solid fa-filter"></i> Apply Filter
-                </button>
+        <!-- Advanced Multi-Filter Toolbar -->
+        <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                <!-- Date Filter -->
+                <div style="flex: 1; min-width: 150px;">
+                    <label class="form-label">Date Filter</label>
+                    <input type="date" id="filterDate" class="form-control" value="{{ today_str }}">
+                </div>
+
+                <!-- Search Roll / Name -->
+                <div style="flex: 1.2; min-width: 160px;">
+                    <label class="form-label">Search Roll / Name</label>
+                    <input type="text" id="filterRoll" class="form-control" placeholder="e.g. CS2026 or Jane">
+                </div>
+
+                <!-- Department Filter -->
+                <div style="flex: 1; min-width: 150px;">
+                    <label class="form-label">Department</label>
+                    <select id="filterDept" class="form-control">
+                        <option value="">All Departments</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Artificial Intelligence">Artificial Intelligence</option>
+                        <option value="Electronics & Comm">Electronics & Comm</option>
+                        <option value="Mechanical Eng">Mechanical Eng</option>
+                        <option value="Administration">Administration</option>
+                    </select>
+                </div>
+
+                <!-- User Role Filter -->
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label">User Role</label>
+                    <select id="filterRole" class="form-control">
+                        <option value="">All Roles</option>
+                        <option value="student">Students</option>
+                        <option value="teacher">Teachers</option>
+                        <option value="admin_staff">Admin Staff</option>
+                        <option value="other">Other Members</option>
+                    </select>
+                </div>
+
+                <!-- Source / Override Filter -->
+                <div style="flex: 1; min-width: 150px;">
+                    <label class="form-label">Log Source</label>
+                    <select id="filterOverride" class="form-control">
+                        <option value="">All Verification Sources</option>
+                        <option value="false">Face Recognition Only</option>
+                        <option value="true">Manual Overrides Only</option>
+                    </select>
+                </div>
+
+                <div>
+                    <button id="btnApplyFilter" onclick="applyLogFilters()" class="btn btn-primary" style="padding: 10px 18px;">
+                        <i class="fa-solid fa-filter"></i> Apply
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -41,13 +92,15 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Student</th>
-                        <th>Roll Number</th>
+                        <th>Log ID</th>
+                        <th>Member Profile</th>
+                        <th>Roll / ID Number</th>
+                        <th>Role</th>
                         <th>Department</th>
-                        <th>Node Ingested</th>
+                        <th>Class / Semester</th>
+                        <th>Ingestion Node</th>
                         <th>Timestamp</th>
-                        <th>Confidence</th>
+                        <th>Verification Status</th>
                     </tr>
                 </thead>
                 <tbody id="logsTableBody">
@@ -57,12 +110,87 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================================= -->
+<!-- MODAL: MANUAL ATTENDANCE OVERRIDE (BIOMETRIC FALLBACK)    -->
+<!-- ========================================================= -->
+<div id="manualOverrideModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>
+                <i class="fa-solid fa-user-check" style="color: var(--accent-primary);"></i>
+                <span>Biometric Fallback / Manual Override</span>
+            </h3>
+            <button class="modal-close" onclick="closeManualOverrideModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="manualOverrideForm" onsubmit="submitManualOverride(event)">
+            <div class="modal-body">
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
+                    Force-marks attendance with an authorized administrative audit tag.
+                </p>
+
+                <!-- Student Selector -->
+                <div class="form-group">
+                    <label class="form-label">Select Member *</label>
+                    <select id="overrideStudentSelect" class="form-control" required>
+                        <option value="">-- Choose Member --</option>
+                    </select>
+                </div>
+
+                <!-- Date & Time Picker -->
+                <div class="form-group">
+                    <label class="form-label">Attendance Date & Time *</label>
+                    <input type="datetime-local" id="overrideTimestamp" class="form-control" required>
+                </div>
+
+                <!-- Justification Preset & Reason -->
+                <div class="form-group">
+                    <label class="form-label">Justification Preset</label>
+                    <select id="overridePresetSelect" class="form-control" onchange="applyReasonPreset()">
+                        <option value="Admin Manual Verification">Admin Manual Verification</option>
+                        <option value="Medical Leave / Approved Exception">Medical Leave / Approved Exception</option>
+                        <option value="Biometric Hardware Malfunction">Biometric Hardware Malfunction</option>
+                        <option value="Official Institutional Duty">Official Institutional Duty / Field Trip</option>
+                        <option value="Custom">Other (Custom Reason)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Detailed Audit Reason *</label>
+                    <input type="text" id="overrideReasonInput" class="form-control" value="Admin Manual Verification" placeholder="Provide justification reason" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Authorized Admin Sign-Off</label>
+                    <input type="text" id="overrideByInput" class="form-control" value="System Administrator">
+                </div>
+
+                <div id="overrideResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeManualOverrideModal()">Cancel</button>
+                <button type="submit" id="btnSaveOverride" class="btn btn-primary">
+                    <i class="fa-solid fa-check"></i> Force Mark Present
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         applyLogFilters();
+        populateStudentDropdown();
+
+        // Default timestamp to now
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        const el = document.getElementById("overrideTimestamp");
+        if (el) el.value = now.toISOString().slice(0, 16);
     });
 </script>
 {% endblock %}

@@ -17,6 +17,7 @@ if os.path.exists(anaconda_bin):
         os.environ["PATH"] = anaconda_bin + os.pathsep + os.environ.get("PATH", "")
 
 import unittest
+import time
 import numpy as np
 import cv2
 from fastapi.testclient import TestClient
@@ -215,39 +216,50 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         self.assertGreaterEqual(res_natural["score"], 0.65)
         print("[PASS] Test 6: LivenessDetector Spectral & Chromatic Anti-Spoofing verified.")
 
-    def test_07_temporal_motion_tracker(self):
-        """Test TemporalMotionTracker 3-frame confirmation sequence."""
+    def test_07_temporal_tracker(self):
+        """Test 5-frame temporal motion tracking, node isolation, and static spoof rejection."""
         from src.core.liveness_detector import TemporalMotionTracker
 
-        tracker = TemporalMotionTracker(confirmation_frames=3, max_idle_seconds=2.0)
+        tracker = TemporalMotionTracker(confirmation_frames=5, max_idle_seconds=2.0)
         box = {"top": 50, "right": 150, "bottom": 150, "left": 50}
 
-        # Frame 1: Real face detected -> should NOT confirm yet (frames=1)
-        confirmed_1, f1, status_1 = tracker.update_track(student_id=999, face_box=box, is_single_frame_live=True)
-        self.assertFalse(confirmed_1)
-        self.assertEqual(f1, 1)
-        self.assertIn("1/3", status_1)
+        # Frame 1 to 4: Real face detected with organic micro-movement -> should be in VERIFYING (1/5 to 4/5)
+        for i in range(1, 5):
+            box_i = {"top": 50 + (i % 2), "right": 150 + (i % 2), "bottom": 150 + (i % 2), "left": 50 + (i % 2)}
+            confirmed, frames, status = tracker.update_track(student_id=999, face_box=box_i, is_single_frame_live=True, node_id="NODE-A")
+            self.assertFalse(confirmed)
+            self.assertEqual(frames, i)
+            self.assertIn(f"{i}/5", status)
 
-        # Frame 2: Real face detected with micro-displacement -> still verifying (frames=2)
-        box2 = {"top": 52, "right": 151, "bottom": 152, "left": 51}
-        confirmed_2, f2, status_2 = tracker.update_track(student_id=999, face_box=box2, is_single_frame_live=True)
-        self.assertFalse(confirmed_2)
-        self.assertEqual(f2, 2)
-        self.assertIn("2/3", status_2)
+        # Frame 5: Real face with micro-displacement -> should CONFIRM (5/5)
+        box5 = {"top": 51, "right": 151, "bottom": 151, "left": 51}
+        confirmed_5, f5, status_5 = tracker.update_track(student_id=999, face_box=box5, is_single_frame_live=True, node_id="NODE-A")
+        self.assertTrue(confirmed_5)
+        self.assertEqual(f5, 5)
+        self.assertEqual(status_5, "REAL")
 
-        # Frame 3: Real face detected -> should CONFIRM (frames=3)
-        box3 = {"top": 51, "right": 150, "bottom": 151, "left": 50}
-        confirmed_3, f3, status_3 = tracker.update_track(student_id=999, face_box=box3, is_single_frame_live=True)
-        self.assertTrue(confirmed_3)
-        self.assertEqual(f3, 3)
-        self.assertEqual(status_3, "REAL")
+        # Frame 6: Spoof attack injected -> should immediately invalidate track
+        confirmed_6, f6, status_6 = tracker.update_track(student_id=999, face_box=box5, is_single_frame_live=False, node_id="NODE-A")
+        self.assertFalse(confirmed_6)
+        self.assertEqual(f6, 0)
+        self.assertEqual(status_6, "SPOOF_DETECTED")
 
-        # Frame 4: Spoof attack injected -> should immediately invalidate track
-        confirmed_4, f4, status_4 = tracker.update_track(student_id=999, face_box=box3, is_single_frame_live=False)
-        self.assertFalse(confirmed_4)
-        self.assertEqual(f4, 0)
-        self.assertEqual(status_4, "SPOOF_DETECTED")
-        print("[PASS] Test 7: TemporalMotionTracker Multi-Frame Verification verified.")
+        # Node Isolation Test: NODE-B should have independent track for same student
+        confirmed_b, fb, status_b = tracker.update_track(student_id=999, face_box=box, is_single_frame_live=True, node_id="NODE-B")
+        self.assertFalse(confirmed_b)
+        self.assertEqual(fb, 1)
+        self.assertIn("1/5", status_b)
+
+        # Static Freeze Photo Rejection Test: 5 frames with 0.0px variance
+        freeze_tracker = TemporalMotionTracker(confirmation_frames=5, max_idle_seconds=2.0)
+        frozen_box = {"top": 100, "right": 200, "bottom": 200, "left": 100}
+        for _ in range(4):
+            freeze_tracker.update_track(student_id=888, face_box=frozen_box, is_single_frame_live=True)
+        # 5th frame: still exactly frozen with 0.0px motion -> should detect spoof freeze
+        conf_freeze, _, stat_freeze = freeze_tracker.update_track(student_id=888, face_box=frozen_box, is_single_frame_live=True)
+        self.assertFalse(conf_freeze)
+        self.assertEqual(stat_freeze, "SPOOF_DETECTED")
+        print("[PASS] Test 7: 5-Frame Temporal Micro-Motion & Static Freeze Defense verified.")
 
     def test_08_edit_student_profile(self):
         """Test PUT /api/v1/enroll/student/{student_id} endpoint."""
@@ -320,6 +332,143 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["node_id"], "NODE-MOBILE-CAMERA")
         print("[PASS] Test 11: Mobile Frame Ingestion & Node Ingestion verified.")
+
+    def test_12_manual_override_audit(self):
+        """Test POST /api/v1/attendance/manual-override endpoint and audit fields."""
+        with get_db_context() as db:
+            student = db.query(Student).first()
+            self.assertIsNotNone(student)
+            student_id = student.id
+
+        payload = {
+            "student_id": student_id,
+            "timestamp": "2026-09-02 10:30:00",
+            "reason": "Medical Leave Certificate Approved",
+            "override_by": "Dr. Smith (Dean)",
+        }
+
+        res = self.client.post("/api/v1/attendance/manual-override", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertTrue(data["record"]["is_manual_override"])
+        self.assertEqual(data["record"]["override_reason"], "Medical Leave Certificate Approved")
+        self.assertEqual(data["record"]["override_by"], "Dr. Smith (Dean)")
+
+        # Verify record exists in GET /records with is_override=true
+        res_rec = self.client.get("/api/v1/attendance/records?is_override=true")
+        self.assertEqual(res_rec.status_code, 200)
+        self.assertGreaterEqual(len(res_rec.json()["records"]), 1)
+        self.assertTrue(res_rec.json()["records"][0]["is_manual_override"])
+        print("[PASS] Test 12: Biometric Fallback / Manual Override & Audit Logging verified.")
+
+    def test_13_analytics_and_defaulters(self):
+        """Test GET /api/v1/attendance/analytics with configurable threshold."""
+        # 1. Standard 75% threshold
+        res_75 = self.client.get("/api/v1/attendance/analytics?defaulter_threshold=75.0&days=7")
+        self.assertEqual(res_75.status_code, 200)
+        data_75 = res_75.json()
+        self.assertEqual(data_75["status"], "success")
+        self.assertIn("headcount", data_75)
+        self.assertIn("daily_trends", data_75)
+        self.assertIn("departments", data_75)
+        self.assertIn("defaulters", data_75)
+        self.assertEqual(data_75["defaulter_threshold"], 75.0)
+
+        # 2. Configurable 50% threshold
+        res_50 = self.client.get("/api/v1/attendance/analytics?defaulter_threshold=50.0")
+        self.assertEqual(res_50.status_code, 200)
+        self.assertEqual(res_50.json()["defaulter_threshold"], 50.0)
+        print("[PASS] Test 13: Institutional Analytics & Configurable Defaulters verified.")
+
+    def test_14_compliance_export(self):
+        """Test GET /api/v1/attendance/export-compliance endpoint."""
+        res_csv = self.client.get("/api/v1/attendance/export-compliance?export_format=csv&defaulter_threshold=75.0")
+        self.assertEqual(res_csv.status_code, 200)
+        self.assertIn("text/csv", res_csv.headers["content-type"])
+        self.assertIn("Student ID / Roll", res_csv.text)
+
+        res_xlsx = self.client.get("/api/v1/attendance/export-compliance?export_format=xlsx&defaulter_threshold=75.0")
+        self.assertEqual(res_xlsx.status_code, 200)
+        self.assertIn("spreadsheetml.sheet", res_xlsx.headers["content-type"])
+        print("[PASS] Test 14: Institutional Compliance Export (CSV & Excel) verified.")
+
+    def test_15_role_based_enrollment(self):
+        """Test role classification (teacher/staff/student) at registration."""
+        unique_roll = f"FACULTY-{int(time.time())}"
+        payload = {
+            "roll_number": unique_roll,
+            "name": "Prof. Charles Xavier",
+            "department": "Artificial Intelligence",
+            "email": "charles.xavier@university.edu",
+            "user_role": "teacher",
+            "class_semester": "Faculty Wing B",
+        }
+
+        res = self.client.post("/api/v1/enroll/student", json=payload)
+        self.assertEqual(res.status_code, 200)
+        student = res.json()["student"]
+        self.assertEqual(student["user_role"], "teacher")
+        self.assertEqual(student["class_semester"], "Faculty Wing B")
+
+        # Verify stats endpoint properly separates students
+        res_stats = self.client.get("/api/v1/attendance/stats")
+        self.assertEqual(res_stats.status_code, 200)
+        stats = res_stats.json()
+        self.assertGreaterEqual(stats["total_all_users"], stats["total_students"])
+        print("[PASS] Test 15: Role-Based User Classification & Stats Exclusion verified.")
+
+    def test_16_settings_view_and_themes(self):
+        """Test GET /settings view rendering and multi-theme components."""
+        res = self.client.get("/settings")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("Visual Theme Personalization", res.text)
+        self.assertIn("Clean Minimalist Light", res.text)
+        self.assertIn("Executive Midnight Dark", res.text)
+        self.assertIn("Warm Academic", res.text)
+        self.assertIn("Institutional Attendance Parameters", res.text)
+        self.assertIn("btnQuickThemeToggle", res.text)
+        print("[PASS] Test 16: Multi-Theme Engine & Settings Menu View verified.")
+
+    def test_17_institutional_branding(self):
+        """Test institutional white-labeling API, text updates, and logo uploads."""
+        # 1. GET branding defaults
+        res_get = self.client.get("/api/v1/branding")
+        self.assertEqual(res_get.status_code, 200)
+        self.assertIn("branding", res_get.json())
+
+        # 2. POST update text and colors
+        update_payload = {
+            "institution_name": "MIT Vision & Robotics Lab",
+            "short_code": "MIT-ROBO",
+            "tagline": "Real-time Autonomous Edge Biometrics",
+            "primary_accent_color": "#0ea5e9",
+            "header_badge_text": "Robotics Center",
+            "contact_email": "admin@mit.edu",
+        }
+        res_post = self.client.post("/api/v1/branding", json=update_payload)
+        self.assertEqual(res_post.status_code, 200)
+        branding = res_post.json()["branding"]
+        self.assertEqual(branding["institution_name"], "MIT Vision & Robotics Lab")
+        self.assertEqual(branding["short_code"], "MIT-ROBO")
+        self.assertEqual(branding["primary_accent_color"], "#0ea5e9")
+
+        # 3. Upload dummy logo file
+        dummy_img = np.zeros((100, 100, 3), dtype=np.uint8)
+        _, img_buf = cv2.imencode(".png", dummy_img)
+        files = {"logo": ("campus_logo.png", img_buf.tobytes(), "image/png")}
+
+        res_logo = self.client.post("/api/v1/branding/logo", files=files)
+        self.assertEqual(res_logo.status_code, 200)
+        data_logo = res_logo.json()
+        self.assertIsNotNone(data_logo["branding"]["logo_url"])
+        self.assertTrue(data_logo["branding"]["logo_url"].startswith("/data/branding/"))
+
+        # 4. Reset logo
+        res_del = self.client.delete("/api/v1/branding/logo")
+        self.assertEqual(res_del.status_code, 200)
+        self.assertIsNone(res_del.json()["branding"]["logo_url"])
+        print("[PASS] Test 17: Institutional White-Labeling, Custom Branding & Logo Engine verified.")
 
 
 if __name__ == "__main__":

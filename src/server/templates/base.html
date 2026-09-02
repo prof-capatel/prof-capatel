@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }} - Face Recognition Attendance System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>{{ page_title }} - {{ branding.short_code if branding and branding.short_code else 'FA-HUB' }} | {{ branding.institution_name if branding and branding.institution_name else 'FaceAttendance' }}</title>
     <!-- Plus Jakarta Sans & Inter Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,53 +12,98 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <!-- Dynamic Custom Accent Color if configured -->
+    {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#6366f1' %}
+    <style>
+        :root, [data-theme="light"] {
+            --accent-primary: {{ branding.primary_accent_color }};
+            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #4338ca 100%);
+        }
+    </style>
+    {% endif %}
+
+    <!-- Immediate Zero-Flicker Theme Initializer -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem("app_theme") || "light";
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
+    <!-- Mobile Backdrop for Off-Canvas Drawer -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="closeMobileMenu()"></div>
+
     <!-- Sidebar Navigation -->
-    <aside class="sidebar">
-        <div class="brand">
-            <div class="brand-icon">
-                <i class="fa-solid fa-camera-viewfinder"></i>
+    <aside id="mainSidebar" class="sidebar">
+        <div class="brand" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                {% if branding and branding.logo_url %}
+                <img id="sidebarBrandLogo" src="{{ branding.logo_url }}" alt="Logo" class="brand-logo-img" style="width: 42px; height: 42px; border-radius: var(--radius-xs); object-fit: contain; background: var(--bg-card); padding: 3px; border: 1.5px solid var(--border-color); flex-shrink: 0;">
+                {% else %}
+                <div id="sidebarBrandIcon" class="brand-icon">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                {% endif %}
+                <div class="brand-text" style="overflow: hidden;">
+                    <h1 id="sidebarBrandName" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{{ branding.institution_name if branding else 'FaceAttendance' }}">{{ branding.institution_name if branding else 'FaceAttendance' }}</h1>
+                    <span id="sidebarBrandBadge">{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}</span>
+                </div>
             </div>
-            <div class="brand-text">
-                <h1>FaceAttendance</h1>
-                <span>Thin-Client Hub</span>
-            </div>
+            <!-- Mobile Drawer Dismiss Button -->
+            <button class="sidebar-close-btn" onclick="closeMobileMenu()" title="Close Navigation Menu">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
 
         <ul class="nav-list">
             <li>
-                <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-chart-pie"></i>
                     <span>Live Dashboard</span>
                 </a>
             </li>
             <li>
-                <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}">
+                <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-user-graduate"></i>
                     <span>Students</span>
                 </a>
             </li>
             <li>
-                <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}">
+                <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-user-plus"></i>
                     <span>Face Enrollment</span>
                 </a>
             </li>
             <li>
-                <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}">
+                <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span>Attendance Logs</span>
                 </a>
             </li>
             <li>
-                <a href="/nodes" class="nav-link {% if active_page == 'nodes' %}active{% endif %}">
+                <a href="/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Analytics & Reports</span>
+                </a>
+            </li>
+            <li>
+                <a href="/nodes" class="nav-link {% if active_page == 'nodes' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-microchip"></i>
                     <span>Edge Nodes</span>
                 </a>
             </li>
             <li>
-                <a href="/mobile-capture" target="_blank" class="nav-link {% if active_page == 'mobile' %}active{% endif %}">
+                <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Settings & Themes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/mobile-capture" target="_blank" class="nav-link {% if active_page == 'mobile' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-mobile-screen"></i>
                     <span>Mobile Capture Node</span>
                 </a>
@@ -68,20 +113,31 @@
         <div class="sidebar-footer">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="pulse-dot"></span>
-                <span>Hub Online</span>
+                <span id="footerShortCode">{{ branding.short_code if branding else 'FA-HUB' }} Online</span>
             </div>
-            <span style="font-size: 11px; opacity: 0.7;">v1.2.0</span>
+            <span style="font-size: 11px; opacity: 0.7;">v1.5.0</span>
         </div>
     </aside>
 
     <!-- Main Wrapper -->
     <div class="main-wrapper">
         <header class="top-bar">
-            <div class="page-title">
-                <h2>{{ page_title }}</h2>
-                <p>Raspberry Pi Zero Edge Nodes & Central Face Recognition</p>
+            <div style="display: flex; align-items: center;">
+                <!-- Hamburger Menu Button (visible on mobile/tablet) -->
+                <button id="btnMobileNavToggle" class="btn-hamburger" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu" title="Open Navigation Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="page-title">
+                    <h2>{{ page_title }}</h2>
+                    <p id="topBarTagline">{{ branding.tagline if branding and branding.tagline else 'Raspberry Pi Zero Edge Nodes & Central Face Recognition' }}</p>
+                </div>
             </div>
             <div class="top-actions">
+                <!-- 1-Click Theme Cycle Button -->
+                <button id="btnQuickThemeToggle" class="theme-quick-btn" onclick="cycleAppTheme()" title="Switch Visual Theme (Light / Dark / Academic)">
+                    <i class="fa-solid fa-palette"></i>
+                    <span id="quickThemeLabel">Theme</span>
+                </button>
                 <a href="/enroll" class="btn btn-primary">
                     <i class="fa-solid fa-plus"></i>
                     <span>Enroll Student</span>

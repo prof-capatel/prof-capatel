@@ -34,9 +34,9 @@ async def ingest_node_frame(
     # 2. Record node heartbeat
     attendance_manager.record_node_heartbeat(node_id=node_id, location=location)
 
-    # 3. Detect and recognize faces
+    # 3. Detect and recognize faces (isolated per node)
     try:
-        detections = face_engine.detect_and_recognize_faces(image_bgr)
+        detections = face_engine.detect_and_recognize_faces(image_bgr, node_id=node_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Face recognition error: {str(e)}")
 

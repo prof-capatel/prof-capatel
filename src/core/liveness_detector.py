@@ -3,16 +3,19 @@ from typing import Dict, List, Optional, Tuple, Any
 import cv2
 import numpy as np
 
+from src.config import LIVENESS_CONFIRMATION_FRAMES, LIVENESS_THRESHOLD
+
 
 class LivenessDetector:
     """
-    Lightweight, CPU-optimized Anti-Spoofing & Liveness Engine.
-    Employs 2D Fast Fourier Transform (FFT) high-frequency analysis,
-    YCbCr / HSV skin chromatic dispersion, and surface gradient flatness checks
-    to reject printed photographs, phone screens, and tablet displays.
+    Lightweight, CPU-optimized Multi-Layer Anti-Spoofing & Liveness Engine.
+    Employs:
+    1. 2D Fast Fourier Transform (FFT) high-frequency Moiré & spectral decay analysis.
+    2. YCbCr / HSV color-space chromatic dispersion & blue-backlight ratio checks.
+    3. Multi-scale Laplacian gradient variance & specular screen reflection checks.
     """
 
-    def __init__(self, threshold: float = 0.65):
+    def __init__(self, threshold: float = LIVENESS_THRESHOLD):
         self.threshold = threshold
 
     def evaluate_liveness(
@@ -39,6 +42,7 @@ class LivenessDetector:
                 "score": 0.0,
                 "status": "FACE_TOO_SMALL",
                 "details": "Face bounding box is too small for liveness analysis.",
+                "reasons": ["Face resolution too low for liveness validation."],
             }
 
         face_crop = frame_bgr[c_top:c_bottom, c_left:c_right]
@@ -46,7 +50,7 @@ class LivenessDetector:
         # 1. FFT High-Frequency Texture & Moiré Analysis
         fft_score, fft_msg = self._analyze_fft_texture(face_crop)
 
-        # 2. Color-Space Chromatic Dispersion (YCbCr & HSV skin gamut)
+        # 2. Color-Space Chromatic Dispersion & Blue Screen Backlight Check
         color_score, color_msg = self._analyze_chromatic_dispersion(face_crop)
 
         # 3. Surface Specular Glare & Gradient Flatness
@@ -106,8 +110,7 @@ class LivenessDetector:
         # Ratio of high-to-low frequency
         freq_ratio = high_energy / max(1.0, low_energy)
 
-        # Real faces typically have freq_ratio between 0.45 and 0.78
-        # Flat prints / OLED screens often have either abnormally low ratio (<0.38) or high moiré peaks (>0.85)
+        # Real faces typically have freq_ratio between 0.44 and 0.80
         if 0.44 <= freq_ratio <= 0.80:
             score = 1.0 - (abs(freq_ratio - 0.60) * 1.5)
             score = max(0.65, min(1.0, score))
@@ -128,7 +131,7 @@ class LivenessDetector:
         ycrcb = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2YCrCb)
         _, cr, cb = cv2.split(ycrcb)
 
-        # Human skin standard chrominance range: Cr in [133, 173], Cb in [77, 127]
+        # Human skin standard chrominance range: Cr in [130, 178], Cb in [75, 130]
         skin_mask = (cr >= 130) & (cr <= 178) & (cb >= 75) & (cb <= 130)
         skin_ratio = np.sum(skin_mask) / (face_bgr.shape[0] * face_bgr.shape[1])
 
@@ -136,7 +139,7 @@ class LivenessDetector:
         cr_std = np.std(cr)
         cb_std = np.std(cb)
 
-        # Blue-light saturation check (screens often have elevated B channel relative to R)
+        # Blue-light saturation check (screens have elevated B channel relative to R)
         b_channel, _, r_channel = cv2.split(face_bgr)
         b_over_r_ratio = np.mean(b_channel) / max(1.0, np.mean(r_channel))
 
@@ -147,12 +150,12 @@ class LivenessDetector:
             score += 0.15
 
         if b_over_r_ratio > 0.95:  # Unnatural blue screen backlighting
-            score -= 0.35
-            return max(0.1, score), "Unnatural display backlight spectrum"
+            score -= 0.40
+            return max(0.1, score), "Unnatural digital screen backlight spectrum"
 
         if cr_std < 4.0 or cb_std < 4.0:  # Excessive chromatic uniformity (monochrome print)
-            score -= 0.30
-            return max(0.1, score), "Monochrome or printed color gamut"
+            score -= 0.35
+            return max(0.1, score), "Monochrome or printed paper color gamut"
 
         return max(0.2, min(1.0, score)), "Natural skin chrominance verified"
 
@@ -168,12 +171,12 @@ class LivenessDetector:
         laplacian = cv2.Laplacian(gray, cv2.CV_64F)
         lap_var = laplacian.var()
 
-        # Check for harsh specular glare (pixels with value > 250 in clusters)
+        # Check for harsh specular glare (pixels with value > 248 in clusters)
         overexposed = np.sum(gray > 248) / (gray.shape[0] * gray.shape[1])
         if overexposed > 0.08:
-            return 0.30, "Screen/photo glass specular glare detected"
+            return 0.30, "Screen/photo glass specular reflection detected"
 
-        # Edge variance score: Natural faces in standard lighting have variance in [40, 600]
+        # Edge variance score: Natural faces in standard lighting have variance in [35, 800]
         if 35.0 <= lap_var <= 800.0:
             score = 0.85
         elif lap_var < 35.0:
@@ -186,15 +189,15 @@ class LivenessDetector:
 
 class TemporalMotionTracker:
     """
-    Tracks detected faces across consecutive video frames for a camera node.
-    Requires a face to remain consistently recognized with natural human micro-motion
-    across sequential frames before confirming attendance.
+    Tracks detected faces across consecutive video frames per camera node.
+    Enforces a multi-frame verification sequence (default 5 frames) requiring natural human micro-movement
+    while rejecting completely frozen static photos (variance == 0) or discontinuous spoof attacks.
     """
 
-    def __init__(self, confirmation_frames: int = 3, max_idle_seconds: float = 2.5):
+    def __init__(self, confirmation_frames: int = LIVENESS_CONFIRMATION_FRAMES, max_idle_seconds: float = 2.5):
         self.confirmation_frames = confirmation_frames
         self.max_idle_seconds = max_idle_seconds
-        # Active tracks: track_key (student_id or box_hash) -> { 'frames': int, 'last_time': float, 'last_box': box, 'status': str }
+        # Active tracks: track_key (node_id + student_id / box) -> { 'frames': int, 'last_time': float, 'history': [box], 'status': str }
         self._tracks: Dict[str, Dict[str, Any]] = {}
 
     def update_track(
@@ -202,54 +205,83 @@ class TemporalMotionTracker:
         student_id: Optional[int],
         face_box: Dict[str, int],
         is_single_frame_live: bool,
+        node_id: str = "DEFAULT",
     ) -> Tuple[bool, int, str]:
         """
-        Updates temporal sequence for a face.
+        Updates temporal sequence for a face on a specific node.
         Returns: (is_temporally_confirmed, current_consecutive_frames, temporal_status)
         """
         current_time = time.time()
         self._clean_expired_tracks(current_time)
 
-        # Key tracking identifier
-        track_key = f"std_{student_id}" if student_id is not None else f"box_{face_box['top']}_{face_box['left']}"
+        # Namespace tracking key per node to prevent stream collisions
+        target_tag = f"std_{student_id}" if student_id is not None else f"box_{face_box['top']}_{face_box['left']}"
+        track_key = f"{node_id}_{target_tag}"
 
         track = self._tracks.get(track_key)
 
         if not is_single_frame_live:
-            # Single-frame spoof detected -> reset or flag track
+            # Single-frame spoof detected -> immediately invalidate track
             self._tracks[track_key] = {
                 "frames": 0,
                 "last_time": current_time,
-                "last_box": face_box,
+                "history": [face_box],
                 "status": "SPOOF_DETECTED",
             }
             return False, 0, "SPOOF_DETECTED"
 
-        if track is None:
+        if track is None or track.get("status") == "SPOOF_DETECTED":
             # New face appearance -> Initialize tracker
             self._tracks[track_key] = {
                 "frames": 1,
                 "last_time": current_time,
-                "last_box": face_box,
+                "history": [face_box],
                 "status": "VERIFYING",
             }
             is_confirmed = (1 >= self.confirmation_frames)
             status = "REAL" if is_confirmed else f"VERIFYING (1/{self.confirmation_frames})"
             return is_confirmed, 1, status
 
-        # Existing track -> measure displacement
-        last_box = track["last_box"]
+        # Existing track -> measure displacement history
+        history = track.get("history", [])
+        history.append(face_box)
+        if len(history) > 10:
+            history.pop(0)
+        track["history"] = history
+
+        last_box = history[-2] if len(history) >= 2 else face_box
         dx = abs(face_box["left"] - last_box["left"])
         dy = abs(face_box["top"] - last_box["top"])
-        displacement = np.sqrt(dx**2 + dy**2)
+        step_displacement = np.sqrt(dx**2 + dy**2)
+
+        # Teleportation check (face jumped across screen instantaneously)
+        if step_displacement > 160:
+            track["frames"] = 1
+            track["last_time"] = current_time
+            track["history"] = [face_box]
+            status = f"VERIFYING (1/{self.confirmation_frames})"
+            track["status"] = status
+            return False, 1, status
 
         track["frames"] += 1
         track["last_time"] = current_time
-        track["last_box"] = face_box
 
         consecutive = track["frames"]
 
         if consecutive >= self.confirmation_frames:
+            # Verify that the sequence isn't an absolutely rigid/frozen static screenshot (e.g. 0.0px variance across 5 frames)
+            if len(history) >= 4:
+                centers_x = [(b["left"] + b["right"]) / 2.0 for b in history[-4:]]
+                centers_y = [(b["top"] + b["bottom"]) / 2.0 for b in history[-4:]]
+                std_x = float(np.std(centers_x))
+                std_y = float(np.std(centers_y))
+
+                # Note: Natural living heads have subtle micro-tremors (> 0.05px) even when trying to hold still.
+                # Perfectly rigid software injection / motionless static prints have std == 0.0.
+                if std_x == 0.0 and std_y == 0.0:
+                    track["status"] = "SPOOF_FREEZE_DETECTED"
+                    return False, consecutive, "SPOOF_DETECTED"
+
             track["status"] = "REAL"
             return True, consecutive, "REAL"
         else:
@@ -272,5 +304,5 @@ class TemporalMotionTracker:
 
 
 # Global singletons
-liveness_detector = LivenessDetector(threshold=0.65)
-temporal_tracker = TemporalMotionTracker(confirmation_frames=3)
+liveness_detector = LivenessDetector(threshold=LIVENESS_THRESHOLD)
+temporal_tracker = TemporalMotionTracker(confirmation_frames=LIVENESS_CONFIRMATION_FRAMES)

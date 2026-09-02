@@ -3,6 +3,7 @@
    ========================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
+    initThemeSwitcher();
     initLiveStream();
     initFilters();
 });
@@ -30,6 +31,8 @@ function initLiveStream() {
             const payload = JSON.parse(event.data);
             if (payload.type === "ATTENDANCE_LOGGED") {
                 handleNewAttendanceEvent(payload.data);
+            } else if (payload.type === "MANUAL_OVERRIDE_LOGGED") {
+                handleManualOverrideEvent(payload.data);
             } else if (payload.type === "SPOOF_ATTEMPT") {
                 handleSpoofAttemptEvent(payload.data);
             }
@@ -47,7 +50,7 @@ function initLiveStream() {
 }
 
 /**
- * Inserts new attendance item into the live feed without full-page reload
+ * Inserts new face attendance item into the live feed
  */
 function handleNewAttendanceEvent(data) {
     const liveFeed = document.getElementById("liveFeedContainer");
@@ -87,14 +90,52 @@ function handleNewAttendanceEvent(data) {
 
     liveFeed.prepend(item);
 
-    // Fade out highlight border after 4 seconds
     setTimeout(() => {
         item.classList.remove("highlight");
     }, 4000);
 }
 
 /**
- * Inserts a prominent security warning banner when a spoof attack is blocked
+ * Inserts manual override item into the live feed
+ */
+function handleManualOverrideEvent(data) {
+    const liveFeed = document.getElementById("liveFeedContainer");
+    const emptyState = document.getElementById("emptyFeedState");
+    if (emptyState) emptyState.remove();
+
+    const item = document.createElement("div");
+    item.className = "feed-item highlight";
+    item.style.borderColor = "var(--badge-emerald-border)";
+    item.style.background = "var(--badge-emerald-bg)";
+    item.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div class="feed-avatar" style="background: var(--badge-emerald-bg); color: var(--badge-emerald-text);">
+                <i class="fa-solid fa-user-check"></i>
+            </div>
+            <div>
+                <h4 style="font-size: 14px; font-weight: 700; color: var(--badge-emerald-text);">${data.student_name}</h4>
+                <div style="font-size: 12px; color: var(--text-muted); display: flex; gap: 10px; margin-top: 2px;">
+                    <span>Roll: <strong>${data.roll_number}</strong></span>
+                    <span>•</span>
+                    <span>Reason: <em>${data.override_reason || 'Manual Verification'}</em></span>
+                </div>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <span class="badge badge-present"><i class="fa-solid fa-shield-check"></i> Manual Override</span>
+            <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">By ${data.override_by || 'Admin'}</div>
+        </div>
+    `;
+
+    liveFeed.prepend(item);
+
+    setTimeout(() => {
+        item.classList.remove("highlight");
+    }, 4000);
+}
+
+/**
+ * Inserts security warning banner when a spoof attack is blocked
  */
 function handleSpoofAttemptEvent(data) {
     const liveFeed = document.getElementById("liveFeedContainer");
@@ -131,7 +172,7 @@ function handleSpoofAttemptEvent(data) {
 }
 
 /**
- * Filter and Export Handlers
+ * Attendance Logs Multi-Parameter Filter Handlers
  */
 function initFilters() {
     const filterBtn = document.getElementById("btnApplyFilter");
@@ -143,22 +184,28 @@ function initFilters() {
 async function applyLogFilters() {
     const dateInput = document.getElementById("filterDate")?.value;
     const rollInput = document.getElementById("filterRoll")?.value;
+    const deptInput = document.getElementById("filterDept")?.value;
+    const roleInput = document.getElementById("filterRole")?.value;
+    const overrideInput = document.getElementById("filterOverride")?.value;
     const tableBody = document.getElementById("logsTableBody");
 
     if (!tableBody) return;
 
-    tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted); font-weight: 500;">Loading attendance records...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted); font-weight: 500;"><i class="fa-solid fa-spinner fa-spin"></i> Loading attendance audit records...</td></tr>';
 
-    let url = `/api/v1/attendance/records?limit=100`;
+    let url = `/api/v1/attendance/records?limit=150`;
     if (dateInput) url += `&date_str=${encodeURIComponent(dateInput)}`;
     if (rollInput) url += `&roll_number=${encodeURIComponent(rollInput)}`;
+    if (deptInput) url += `&department=${encodeURIComponent(deptInput)}`;
+    if (roleInput) url += `&user_role=${encodeURIComponent(roleInput)}`;
+    if (overrideInput !== undefined && overrideInput !== "") url += `&is_override=${encodeURIComponent(overrideInput)}`;
 
     try {
         const res = await fetch(url);
         const data = await res.json();
         renderLogsTable(data.records);
     } catch (e) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--accent-rose); padding: 24px; font-weight: 600;">Failed to fetch logs from server.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: var(--accent-rose); padding: 24px; font-weight: 600;">Failed to fetch logs from server.</td></tr>';
     }
 }
 
@@ -167,28 +214,42 @@ function renderLogsTable(records) {
     if (!tableBody) return;
 
     if (!records || records.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 36px; color: var(--text-muted);">No attendance records found matching filters.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 36px; color: var(--text-muted);">No attendance records found matching filters.</td></tr>';
         return;
     }
 
-    tableBody.innerHTML = records.map(r => `
-        <tr>
-            <td>#${r.id}</td>
-            <td>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
-                        ${r.snapshot_path ? `<img src="/data/${r.snapshot_path}" alt="Face">` : `<span>${r.student_name.charAt(0)}</span>`}
+    tableBody.innerHTML = records.map(r => {
+        let roleBadge = '<span class="badge badge-present">Student</span>';
+        if (r.user_role === 'teacher') roleBadge = '<span class="badge badge-node">Faculty</span>';
+        else if (r.user_role === 'admin_staff') roleBadge = '<span class="badge badge-amber">Admin Staff</span>';
+        else if (r.user_role === 'other') roleBadge = '<span class="badge badge-node">Other</span>';
+
+        let verificationBadge = `<span class="badge badge-present">✓ ${r.match_confidence_pct}% Face Match</span>`;
+        if (r.is_manual_override) {
+            verificationBadge = `<span class="badge badge-amber" title="Override Reason: ${r.override_reason || 'N/A'} (By ${r.override_by || 'Admin'})"><i class="fa-solid fa-shield-check"></i> Manual Override</span>`;
+        }
+
+        return `
+            <tr>
+                <td>#${r.id}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
+                            ${r.snapshot_path ? `<img src="/data/${r.snapshot_path}" alt="Face">` : `<span>${r.student_name.charAt(0)}</span>`}
+                        </div>
+                        <strong style="color: var(--text-heading);">${r.student_name}</strong>
                     </div>
-                    <strong style="color: var(--text-heading);">${r.student_name}</strong>
-                </div>
-            </td>
-            <td><code>${r.roll_number}</code></td>
-            <td>${r.department}</td>
-            <td><span class="badge badge-node">${r.node_id}</span></td>
-            <td>${r.timestamp}</td>
-            <td><span class="badge badge-present">${r.match_confidence_pct}%</span></td>
-        </tr>
-    `).join("");
+                </td>
+                <td><code>${r.roll_number}</code></td>
+                <td>${roleBadge}</td>
+                <td>${r.department}</td>
+                <td><span class="badge badge-node">${r.class_semester || 'General'}</span></td>
+                <td><span class="badge ${r.is_manual_override ? 'badge-amber' : 'badge-node'}">${r.node_id}</span></td>
+                <td>${r.timestamp}</td>
+                <td>${verificationBadge}</td>
+            </tr>
+        `;
+    }).join("");
 }
 
 function exportData(format) {
@@ -198,11 +259,57 @@ function exportData(format) {
     window.location.href = url;
 }
 
+/* ==========================================================
+   Student Directory Multi-Parameter Filtering Handlers
+   ========================================================== */
+function applyDirectoryFilters() {
+    const searchVal = (document.getElementById("dirSearchInput")?.value || "").toLowerCase().trim();
+    const deptVal = document.getElementById("dirDeptFilter")?.value || "";
+    const roleVal = document.getElementById("dirRoleFilter")?.value || "";
+    const classVal = (document.getElementById("dirClassFilter")?.value || "").toLowerCase().trim();
+
+    const rows = document.querySelectorAll(".student-row");
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const name = row.getAttribute("data-name") || "";
+        const roll = row.getAttribute("data-roll") || "";
+        const dept = row.getAttribute("data-dept") || "";
+        const role = row.getAttribute("data-role") || "student";
+        const classSem = row.getAttribute("data-class") || "";
+
+        let matchSearch = !searchVal || name.includes(searchVal) || roll.includes(searchVal);
+        let matchDept = !deptVal || dept === deptVal;
+        let matchRole = !roleVal || role === roleVal;
+        let matchClass = !classVal || classSem.includes(classVal);
+
+        if (matchSearch && matchDept && matchRole && matchClass) {
+            row.style.display = "";
+            visibleCount++;
+        } else {
+            row.style.display = "none";
+        }
+    });
+
+    const countLabel = document.getElementById("dirFilterCountLabel");
+    if (countLabel) {
+        countLabel.innerText = `Showing ${visibleCount} of ${rows.length} profiles`;
+    }
+}
+
+function resetDirectoryFilters() {
+    if (document.getElementById("dirSearchInput")) document.getElementById("dirSearchInput").value = "";
+    if (document.getElementById("dirDeptFilter")) document.getElementById("dirDeptFilter").value = "";
+    if (document.getElementById("dirRoleFilter")) document.getElementById("dirRoleFilter").value = "";
+    if (document.getElementById("dirClassFilter")) document.getElementById("dirClassFilter").value = "";
+    applyDirectoryFilters();
+}
+
 /**
  * Delete Student
  */
 async function deleteStudent(studentId, studentName) {
-    if (!confirm(`Are you sure you want to delete student "${studentName}" and all associated face embeddings?`)) {
+    if (!confirm(`Are you sure you want to delete profile "${studentName}" and all associated face embeddings?`)) {
         return;
     }
 
@@ -210,13 +317,13 @@ async function deleteStudent(studentId, studentName) {
         const res = await fetch(`/api/v1/enroll/student/${studentId}`, { method: "DELETE" });
         const data = await res.json();
         if (res.ok) {
-            alert(`Student "${studentName}" deleted successfully.`);
+            alert(`Profile "${studentName}" deleted successfully.`);
             window.location.reload();
         } else {
-            alert(`Error: ${data.detail || 'Could not delete student'}`);
+            alert(`Error: ${data.detail || 'Could not delete profile'}`);
         }
     } catch (e) {
-        alert("Failed to delete student.");
+        alert("Failed to delete profile.");
     }
 }
 
@@ -242,7 +349,7 @@ function closeLightbox() {
 /* ==========================================================
    Edit Student Profile Modal
    ========================================================== */
-function openEditModal(id, name, roll, dept, email) {
+function openEditModal(id, name, roll, dept, email, role, classSem) {
     const modal = document.getElementById("editStudentModal");
     if (!modal) return;
 
@@ -251,6 +358,8 @@ function openEditModal(id, name, roll, dept, email) {
     document.getElementById("editRollNumber").value = roll;
     document.getElementById("editDepartment").value = dept || "Computer Science";
     document.getElementById("editEmail").value = email || "";
+    if (document.getElementById("editUserRole")) document.getElementById("editUserRole").value = role || "student";
+    if (document.getElementById("editClassSemester")) document.getElementById("editClassSemester").value = classSem || "General";
 
     const alertBox = document.getElementById("editResultAlert");
     if (alertBox) alertBox.style.display = "none";
@@ -296,6 +405,8 @@ async function submitStudentEdit(e) {
     const roll = document.getElementById("editRollNumber").value.trim();
     const dept = document.getElementById("editDepartment").value.trim();
     const email = document.getElementById("editEmail").value.trim();
+    const role = document.getElementById("editUserRole")?.value || "student";
+    const classSem = document.getElementById("editClassSemester")?.value.trim() || "General";
 
     const saveBtn = document.getElementById("btnSaveEdit");
     const alertBox = document.getElementById("editResultAlert");
@@ -312,6 +423,8 @@ async function submitStudentEdit(e) {
                 roll_number: roll,
                 department: dept,
                 email: email || null,
+                user_role: role,
+                class_semester: classSem,
             }),
         });
         const data = await res.json();
@@ -328,23 +441,26 @@ async function submitStudentEdit(e) {
             const rollEl = document.getElementById(`stdRollLabel${id}`);
             const deptEl = document.getElementById(`stdDeptLabel${id}`);
             const emailEl = document.getElementById(`stdEmailLabel${id}`);
+            const classEl = document.getElementById(`stdClassLabel${id}`);
 
             if (nameEl) nameEl.innerText = name;
             if (rollEl) rollEl.innerText = roll;
             if (deptEl) deptEl.innerText = dept;
             if (emailEl) emailEl.innerText = email || "No email registered";
+            if (classEl) classEl.innerHTML = `<span class="badge badge-node">${classSem}</span>`;
 
             setTimeout(() => {
                 closeEditModal();
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+                window.location.reload();
             }, 800);
         } else {
             alertBox.style.display = "block";
             alertBox.style.background = "var(--badge-rose-bg)";
             alertBox.style.color = "var(--badge-rose-text)";
             alertBox.style.border = "1px solid var(--badge-rose-border)";
-            alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Failed to update student.'}`;
+            alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Failed to update profile.'}`;
             saveBtn.disabled = false;
             saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
         }
@@ -396,8 +512,8 @@ function closeRetakeModal() {
 function switchRetakeMode(mode) {
     const tabUpload = document.getElementById("tabRetakeUpload");
     const tabWebcam = document.getElementById("tabRetakeWebcam");
-    const secUpload = document.getElementById("retakeUploadSection");
-    const secWebcam = document.getElementById("retakeWebcamSection");
+    const secUpload = document.getElementById("secRetakeUpload");
+    const secWebcam = document.getElementById("secRetakeWebcam");
 
     if (mode === "upload") {
         if (tabUpload) tabUpload.classList.add("active");
@@ -451,10 +567,10 @@ function handleRetakeFiles(filesList) {
 
 function updateRetakePreviews() {
     const hint = document.getElementById("retakeUploadHint");
-    const submitBtn = document.getElementById("btnSubmitRetakePhotos");
+    const submitBtn = document.getElementById("btnSubmitRetakeUpload");
 
     for (let i = 0; i < 3; i++) {
-        const imgEl = document.getElementById(`retakePrev${i}`);
+        const imgEl = document.getElementById(`retakePrevImg${i}`);
         const phEl = document.getElementById(`retakePh${i}`);
 
         if (!imgEl || !phEl) continue;
@@ -480,13 +596,13 @@ function updateRetakePreviews() {
     }
 }
 
-async function submitPhotoUploadRetake() {
+async function submitRetakeUpload() {
     if (retakeFiles.length !== 3 || !retakeStudentId) {
         alert("Please select exactly 3 photos before submitting.");
         return;
     }
 
-    const submitBtn = document.getElementById("btnSubmitRetakePhotos");
+    const submitBtn = document.getElementById("btnSubmitRetakeUpload");
     const alertBox = document.getElementById("retakeResultAlert");
 
     if (submitBtn) {
@@ -519,29 +635,30 @@ async function submitPhotoUploadRetake() {
             alertBox.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:700;"><i class="fa-solid fa-circle-check"></i> ${data.message}</span>`;
             if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Updated Successfully';
             setTimeout(() => {
+                closeRetakeModal();
                 window.location.reload();
             }, 1000);
         } else {
             alertBox.style.background = "var(--badge-rose-bg)";
             alertBox.style.border = "1px solid var(--badge-rose-border)";
-            alertBox.innerHTML = `<span style="color:var(--badge-rose-text); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Photo update failed.'}</span>`;
+            alertBox.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Upload failed.'}</span>`;
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Try Again';
+                submitBtn.innerHTML = '<i class="fa-solid fa-upload"></i> Try Again';
             }
         }
     } catch (err) {
         alertBox.style.background = "var(--badge-rose-bg)";
         alertBox.style.border = "1px solid var(--badge-rose-border)";
-        alertBox.innerHTML = '<span style="color:var(--badge-rose-text); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.</span>';
+        alertBox.innerHTML = '<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to backend.</span>';
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Try Again';
+            submitBtn.innerHTML = '<i class="fa-solid fa-upload"></i> Try Again';
         }
     }
 }
 
-// Guided Webcam Retake
+// Live Webcam Retake Handlers
 async function startRetakeWebcam() {
     if (retakeWebcamStream) return;
     const video = document.getElementById("retakeWebcamVideo");
@@ -615,5 +732,225 @@ async function captureRetakeSample(angle) {
             if (fb) fb.innerHTML = '<span style="color:var(--accent-rose);">Upload failed. Try again.</span>';
         }
     }, "image/jpeg", 0.9);
+}
+
+/* ==========================================================
+   Universal Manual Override Modal Handlers
+   ========================================================== */
+async function populateStudentDropdown() {
+    try {
+        const res = await fetch("/api/v1/enroll/students");
+        const data = await res.json();
+        const select = document.getElementById("overrideStudentSelect");
+        if (!select || !data.students) return;
+
+        select.innerHTML = '<option value="">-- Choose Member --</option>' +
+            data.students.map(s => `<option value="${s.id}">${s.name} (${s.roll_number} - ${s.department}) [${s.user_role || 'student'}]</option>`).join("");
+    } catch (e) {}
+}
+
+function openManualOverrideModal() {
+    const modal = document.getElementById("manualOverrideModal");
+    if (modal) modal.classList.add("active");
+    const alertBox = document.getElementById("overrideResultAlert");
+    if (alertBox) alertBox.style.display = "none";
+    populateStudentDropdown();
+}
+
+function openManualOverrideForStudent(studentId) {
+    openManualOverrideModal();
+    setTimeout(() => {
+        const select = document.getElementById("overrideStudentSelect");
+        if (select) select.value = studentId;
+    }, 100);
+}
+
+function closeManualOverrideModal() {
+    const modal = document.getElementById("manualOverrideModal");
+    if (modal) modal.classList.remove("active");
+}
+
+function applyReasonPreset() {
+    const preset = document.getElementById("overridePresetSelect")?.value;
+    const input = document.getElementById("overrideReasonInput");
+    if (!input) return;
+    if (preset !== "Custom") {
+        input.value = preset;
+    } else {
+        input.value = "";
+        input.focus();
+    }
+}
+
+async function submitManualOverride(e) {
+    e.preventDefault();
+    const studentId = parseInt(document.getElementById("overrideStudentSelect").value);
+    const timestamp = document.getElementById("overrideTimestamp").value;
+    const reason = document.getElementById("overrideReasonInput").value.trim();
+    const overrideBy = document.getElementById("overrideByInput").value.trim();
+
+    const saveBtn = document.getElementById("btnSaveOverride");
+    const alertBox = document.getElementById("overrideResultAlert");
+
+    if (!studentId) {
+        alert("Please select a student/member first.");
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Recording...';
+
+    try {
+        const res = await fetch("/api/v1/attendance/manual-override", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                student_id: studentId,
+                timestamp: timestamp || null,
+                reason: reason,
+                override_by: overrideBy || "Admin",
+            })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.style.border = "1px solid var(--badge-emerald-border)";
+            alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message}`;
+
+            setTimeout(() => {
+                closeManualOverrideModal();
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+                if (typeof loadAnalyticsData === "function") loadAnalyticsData();
+                if (typeof applyLogFilters === "function") applyLogFilters();
+            }, 900);
+        } else {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Failed to record override.'}`;
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+        }
+    } catch (err) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "var(--badge-rose-bg)";
+        alertBox.style.color = "var(--badge-rose-text)";
+        alertBox.style.border = "1px solid var(--badge-rose-border)";
+        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.';
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+    }
+}
+
+/* ==========================================================
+   Mobile Navigation Drawer Handlers
+   ========================================================== */
+function toggleMobileMenu() {
+    const sidebar = document.getElementById("mainSidebar");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    if (!sidebar) return;
+
+    sidebar.classList.toggle("open");
+    if (backdrop) {
+        backdrop.classList.toggle("active", sidebar.classList.contains("open"));
+    }
+}
+
+function closeMobileMenu() {
+    const sidebar = document.getElementById("mainSidebar");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    if (sidebar) sidebar.classList.remove("open");
+    if (backdrop) backdrop.classList.remove("active");
+}
+
+// Close drawer & modals on Escape key
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        closeMobileMenu();
+        closeLightbox();
+        closeEditModal();
+        closeRetakeModal();
+        closeManualOverrideModal();
+    }
+});
+
+/* ==========================================================
+   Multi-Theme Engine Handlers
+   ========================================================== */
+function initThemeSwitcher() {
+    const currentTheme = document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
+    updateQuickThemeButton(currentTheme);
+    updateThemeSelectionCards(currentTheme);
+}
+
+function setAppTheme(themeName) {
+    if (!["light", "dark", "academic"].includes(themeName)) {
+        themeName = "light";
+    }
+    document.documentElement.setAttribute("data-theme", themeName);
+    try {
+        localStorage.setItem("app_theme", themeName);
+    } catch (e) {}
+
+    updateThemeSelectionCards(themeName);
+    updateQuickThemeButton(themeName);
+}
+
+function cycleAppTheme() {
+    const currentTheme = document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
+    let nextTheme = "light";
+    if (currentTheme === "light") nextTheme = "dark";
+    else if (currentTheme === "dark") nextTheme = "academic";
+    else nextTheme = "light";
+
+    setAppTheme(nextTheme);
+}
+
+function updateThemeSelectionCards(theme) {
+    const current = theme || document.documentElement.getAttribute("data-theme") || "light";
+    const cardLight = document.getElementById("themeCardLight");
+    const cardDark = document.getElementById("themeCardDark");
+    const cardAcad = document.getElementById("themeCardAcademic");
+    const badge = document.getElementById("activeThemeBadge");
+
+    if (cardLight) cardLight.classList.toggle("active", current === "light");
+    if (cardDark) cardDark.classList.toggle("active", current === "dark");
+    if (cardAcad) cardAcad.classList.toggle("active", current === "academic");
+
+    if (badge) {
+        if (current === "dark") {
+            badge.className = "badge badge-sky";
+            badge.innerHTML = '<i class="fa-solid fa-moon"></i> Active: Midnight Dark';
+        } else if (current === "academic") {
+            badge.className = "badge badge-amber";
+            badge.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Active: Warm Academic';
+        } else {
+            badge.className = "badge badge-present";
+            badge.innerHTML = '<i class="fa-solid fa-sun"></i> Active: Clean Light';
+        }
+    }
+}
+
+function updateQuickThemeButton(theme) {
+    const current = theme || document.documentElement.getAttribute("data-theme") || "light";
+    const btn = document.getElementById("btnQuickThemeToggle");
+    const label = document.getElementById("quickThemeLabel");
+    if (!btn || !label) return;
+
+    if (current === "dark") {
+        label.innerText = "Dark";
+        btn.querySelector("i").className = "fa-solid fa-moon";
+    } else if (current === "academic") {
+        label.innerText = "Academic";
+        btn.querySelector("i").className = "fa-solid fa-graduation-cap";
+    } else {
+        label.innerText = "Light";
+        btn.querySelector("i").className = "fa-solid fa-sun";
+    }
 }
 

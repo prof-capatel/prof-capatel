@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from src.config import DATA_DIR, FACES_DIR, SNAPSHOTS_DIR
 from src.core.face_engine import face_engine
 from src.database.session import init_db
-from src.server.routes import api_nodes, api_enrollment, api_attendance, views_dashboard
+from src.server.routes import api_nodes, api_enrollment, api_attendance, api_branding, views_dashboard
 
 # Configure root logger
 logging.basicConfig(
@@ -62,6 +62,7 @@ app.include_router(views_dashboard.router)
 app.include_router(api_nodes.router)
 app.include_router(api_enrollment.router)
 app.include_router(api_attendance.router)
+app.include_router(api_branding.router)
 
 
 @app.get("/health")

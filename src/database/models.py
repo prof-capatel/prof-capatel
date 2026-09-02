@@ -25,6 +25,8 @@ class Student(Base):
     name = Column(String(100), nullable=False)
     department = Column(String(100), default="Computer Science")
     email = Column(String(100), nullable=True)
+    user_role = Column(String(30), default="student", nullable=False)  # student, teacher, admin_staff, other
+    class_semester = Column(String(50), nullable=True, default="General")
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
@@ -55,6 +57,8 @@ class Student(Base):
             "name": self.name,
             "department": self.department,
             "email": self.email,
+            "user_role": self.user_role or "student",
+            "class_semester": self.class_semester or "General",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "is_active": self.is_active,
             "samples_count": len(self.encodings) if self.encodings else 0,
@@ -99,6 +103,9 @@ class AttendanceRecord(Base):
     confidence_distance = Column(Float, nullable=False)
     status = Column(String(20), default="PRESENT")  # PRESENT, UNKNOWN
     snapshot_path = Column(String(255), nullable=True)
+    is_manual_override = Column(Boolean, default=False, nullable=False)
+    override_reason = Column(String(255), nullable=True)
+    override_by = Column(String(100), nullable=True)
 
     student = relationship("Student", back_populates="attendance_records")
 
@@ -109,12 +116,17 @@ class AttendanceRecord(Base):
             "student_name": self.student.name if self.student else "Unknown",
             "roll_number": self.student.roll_number if self.student else "N/A",
             "department": self.student.department if self.student else "N/A",
+            "user_role": self.student.user_role if self.student else "student",
+            "class_semester": self.student.class_semester if self.student else "General",
             "node_id": self.node_id,
             "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S") if self.timestamp else None,
             "confidence_distance": round(self.confidence_distance, 4) if self.confidence_distance is not None else 0.0,
             "match_confidence_pct": round(max(0.0, (1.0 - (self.confidence_distance / 0.6))) * 100, 1) if self.confidence_distance is not None else 0.0,
             "status": self.status,
             "snapshot_path": self.snapshot_path,
+            "is_manual_override": bool(self.is_manual_override),
+            "override_reason": self.override_reason,
+            "override_by": self.override_by,
         }
 
 
@@ -139,3 +151,33 @@ class NodeDevice(Base):
             "fps": self.fps,
             "total_detections": self.total_detections,
         }
+
+
+class SystemBranding(Base):
+    __tablename__ = "system_branding"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    institution_name = Column(String(150), default="FaceAttendance Campus", nullable=False)
+    short_code = Column(String(30), default="FA-HUB", nullable=False)
+    tagline = Column(String(255), default="Raspberry Pi Zero Edge Nodes & Central Face Recognition")
+    logo_filename = Column(String(255), nullable=True)
+    primary_accent_color = Column(String(20), default="#6366f1")
+    header_badge_text = Column(String(50), default="Thin-Client Hub")
+    contact_email = Column(String(100), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        logo_url = f"/data/branding/{self.logo_filename}" if self.logo_filename else None
+        return {
+            "id": self.id,
+            "institution_name": self.institution_name,
+            "short_code": self.short_code,
+            "tagline": self.tagline,
+            "logo_filename": self.logo_filename,
+            "logo_url": logo_url,
+            "primary_accent_color": self.primary_accent_color or "#6366f1",
+            "header_badge_text": self.header_badge_text or "Thin-Client Hub",
+            "contact_email": self.contact_email,
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
+        }
+

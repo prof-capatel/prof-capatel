@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Top Header & Export Action Bar -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 8px;">
+    <div>
+        <h3 style="font-size: 18px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-chart-line" style="color: var(--accent-primary);"></i>
+            <span>Institutional Attendance Analytics & Defaulter Audit</span>
+        </h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+            Comprehensive attendance trends, department breakdowns, and automated compliance tracking.
+        </p>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="exportComplianceReport('xlsx')" class="btn btn-primary" title="Download Official Institutional Compliance Excel">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Compliance Excel (.xlsx)</span>
+        </button>
+        <button onclick="exportComplianceReport('csv')" class="btn btn-secondary" title="Download Compliance CSV">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>Compliance CSV</span>
+        </button>
+        <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Biometric Fallback Manual Attendance">
+            <i class="fa-solid fa-user-check"></i>
+            <span>Manual Override</span>
+        </button>
+    </div>
+</div>
+
+<!-- KPI Summary Cards Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Enrolled Students</span>
+            <h3 id="anaTotalStudents">--</h3>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Active in Registry</div>
+        </div>
+        <div class="stat-icon purple">
+            <i class="fa-solid fa-user-graduate"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Faculty & Staff</span>
+            <h3 id="anaTotalStaff">--</h3>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Teachers & Admin</div>
+        </div>
+        <div class="stat-icon cyan">
+            <i class="fa-solid fa-chalkboard-user"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Today's Turnout</span>
+            <h3 id="anaTurnoutPct">--%</h3>
+            <div id="anaTurnoutFraction" style="font-size: 11px; color: var(--accent-emerald); font-weight: 600; margin-top: 4px;">-- Present Today</div>
+        </div>
+        <div class="stat-icon emerald">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Defaulters Alert</span>
+            <h3 id="anaDefaultersCount" style="color: var(--accent-rose);">--</h3>
+            <div id="anaThresholdLabel" style="font-size: 11px; color: var(--accent-rose); font-weight: 600; margin-top: 4px;">< 75% Attendance</div>
+        </div>
+        <div class="stat-icon" style="background: var(--badge-rose-bg); color: var(--accent-rose); border: 1px solid var(--badge-rose-border);">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Charts Section -->
+<div class="dashboard-grid" style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 24px;">
+    <!-- 7-Day / 30-Day Attendance Trend Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fa-solid fa-chart-area" style="color: var(--accent-primary);"></i>
+                <span>Daily Attendance Trend</span>
+            </h3>
+            <div style="display: flex; gap: 6px;">
+                <button id="btnTrend7" onclick="setTrendDays(7)" class="btn btn-primary" style="padding: 4px 10px; font-size: 11.5px;">7 Days</button>
+                <button id="btnTrend30" onclick="setTrendDays(30)" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;">30 Days</button>
+            </div>
+        </div>
+        <div class="card-body" style="padding: 18px 20px;">
+            <div style="position: relative; height: 260px; width: 100%;">
+                <canvas id="trendChartCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Comparison Bar Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fa-solid fa-chart-column" style="color: var(--accent-cyan);"></i>
+                <span>Department Turnout Today</span>
+            </h3>
+        </div>
+        <div class="card-body" style="padding: 18px 20px;">
+            <div style="position: relative; height: 260px; width: 100%;">
+                <canvas id="deptChartCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Attendance Defaulter Warning List -->
+<div class="card">
+    <div class="card-header" style="flex-wrap: wrap; gap: 14px;">
+        <div>
+            <h3>
+                <i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-rose);"></i>
+                <span>Low Attendance Defaulters List</span>
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Students whose overall attendance falls below the institutional minimum threshold.
+            </p>
+        </div>
+
+        <!-- User Configurable Threshold Toolbar -->
+        <div style="display: flex; align-items: center; gap: 12px; background: var(--bg-subtle); padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap;">
+            <label style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); white-space: nowrap;">
+                Defaulter Threshold:
+            </label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="number" id="thresholdInput" min="10" max="100" value="75" style="width: 60px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; font-weight: 700; text-align: center;">
+                <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">%</span>
+            </div>
+            <button onclick="applyNewThreshold()" class="btn btn-secondary" style="padding: 5px 12px; font-size: 11.5px;">
+                <i class="fa-solid fa-arrows-rotate"></i> Recalculate
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="table-container">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Student Profile</th>
+                        <th>Roll Number</th>
+                        <th>Department</th>
+                        <th>Class / Semester</th>
+                        <th>Sessions Attended</th>
+                        <th>Attendance Rate</th>
+                        <th>Manual Overrides</th>
+                        <th>Compliance Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="defaultersTableBody">
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 36px; color: var(--text-muted);">
+                            <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading analytics data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL: MANUAL ATTENDANCE OVERRIDE (BIOMETRIC FALLBACK)    -->
+<!-- ========================================================= -->
+<div id="manualOverrideModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>
+                <i class="fa-solid fa-user-check" style="color: var(--accent-primary);"></i>
+                <span>Biometric Fallback / Manual Override</span>
+            </h3>
+            <button class="modal-close" onclick="closeManualOverrideModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="manualOverrideForm" onsubmit="submitManualOverride(event)">
+            <div class="modal-body">
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
+                    Force-marks student attendance with an authorized administrative audit tag.
+                </p>
+
+                <!-- Student Selector -->
+                <div class="form-group">
+                    <label class="form-label">Select Student *</label>
+                    <select id="overrideStudentSelect" class="form-control" required>
+                        <option value="">-- Choose Student --</option>
+                    </select>
+                </div>
+
+                <!-- Date & Time Picker -->
+                <div class="form-group">
+                    <label class="form-label">Attendance Date & Time *</label>
+                    <input type="datetime-local" id="overrideTimestamp" class="form-control" required>
+                </div>
+
+                <!-- Justification Preset & Reason -->
+                <div class="form-group">
+                    <label class="form-label">Justification Preset</label>
+                    <select id="overridePresetSelect" class="form-control" onchange="applyReasonPreset()">
+                        <option value="Admin Manual Verification">Admin Manual Verification</option>
+                        <option value="Medical Leave / Approved Exception">Medical Leave / Approved Exception</option>
+                        <option value="Biometric Hardware Malfunction">Biometric Hardware Malfunction</option>
+                        <option value="Official Institutional Duty">Official Institutional Duty / Field Trip</option>
+                        <option value="Custom">Other (Custom Reason)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Detailed Audit Reason *</label>
+                    <input type="text" id="overrideReasonInput" class="form-control" value="Admin Manual Verification" placeholder="Provide justification reason" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Authorized Admin Sign-Off</label>
+                    <input type="text" id="overrideByInput" class="form-control" value="System Administrator">
+                </div>
+
+                <div id="overrideResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeManualOverrideModal()">Cancel</button>
+                <button type="submit" id="btnSaveOverride" class="btn btn-primary">
+                    <i class="fa-solid fa-check"></i> Force Mark Present
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+let currentThreshold = 75.0;
+let currentDays = 7;
+let trendChartInstance = null;
+let deptChartInstance = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadAnalyticsData();
+    populateStudentDropdown();
+
+    // Set default datetime to now
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById("overrideTimestamp").value = now.toISOString().slice(0, 16);
+});
+
+async function loadAnalyticsData() {
+    try {
+        const res = await fetch(`/api/v1/attendance/analytics?defaulter_threshold=${currentThreshold}&days=${currentDays}`);
+        const data = await res.json();
+
+        if (data.status === "success") {
+            // 1. Render KPIs
+            document.getElementById("anaTotalStudents").innerText = data.headcount.students;
+            document.getElementById("anaTotalStaff").innerText = data.headcount.teachers + data.headcount.staff;
+            document.getElementById("anaTurnoutPct").innerText = `${data.today_turnout.turnout_pct}%`;
+            document.getElementById("anaTurnoutFraction").innerText = `${data.today_turnout.present_students} / ${data.today_turnout.total_students} Present Today`;
+            document.getElementById("anaDefaultersCount").innerText = data.defaulter_count;
+            document.getElementById("anaThresholdLabel").innerText = `< ${currentThreshold}% Attendance`;
+
+            // 2. Render Charts
+            renderTrendChart(data.daily_trends);
+            renderDeptChart(data.departments);
+
+            // 3. Render Defaulters Table
+            renderDefaultersTable(data.defaulters, data.total_active_sessions);
+        }
+    } catch (e) {
+        console.error("Failed to load analytics:", e);
+    }
+}
+
+function setTrendDays(days) {
+    currentDays = days;
+    document.getElementById("btnTrend7").className = days === 7 ? "btn btn-primary" : "btn btn-secondary";
+    document.getElementById("btnTrend30").className = days === 30 ? "btn btn-primary" : "btn btn-secondary";
+    loadAnalyticsData();
+}
+
+function applyNewThreshold() {
+    const val = parseFloat(document.getElementById("thresholdInput").value);
+    if (!isNaN(val) && val >= 10 && val <= 100) {
+        currentThreshold = val;
+        loadAnalyticsData();
+    } else {
+        alert("Please enter a valid threshold percentage between 10 and 100.");
+    }
+}
+
+function renderTrendChart(trends) {
+    const ctx = document.getElementById("trendChartCanvas").getContext("2d");
+    if (trendChartInstance) trendChartInstance.destroy();
+
+    const labels = trends.map(t => t.label);
+    const rates = trends.map(t => t.rate_pct);
+
+    trendChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Student Attendance (%)",
+                data: rates,
+                borderColor: "#6366f1",
+                backgroundColor: "rgba(99, 102, 241, 0.12)",
+                fill: true,
+                tension: 0.35,
+                borderWidth: 3,
+                pointBackgroundColor: "#6366f1",
+                pointRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` Attendance: ${ctx.parsed.y}%`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: { callback: (v) => `${v}%` },
+                    grid: { color: "#f1f5f9" }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+function renderDeptChart(departments) {
+    const ctx = document.getElementById("deptChartCanvas").getContext("2d");
+    if (deptChartInstance) deptChartInstance.destroy();
+
+    const labels = departments.map(d => d.department);
+    const rates = departments.map(d => d.rate_pct);
+
+    deptChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Turnout (%)",
+                data: rates,
+                backgroundColor: "#0ea5e9",
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` Turnout: ${ctx.parsed.y}%`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: { callback: (v) => `${v}%` },
+                    grid: { color: "#f1f5f9" }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+function renderDefaultersTable(defaulters, totalSessions) {
+    const tbody = document.getElementById("defaultersTableBody");
+    if (!tbody) return;
+
+    if (!defaulters || defaulters.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 40px; color: var(--badge-emerald-text); background: var(--badge-emerald-bg);">
+                    <i class="fa-solid fa-circle-check" style="font-size: 28px; margin-bottom: 8px;"></i>
+                    <h4 style="font-size: 15px; font-weight: 700;">Zero Low-Attendance Defaulters!</h4>
+                    <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">All active students currently meet or exceed the ${currentThreshold}% attendance minimum.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = defaulters.map(d => `
+        <tr>
+            <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
+                        <span>${d.name.charAt(0)}</span>
+                    </div>
+                    <strong style="color: var(--text-heading); font-size: 13.5px;">${d.name}</strong>
+                </div>
+            </td>
+            <td><code>${d.roll_number}</code></td>
+            <td>${d.department}</td>
+            <td><span class="badge badge-node">${d.class_semester || 'General'}</span></td>
+            <td><strong>${d.attended_days}</strong> / ${d.total_days}</td>
+            <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="flex: 1; min-width: 60px; height: 6px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                        <div style="width: ${d.attendance_pct}%; height: 100%; background: var(--accent-rose);"></div>
+                    </div>
+                    <strong style="color: var(--accent-rose); font-size: 12.5px;">${d.attendance_pct}%</strong>
+                </div>
+            </td>
+            <td>
+                <span class="badge ${d.manual_overrides > 0 ? 'badge-amber' : 'badge-node'}">${d.manual_overrides} Overrides</span>
+            </td>
+            <td>
+                <span class="badge badge-unknown"><i class="fa-solid fa-triangle-exclamation"></i> Defaulter (< ${currentThreshold}%)</span>
+            </td>
+            <td>
+                <button onclick="openManualOverrideForStudent(${d.student_id})" class="btn btn-secondary" style="padding: 5px 10px; font-size: 11px; color: var(--accent-primary);" title="Force Mark Attendance">
+                    <i class="fa-solid fa-user-check"></i> Override
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function exportComplianceReport(format) {
+    window.location.href = `/api/v1/attendance/export-compliance?export_format=${format}&defaulter_threshold=${currentThreshold}`;
+}
+
+// Manual Override Modal Handlers
+async function populateStudentDropdown() {
+    try {
+        const res = await fetch("/api/v1/enroll/students");
+        const data = await res.json();
+        const select = document.getElementById("overrideStudentSelect");
+        if (!select || !data.students) return;
+
+        select.innerHTML = '<option value="">-- Choose Student / Member --</option>' +
+            data.students.map(s => `<option value="${s.id}">${s.name} (${s.roll_number} - ${s.department}) [${s.user_role || 'student'}]</option>`).join("");
+    } catch (e) {}
+}
+
+function openManualOverrideModal() {
+    const modal = document.getElementById("manualOverrideModal");
+    if (modal) modal.classList.add("active");
+    const alertBox = document.getElementById("overrideResultAlert");
+    if (alertBox) alertBox.style.display = "none";
+}
+
+function openManualOverrideForStudent(studentId) {
+    openManualOverrideModal();
+    const select = document.getElementById("overrideStudentSelect");
+    if (select) select.value = studentId;
+}
+
+function closeManualOverrideModal() {
+    const modal = document.getElementById("manualOverrideModal");
+    if (modal) modal.classList.remove("active");
+}
+
+function applyReasonPreset() {
+    const preset = document.getElementById("overridePresetSelect").value;
+    const input = document.getElementById("overrideReasonInput");
+    if (preset !== "Custom") {
+        input.value = preset;
+    } else {
+        input.value = "";
+        input.focus();
+    }
+}
+
+async function submitManualOverride(e) {
+    e.preventDefault();
+    const studentId = parseInt(document.getElementById("overrideStudentSelect").value);
+    const timestamp = document.getElementById("overrideTimestamp").value;
+    const reason = document.getElementById("overrideReasonInput").value.trim();
+    const overrideBy = document.getElementById("overrideByInput").value.trim();
+
+    const saveBtn = document.getElementById("btnSaveOverride");
+    const alertBox = document.getElementById("overrideResultAlert");
+
+    if (!studentId) {
+        alert("Please select a student first.");
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Recording...';
+
+    try {
+        const res = await fetch("/api/v1/attendance/manual-override", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                student_id: studentId,
+                timestamp: timestamp || null,
+                reason: reason,
+                override_by: overrideBy || "Admin",
+            })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.style.border = "1px solid var(--badge-emerald-border)";
+            alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message}`;
+
+            setTimeout(() => {
+                closeManualOverrideModal();
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+                loadAnalyticsData();
+            }, 900);
+        } else {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Failed to record override.'}`;
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+        }
+    } catch (err) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "var(--badge-rose-bg)";
+        alertBox.style.color = "var(--badge-rose-text)";
+        alertBox.style.border = "1px solid var(--badge-rose-border)";
+        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.';
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+    }
+}
+</script>
+{% endblock %}

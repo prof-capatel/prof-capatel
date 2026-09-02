@@ -1,0 +1,579 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Settings Header -->
+<div style="margin-bottom: 24px;">
+    <h3 style="font-size: 20px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-gear" style="color: var(--accent-primary);"></i>
+        <span>System Settings & Institutional Branding</span>
+    </h3>
+    <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+        Customize your institution profile, white-label visual identity, system themes, and hardware streaming parameters.
+    </p>
+</div>
+
+<!-- Section 1: Institutional White-Labeling & Branding -->
+<div class="card" style="margin-bottom: 28px;">
+    <div class="card-header">
+        <div>
+            <h3>
+                <i class="fa-solid fa-building-columns" style="color: var(--accent-primary);"></i>
+                <span>Institutional Profile & White-Labeling</span>
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Personalize the organization name, acronym, logo, and theme accent displayed on all web portals and audit reports.
+            </p>
+        </div>
+        <span class="badge badge-sky" style="font-size: 12px;">
+            <i class="fa-solid fa-shield-halved"></i> Institutional Master
+        </span>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px;">
+            <!-- Branding Text Details Form -->
+            <form id="brandingForm" onsubmit="saveBrandingDetails(event)">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
+                    <div class="form-group">
+                        <label class="form-label">Institution / Organization Name *</label>
+                        <input type="text" id="brandInstName" class="form-control" value="{{ branding.institution_name if branding else 'FaceAttendance Campus' }}" placeholder="e.g. Stanford University / Tech Corp" required oninput="updateBrandingLivePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Acronym / Code *</label>
+                        <input type="text" id="brandShortCode" class="form-control" value="{{ branding.short_code if branding else 'FA-HUB' }}" placeholder="e.g. STAN-EDU" required oninput="updateBrandingLivePreview()">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Portal Tagline / Subtitle</label>
+                    <input type="text" id="brandTagline" class="form-control" value="{{ branding.tagline if branding else 'Raspberry Pi Zero Edge Nodes & Central Face Recognition' }}" placeholder="e.g. Department of Computer Science & Engineering" oninput="updateBrandingLivePreview()">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div class="form-group">
+                        <label class="form-label">Header Badge Label</label>
+                        <input type="text" id="brandBadgeText" class="form-control" value="{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}" placeholder="e.g. Main Campus Hub" oninput="updateBrandingLivePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact / Admin Email</label>
+                        <input type="email" id="brandContactEmail" class="form-control" value="{{ branding.contact_email if branding and branding.contact_email else '' }}" placeholder="admin@institution.edu">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Brand Primary Accent Color</label>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="color" id="brandAccentColorPicker" value="{{ branding.primary_accent_color if branding and branding.primary_accent_color else '#6366f1' }}" style="width: 44px; height: 38px; border-radius: var(--radius-xs); border: 1px solid var(--border-color); cursor: pointer; background: transparent; padding: 2px;" oninput="syncColorInput(this.value)">
+                        <input type="text" id="brandAccentColorText" class="form-control" style="font-family: monospace; max-width: 140px;" value="{{ branding.primary_accent_color if branding and branding.primary_accent_color else '#6366f1' }}" oninput="syncColorPicker(this.value)">
+                        <button type="button" class="btn btn-secondary" onclick="resetBrandColor()" style="font-size: 12px; padding: 8px 12px;">
+                            Reset Color
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSaveBranding" class="btn btn-primary" style="margin-top: 8px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Institutional Details
+                </button>
+                <div id="brandingSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </form>
+
+            <!-- Institutional Logo Upload & Preview Panel -->
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span><i class="fa-solid fa-image" style="color: var(--accent-primary);"></i> Institute Logo</span>
+                        {% if branding and branding.logo_url %}
+                        <button type="button" onclick="resetInstituteLogo()" class="btn btn-danger" style="font-size: 11px; padding: 4px 8px;">
+                            <i class="fa-solid fa-trash"></i> Remove Logo
+                        </button>
+                        {% endif %}
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                        Recommended: Square PNG, SVG, or JPG with transparent background (max 5MB).
+                    </p>
+
+                    <!-- Drag & Drop Upload Zone -->
+                    <div id="logoDropzone" class="upload-dropzone" onclick="document.getElementById('logoFileInput').click()" style="padding: 24px 16px; border: 2px dashed var(--border-hover); border-radius: var(--radius-sm); background: var(--bg-card); text-align: center; cursor: pointer; transition: all 0.2s;">
+                        <input type="file" id="logoFileInput" accept=".png, .jpg, .jpeg, .svg, .webp" style="display: none;" onchange="handleLogoFileSelect(event)">
+                        <div id="logoPreviewContainer" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                            {% if branding and branding.logo_url %}
+                            <img id="logoPreviewImg" src="{{ branding.logo_url }}" alt="Logo" style="width: 64px; height: 64px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); padding: 4px;">
+                            <span style="font-size: 12px; font-weight: 600; color: var(--text-heading);">Click or drag new image to replace</span>
+                            {% else %}
+                            <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--badge-indigo-bg); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <span style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Click or Drag Logo File Here</span>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">PNG, SVG, JPG, WebP up to 5MB</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div id="logoUploadAlert" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                </div>
+
+                <!-- Live Header Preview Simulation -->
+                <div style="padding: 16px; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Live Navbar Simulation</span>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <div id="livePreviewIcon" style="width: 38px; height: 38px; border-radius: var(--radius-xs); background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; flex-shrink: 0;">
+                            {% if branding and branding.logo_url %}
+                            <img src="{{ branding.logo_url }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: inherit;">
+                            {% else %}
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            {% endif %}
+                        </div>
+                        <div style="overflow: hidden;">
+                            <div id="livePreviewName" style="font-size: 14px; font-weight: 800; color: var(--text-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ branding.institution_name if branding else 'FaceAttendance Campus' }}</div>
+                            <div id="livePreviewBadge" style="font-size: 11px; color: var(--accent-primary); font-weight: 700;">{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 2: Visual Theme Engine -->
+<div class="card" style="margin-bottom: 28px;">
+    <div class="card-header">
+        <div>
+            <h3>
+                <i class="fa-solid fa-palette" style="color: var(--accent-primary);"></i>
+                <span>Visual Theme Personalization</span>
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Select your preferred visual environment. Themes sync instantly across all pages and persist automatically.
+            </p>
+        </div>
+        <span id="activeThemeBadge" class="badge badge-present" style="font-size: 12px;">
+            <i class="fa-solid fa-circle-check"></i> Active: Clean Light
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="theme-card-grid">
+            <!-- Theme 1: Clean Minimalist Light -->
+            <div id="themeCardLight" class="theme-card" onclick="setAppTheme('light')">
+                <div>
+                    <div class="theme-card-header">
+                        <h4>
+                            <i class="fa-solid fa-sun" style="color: #6366f1;"></i>
+                            <span>Clean Minimalist Light</span>
+                        </h4>
+                        <div class="theme-card-check">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+
+                    <!-- Mini Mockup Box -->
+                    <div class="theme-preview-box light-preview">
+                        <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                        <div class="theme-preview-body">
+                            <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                            <div class="theme-preview-content" style="background: #ffffff; border: 1px solid #e2e8f0;">
+                                <div style="height: 6px; width: 60%; background: #6366f1; border-radius: 3px;"></div>
+                                <div style="height: 4px; width: 90%; background: #cbd5e1; border-radius: 2px;"></div>
+                                <div style="height: 4px; width: 40%; background: #10b981; border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                        Crisp off-white surfaces, modern indigo gradients, and high ambient clarity for daylight institutional workflows.
+                    </p>
+                </div>
+
+                <div class="theme-swatches-row">
+                    <span class="theme-swatch" style="background: #f8fafc;" title="Background: Slate-50"></span>
+                    <span class="theme-swatch" style="background: #ffffff;" title="Card: Pure White"></span>
+                    <span class="theme-swatch" style="background: #6366f1;" title="Accent: Vibrant Indigo"></span>
+                    <span class="theme-swatch" style="background: #0ea5e9;" title="Accent: Cyan"></span>
+                    <span class="theme-swatch" style="background: #10b981;" title="Accent: Emerald"></span>
+                </div>
+            </div>
+
+            <!-- Theme 2: Executive Midnight Dark -->
+            <div id="themeCardDark" class="theme-card" onclick="setAppTheme('dark')">
+                <div>
+                    <div class="theme-card-header">
+                        <h4>
+                            <i class="fa-solid fa-moon" style="color: #38bdf8;"></i>
+                            <span>Executive Midnight Dark</span>
+                        </h4>
+                        <div class="theme-card-check">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+
+                    <!-- Mini Mockup Box -->
+                    <div class="theme-preview-box dark-preview">
+                        <div class="theme-preview-nav" style="background: #0f172a; border: 1px solid #1e293b;"></div>
+                        <div class="theme-preview-body">
+                            <div class="theme-preview-sidebar" style="background: #0f172a; border: 1px solid #1e293b;"></div>
+                            <div class="theme-preview-content" style="background: #0f172a; border: 1px solid #1e293b;">
+                                <div style="height: 6px; width: 60%; background: #38bdf8; border-radius: 3px;"></div>
+                                <div style="height: 4px; width: 90%; background: #334155; border-radius: 2px;"></div>
+                                <div style="height: 4px; width: 40%; background: #34d399; border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                        Deep midnight charcoal surfaces, obsidian cards, and glowing electric cyan & neon emerald status indicators.
+                    </p>
+                </div>
+
+                <div class="theme-swatches-row">
+                    <span class="theme-swatch" style="background: #090d16;" title="Background: Deep Charcoal"></span>
+                    <span class="theme-swatch" style="background: #0f172a;" title="Card: Obsidian Slate"></span>
+                    <span class="theme-swatch" style="background: #38bdf8;" title="Accent: Electric Sky"></span>
+                    <span class="theme-swatch" style="background: #34d399;" title="Accent: Neon Emerald"></span>
+                    <span class="theme-swatch" style="background: #6366f1;" title="Accent: Violet Glow"></span>
+                </div>
+            </div>
+
+            <!-- Theme 3: Warm Academic -->
+            <div id="themeCardAcademic" class="theme-card" onclick="setAppTheme('academic')">
+                <div>
+                    <div class="theme-card-header">
+                        <h4>
+                            <i class="fa-solid fa-graduation-cap" style="color: #c2410c;"></i>
+                            <span>Warm Academic</span>
+                        </h4>
+                        <div class="theme-card-check">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+
+                    <!-- Mini Mockup Box -->
+                    <div class="theme-preview-box academic-preview">
+                        <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e7ded3;"></div>
+                        <div class="theme-preview-body">
+                            <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e7ded3;"></div>
+                            <div class="theme-preview-content" style="background: #ffffff; border: 1px solid #e7ded3;">
+                                <div style="height: 6px; width: 60%; background: #c2410c; border-radius: 3px;"></div>
+                                <div style="height: 4px; width: 90%; background: #d6c8b7; border-radius: 2px;"></div>
+                                <div style="height: 4px; width: 40%; background: #15803d; border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                        Warm parchment tones, classic sandstone taupe borders, and rich terracotta accents with collegiate warmth.
+                    </p>
+                </div>
+
+                <div class="theme-swatches-row">
+                    <span class="theme-swatch" style="background: #faf7f2;" title="Background: Eggshell Parchment"></span>
+                    <span class="theme-swatch" style="background: #ffffff;" title="Card: Warm Ivory"></span>
+                    <span class="theme-swatch" style="background: #c2410c;" title="Accent: Rich Terracotta"></span>
+                    <span class="theme-swatch" style="background: #d97706;" title="Accent: Antique Amber"></span>
+                    <span class="theme-swatch" style="background: #15803d;" title="Accent: Forest Pine"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 3: Institutional System Preferences -->
+<div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- Core Attendance Parameters -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i>
+                <span>Institutional Attendance Parameters</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <form id="systemSettingsForm" onsubmit="saveSystemPreferences(event)">
+                <div class="form-group">
+                    <label class="form-label">Default Defaulter Attendance Threshold (%)</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="number" id="prefDefaulterThreshold" class="form-control" min="10" max="100" value="75" required>
+                        <span style="font-weight: 700; color: var(--text-muted);">%</span>
+                    </div>
+                    <small style="font-size: 11.5px; color: var(--text-muted);">Students below this turnout are flagged in analytics audits.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Face Recognition Match Tolerance</label>
+                    <select id="prefMatchTolerance" class="form-control">
+                        <option value="0.55">0.55 - Strict (High Security / Low False Acceptance)</option>
+                        <option value="0.60" selected>0.60 - Standard Recommended (Balanced Institutional)</option>
+                        <option value="0.65">0.65 - Relaxed (Low False Rejection)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Anti-Spoofing Temporal Confirmation Window</label>
+                    <div style="padding: 10px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 13px; color: var(--text-heading); font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <span class="pulse-dot"></span>
+                        <span>5 Consecutive Confirmation Frames (~2.5s Strict Gating)</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Sliding Cooldown Deduplication Window</label>
+                    <input type="text" class="form-control" value="300 Seconds (5 Minutes Per Student)" disabled>
+                </div>
+
+                <button type="submit" id="btnSavePrefs" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save System Preferences
+                </button>
+                <div id="prefsSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; text-align: center;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edge Hardware & Database Diagnostics -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fa-solid fa-server" style="color: var(--accent-emerald);"></i>
+                <span>Hub & Database Diagnostics</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Database Engine</div>
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-top: 4px;">
+                        <i class="fa-solid fa-database" style="color: var(--accent-primary);"></i> SQLite Thin-Client Hub (Thread-Safe)
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                        Storage: <code>database/attendance.db</code>
+                    </div>
+                </div>
+
+                <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Vector Cache Acceleration</div>
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-top: 4px;">
+                        <i class="fa-solid fa-microchip" style="color: var(--accent-cyan);"></i> In-Memory NumPy 128-d Euclidean Matrix
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                        Optimized for CPU inference with zero GPU hardware dependencies.
+                    </div>
+                </div>
+
+                <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Mobile Web Ingestion Endpoint</div>
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-top: 4px;">
+                        <code>/api/v1/nodes/frame</code> (2.0 FPS Stream Rate)
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                        Access via mobile browser at <code>/mobile-capture</code>
+                    </div>
+                </div>
+
+                <!-- Quick Backup Export Action -->
+                <div style="display: flex; gap: 10px; margin-top: 6px;">
+                    <a href="/api/v1/attendance/export?export_format=xlsx" class="btn btn-secondary" style="flex: 1; text-align: center; justify-content: center;">
+                        <i class="fa-solid fa-file-excel" style="color: var(--accent-emerald);"></i> Export Raw Logs (.xlsx)
+                    </a>
+                    <a href="/api/v1/attendance/export-compliance?export_format=xlsx" class="btn btn-secondary" style="flex: 1; text-align: center; justify-content: center;">
+                        <i class="fa-solid fa-file-shield" style="color: var(--accent-primary);"></i> Export Audit Report (.xlsx)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    updateThemeSelectionCards();
+    loadSavedSystemPreferences();
+});
+
+function updateBrandingLivePreview() {
+    const instName = document.getElementById("brandInstName").value || "FaceAttendance Campus";
+    const badgeText = document.getElementById("brandBadgeText").value || "Thin-Client Hub";
+
+    const nameEl = document.getElementById("livePreviewName");
+    const badgeEl = document.getElementById("livePreviewBadge");
+
+    if (nameEl) nameEl.innerText = instName;
+    if (badgeEl) badgeEl.innerText = badgeText;
+}
+
+function syncColorInput(val) {
+    document.getElementById("brandAccentColorText").value = val;
+}
+
+function syncColorPicker(val) {
+    if (/^#[0-9A-F]{6}$/i.test(val)) {
+        document.getElementById("brandAccentColorPicker").value = val;
+    }
+}
+
+function resetBrandColor() {
+    document.getElementById("brandAccentColorPicker").value = "#6366f1";
+    document.getElementById("brandAccentColorText").value = "#6366f1";
+}
+
+async function saveBrandingDetails(e) {
+    e.preventDefault();
+    const instName = document.getElementById("brandInstName").value.trim();
+    const shortCode = document.getElementById("brandShortCode").value.trim();
+    const tagline = document.getElementById("brandTagline").value.trim();
+    const badgeText = document.getElementById("brandBadgeText").value.trim();
+    const email = document.getElementById("brandContactEmail").value.trim();
+    const color = document.getElementById("brandAccentColorText").value.trim();
+
+    const saveBtn = document.getElementById("btnSaveBranding");
+    const alertBox = document.getElementById("brandingSaveAlert");
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+    try {
+        const res = await fetch("/api/v1/branding", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                institution_name: instName,
+                short_code: shortCode,
+                tagline: tagline,
+                header_badge_text: badgeText,
+                contact_email: email || null,
+                primary_accent_color: color,
+            }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.style.border = "1px solid var(--badge-emerald-border)";
+            alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
+
+            // Update live UI
+            const sideName = document.getElementById("sidebarBrandName");
+            const sideBadge = document.getElementById("sidebarBrandBadge");
+            const sideCode = document.getElementById("footerShortCode");
+            const tagEl = document.getElementById("topBarTagline");
+
+            if (sideName) sideName.innerText = instName;
+            if (sideBadge) sideBadge.innerText = badgeText;
+            if (sideCode) sideCode.innerText = `${shortCode} Online`;
+            if (tagEl) tagEl.innerText = tagline;
+
+            setTimeout(() => {
+                alertBox.style.display = "none";
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Institutional Details';
+            }, 2500);
+        } else {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || 'Failed to save.');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Institutional Details';
+        }
+    } catch (err) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "var(--badge-rose-bg)";
+        alertBox.style.color = "var(--badge-rose-text)";
+        alertBox.style.border = "1px solid var(--badge-rose-border)";
+        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to backend.';
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Institutional Details';
+    }
+}
+
+async function handleLogoFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const alertBox = document.getElementById("logoUploadAlert");
+    alertBox.style.display = "block";
+    alertBox.style.background = "var(--badge-indigo-bg)";
+    alertBox.style.color = "var(--accent-primary)";
+    alertBox.style.border = "1px solid var(--badge-indigo-border)";
+    alertBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading & resizing logo...';
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    try {
+        const res = await fetch("/api/v1/branding/logo", {
+            method: "POST",
+            body: formData,
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.style.border = "1px solid var(--badge-emerald-border)";
+            alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+            setTimeout(() => window.location.reload(), 900);
+        } else {
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || 'Upload failed.');
+        }
+    } catch (err) {
+        alertBox.style.background = "var(--badge-rose-bg)";
+        alertBox.style.color = "var(--badge-rose-text)";
+        alertBox.style.border = "1px solid var(--badge-rose-border)";
+        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error uploading logo.';
+    }
+}
+
+async function resetInstituteLogo() {
+    if (!confirm("Are you sure you want to reset the institute logo to default?")) return;
+
+    try {
+        const res = await fetch("/api/v1/branding/logo", {
+            method: "DELETE",
+        });
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert("Failed to reset logo.");
+        }
+    } catch (e) {
+        alert("Network error.");
+    }
+}
+
+function loadSavedSystemPreferences() {
+    const savedThreshold = localStorage.getItem("app_defaulter_threshold") || "75";
+    const savedTolerance = localStorage.getItem("app_match_tolerance") || "0.60";
+
+    const thresholdInput = document.getElementById("prefDefaulterThreshold");
+    const toleranceSelect = document.getElementById("prefMatchTolerance");
+
+    if (thresholdInput) thresholdInput.value = savedThreshold;
+    if (toleranceSelect) toleranceSelect.value = savedTolerance;
+}
+
+function saveSystemPreferences(e) {
+    e.preventDefault();
+    const threshold = document.getElementById("prefDefaulterThreshold").value;
+    const tolerance = document.getElementById("prefMatchTolerance").value;
+
+    localStorage.setItem("app_defaulter_threshold", threshold);
+    localStorage.setItem("app_match_tolerance", tolerance);
+
+    const alertBox = document.getElementById("prefsSaveAlert");
+    if (alertBox) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "var(--badge-emerald-bg)";
+        alertBox.style.color = "var(--badge-emerald-text)";
+        alertBox.style.border = "1px solid var(--badge-emerald-border)";
+        alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> System preferences saved successfully!';
+        setTimeout(() => {
+            alertBox.style.display = "none";
+        }, 3000);
+    }
+}
+</script>
+{% endblock %}

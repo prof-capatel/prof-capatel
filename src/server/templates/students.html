@@ -2,36 +2,108 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header">
-        <h3>
-            <i class="fa-solid fa-user-graduate" style="color: var(--accent-primary);"></i>
-            <span>Registered Student Directory</span>
-        </h3>
-        <div style="display: flex; gap: 10px;">
+    <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h3>
+                <i class="fa-solid fa-user-graduate" style="color: var(--accent-primary);"></i>
+                <span>Institutional Directory & Profile Management</span>
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Manage registered students, faculty, and administrative personnel.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Biometric Fallback Manual Attendance">
+                <i class="fa-solid fa-user-check"></i>
+                <span>Manual Override</span>
+            </button>
             <a href="/enroll" class="btn btn-primary">
                 <i class="fa-solid fa-user-plus"></i>
-                <span>Enroll New Student</span>
+                <span>Enroll Profile</span>
             </a>
         </div>
     </div>
     <div class="card-body">
+        <!-- Advanced Multi-Parameter Filter Toolbar -->
+        <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                <!-- Search Name / Roll -->
+                <div style="flex: 1.5; min-width: 180px;">
+                    <label class="form-label">Search Name or ID Number</label>
+                    <input type="text" id="dirSearchInput" class="form-control" placeholder="Search by name, roll number..." oninput="applyDirectoryFilters()">
+                </div>
+
+                <!-- Department Filter -->
+                <div style="flex: 1; min-width: 150px;">
+                    <label class="form-label">Department</label>
+                    <select id="dirDeptFilter" class="form-control" onchange="applyDirectoryFilters()">
+                        <option value="">All Departments</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Artificial Intelligence">Artificial Intelligence</option>
+                        <option value="Electronics & Comm">Electronics & Comm</option>
+                        <option value="Mechanical Eng">Mechanical Eng</option>
+                        <option value="Administration">Administration</option>
+                    </select>
+                </div>
+
+                <!-- User Role Filter -->
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label">User Role</label>
+                    <select id="dirRoleFilter" class="form-control" onchange="applyDirectoryFilters()">
+                        <option value="">All Roles</option>
+                        <option value="student">Students</option>
+                        <option value="teacher">Teachers / Faculty</option>
+                        <option value="admin_staff">Admin Staff</option>
+                        <option value="other">Other Members</option>
+                    </select>
+                </div>
+
+                <!-- Class / Semester Filter -->
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label">Class / Semester</label>
+                    <input type="text" id="dirClassFilter" class="form-control" placeholder="e.g. Semester 6" oninput="applyDirectoryFilters()">
+                </div>
+
+                <div>
+                    <button onclick="resetDirectoryFilters()" class="btn btn-secondary" style="padding: 10px 14px;" title="Reset Filters">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Results Status Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-muted);">
+                <span id="dirFilterCountLabel">Showing {{ students|length }} of {{ students|length }} profiles</span>
+                <span id="dirActiveFilterTags"></span>
+            </div>
+        </div>
+
         <div class="table-container">
-            <table class="custom-table">
+            <table class="custom-table" id="studentsTable">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Student Profile</th>
-                        <th>Roll Number</th>
+                        <th>User Profile</th>
+                        <th>Roll / ID Number</th>
+                        <th>Role</th>
                         <th>Department</th>
+                        <th>Class / Semester</th>
                         <th>Enrolled 3-Pose Photos</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="studentsTableBody">
                     {% if students %}
                         {% for s in students %}
-                        <tr id="studentRow{{ s.id }}">
+                        <tr id="studentRow{{ s.id }}" 
+                            class="student-row"
+                            data-name="{{ s.name|lower }}" 
+                            data-roll="{{ s.roll_number|lower }}" 
+                            data-dept="{{ s.department }}" 
+                            data-role="{{ s.user_role }}" 
+                            data-class="{{ s.class_semester|lower if s.class_semester else '' }}">
                             <td>#{{ s.id }}</td>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -45,7 +117,19 @@
                                 </div>
                             </td>
                             <td><code id="stdRollLabel{{ s.id }}">{{ s.roll_number }}</code></td>
+                            <td>
+                                {% if s.user_role == 'teacher' %}
+                                    <span class="badge badge-node" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-chalkboard-user"></i> Faculty</span>
+                                {% elif s.user_role == 'admin_staff' %}
+                                    <span class="badge badge-amber" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-tie"></i> Admin Staff</span>
+                                {% elif s.user_role == 'other' %}
+                                    <span class="badge badge-node" id="stdRoleBadge{{ s.id }}">Other</span>
+                                {% else %}
+                                    <span class="badge badge-present" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-graduate"></i> Student</span>
+                                {% endif %}
+                            </td>
                             <td id="stdDeptLabel{{ s.id }}">{{ s.department }}</td>
+                            <td id="stdClassLabel{{ s.id }}"><span class="badge badge-node">{{ s.class_semester or 'General' }}</span></td>
                             <td>
                                 <div class="photo-thumb-strip">
                                     {% if s.photos and s.photos|length > 0 %}
@@ -65,12 +149,15 @@
                                 </span>
                             </td>
                             <td>
-                                <div style="display: flex; gap: 6px; align-items: center;">
-                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}', '{{ s.department }}', '{{ s.email or '' }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Student Profile">
+                                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                    <button onclick="openManualOverrideForStudent({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-emerald);" title="Force Mark Attendance Override">
+                                        <i class="fa-solid fa-user-check"></i>
+                                    </button>
+                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}', '{{ s.department }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_semester or 'General' }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </button>
                                     <button onclick="openRetakeModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
-                                        <i class="fa-solid fa-camera-rotate"></i> Update Photos
+                                        <i class="fa-solid fa-camera-rotate"></i>
                                     </button>
                                     <button onclick="deleteStudent({{ s.id }}, '{{ s.name }}')" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Delete Student">
                                         <i class="fa-solid fa-trash"></i>
@@ -80,13 +167,13 @@
                         </tr>
                         {% endfor %}
                     {% else %}
-                        <tr>
-                            <td colspan="7" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
+                        <tr id="emptyDirectoryRow">
+                            <td colspan="9" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
                                 <i class="fa-solid fa-user-xmark" style="font-size: 36px; margin-bottom: 12px; color: var(--text-light);"></i>
-                                <p style="font-size: 15px; font-weight: 600; color: var(--text-heading);">No students registered yet.</p>
+                                <p style="font-size: 15px; font-weight: 600; color: var(--text-heading);">No profiles registered yet.</p>
                                 <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Enroll students via live webcam or 3-photo batch upload.</p>
                                 <a href="/enroll" class="btn btn-primary" style="margin-top: 16px;">
-                                    <i class="fa-solid fa-user-plus"></i> Enroll First Student
+                                    <i class="fa-solid fa-user-plus"></i> Enroll First Member
                                 </a>
                             </td>
                         </tr>
@@ -98,14 +185,14 @@
 </div>
 
 <!-- ========================================================= -->
-<!-- MODAL 1: EDIT STUDENT PROFILE                             -->
+<!-- MODAL 1: EDIT PROFILE & ROLE                              -->
 <!-- ========================================================= -->
 <div id="editStudentModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header">
             <h3>
                 <i class="fa-solid fa-user-pen" style="color: var(--accent-primary);"></i>
-                <span>Edit Student Profile</span>
+                <span>Edit Member Profile</span>
             </h3>
             <button class="modal-close" onclick="closeEditModal()">
                 <i class="fa-solid fa-xmark"></i>
@@ -127,18 +214,33 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">User Role *</label>
+                    <select id="editUserRole" class="form-control" required>
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher / Faculty</option>
+                        <option value="admin_staff">Administrative Staff</option>
+                        <option value="other">Other Institutional Member</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Full Name *</label>
                     <input type="text" id="editStudentName" class="form-control" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Roll Number / Student ID *</label>
+                    <label class="form-label">Roll Number / Staff ID *</label>
                     <input type="text" id="editRollNumber" class="form-control" required>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Department *</label>
                     <input type="text" id="editDepartment" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Class / Semester / Section</label>
+                    <input type="text" id="editClassSemester" class="form-control" placeholder="e.g. Semester 6 - Section A">
                 </div>
 
                 <div class="form-group">
@@ -198,66 +300,51 @@
                 </button>
             </div>
 
-            <!-- MODE A: Batch 3-Photo Upload -->
-            <div id="retakeUploadSection">
-                <div id="retakeDropzone" class="upload-dropzone" onclick="document.getElementById('retakeFileInput').click()" style="padding: 24px 16px;">
-                    <i class="fa-solid fa-images" style="font-size: 32px;"></i>
-                    <h4 style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">Click or Drag 3 New Face Photos Here</h4>
-                    <p style="font-size: 12px; color: var(--text-muted);">Frontal, Left Angle, Right Angle</p>
+            <!-- Tab 1: Upload 3 New Photos -->
+            <div id="secRetakeUpload">
+                <div id="retakeDropzone" class="upload-dropzone" onclick="document.getElementById('retakeFileInput').click()">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <h4 style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">Click or Drag & Drop 3 Photos Here</h4>
+                    <p style="font-size: 12px; color: var(--text-muted);">Frontal, Left Angle, Right Angle photos</p>
                     <input type="file" id="retakeFileInput" accept="image/jpeg,image/png,image/jpg" multiple style="display: none;">
                 </div>
 
-                <!-- 3 Previews Grid -->
                 <div class="photo-preview-grid" style="margin-top: 14px;">
                     <div class="photo-preview-card">
-                        <img id="retakePrev0" class="photo-preview-img" src="" style="display: none;">
-                        <div id="retakePh0" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 22px;">
-                            <i class="fa-regular fa-image"></i>
-                        </div>
-                        <div class="photo-preview-label">New Photo 1 (Frontal)</div>
+                        <img id="retakePrevImg0" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakePh0" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
+                        <div class="photo-preview-label">1. Frontal</div>
                     </div>
                     <div class="photo-preview-card">
-                        <img id="retakePrev1" class="photo-preview-img" src="" style="display: none;">
-                        <div id="retakePh1" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 22px;">
-                            <i class="fa-regular fa-image"></i>
-                        </div>
-                        <div class="photo-preview-label">New Photo 2 (Left)</div>
+                        <img id="retakePrevImg1" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakePh1" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
+                        <div class="photo-preview-label">2. Left Angle</div>
                     </div>
                     <div class="photo-preview-card">
-                        <img id="retakePrev2" class="photo-preview-img" src="" style="display: none;">
-                        <div id="retakePh2" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 22px;">
-                            <i class="fa-regular fa-image"></i>
-                        </div>
-                        <div class="photo-preview-label">New Photo 3 (Right)</div>
+                        <img id="retakePrevImg2" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakePh2" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
+                        <div class="photo-preview-label">3. Right Angle</div>
                     </div>
                 </div>
 
-                <div id="retakeUploadHint" style="font-size: 12px; color: var(--accent-amber); font-weight: 600; margin-top: 12px;">
-                    <i class="fa-solid fa-circle-exclamation"></i> Select exactly 3 new face photos to overwrite embeddings.
+                <div id="retakeUploadHint" style="font-size: 12px; color: var(--accent-amber); font-weight: 600; margin-top: 10px;">
+                    Please select exactly 3 photos to overwrite existing face encodings.
                 </div>
             </div>
 
-            <!-- MODE B: Live Webcam Retake Stepper -->
-            <div id="retakeWebcamSection" style="display: none;">
-                <div class="camera-box" style="aspect-ratio: 4/3; max-height: 240px; margin-bottom: 14px;">
+            <!-- Tab 2: Live Webcam Retake -->
+            <div id="secRetakeWebcam" style="display: none;">
+                <div class="camera-box" style="height: 240px;">
                     <video id="retakeWebcamVideo" autoplay playsinline muted></video>
                     <canvas id="retakeCaptureCanvas" style="display: none;"></canvas>
                 </div>
-
-                <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 12px;">
-                    <button type="button" id="btnRetakeCapFrontal" onclick="captureRetakeSample('frontal')" class="btn btn-secondary" style="font-size: 12px;">
-                        1. Capture Frontal
-                    </button>
-                    <button type="button" id="btnRetakeCapLeft" onclick="captureRetakeSample('left')" class="btn btn-secondary" style="font-size: 12px;" disabled>
-                        2. Capture Left
-                    </button>
-                    <button type="button" id="btnRetakeCapRight" onclick="captureRetakeSample('right')" class="btn btn-secondary" style="font-size: 12px;" disabled>
-                        3. Capture Right
-                    </button>
+                <div id="retakeCamFeedback" style="margin-top: 10px; font-size: 12.5px; color: var(--text-secondary);">
+                    Click poses in sequence: Frontal → Left → Right.
                 </div>
-
-                <div id="retakeCamFeedback" style="padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary);">
-                    Click "Capture Frontal" to start guided 3-pose retake.
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button type="button" id="btnRetakeCapFrontal" onclick="captureRetakeSample('frontal')" class="btn btn-secondary" style="flex: 1; font-size: 11.5px;">1. Frontal</button>
+                    <button type="button" id="btnRetakeCapLeft" onclick="captureRetakeSample('left')" class="btn btn-secondary" style="flex: 1; font-size: 11.5px;" disabled>2. Left</button>
+                    <button type="button" id="btnRetakeCapRight" onclick="captureRetakeSample('right')" class="btn btn-secondary" style="flex: 1; font-size: 11.5px;" disabled>3. Right</button>
                 </div>
             </div>
 
@@ -265,22 +352,93 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeRetakeModal()">Close</button>
-            <button type="button" id="btnSubmitRetakePhotos" class="btn btn-primary" onclick="submitPhotoUploadRetake()" disabled>
-                <i class="fa-solid fa-rotate"></i> Overwrite & Retrain Vectors
+            <button type="button" id="btnSubmitRetakeUpload" onclick="submitRetakeUpload()" class="btn btn-primary" disabled>
+                <i class="fa-solid fa-upload"></i> Upload & Replace Vectors
             </button>
         </div>
     </div>
 </div>
 
 <!-- ========================================================= -->
-<!-- MODAL 3: LIGHTBOX PHOTO VIEWER                            -->
+<!-- MODAL 3: MANUAL ATTENDANCE OVERRIDE (BIOMETRIC FALLBACK)    -->
+<!-- ========================================================= -->
+<div id="manualOverrideModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>
+                <i class="fa-solid fa-user-check" style="color: var(--accent-primary);"></i>
+                <span>Biometric Fallback / Manual Override</span>
+            </h3>
+            <button class="modal-close" onclick="closeManualOverrideModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="manualOverrideForm" onsubmit="submitManualOverride(event)">
+            <div class="modal-body">
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
+                    Force-marks attendance with an authorized administrative audit tag.
+                </p>
+
+                <!-- Student Selector -->
+                <div class="form-group">
+                    <label class="form-label">Select Member *</label>
+                    <select id="overrideStudentSelect" class="form-control" required>
+                        <option value="">-- Choose Member --</option>
+                        {% for s in students %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.roll_number }} - {{ s.department }}) [{{ s.user_role }}]</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Date & Time Picker -->
+                <div class="form-group">
+                    <label class="form-label">Attendance Date & Time *</label>
+                    <input type="datetime-local" id="overrideTimestamp" class="form-control" required>
+                </div>
+
+                <!-- Justification Preset & Reason -->
+                <div class="form-group">
+                    <label class="form-label">Justification Preset</label>
+                    <select id="overridePresetSelect" class="form-control" onchange="applyReasonPreset()">
+                        <option value="Admin Manual Verification">Admin Manual Verification</option>
+                        <option value="Medical Leave / Approved Exception">Medical Leave / Approved Exception</option>
+                        <option value="Biometric Hardware Malfunction">Biometric Hardware Malfunction</option>
+                        <option value="Official Institutional Duty">Official Institutional Duty / Field Trip</option>
+                        <option value="Custom">Other (Custom Reason)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Detailed Audit Reason *</label>
+                    <input type="text" id="overrideReasonInput" class="form-control" value="Admin Manual Verification" placeholder="Provide justification reason" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Authorized Admin Sign-Off</label>
+                    <input type="text" id="overrideByInput" class="form-control" value="System Administrator">
+                </div>
+
+                <div id="overrideResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeManualOverrideModal()">Cancel</button>
+                <button type="submit" id="btnSaveOverride" class="btn btn-primary">
+                    <i class="fa-solid fa-check"></i> Force Mark Present
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL 4: HIGH-RES LIGHTBOX VIEWER                         -->
 <!-- ========================================================= -->
 <div id="lightboxModal" class="lightbox-overlay" onclick="closeLightbox()">
     <div class="lightbox-img-card" onclick="event.stopPropagation()">
-        <img id="lightboxImg" class="lightbox-img" src="" alt="Enrolled Face Sample">
+        <img id="lightboxImg" class="lightbox-img" src="" alt="Face Sample">
         <div class="lightbox-footer">
-            <span id="lightboxCaption" style="font-weight: 700; font-size: 13.5px; color: var(--text-heading);"></span>
-            <button class="btn btn-secondary" onclick="closeLightbox()" style="padding: 4px 10px; font-size: 11px;">Close</button>
+            <span id="lightboxCaption" style="font-size: 13px; font-weight: 700; color: var(--text-heading);"></span>
+            <button onclick="closeLightbox()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;">Close</button>
         </div>
     </div>
 </div>

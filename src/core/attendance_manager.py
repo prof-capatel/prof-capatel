@@ -51,6 +51,14 @@ class AttendanceManager:
             except Exception as e:
                 logger.warning(f"Failed to send event to subscriber: {e}")
 
+    def publish(self, event_data: Dict[str, Any]):
+        """Dispatches real-time attendance event synchronously to all subscriber queues."""
+        for queue in list(self._subscribers):
+            try:
+                queue.put_nowait(event_data)
+            except Exception as e:
+                logger.warning(f"Failed to put event in queue: {e}")
+
     def should_log_attendance(self, student_id: int, node_id: str) -> bool:
         """
         Checks whether the student can be logged at this node based on

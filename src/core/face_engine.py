@@ -92,21 +92,25 @@ class FaceEngine:
     def detect_and_recognize_faces(
         self,
         frame_bgr: np.ndarray,
+        node_id: str = "DEFAULT",
         detection_scale: float = DETECTION_SCALE,
     ) -> List[Dict[str, Any]]:
         """
         Takes a BGR image frame, detects all faces (using CPU-optimized scaled HOG),
-        extracts 128-d vectors, and matches against the in-memory vector cache.
+        extracts 128-d vectors, matches against the in-memory vector cache,
+        and runs anti-spoofing + temporal motion verification isolated per node.
         """
         if face_recognition is None:
             raise RuntimeError("face_recognition library is not loaded.")
+
+        if frame_bgr is None or frame_bgr.size == 0:
+            return []
 
         if not self._is_initialized:
             self.initialize()
 
         # Convert BGR to RGB (dlib/face_recognition uses RGB)
         rgb_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        height, width = rgb_frame.shape[:2]
 
         # 1. CPU Acceleration: Downscale frame for fast HOG detection
         if detection_scale < 1.0:
@@ -155,12 +159,13 @@ class FaceEngine:
                 liveness_score = liveness_res["score"]
                 reasons = liveness_res["reasons"]
 
-                # Temporal micro-motion tracking across consecutive frames
+                # Temporal micro-motion tracking across consecutive frames isolated per node
                 student_id = match_info.get("student_id")
                 is_temp_confirmed, frames_seen, temp_status = temporal_tracker.update_track(
                     student_id=student_id,
                     face_box=box,
                     is_single_frame_live=is_live,
+                    node_id=node_id,
                 )
 
                 match_info["is_live"] = is_live
@@ -176,7 +181,7 @@ class FaceEngine:
                 match_info["liveness_status"] = "REAL"
                 match_info["temporal_confirmed"] = True
                 match_info["temporal_status"] = "REAL"
-                match_info["temporal_frames"] = 3
+                match_info["temporal_frames"] = 5
                 match_info["liveness_reasons"] = ["Anti-spoofing disabled."]
 
             results.append(match_info)
