@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - Face Recognition Attendance System</title>
+    <!-- Plus Jakarta Sans & Inter Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-camera-viewfinder"></i>
+            </div>
+            <div class="brand-text">
+                <h1>FaceAttendance</h1>
+                <span>Thin-Client Hub</span>
+            </div>
+        </div>
+
+        <ul class="nav-list">
+            <li>
+                <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Live Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <span>Students</span>
+                </a>
+            </li>
+            <li>
+                <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Face Enrollment</span>
+                </a>
+            </li>
+            <li>
+                <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Attendance Logs</span>
+                </a>
+            </li>
+            <li>
+                <a href="/nodes" class="nav-link {% if active_page == 'nodes' %}active{% endif %}">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Edge Nodes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/mobile-capture" target="_blank" class="nav-link {% if active_page == 'mobile' %}active{% endif %}">
+                    <i class="fa-solid fa-mobile-screen"></i>
+                    <span>Mobile Capture Node</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="pulse-dot"></span>
+                <span>Hub Online</span>
+            </div>
+            <span style="font-size: 11px; opacity: 0.7;">v1.2.0</span>
+        </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+        <header class="top-bar">
+            <div class="page-title">
+                <h2>{{ page_title }}</h2>
+                <p>Raspberry Pi Zero Edge Nodes & Central Face Recognition</p>
+            </div>
+            <div class="top-actions">
+                <a href="/enroll" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Enroll Student</span>
+                </a>
+            </div>
+        </header>
+
+        <main class="content-body">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/dashboard.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

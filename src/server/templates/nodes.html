@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>
+            <i class="fa-solid fa-microchip" style="color: var(--accent-cyan);"></i>
+            <span>Edge Nodes & Simulator Monitors</span>
+        </h3>
+        <span class="badge badge-node">Thin-Client Network</span>
+    </div>
+    <div class="card-body">
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6;">
+            In this thin-client architecture, Raspberry Pi Zero nodes capture camera frames at classroom entry points and stream compressed JPEG payloads to this central hub via <code>POST /api/v1/nodes/frame</code>.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 20px;">
+            {% if nodes %}
+                {% for node in nodes %}
+                <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 22px; transition: box-shadow 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                        <div>
+                            <h4 style="font-size: 16px; font-weight: 700; color: var(--text-heading);">{{ node.name }}</h4>
+                            <div style="font-size: 12px; color: var(--accent-primary); font-weight: 700; margin-top: 2px;">ID: {{ node.node_id }}</div>
+                        </div>
+                        <span class="badge {% if node.is_online %}badge-present{% else %}badge-unknown{% endif %}">
+                            {{ "ONLINE" if node.is_online else "OFFLINE" }}
+                        </span>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; color: var(--text-secondary); border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Location:</span>
+                            <strong style="color: var(--text-heading);">{{ node.location }}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Last Heartbeat:</span>
+                            <span>{{ node.last_heartbeat }}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Frame Rate:</span>
+                            <span>{{ node.fps }} FPS</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Total Detections:</span>
+                            <strong style="color: var(--accent-emerald);">{{ node.total_detections }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 22px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                        <div>
+                            <h4 style="font-size: 16px; font-weight: 700; color: var(--text-heading);">Node Classroom 101</h4>
+                            <div style="font-size: 12px; color: var(--accent-primary); font-weight: 700; margin-top: 2px;">ID: NODE-CLASSROOM-101</div>
+                        </div>
+                        <span class="badge badge-node">STANDBY</span>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; color: var(--text-secondary); border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Location:</span>
+                            <strong style="color: var(--text-heading);">Room 101 - Main Entrance</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Status:</span>
+                            <span>Ready to receive streams</span>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Mobile Browser Capture Node Banner -->
+        <div style="margin-top: 28px; padding: 22px; background: var(--badge-sky-bg); border: 1px solid var(--badge-sky-border); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <h4 style="font-size: 15px; font-weight: 700; color: var(--badge-sky-text); margin-bottom: 4px;">
+                    <i class="fa-solid fa-mobile-screen-button"></i> Mobile Browser Capture Node
+                </h4>
+                <p style="font-size: 12.5px; color: var(--text-secondary); margin: 0;">
+                    Take live attendance using your smartphone's camera over the local Wi-Fi network (No app installation required).
+                </p>
+            </div>
+            <a href="/mobile-capture" target="_blank" class="btn btn-primary" style="padding: 10px 20px; font-size: 13px;">
+                <i class="fa-solid fa-camera"></i> Open Mobile Node
+            </a>
+        </div>
+
+        <div style="margin-top: 20px; padding: 20px 24px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-md);">
+            <h4 style="font-size: 14px; font-weight: 700; color: var(--accent-primary); margin-bottom: 8px;">
+                <i class="fa-solid fa-play"></i> Simulating Pi Zero Edge Nodes
+            </h4>
+            <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px;">
+                You can run multiple edge nodes simultaneously from separate terminal windows with different node IDs and locations:
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-family: monospace; font-size: 12px;">
+                <div style="background: #ffffff; padding: 8px 12px; border-radius: 6px; color: var(--accent-primary); border: 1px solid var(--badge-indigo-border); font-weight: 600;">
+                    python run_node.py --node-id NODE-CLASS-101 --location "Room 101" --fps 2
+                </div>
+                <div style="background: #ffffff; padding: 8px 12px; border-radius: 6px; color: var(--accent-primary); border: 1px solid var(--badge-indigo-border); font-weight: 600;">
+                    python run_node.py --node-id NODE-CLASS-102 --location "Room 102" --fps 2
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

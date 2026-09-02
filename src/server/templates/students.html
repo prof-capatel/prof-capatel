@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>
+            <i class="fa-solid fa-user-graduate" style="color: var(--accent-primary);"></i>
+            <span>Registered Student Directory</span>
+        </h3>
+        <div style="display: flex; gap: 10px;">
+            <a href="/enroll" class="btn btn-primary">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Enroll New Student</span>
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Student Profile</th>
+                        <th>Roll Number</th>
+                        <th>Department</th>
+                        <th>Enrolled 3-Pose Photos</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if students %}
+                        {% for s in students %}
+                        <tr id="studentRow{{ s.id }}">
+                            <td>#{{ s.id }}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="feed-avatar" style="width: 38px; height: 38px; font-size: 14px;">
+                                        <span>{{ s.name[0] }}</span>
+                                    </div>
+                                    <div>
+                                        <strong id="stdNameLabel{{ s.id }}" style="color: var(--text-heading); font-size: 14px;">{{ s.name }}</strong>
+                                        <div id="stdEmailLabel{{ s.id }}" style="font-size: 12px; color: var(--text-muted);">{{ s.email or 'No email registered' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><code id="stdRollLabel{{ s.id }}">{{ s.roll_number }}</code></td>
+                            <td id="stdDeptLabel{{ s.id }}">{{ s.department }}</td>
+                            <td>
+                                <div class="photo-thumb-strip">
+                                    {% if s.photos and s.photos|length > 0 %}
+                                        {% for p in s.photos %}
+                                            <div class="photo-thumb-item" onclick="openLightbox('{{ p.url }}', '{{ s.name }} ({{ p.angle|capitalize }})')" title="{{ p.angle|capitalize }} sample - Click to expand">
+                                                <img src="{{ p.url }}" alt="{{ p.angle }}">
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span style="font-size: 11.5px; color: var(--text-light); font-style: italic;">No photo crops saved</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {% if s.samples_count >= 3 %}badge-present{% else %}badge-node{% endif %}">
+                                    <i class="fa-solid fa-camera"></i> {{ s.samples_count }} Enrolled
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 6px; align-items: center;">
+                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}', '{{ s.department }}', '{{ s.email or '' }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Student Profile">
+                                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                                    </button>
+                                    <button onclick="openRetakeModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
+                                        <i class="fa-solid fa-camera-rotate"></i> Update Photos
+                                    </button>
+                                    <button onclick="deleteStudent({{ s.id }}, '{{ s.name }}')" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Delete Student">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
+                                <i class="fa-solid fa-user-xmark" style="font-size: 36px; margin-bottom: 12px; color: var(--text-light);"></i>
+                                <p style="font-size: 15px; font-weight: 600; color: var(--text-heading);">No students registered yet.</p>
+                                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Enroll students via live webcam or 3-photo batch upload.</p>
+                                <a href="/enroll" class="btn btn-primary" style="margin-top: 16px;">
+                                    <i class="fa-solid fa-user-plus"></i> Enroll First Student
+                                </a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL 1: EDIT STUDENT PROFILE                             -->
+<!-- ========================================================= -->
+<div id="editStudentModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>
+                <i class="fa-solid fa-user-pen" style="color: var(--accent-primary);"></i>
+                <span>Edit Student Profile</span>
+            </h3>
+            <button class="modal-close" onclick="closeEditModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="editStudentForm" onsubmit="submitStudentEdit(event)">
+            <div class="modal-body">
+                <input type="hidden" id="editStudentId">
+
+                <!-- Enrolled Reference Photos Gallery -->
+                <div style="margin-bottom: 18px;">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Enrolled Face Samples</span>
+                        <span id="editPhotosCountBadge" class="badge badge-present" style="font-size: 11px;">3 Photos</span>
+                    </label>
+                    <div id="editStudentPhotosPreview" class="photo-preview-grid" style="margin-top: 6px;">
+                        <!-- Dynamically populated on modal open -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" id="editStudentName" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Roll Number / Student ID *</label>
+                    <input type="text" id="editRollNumber" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Department *</label>
+                    <input type="text" id="editDepartment" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address (Optional)</label>
+                    <input type="email" id="editEmail" class="form-control">
+                </div>
+
+                <div id="editResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" id="btnSaveEdit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL 2: RETAKE / UPDATE 3 PHOTOS (DUAL-MODE)             -->
+<!-- ========================================================= -->
+<div id="retakePhotosModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-camera-rotate" style="color: var(--accent-primary);"></i>
+                    <span id="retakeModalTitle">Update Reference Photos</span>
+                </h3>
+                <p id="retakeModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;"></p>
+            </div>
+            <button class="modal-close" onclick="closeRetakeModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="retakeStudentId">
+
+            <!-- Existing Enrolled Photos Box -->
+            <div style="margin-bottom: 18px; padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">
+                    <i class="fa-solid fa-images" style="color: var(--accent-primary);"></i> Currently Registered Reference Photos:
+                </div>
+                <div id="retakeExistingPhotosPreview" class="photo-preview-grid" style="margin-top: 0;">
+                    <!-- Dynamically populated on modal open -->
+                </div>
+            </div>
+
+            <!-- Sub-tabs: 3-Photo Upload vs Live Webcam Retake -->
+            <div class="enroll-tabs" style="margin-bottom: 18px;">
+                <button id="tabRetakeUpload" class="enroll-tab-btn active" type="button" onclick="switchRetakeMode('upload')">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload 3 New Replacement Photos
+                </button>
+                <button id="tabRetakeWebcam" class="enroll-tab-btn" type="button" onclick="switchRetakeMode('webcam')">
+                    <i class="fa-solid fa-video"></i> Live Webcam Retake
+                </button>
+            </div>
+
+            <!-- MODE A: Batch 3-Photo Upload -->
+            <div id="retakeUploadSection">
+                <div id="retakeDropzone" class="upload-dropzone" onclick="document.getElementById('retakeFileInput').click()" style="padding: 24px 16px;">
+                    <i class="fa-solid fa-images" style="font-size: 32px;"></i>
+                    <h4 style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">Click or Drag 3 New Face Photos Here</h4>
+                    <p style="font-size: 12px; color: var(--text-muted);">Frontal, Left Angle, Right Angle</p>
+                    <input type="file" id="retakeFileInput" accept="image/jpeg,image/png,image/jpg" multiple style="display: none;">
+                </div>
+
+                <!-- 3 Previews Grid -->
+                <div class="photo-preview-grid" style="margin-top: 14px;">
+                    <div class="photo-preview-card">
+                        <img id="retakePrev0" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakePh0" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 22px;">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="photo-preview-label">New Photo 1 (Frontal)</div>
+                    </div>
+                    <div class="photo-preview-card">
+                        <img id="retakePrev1" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakePh1" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 22px;">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="photo-preview-label">New Photo 2 (Left)</div>
+                    </div>
+                    <div class="photo-preview-card">
+                        <img id="retakePrev2" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakePh2" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 22px;">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="photo-preview-label">New Photo 3 (Right)</div>
+                    </div>
+                </div>
+
+                <div id="retakeUploadHint" style="font-size: 12px; color: var(--accent-amber); font-weight: 600; margin-top: 12px;">
+                    <i class="fa-solid fa-circle-exclamation"></i> Select exactly 3 new face photos to overwrite embeddings.
+                </div>
+            </div>
+
+            <!-- MODE B: Live Webcam Retake Stepper -->
+            <div id="retakeWebcamSection" style="display: none;">
+                <div class="camera-box" style="aspect-ratio: 4/3; max-height: 240px; margin-bottom: 14px;">
+                    <video id="retakeWebcamVideo" autoplay playsinline muted></video>
+                    <canvas id="retakeCaptureCanvas" style="display: none;"></canvas>
+                </div>
+
+                <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 12px;">
+                    <button type="button" id="btnRetakeCapFrontal" onclick="captureRetakeSample('frontal')" class="btn btn-secondary" style="font-size: 12px;">
+                        1. Capture Frontal
+                    </button>
+                    <button type="button" id="btnRetakeCapLeft" onclick="captureRetakeSample('left')" class="btn btn-secondary" style="font-size: 12px;" disabled>
+                        2. Capture Left
+                    </button>
+                    <button type="button" id="btnRetakeCapRight" onclick="captureRetakeSample('right')" class="btn btn-secondary" style="font-size: 12px;" disabled>
+                        3. Capture Right
+                    </button>
+                </div>
+
+                <div id="retakeCamFeedback" style="padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary);">
+                    Click "Capture Frontal" to start guided 3-pose retake.
+                </div>
+            </div>
+
+            <div id="retakeResultAlert" style="display: none; margin-top: 14px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeRetakeModal()">Close</button>
+            <button type="button" id="btnSubmitRetakePhotos" class="btn btn-primary" onclick="submitPhotoUploadRetake()" disabled>
+                <i class="fa-solid fa-rotate"></i> Overwrite & Retrain Vectors
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL 3: LIGHTBOX PHOTO VIEWER                            -->
+<!-- ========================================================= -->
+<div id="lightboxModal" class="lightbox-overlay" onclick="closeLightbox()">
+    <div class="lightbox-img-card" onclick="event.stopPropagation()">
+        <img id="lightboxImg" class="lightbox-img" src="" alt="Enrolled Face Sample">
+        <div class="lightbox-footer">
+            <span id="lightboxCaption" style="font-weight: 700; font-size: 13.5px; color: var(--text-heading);"></span>
+            <button class="btn btn-secondary" onclick="closeLightbox()" style="padding: 4px 10px; font-size: 11px;">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

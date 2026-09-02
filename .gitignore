@@ -1,0 +1,16 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Data artifacts & local databases that might be large (optional backup)
+# We keep database schema and code tracked
+.DS_Store
+Thumbs.db

@@ -1,0 +1,574 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Mode Switcher Tabs -->
+<div class="enroll-tabs">
+    <button id="tabBtnWebcam" class="enroll-tab-btn active" onclick="switchEnrollMode('webcam')">
+        <i class="fa-solid fa-video"></i>
+        <span>Live Webcam Guided Capture</span>
+    </button>
+    <button id="tabBtnBatch" class="enroll-tab-btn" onclick="switchEnrollMode('batch')">
+        <i class="fa-solid fa-images"></i>
+        <span>Batch Photo Upload (Exactly 3 Photos)</span>
+    </button>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODE 1: LIVE WEBCAM ENROLLMENT                            -->
+<!-- ========================================================= -->
+<div id="modeWebcamSection" style="display: grid; grid-template-columns: 1fr 1fr; gap: 28px;">
+    <!-- Enrollment Form & Stepper -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i>
+                <span>1. Student Information</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <form id="enrollStudentForm">
+                <div class="form-group">
+                    <label class="form-label">Roll / Student ID Number *</label>
+                    <input type="text" id="rollNumber" class="form-control" placeholder="e.g. CS2026-001" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" id="studentName" class="form-control" placeholder="e.g. Jane Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <input type="text" id="department" class="form-control" value="Computer Science" placeholder="e.g. Computer Science">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address (Optional)</label>
+                    <input type="email" id="email" class="form-control" placeholder="e.g. jane.doe@university.edu">
+                </div>
+
+                <button type="submit" id="btnRegisterProfile" class="btn btn-primary" style="width: 100%; margin-top: 6px;">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Register Profile & Start Face Capture</span>
+                </button>
+            </form>
+
+            <div id="enrollProgressSection" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                <h4 style="font-size: 14px; font-weight: 700; color: var(--accent-primary); margin-bottom: 12px;">
+                    <i class="fa-solid fa-camera"></i> Step 2: Multi-Angle Face Samples
+                </h4>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div id="stepFrontal" style="padding: 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="font-size: 13px; color: var(--text-heading);">1. Frontal Pose</strong>
+                            <div style="font-size: 12px; color: var(--text-muted);">Look directly into the camera.</div>
+                        </div>
+                        <button onclick="captureSample('frontal')" id="btnCapFrontal" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;">
+                            Capture
+                        </button>
+                    </div>
+
+                    <div id="stepLeft" style="padding: 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="font-size: 13px; color: var(--text-heading);">2. Slight Left (~15°)</strong>
+                            <div style="font-size: 12px; color: var(--text-muted);">Turn head slightly to your left.</div>
+                        </div>
+                        <button onclick="captureSample('left')" id="btnCapLeft" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;" disabled>
+                            Capture
+                        </button>
+                    </div>
+
+                    <div id="stepRight" style="padding: 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="font-size: 13px; color: var(--text-heading);">3. Slight Right (~15°)</strong>
+                            <div style="font-size: 12px; color: var(--text-muted);">Turn head slightly to your right.</div>
+                        </div>
+                        <button onclick="captureSample('right')" id="btnCapRight" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;" disabled>
+                            Capture
+                        </button>
+                    </div>
+                </div>
+
+                <div id="enrollmentCompleteBox" style="display: none; margin-top: 16px; padding: 16px; background: var(--badge-emerald-bg); border: 1px solid var(--badge-emerald-border); border-radius: var(--radius-sm); text-align: center;">
+                    <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald); font-size: 26px; margin-bottom: 6px;"></i>
+                    <h5 style="color: var(--badge-emerald-text); font-size: 15px; font-weight: 700;">Enrollment Completed!</h5>
+                    <p style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 14px;">3-angle embeddings cached into recognition engine.</p>
+                    <a href="/students" class="btn btn-primary" style="padding: 7px 18px; font-size: 12.5px;">
+                        <i class="fa-solid fa-users"></i> View in Student Directory
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Webcam Capture Feed -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fa-solid fa-video" style="color: var(--accent-cyan);"></i>
+                <span>Live Enrollment View</span>
+            </h3>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <span id="camStatusBadge" class="badge badge-node">Camera Idle</span>
+                <button id="btnToggleCam" onclick="toggleWebcam()" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;">
+                    <i class="fa-solid fa-power-off"></i> Start Camera
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="camera-box">
+                <video id="webcamVideo" autoplay playsinline muted></video>
+                <canvas id="captureCanvas" style="display: none;"></canvas>
+            </div>
+
+            <div id="camFeedback" style="margin-top: 14px; padding: 12px 16px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-circle-info" style="color: var(--accent-cyan);"></i>
+                <span>Click "Start Camera" or register student profile to begin face capture.</span>
+            </div>
+
+            <!-- Alternative CLI helper notice -->
+            <div style="margin-top: 16px; padding: 14px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary);">
+                <span style="color: var(--accent-primary); font-weight: 700;"><i class="fa-solid fa-shield-halved"></i> Camera Lock Management:</span>
+                The browser will automatically release the webcam hardware once all 3 samples are captured.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODE 2: BATCH 3-PHOTO FILE UPLOAD                         -->
+<!-- ========================================================= -->
+<div id="modeBatchSection" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px;">
+        <!-- Batch Upload Form -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <i class="fa-solid fa-cloud-arrow-up" style="color: var(--accent-primary);"></i>
+                    <span>Student Details & Batch Upload</span>
+                </h3>
+            </div>
+            <div class="card-body">
+                <form id="batchUploadForm">
+                    <div class="form-group">
+                        <label class="form-label">Roll / Student ID Number *</label>
+                        <input type="text" id="batchRollNumber" class="form-control" placeholder="e.g. CS2026-002" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" id="batchStudentName" class="form-control" placeholder="e.g. Alex Morgan" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Department</label>
+                        <input type="text" id="batchDepartment" class="form-control" value="Computer Science" placeholder="e.g. Computer Science">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address (Optional)</label>
+                        <input type="email" id="batchEmail" class="form-control" placeholder="e.g. alex.morgan@university.edu">
+                    </div>
+
+                    <button type="submit" id="btnSubmitBatch" class="btn btn-primary" style="width: 100%; margin-top: 10px;" disabled>
+                        <i class="fa-solid fa-upload"></i>
+                        <span>Upload 3 Photos & Generate Vectors</span>
+                    </button>
+                </form>
+
+                <div id="batchResultAlert" style="display: none; margin-top: 18px; padding: 14px; border-radius: var(--radius-sm);"></div>
+            </div>
+        </div>
+
+        <!-- 3-Photo Dropzone & Live Thumbnails -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <i class="fa-solid fa-images" style="color: var(--accent-cyan);"></i>
+                    <span>Select Exactly 3 Face Photos</span>
+                </h3>
+                <span id="photoCountBadge" class="badge badge-node">0 / 3 Selected</span>
+            </div>
+            <div class="card-body">
+                <!-- Dropzone -->
+                <div id="dropzone" class="upload-dropzone" onclick="document.getElementById('fileInputBatch').click()">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <h4 style="font-size: 15px; font-weight: 700; color: var(--text-heading); margin-bottom: 6px;">Click or Drag & Drop 3 Photos Here</h4>
+                    <p style="font-size: 12.5px; color: var(--text-muted);">Accepts JPEG, PNG (Frontal, Left Angle, Right Angle recommended)</p>
+                    <input type="file" id="fileInputBatch" accept="image/jpeg,image/png,image/jpg" multiple style="display: none;">
+                </div>
+
+                <!-- 3 Thumbnail Previews -->
+                <div class="photo-preview-grid">
+                    <div class="photo-preview-card">
+                        <img id="prevImg0" class="photo-preview-img" src="" style="display: none;">
+                        <div id="prevPlaceholder0" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 26px;">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="photo-preview-label">Photo 1 (Frontal)</div>
+                    </div>
+
+                    <div class="photo-preview-card">
+                        <img id="prevImg1" class="photo-preview-img" src="" style="display: none;">
+                        <div id="prevPlaceholder1" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 26px;">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="photo-preview-label">Photo 2 (Left Angle)</div>
+                    </div>
+
+                    <div class="photo-preview-card">
+                        <img id="prevImg2" class="photo-preview-img" src="" style="display: none;">
+                        <div id="prevPlaceholder2" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 26px;">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="photo-preview-label">Photo 3 (Right Angle)</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="batchValidationHint" style="font-size: 12.5px; color: var(--accent-amber); font-weight: 600;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Please select 3 clear face images.
+                    </span>
+                    <button id="btnClearFiles" onclick="clearBatchFiles()" class="btn btn-secondary" style="padding: 4px 12px; font-size: 11.5px; display: none;">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ==========================================================
+// Mode Switching (Webcam vs Batch Upload)
+// ==========================================================
+function switchEnrollMode(mode) {
+    const tabWebcam = document.getElementById("tabBtnWebcam");
+    const tabBatch = document.getElementById("tabBtnBatch");
+    const secWebcam = document.getElementById("modeWebcamSection");
+    const secBatch = document.getElementById("modeBatchSection");
+
+    if (mode === "webcam") {
+        tabWebcam.classList.add("active");
+        tabBatch.classList.remove("active");
+        secWebcam.style.display = "grid";
+        secBatch.style.display = "none";
+    } else {
+        tabBatch.classList.add("active");
+        tabWebcam.classList.remove("active");
+        secBatch.style.display = "block";
+        secWebcam.style.display = "none";
+        stopWebcam();
+    }
+}
+
+// ==========================================================
+// Webcam Stream & Enrollment Logic
+// ==========================================================
+let currentStudentId = null;
+let videoStream = null;
+
+async function startWebcam() {
+    if (videoStream) return;
+    const video = document.getElementById("webcamVideo");
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480 }
+        });
+        video.srcObject = videoStream;
+        document.getElementById("camStatusBadge").innerText = "Streaming";
+        document.getElementById("camStatusBadge").className = "badge badge-present";
+        document.getElementById("btnToggleCam").innerHTML = '<i class="fa-solid fa-stop"></i> Release Camera';
+        document.getElementById("btnToggleCam").className = "btn btn-danger";
+    } catch (e) {
+        document.getElementById("camStatusBadge").innerText = "Access Denied / Busy";
+        document.getElementById("camStatusBadge").className = "badge badge-unknown";
+        document.getElementById("camFeedback").innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Camera is in use by another app or permission denied.</span>`;
+    }
+}
+
+function stopWebcam() {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+        const video = document.getElementById("webcamVideo");
+        if (video) video.srcObject = null;
+        
+        const badge = document.getElementById("camStatusBadge");
+        if (badge) {
+            badge.innerText = "Camera Released";
+            badge.className = "badge badge-node";
+        }
+        const btn = document.getElementById("btnToggleCam");
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-video"></i> Start Camera';
+            btn.className = "btn btn-secondary";
+        }
+    }
+}
+
+function toggleWebcam() {
+    if (videoStream) stopWebcam();
+    else startWebcam();
+}
+
+window.addEventListener("beforeunload", stopWebcam);
+window.addEventListener("pagehide", stopWebcam);
+
+document.getElementById("enrollStudentForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const rollNumber = document.getElementById("rollNumber").value.trim();
+    const name = document.getElementById("studentName").value.trim();
+    const department = document.getElementById("department").value.trim();
+    const email = document.getElementById("email").value.trim();
+
+    try {
+        const res = await fetch("/api/v1/enroll/student", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roll_number: rollNumber, name, department, email })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            currentStudentId = data.student.id;
+            document.getElementById("btnRegisterProfile").disabled = true;
+            document.getElementById("btnRegisterProfile").innerHTML = '<i class="fa-solid fa-check"></i> Profile Registered';
+            document.getElementById("enrollProgressSection").style.display = "block";
+            document.getElementById("camFeedback").innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-check"></i> Registered ${name}. Now starting camera for 3 angle samples...</span>`;
+            await startWebcam();
+        } else {
+            alert(`Error: ${data.detail || 'Could not register student.'}`);
+        }
+    } catch (err) {
+        alert("Failed to connect to server.");
+    }
+});
+
+async function captureSample(angle) {
+    if (!currentStudentId) {
+        alert("Please register the student profile first.");
+        return;
+    }
+    if (!videoStream) {
+        await startWebcam();
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    const video = document.getElementById("webcamVideo");
+    const canvas = document.getElementById("captureCanvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append("student_id", currentStudentId);
+        formData.append("sample_angle", angle);
+        formData.append("image", blob, `sample_${angle}.jpg`);
+
+        const feedbackEl = document.getElementById("camFeedback");
+        feedbackEl.innerHTML = `<span style="color:var(--accent-primary); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Extracting 128-d vector...</span>`;
+
+        try {
+            const res = await fetch("/api/v1/enroll/capture-sample", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                feedbackEl.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
+                if (angle === 'frontal') {
+                    document.getElementById("btnCapFrontal").disabled = true;
+                    document.getElementById("btnCapFrontal").className = "btn btn-primary";
+                    document.getElementById("btnCapFrontal").innerText = "✓ Done";
+                    document.getElementById("btnCapLeft").disabled = false;
+                } else if (angle === 'left') {
+                    document.getElementById("btnCapLeft").disabled = true;
+                    document.getElementById("btnCapLeft").className = "btn btn-primary";
+                    document.getElementById("btnCapLeft").innerText = "✓ Done";
+                    document.getElementById("btnCapRight").disabled = false;
+                } else if (angle === 'right') {
+                    document.getElementById("btnCapRight").disabled = true;
+                    document.getElementById("btnCapRight").className = "btn btn-primary";
+                    document.getElementById("btnCapRight").innerText = "✓ Done";
+                    document.getElementById("enrollmentCompleteBox").style.display = "block";
+                    stopWebcam();
+                    feedbackEl.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-circle-check"></i> Enrollment finished! Camera released.</span>`;
+                }
+            } else {
+                feedbackEl.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${data.detail}</span>`;
+            }
+        } catch (err) {
+            feedbackEl.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Upload failed. Try again.</span>`;
+        }
+    }, "image/jpeg", 0.9);
+}
+
+// ==========================================================
+// Batch 3-Photo File Upload Logic
+// ==========================================================
+let batchFiles = [];
+
+const fileInput = document.getElementById("fileInputBatch");
+const dropzone = document.getElementById("dropzone");
+
+dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+});
+
+dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("dragover");
+});
+
+dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+    handleSelectedFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener("change", (e) => {
+    handleSelectedFiles(e.target.files);
+});
+
+function handleSelectedFiles(filesList) {
+    const newFiles = Array.from(filesList).filter(f => f.type.startsWith("image/"));
+    for (const f of newFiles) {
+        if (batchFiles.length < 3) {
+            batchFiles.push(f);
+        }
+    }
+    updateBatchPreviews();
+}
+
+function updateBatchPreviews() {
+    const badge = document.getElementById("photoCountBadge");
+    const hint = document.getElementById("batchValidationHint");
+    const submitBtn = document.getElementById("btnSubmitBatch");
+    const clearBtn = document.getElementById("btnClearFiles");
+
+    badge.innerText = `${batchFiles.length} / 3 Selected`;
+    badge.className = batchFiles.length === 3 ? "badge badge-present" : "badge badge-node";
+
+    for (let i = 0; i < 3; i++) {
+        const imgEl = document.getElementById(`prevImg${i}`);
+        const phEl = document.getElementById(`prevPlaceholder${i}`);
+
+        if (batchFiles[i]) {
+            const url = URL.createObjectURL(batchFiles[i]);
+            imgEl.src = url;
+            imgEl.style.display = "block";
+            phEl.style.display = "none";
+        } else {
+            imgEl.src = "";
+            imgEl.style.display = "none";
+            phEl.style.display = "flex";
+        }
+    }
+
+    if (batchFiles.length === 3) {
+        hint.innerHTML = '<span style="color:var(--badge-emerald-text); font-weight:700;"><i class="fa-solid fa-circle-check"></i> Exactly 3 photos selected. Ready for upload!</span>';
+        submitBtn.disabled = false;
+        clearBtn.style.display = "inline-flex";
+    } else {
+        hint.innerHTML = `<span style="color:var(--accent-amber); font-weight:600;"><i class="fa-solid fa-circle-exclamation"></i> Please select exactly 3 photos (${3 - batchFiles.length} more needed).</span>`;
+        submitBtn.disabled = true;
+        clearBtn.style.display = batchFiles.length > 0 ? "inline-flex" : "none";
+    }
+}
+
+function clearBatchFiles() {
+    batchFiles = [];
+    fileInput.value = "";
+    updateBatchPreviews();
+    const alertBox = document.getElementById("batchResultAlert");
+    alertBox.style.display = "none";
+}
+
+// Submit Batch Form
+document.getElementById("batchUploadForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (batchFiles.length !== 3) {
+        alert("Please select exactly 3 photos before submitting.");
+        return;
+    }
+
+    const rollNumber = document.getElementById("batchRollNumber").value.trim();
+    const name = document.getElementById("batchStudentName").value.trim();
+    const department = document.getElementById("batchDepartment").value.trim();
+    const email = document.getElementById("batchEmail").value.trim();
+
+    const submitBtn = document.getElementById("btnSubmitBatch");
+    const alertBox = document.getElementById("batchResultAlert");
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Extracting Vectors & Enrolling...';
+
+    alertBox.style.display = "block";
+    alertBox.style.background = "var(--badge-indigo-bg)";
+    alertBox.style.border = "1px solid var(--badge-indigo-border)";
+    alertBox.innerHTML = '<span style="color:var(--accent-primary); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Processing 3 images with CPU face recognition engine...</span>';
+
+    const formData = new FormData();
+    formData.append("roll_number", rollNumber);
+    formData.append("name", name);
+    formData.append("department", department);
+    if (email) formData.append("email", email);
+
+    batchFiles.forEach((file) => {
+        formData.append("images", file);
+    });
+
+    try {
+        const res = await fetch("/api/v1/enroll/batch-upload", {
+            method: "POST",
+            body: formData,
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.border = "1px solid var(--badge-emerald-border)";
+            alertBox.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald); font-size: 22px;"></i>
+                    <strong style="color: var(--badge-emerald-text); font-size: 14px;">${data.message}</strong>
+                </div>
+                <div style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px;">
+                    Student <strong>${data.student.name}</strong> (${data.student.roll_number}) enrolled with 3 vectors cached in RAM.
+                </div>
+                <a href="/students" class="btn btn-primary" style="padding: 7px 16px; font-size: 12.5px;">
+                    <i class="fa-solid fa-users"></i> View in Student Directory
+                </a>
+            `;
+            submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Enrolled Successfully';
+        } else {
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-rose); font-size: 20px;"></i>
+                    <strong style="color: var(--badge-rose-text); font-size: 13px;">${data.detail || 'Enrollment failed.'}</strong>
+                </div>
+            `;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-upload"></i> Try Again';
+        }
+    } catch (err) {
+        alertBox.style.background = "var(--badge-rose-bg)";
+        alertBox.style.border = "1px solid var(--badge-rose-border)";
+        alertBox.innerHTML = '<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to backend server.</span>';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-upload"></i> Try Again';
+    }
+});
+</script>
+{% endblock %}
