@@ -13,8 +13,10 @@ from openpyxl.styles import Font, PatternFill, Alignment
 
 from src.config import EXPORTS_DIR
 from src.core.attendance_manager import attendance_manager
-from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding
+from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant
 from src.database.session import get_db
+from src.server.tenant_middleware import get_current_tenant
+from src.utils.timezone import get_ist_now, get_ist_date
 
 router = APIRouter(prefix="/api/v1/attendance", tags=["Attendance Management"])
 
@@ -28,20 +30,28 @@ class ManualOverrideRequest(BaseModel):
 
 
 @router.post("/manual-override")
-def mark_manual_override(payload: ManualOverrideRequest, db: Session = Depends(get_db)):
+def mark_manual_override(
+    payload: ManualOverrideRequest,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """
     Biometric Fallback / Manual Override:
-    Force-marks a student present with an explicit audit tag, timestamp, and justification reason.
+    Force-marks a student present with an explicit audit tag, timestamp, and justification reason scoped to tenant.
     """
-    student = db.query(Student).filter(Student.id == payload.student_id).first()
+    student = db.query(Student).filter(
+        Student.id == payload.student_id,
+        Student.tenant_id == current_tenant.id,
+    ).first()
+
     if not student:
-        raise HTTPException(status_code=404, detail="Student profile not found.")
+        raise HTTPException(status_code=404, detail="Student profile not found in this institution.")
 
     if not payload.reason or not payload.reason.strip():
         raise HTTPException(status_code=400, detail="An override justification reason is required.")
 
-    # Parse custom timestamp if provided, else use current UTC time
-    log_time = datetime.utcnow()
+    # Parse custom timestamp if provided, else use current IST time
+    log_time = get_ist_now()
     if payload.timestamp:
         try:
             clean_ts = payload.timestamp.replace("T", " ")
@@ -52,6 +62,7 @@ def mark_manual_override(payload: ManualOverrideRequest, db: Session = Depends(g
             raise HTTPException(status_code=400, detail="Invalid timestamp format. Use YYYY-MM-DD HH:MM:SS.")
 
     record = AttendanceRecord(
+        tenant_id=current_tenant.id,
         student_id=student.id,
         node_id=payload.node_id or "MANUAL-OVERRIDE",
         timestamp=log_time,
@@ -68,14 +79,14 @@ def mark_manual_override(payload: ManualOverrideRequest, db: Session = Depends(g
     # Broadcast event via SSE to live dashboard feeds
     attendance_manager.publish({
         "type": "MANUAL_OVERRIDE_LOGGED",
+        "tenant_id": current_tenant.id,
+        "data": record.to_dict(),
         "student_id": student.id,
-        "student_name": student.name,
+        "name": student.name,
         "roll_number": student.roll_number,
         "department": student.department,
         "node_id": record.node_id,
-        "timestamp": record.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-        "confidence_distance": 0.0,
-        "match_confidence_pct": 100.0,
+        "timestamp": record.timestamp.strftime("%Y-%m-%d %H:%M:%S") if record.timestamp else "",
         "status": "PRESENT",
         "is_manual_override": True,
         "override_reason": record.override_reason,
@@ -85,6 +96,7 @@ def mark_manual_override(payload: ManualOverrideRequest, db: Session = Depends(g
 
     return {
         "status": "success",
+        "tenant_id": current_tenant.id,
         "message": f"Manual override recorded for '{student.name}' ({student.roll_number}).",
         "record": record.to_dict(),
     }
@@ -100,9 +112,14 @@ def get_attendance_records(
     node_id: Optional[str] = Query(None, description="Filter by node ID"),
     limit: int = Query(150, ge=1, le=1000),
     db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Retrieves paginated and filtered attendance records with multi-parameter criteria."""
-    query = db.query(AttendanceRecord).join(Student, AttendanceRecord.student_id == Student.id, isouter=True)
+    """Retrieves paginated and filtered attendance records strictly scoped to active tenant."""
+    query = (
+        db.query(AttendanceRecord)
+        .join(Student, AttendanceRecord.student_id == Student.id, isouter=True)
+        .filter(AttendanceRecord.tenant_id == current_tenant.id)
+    )
 
     if date_str:
         try:
@@ -126,34 +143,54 @@ def get_attendance_records(
         query = query.filter(AttendanceRecord.is_manual_override == is_override)
 
     if node_id:
-        query = query.filter(AttendanceRecord.node_id == node_id)
+        query = query.filter(AttendanceRecord.node_id == node_id.strip())
 
     records = query.order_by(AttendanceRecord.timestamp.desc()).limit(limit).all()
-    return {"records": [r.to_dict() for r in records]}
+
+    return {
+        "status": "success",
+        "tenant_id": current_tenant.id,
+        "records": [r.to_dict() for r in records],
+    }
 
 
 @router.get("/stats")
-def get_attendance_stats(db: Session = Depends(get_db)):
-    """Computes summary statistics for the dashboard cards, filtering student role by default."""
-    today = date.today()
+def get_attendance_stats(
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Computes summary statistics for the dashboard cards strictly for current tenant."""
+    today = get_ist_date()
     start_today = datetime.combine(today, dt_time.min)
     end_today = datetime.combine(today, dt_time.max)
 
-    # Active student headcount (excluding non-students from standard classroom calculation)
+    # Active student headcount in this tenant
     total_students = (
         db.query(Student)
-        .filter(Student.is_active == True, Student.user_role == "student")
+        .filter(
+            Student.tenant_id == current_tenant.id,
+            Student.is_active == True,
+            Student.user_role == "student",
+        )
         .count()
     )
 
-    # Total registered profiles across all roles
-    total_all_users = db.query(Student).filter(Student.is_active == True).count()
+    # Total registered profiles across all roles in this tenant
+    total_all_users = (
+        db.query(Student)
+        .filter(
+            Student.tenant_id == current_tenant.id,
+            Student.is_active == True,
+        )
+        .count()
+    )
 
-    # Count unique students present today
+    # Count unique students present today in this tenant
     present_today = (
         db.query(distinct(AttendanceRecord.student_id))
         .join(Student, AttendanceRecord.student_id == Student.id)
         .filter(
+            AttendanceRecord.tenant_id == current_tenant.id,
             AttendanceRecord.timestamp.between(start_today, end_today),
             Student.user_role == "student",
         )
@@ -162,19 +199,26 @@ def get_attendance_stats(db: Session = Depends(get_db)):
 
     total_today_logs = (
         db.query(AttendanceRecord)
-        .filter(AttendanceRecord.timestamp.between(start_today, end_today))
+        .filter(
+            AttendanceRecord.tenant_id == current_tenant.id,
+            AttendanceRecord.timestamp.between(start_today, end_today),
+        )
         .count()
     )
 
     active_nodes = (
         db.query(NodeDevice)
-        .filter(NodeDevice.is_online == True)
+        .filter(
+            NodeDevice.tenant_id == current_tenant.id,
+            NodeDevice.is_online == True,
+        )
         .count()
     )
 
     attendance_pct = round((present_today / total_students * 100), 1) if total_students > 0 else 0.0
 
     return {
+        "tenant_id": current_tenant.id,
         "total_students": total_students,
         "total_all_users": total_all_users,
         "present_today": present_today,
@@ -190,26 +234,28 @@ def get_analytics_metrics(
     defaulter_threshold: float = Query(75.0, ge=10.0, le=100.0, description="Defaulter threshold percentage"),
     days: int = Query(7, ge=7, le=60, description="Days range for trend analysis"),
     db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """
-    Comprehensive Analytics Dashboard API:
+    Comprehensive Analytics Dashboard API scoped to active tenant:
     Computes summary metrics, daily trends, department breakdowns, and low-attendance defaulters.
     """
-    today = date.today()
+    today = get_ist_date()
     start_today = datetime.combine(today, dt_time.min)
     end_today = datetime.combine(today, dt_time.max)
 
-    # 1. Role Headcount Distribution
-    students_count = db.query(Student).filter(Student.is_active == True, Student.user_role == "student").count()
-    teachers_count = db.query(Student).filter(Student.is_active == True, Student.user_role == "teacher").count()
-    staff_count = db.query(Student).filter(Student.is_active == True, Student.user_role == "admin_staff").count()
-    other_count = db.query(Student).filter(Student.is_active == True, Student.user_role == "other").count()
+    # 1. Role Headcount Distribution for current tenant
+    students_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "student").count()
+    teachers_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "teacher").count()
+    staff_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "admin_staff").count()
+    other_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "other").count()
 
     # 2. Today's Student Turnout
     present_today = (
         db.query(distinct(AttendanceRecord.student_id))
         .join(Student, AttendanceRecord.student_id == Student.id)
         .filter(
+            AttendanceRecord.tenant_id == current_tenant.id,
             AttendanceRecord.timestamp.between(start_today, end_today),
             Student.user_role == "student",
         )
@@ -228,65 +274,70 @@ def get_analytics_metrics(
             db.query(distinct(AttendanceRecord.student_id))
             .join(Student, AttendanceRecord.student_id == Student.id)
             .filter(
+                AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.timestamp.between(d_start, d_end),
                 Student.user_role == "student",
             )
             .count()
         )
         rate = round((present_on_date / students_count * 100), 1) if students_count > 0 else 0.0
+
         daily_trends.append({
-            "date": target_date.strftime("%Y-%m-%d"),
-            "label": target_date.strftime("%a, %b %d"),
+            "date": target_date.strftime("%b %d"),
+            "full_date": target_date.isoformat(),
             "present_count": present_on_date,
             "total_students": students_count,
-            "rate_pct": rate,
+            "attendance_rate": rate,
         })
 
-    # 4. Department Turnout Breakdown
-    dept_results = (
+    # 4. Department Breakdown (Aggregated strictly for students in active tenant)
+    dept_rows = (
         db.query(
             Student.department,
-            func.count(Student.id).label("total_dept"),
+            func.count(distinct(Student.id)).label("total_dept_students"),
         )
-        .filter(Student.is_active == True, Student.user_role == "student")
+        .filter(
+            Student.tenant_id == current_tenant.id,
+            Student.is_active == True,
+            Student.user_role == "student",
+        )
         .group_by(Student.department)
         .all()
     )
 
     departments_summary = []
-    for dept_name, total_dept in dept_results:
+    for dept_name, dept_total in dept_rows:
         dept_present_today = (
             db.query(distinct(AttendanceRecord.student_id))
             .join(Student, AttendanceRecord.student_id == Student.id)
             .filter(
+                AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.timestamp.between(start_today, end_today),
                 Student.department == dept_name,
                 Student.user_role == "student",
             )
             .count()
         )
-        rate = round((dept_present_today / total_dept * 100), 1) if total_dept > 0 else 0.0
+        dept_rate = round((dept_present_today / dept_total * 100), 1) if dept_total > 0 else 0.0
         departments_summary.append({
             "department": dept_name or "General",
-            "total_students": total_dept,
+            "total_students": dept_total,
             "present_today": dept_present_today,
-            "rate_pct": rate,
+            "turnout_percentage": dept_rate,
         })
 
-    # 5. Low-Attendance Defaulters List
-    # Calculate total unique dates recorded in attendance system
+    # 5. Defaulter Identification (Students below threshold across unique attendance sessions)
     total_dates_recorded = (
         db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
+        .filter(AttendanceRecord.tenant_id == current_tenant.id)
         .scalar()
     ) or 1
-    total_dates_recorded = max(1, total_dates_recorded)
 
-    students_list = (
-        db.query(Student)
-        .filter(Student.is_active == True, Student.user_role == "student")
-        .order_by(Student.name.asc())
-        .all()
-    )
+    students_list = db.query(Student).filter(
+        Student.tenant_id == current_tenant.id,
+        Student.is_active == True,
+        Student.user_role == "student",
+    ).all()
 
     defaulters = []
     satisfactory_count = 0
@@ -294,13 +345,17 @@ def get_analytics_metrics(
     for s in students_list:
         attended_days = (
             db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
-            .filter(AttendanceRecord.student_id == s.id)
+            .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.student_id == s.id)
             .scalar()
         ) or 0
 
         override_count = (
             db.query(func.count(AttendanceRecord.id))
-            .filter(AttendanceRecord.student_id == s.id, AttendanceRecord.is_manual_override == True)
+            .filter(
+                AttendanceRecord.tenant_id == current_tenant.id,
+                AttendanceRecord.student_id == s.id,
+                AttendanceRecord.is_manual_override == True,
+            )
             .scalar()
         ) or 0
 
@@ -325,6 +380,7 @@ def get_analytics_metrics(
 
     return {
         "status": "success",
+        "tenant_id": current_tenant.id,
         "defaulter_threshold": defaulter_threshold,
         "headcount": {
             "students": students_count,
@@ -352,81 +408,93 @@ def export_compliance_report(
     defaulter_threshold: float = Query(75.0, ge=10.0, le=100.0),
     export_format: str = Query("xlsx", pattern="^(csv|xlsx)$"),
     db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Exports structured institutional compliance audit report in Excel or CSV format."""
+    """Exports structured institutional compliance audit report in Excel or CSV format for active tenant."""
     total_dates_recorded = (
         db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
+        .filter(AttendanceRecord.tenant_id == current_tenant.id)
         .scalar()
     ) or 1
     total_dates_recorded = max(1, total_dates_recorded)
 
-    students = db.query(Student).filter(Student.is_active == True).order_by(Student.department.asc(), Student.name.asc()).all()
+    students = (
+        db.query(Student)
+        .filter(Student.tenant_id == current_tenant.id, Student.is_active == True)
+        .order_by(Student.department.asc(), Student.name.asc())
+        .all()
+    )
 
-    report_data = []
+    rows = []
     for s in students:
-        attended_days = (
+        attended = (
             db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
-            .filter(AttendanceRecord.student_id == s.id)
+            .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.student_id == s.id)
             .scalar()
         ) or 0
 
         override_count = (
             db.query(func.count(AttendanceRecord.id))
-            .filter(AttendanceRecord.student_id == s.id, AttendanceRecord.is_manual_override == True)
+            .filter(
+                AttendanceRecord.tenant_id == current_tenant.id,
+                AttendanceRecord.student_id == s.id,
+                AttendanceRecord.is_manual_override == True,
+            )
             .scalar()
         ) or 0
 
-        pct = round((attended_days / total_dates_recorded * 100), 1)
-        compliance_status = "Satisfactory" if pct >= defaulter_threshold else f"Defaulter Warning (< {defaulter_threshold}%)"
+        pct = round((attended / total_dates_recorded * 100), 1) if total_dates_recorded > 0 else 0.0
+        status_label = "COMPLIANT" if pct >= defaulter_threshold else "DEFAULTER"
 
-        report_data.append({
+        rows.append({
             "Student ID / Roll": s.roll_number,
             "Full Name": s.name,
-            "Role": s.user_role.capitalize(),
-            "Department": s.department,
+            "Role": (s.user_role or "student").capitalize(),
+            "Department": s.department or "General",
             "Class / Semester": s.class_semester or "General",
             "Total Sessions Held": total_dates_recorded,
-            "Sessions Attended": attended_days,
+            "Sessions Attended": attended,
             "Manual Overrides Count": override_count,
             "Attendance Percentage (%)": pct,
-            "Compliance Status": compliance_status,
+            "Compliance Status": status_label,
         })
 
-    df = pd.DataFrame(report_data)
-    date_str = date.today().strftime("%Y%m%d")
+    df = pd.DataFrame(rows)
+    today_str = get_ist_date().strftime("%Y%m%d")
 
     # Fetch institution branding
-    branding = db.query(SystemBranding).filter(SystemBranding.id == 1).first()
-    inst_name = branding.institution_name if branding else "FaceAttendance Campus"
-    short_code = branding.short_code if branding else "FA-HUB"
+    branding = current_tenant.branding
+    inst_name = branding.institution_name if branding else current_tenant.name
+    short_code = branding.short_code if branding else current_tenant.slug.upper()
 
     if export_format == "csv":
         csv_buffer = io.StringIO()
         csv_buffer.write(f"# INSTITUTION: {inst_name} ({short_code})\n")
-        csv_buffer.write(f"# REPORT: Attendance Compliance Audit (Threshold: {defaulter_threshold}%)\n")
-        csv_buffer.write(f"# GENERATED: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        csv_buffer.write(f"# REPORT: Institutional Attendance Compliance Audit\n")
+        csv_buffer.write(f"# DEFAULTER THRESHOLD: {defaulter_threshold}%\n")
+        csv_buffer.write(f"# GENERATED (IST): {get_ist_now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         df.to_csv(csv_buffer, index=False)
         csv_buffer.seek(0)
         return StreamingResponse(
             io.BytesIO(csv_buffer.getvalue().encode("utf-8")),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=institutional_compliance_report_{date_str}.csv"},
+            headers={"Content-Disposition": f"attachment; filename=compliance_audit_{current_tenant.slug}_{today_str}.csv"},
         )
     else:
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Compliance Audit", startrow=3)
+            df.to_excel(writer, index=False, sheet_name="Compliance Audit", startrow=4)
             ws = writer.sheets["Compliance Audit"]
 
-            # Merged Institutional Header Banner
-            ws.merge_cells("A1:J1")
-            ws["A1"] = f"{inst_name} ({short_code}) — Institutional Compliance Report"
+            # Header Banner styling
+            ws.merge_cells("A1:K1")
+            ws["A1"] = f"{inst_name} ({short_code}) — Attendance Compliance Report"
             ws["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
             ws["A1"].fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
             ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
 
-            ws.merge_cells("A2:J2")
-            ws["A2"] = f"Audit Threshold: {defaulter_threshold}% | Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Total Sessions: {total_dates_recorded}"
+            ws.merge_cells("A2:K2")
+            ws["A2"] = f"Defaulter Threshold: <{defaulter_threshold}% | Generated (IST): {get_ist_now().strftime('%Y-%m-%d %H:%M:%S')} | Total Tracked Profiles: {len(students)}"
             ws["A2"].font = Font(name="Calibri", size=10, italic=True)
             ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
 
@@ -434,7 +502,7 @@ def export_compliance_report(
         return StreamingResponse(
             excel_buffer,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=institutional_compliance_report_{date_str}.xlsx"},
+            headers={"Content-Disposition": f"attachment; filename=compliance_audit_{current_tenant.slug}_{today_str}.xlsx"},
         )
 
 
@@ -443,8 +511,9 @@ def export_attendance_report(
     date_str: Optional[str] = Query(None, description="Filter date YYYY-MM-DD"),
     export_format: str = Query("csv", pattern="^(csv|xlsx)$"),
     db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Exports raw attendance history into downloadable CSV or Excel spreadsheet."""
+    """Exports raw attendance history into downloadable CSV or Excel spreadsheet scoped to tenant."""
     query = (
         db.query(
             AttendanceRecord.id,
@@ -460,6 +529,7 @@ def export_attendance_report(
             AttendanceRecord.override_reason,
         )
         .join(Student, AttendanceRecord.student_id == Student.id, isouter=True)
+        .filter(AttendanceRecord.tenant_id == current_tenant.id)
         .order_by(AttendanceRecord.timestamp.desc())
     )
 
@@ -483,7 +553,7 @@ def export_attendance_report(
             "Department": row[3] or "N/A",
             "Role": (row[4] or "student").capitalize(),
             "Node Ingestion": row[5],
-            "Timestamp": row[6].strftime("%Y-%m-%d %H:%M:%S") if row[6] else "",
+            "Timestamp (IST)": row[6].strftime("%Y-%m-%d %H:%M:%S") if row[6] else "",
             "Confidence Distance": round(row[7], 4) if row[7] is not None else "",
             "Status": row[8],
             "Manual Override": "Yes" if row[9] else "No",
@@ -491,24 +561,24 @@ def export_attendance_report(
         })
 
     df = pd.DataFrame(data)
-    date_label = date_str or datetime.now().strftime("%Y%m%d")
+    date_label = date_str or get_ist_date().strftime("%Y%m%d")
 
     # Fetch institution branding
-    branding = db.query(SystemBranding).filter(SystemBranding.id == 1).first()
-    inst_name = branding.institution_name if branding else "FaceAttendance Campus"
-    short_code = branding.short_code if branding else "FA-HUB"
+    branding = current_tenant.branding
+    inst_name = branding.institution_name if branding else current_tenant.name
+    short_code = branding.short_code if branding else current_tenant.slug.upper()
 
     if export_format == "csv":
         csv_buffer = io.StringIO()
         csv_buffer.write(f"# INSTITUTION: {inst_name} ({short_code})\n")
         csv_buffer.write(f"# LOGS: Attendance Audit Export\n")
-        csv_buffer.write(f"# GENERATED: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        csv_buffer.write(f"# GENERATED (IST): {get_ist_now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         df.to_csv(csv_buffer, index=False)
         csv_buffer.seek(0)
         return StreamingResponse(
             io.BytesIO(csv_buffer.getvalue().encode("utf-8")),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=attendance_logs_{date_label}.csv"},
+            headers={"Content-Disposition": f"attachment; filename=attendance_logs_{current_tenant.slug}_{date_label}.csv"},
         )
     else:
         excel_buffer = io.BytesIO()
@@ -524,7 +594,7 @@ def export_attendance_report(
             ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
 
             ws.merge_cells("A2:K2")
-            ws["A2"] = f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Total Records: {len(data)}"
+            ws["A2"] = f"Generated (IST): {get_ist_now().strftime('%Y-%m-%d %H:%M:%S')} | Total Records: {len(data)}"
             ws["A2"].font = Font(name="Calibri", size=10, italic=True)
             ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
 
@@ -532,7 +602,7 @@ def export_attendance_report(
         return StreamingResponse(
             excel_buffer,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=attendance_logs_{date_label}.xlsx"},
+            headers={"Content-Disposition": f"attachment; filename=attendance_logs_{current_tenant.slug}_{date_label}.xlsx"},
         )
 
 

@@ -1,24 +1,27 @@
 from datetime import date
+from typing import List
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from src.database.models import Student, AttendanceRecord, NodeDevice, SystemBranding
+from src.database.models import Student, AttendanceRecord, NodeDevice, SystemBranding, Tenant
 from src.database.session import get_db
+from src.server.tenant_middleware import get_current_tenant
 
 templates = Jinja2Templates(directory="src/server/templates")
 
 router = APIRouter(include_in_schema=False)
 
 
-def get_branding_dict(db: Session) -> dict:
-    """Helper to load institutional branding for template injection."""
-    branding = db.query(SystemBranding).filter(SystemBranding.id == 1).first()
+def get_branding_dict(db: Session, tenant_id: int) -> dict:
+    """Helper to load institutional branding for template injection scoped to tenant."""
+    branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == tenant_id).first()
     if branding:
         return branding.to_dict()
     return {
         "id": 1,
+        "tenant_id": tenant_id,
         "institution_name": "FaceAttendance Campus",
         "short_code": "FA-HUB",
         "tagline": "Raspberry Pi Zero Edge Nodes & Central Face Recognition",
@@ -30,18 +33,34 @@ def get_branding_dict(db: Session) -> dict:
     }
 
 
+def get_all_active_tenants(db: Session) -> List[dict]:
+    """Helper to load all active tenants for the global switcher."""
+    tenants = db.query(Tenant).filter(Tenant.is_active == True).order_by(Tenant.name.asc()).all()
+    return [t.to_dict() for t in tenants]
+
+
 @router.get("/", response_class=HTMLResponse)
-def page_dashboard(request: Request, db: Session = Depends(get_db)):
+def page_dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Main Admin Overview Dashboard."""
-    total_students = db.query(Student).filter(Student.is_active == True).count()
+    total_students = (
+        db.query(Student)
+        .filter(Student.tenant_id == current_tenant.id, Student.is_active == True)
+        .count()
+    )
     recent_logs = (
         db.query(AttendanceRecord)
+        .filter(AttendanceRecord.tenant_id == current_tenant.id)
         .order_by(AttendanceRecord.timestamp.desc())
         .limit(10)
         .all()
     )
-    nodes = db.query(NodeDevice).all()
-    branding = get_branding_dict(db)
+    nodes = db.query(NodeDevice).filter(NodeDevice.tenant_id == current_tenant.id).all()
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
 
     return templates.TemplateResponse(
         "dashboard.html",
@@ -53,15 +72,28 @@ def page_dashboard(request: Request, db: Session = Depends(get_db)):
             "recent_logs": [r.to_dict() for r in recent_logs],
             "nodes": [n.to_dict() for n in nodes],
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )
 
 
 @router.get("/students", response_class=HTMLResponse)
-def page_students(request: Request, db: Session = Depends(get_db)):
+def page_students(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Student Directory & Face Profile Management."""
-    students = db.query(Student).order_by(Student.name.asc()).all()
-    branding = get_branding_dict(db)
+    students = (
+        db.query(Student)
+        .filter(Student.tenant_id == current_tenant.id)
+        .order_by(Student.name.asc())
+        .all()
+    )
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
     return templates.TemplateResponse(
         "students.html",
         {
@@ -70,14 +102,22 @@ def page_students(request: Request, db: Session = Depends(get_db)):
             "active_page": "students",
             "students": [s.to_dict() for s in students],
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )
 
 
 @router.get("/enroll", response_class=HTMLResponse)
-def page_enroll(request: Request, db: Session = Depends(get_db)):
+def page_enroll(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Interactive Browser & Guided Face Enrollment."""
-    branding = get_branding_dict(db)
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
     return templates.TemplateResponse(
         "enroll.html",
         {
@@ -85,15 +125,23 @@ def page_enroll(request: Request, db: Session = Depends(get_db)):
             "page_title": "Enroll New Student",
             "active_page": "enroll",
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )
 
 
 @router.get("/logs", response_class=HTMLResponse)
-def page_logs(request: Request, db: Session = Depends(get_db)):
+def page_logs(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Full Attendance Log Audit & Export."""
     today_str = date.today().isoformat()
-    branding = get_branding_dict(db)
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
     return templates.TemplateResponse(
         "logs.html",
         {
@@ -102,15 +150,23 @@ def page_logs(request: Request, db: Session = Depends(get_db)):
             "active_page": "logs",
             "today_str": today_str,
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )
 
 
 @router.get("/nodes", response_class=HTMLResponse)
-def page_nodes(request: Request, db: Session = Depends(get_db)):
+def page_nodes(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Connected Edge Nodes / Pi Zero Monitor."""
-    nodes = db.query(NodeDevice).all()
-    branding = get_branding_dict(db)
+    nodes = db.query(NodeDevice).filter(NodeDevice.tenant_id == current_tenant.id).all()
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
     return templates.TemplateResponse(
         "nodes.html",
         {
@@ -119,14 +175,22 @@ def page_nodes(request: Request, db: Session = Depends(get_db)):
             "active_page": "nodes",
             "nodes": [n.to_dict() for n in nodes],
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )
 
 
 @router.get("/analytics", response_class=HTMLResponse)
-def page_analytics(request: Request, db: Session = Depends(get_db)):
+def page_analytics(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Institutional Attendance Analytics & Defaulter Reports."""
-    branding = get_branding_dict(db)
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
     return templates.TemplateResponse(
         "analytics.html",
         {
@@ -134,14 +198,22 @@ def page_analytics(request: Request, db: Session = Depends(get_db)):
             "page_title": "Attendance Analytics & Reports",
             "active_page": "analytics",
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )
 
 
 @router.get("/settings", response_class=HTMLResponse)
-def page_settings(request: Request, db: Session = Depends(get_db)):
+def page_settings(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Visual Theme Engine & System Preferences Settings."""
-    branding = get_branding_dict(db)
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
     return templates.TemplateResponse(
         "settings.html",
         {
@@ -149,14 +221,22 @@ def page_settings(request: Request, db: Session = Depends(get_db)):
             "page_title": "System Settings & Theme",
             "active_page": "settings",
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )
 
 
 @router.get("/mobile-capture", response_class=HTMLResponse)
-def page_mobile_capture(request: Request, db: Session = Depends(get_db)):
+def page_mobile_capture(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
     """Dedicated Mobile Browser Attendance Node."""
-    branding = get_branding_dict(db)
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
     return templates.TemplateResponse(
         "mobile_capture.html",
         {
@@ -164,5 +244,30 @@ def page_mobile_capture(request: Request, db: Session = Depends(get_db)):
             "page_title": "Mobile Capture Node",
             "active_page": "mobile",
             "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
+        },
+    )
+
+
+@router.get("/face-demo", response_class=HTMLResponse)
+def page_face_demo(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Dedicated Non-Logging Visual Recognition Demo Page."""
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+
+    return templates.TemplateResponse(
+        "face_demo.html",
+        {
+            "request": request,
+            "page_title": "Visual Recognition Demo (Non-Logging)",
+            "active_page": "demo",
+            "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
         },
     )

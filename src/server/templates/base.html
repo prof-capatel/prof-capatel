@@ -103,6 +103,12 @@
                 </a>
             </li>
             <li>
+                <a href="/face-demo" class="nav-link {% if active_page == 'demo' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-eye" style="color: #f59e0b;"></i>
+                    <span>Visual Demo (No DB)</span>
+                </a>
+            </li>
+            <li>
                 <a href="/mobile-capture" target="_blank" class="nav-link {% if active_page == 'mobile' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-mobile-screen"></i>
                     <span>Mobile Capture Node</span>
@@ -115,24 +121,38 @@
                 <span class="pulse-dot"></span>
                 <span id="footerShortCode">{{ branding.short_code if branding else 'FA-HUB' }} Online</span>
             </div>
-            <span style="font-size: 11px; opacity: 0.7;">v1.5.0</span>
+            <span style="font-size: 11px; opacity: 0.7;">SaaS v2.0</span>
         </div>
     </aside>
 
     <!-- Main Wrapper -->
     <div class="main-wrapper">
         <header class="top-bar">
-            <div style="display: flex; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
                 <!-- Hamburger Menu Button (visible on mobile/tablet) -->
                 <button id="btnMobileNavToggle" class="btn-hamburger" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu" title="Open Navigation Menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <div class="page-title">
+                <div class="page-title" style="min-width: 0;">
                     <h2>{{ page_title }}</h2>
                     <p id="topBarTagline">{{ branding.tagline if branding and branding.tagline else 'Raspberry Pi Zero Edge Nodes & Central Face Recognition' }}</p>
                 </div>
             </div>
-            <div class="top-actions">
+            <div class="top-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <!-- SaaS Multi-Tenant Switcher -->
+                <div class="tenant-switcher-box" style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <i class="fa-solid fa-building-columns" style="color: var(--accent-primary); font-size: 13px;"></i>
+                    <select id="globalTenantSelect" class="tenant-select" onchange="switchActiveTenant(this.value)" style="background: transparent; border: none; color: var(--text-primary); font-weight: 600; font-size: 13px; outline: none; cursor: pointer; max-width: 160px;">
+                        {% if all_tenants %}
+                            {% for t in all_tenants %}
+                            <option value="{{ t.id }}" {% if current_tenant and current_tenant.id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="1">Default Campus</option>
+                        {% endif %}
+                    </select>
+                </div>
+
                 <!-- 1-Click Theme Cycle Button -->
                 <button id="btnQuickThemeToggle" class="theme-quick-btn" onclick="cycleAppTheme()" title="Switch Visual Theme (Light / Dark / Academic)">
                     <i class="fa-solid fa-palette"></i>
@@ -152,6 +172,13 @@
 
     <!-- Scripts -->
     <script src="/static/js/dashboard.js"></script>
+    <script>
+        function switchActiveTenant(tenantId) {
+            document.cookie = "active_tenant_id=" + tenantId + "; path=/; max-age=31536000";
+            localStorage.setItem("active_tenant_id", tenantId);
+            window.location.reload();
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -7,8 +7,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.config import BRANDING_DIR
-from src.database.models import SystemBranding
+from src.database.models import SystemBranding, Tenant
 from src.database.session import get_db
+from src.server.tenant_middleware import get_current_tenant
 
 router = APIRouter(prefix="/api/v1/branding", tags=["Branding & White-Labeling"])
 
@@ -23,19 +24,31 @@ class BrandingUpdateRequest(BaseModel):
     primary_accent_color: Optional[str] = "#6366f1"
     header_badge_text: Optional[str] = "Thin-Client Hub"
     contact_email: Optional[str] = None
+    cooldown_minutes: Optional[int] = 60
+    enable_anti_spoofing: Optional[bool] = True
+    liveness_mode: Optional[str] = "BALANCED"
+    temporal_frames_required: Optional[int] = 3
+    enable_audio_chime: Optional[bool] = True
+    enable_haptic_feedback: Optional[bool] = True
 
 
-def get_or_create_branding(db: Session) -> SystemBranding:
-    """Helper to fetch singleton branding record or create default."""
-    branding = db.query(SystemBranding).filter(SystemBranding.id == 1).first()
+def get_or_create_tenant_branding(db: Session, tenant_id: int, tenant_name: str = "FaceAttendance Campus") -> SystemBranding:
+    """Helper to fetch singleton branding record for a specific tenant or create default."""
+    branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == tenant_id).first()
     if not branding:
         branding = SystemBranding(
-            id=1,
-            institution_name="FaceAttendance Campus",
+            tenant_id=tenant_id,
+            institution_name=tenant_name,
             short_code="FA-HUB",
             tagline="Raspberry Pi Zero Edge Nodes & Central Face Recognition",
             primary_accent_color="#6366f1",
             header_badge_text="Thin-Client Hub",
+            cooldown_minutes=60,
+            enable_anti_spoofing=True,
+            liveness_mode="BALANCED",
+            temporal_frames_required=3,
+            enable_audio_chime=True,
+            enable_haptic_feedback=True,
         )
         db.add(branding)
         db.commit()
@@ -44,19 +57,27 @@ def get_or_create_branding(db: Session) -> SystemBranding:
 
 
 @router.get("")
-def get_branding(db: Session = Depends(get_db)):
-    """Retrieves current institutional branding settings."""
-    branding = get_or_create_branding(db)
+def get_branding(
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Retrieves current institutional branding settings for the active tenant."""
+    branding = get_or_create_tenant_branding(db, current_tenant.id, current_tenant.name)
     return {
         "status": "success",
+        "tenant_id": current_tenant.id,
         "branding": branding.to_dict(),
     }
 
 
 @router.post("")
-def update_branding(payload: BrandingUpdateRequest, db: Session = Depends(get_db)):
-    """Updates institutional white-labeling text, acronym, and color accents."""
-    branding = get_or_create_branding(db)
+def update_branding(
+    payload: BrandingUpdateRequest,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Updates institutional white-labeling text, acronym, color accents, and cooldown window for current tenant."""
+    branding = get_or_create_tenant_branding(db, current_tenant.id, current_tenant.name)
 
     if not payload.institution_name.strip():
         raise HTTPException(status_code=400, detail="Institution name cannot be empty.")
@@ -69,6 +90,29 @@ def update_branding(payload: BrandingUpdateRequest, db: Session = Depends(get_db
     branding.primary_accent_color = payload.primary_accent_color.strip() if payload.primary_accent_color else "#6366f1"
     branding.header_badge_text = payload.header_badge_text.strip() if payload.header_badge_text else "Thin-Client Hub"
     branding.contact_email = payload.contact_email.strip() if payload.contact_email else None
+    
+    if payload.cooldown_minutes is not None:
+        branding.cooldown_minutes = max(1, min(1440, int(payload.cooldown_minutes)))
+
+    if payload.enable_anti_spoofing is not None:
+        branding.enable_anti_spoofing = bool(payload.enable_anti_spoofing)
+
+    if payload.liveness_mode is not None:
+        mode = payload.liveness_mode.strip().upper()
+        if mode in ["STRICT", "BALANCED", "FAST", "DISABLED"]:
+            branding.liveness_mode = mode
+
+    if payload.temporal_frames_required is not None:
+        branding.temporal_frames_required = max(1, min(10, int(payload.temporal_frames_required)))
+
+    if payload.enable_audio_chime is not None:
+        branding.enable_audio_chime = bool(payload.enable_audio_chime)
+
+    if payload.enable_haptic_feedback is not None:
+        branding.enable_haptic_feedback = bool(payload.enable_haptic_feedback)
+
+    # Also sync Tenant name
+    current_tenant.name = branding.institution_name
 
     db.commit()
     db.refresh(branding)
@@ -76,14 +120,19 @@ def update_branding(payload: BrandingUpdateRequest, db: Session = Depends(get_db
     return {
         "status": "success",
         "message": "Institutional branding updated successfully.",
+        "tenant_id": current_tenant.id,
         "branding": branding.to_dict(),
     }
 
 
 @router.post("/logo")
-async def upload_branding_logo(logo: UploadFile = File(...), db: Session = Depends(get_db)):
-    """Uploads and saves an institutional logo image to filesystem storage."""
-    branding = get_or_create_branding(db)
+async def upload_branding_logo(
+    logo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Uploads and saves an institutional logo image to filesystem storage for active tenant."""
+    branding = get_or_create_tenant_branding(db, current_tenant.id, current_tenant.name)
 
     ext = Path(logo.filename or "").suffix.lower()
     if ext not in ALLOWED_LOGO_EXTENSIONS:
@@ -107,8 +156,8 @@ async def upload_branding_logo(logo: UploadFile = File(...), db: Session = Depen
             except Exception:
                 pass
 
-    # Save new file
-    safe_filename = f"inst_logo_{int(time.time())}{ext}"
+    # Save new file scoped with tenant id
+    safe_filename = f"tenant_{current_tenant.id}_logo_{int(time.time())}{ext}"
     target_path = BRANDING_DIR / safe_filename
     with open(target_path, "wb") as f:
         f.write(file_bytes)
@@ -120,14 +169,18 @@ async def upload_branding_logo(logo: UploadFile = File(...), db: Session = Depen
     return {
         "status": "success",
         "message": "Institute logo uploaded and updated successfully.",
+        "tenant_id": current_tenant.id,
         "branding": branding.to_dict(),
     }
 
 
 @router.delete("/logo")
-def delete_branding_logo(db: Session = Depends(get_db)):
-    """Resets the institutional logo to default system icon."""
-    branding = get_or_create_branding(db)
+def delete_branding_logo(
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Resets the institutional logo to default system icon for active tenant."""
+    branding = get_or_create_tenant_branding(db, current_tenant.id, current_tenant.name)
 
     if branding.logo_filename:
         old_file = BRANDING_DIR / branding.logo_filename
@@ -143,5 +196,6 @@ def delete_branding_logo(db: Session = Depends(get_db)):
     return {
         "status": "success",
         "message": "Institute logo reset to default.",
+        "tenant_id": current_tenant.id,
         "branding": branding.to_dict(),
     }

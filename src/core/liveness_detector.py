@@ -206,11 +206,15 @@ class TemporalMotionTracker:
         face_box: Dict[str, int],
         is_single_frame_live: bool,
         node_id: str = "DEFAULT",
+        custom_confirmation_frames: Optional[int] = None,
     ) -> Tuple[bool, int, str]:
         """
         Updates temporal sequence for a face on a specific node.
         Returns: (is_temporally_confirmed, current_consecutive_frames, temporal_status)
         """
+        target_frames = custom_confirmation_frames if custom_confirmation_frames is not None else self.confirmation_frames
+        target_frames = max(1, target_frames)
+
         current_time = time.time()
         self._clean_expired_tracks(current_time)
 
@@ -238,8 +242,8 @@ class TemporalMotionTracker:
                 "history": [face_box],
                 "status": "VERIFYING",
             }
-            is_confirmed = (1 >= self.confirmation_frames)
-            status = "REAL" if is_confirmed else f"VERIFYING (1/{self.confirmation_frames})"
+            is_confirmed = (1 >= target_frames)
+            status = "REAL" if is_confirmed else f"VERIFYING (1/{target_frames})"
             return is_confirmed, 1, status
 
         # Existing track -> measure displacement history
@@ -259,7 +263,7 @@ class TemporalMotionTracker:
             track["frames"] = 1
             track["last_time"] = current_time
             track["history"] = [face_box]
-            status = f"VERIFYING (1/{self.confirmation_frames})"
+            status = f"VERIFYING (1/{target_frames})"
             track["status"] = status
             return False, 1, status
 
@@ -268,16 +272,14 @@ class TemporalMotionTracker:
 
         consecutive = track["frames"]
 
-        if consecutive >= self.confirmation_frames:
-            # Verify that the sequence isn't an absolutely rigid/frozen static screenshot (e.g. 0.0px variance across 5 frames)
+        if consecutive >= target_frames:
+            # Verify that the sequence isn't an absolutely rigid/frozen static screenshot
             if len(history) >= 4:
                 centers_x = [(b["left"] + b["right"]) / 2.0 for b in history[-4:]]
                 centers_y = [(b["top"] + b["bottom"]) / 2.0 for b in history[-4:]]
                 std_x = float(np.std(centers_x))
                 std_y = float(np.std(centers_y))
 
-                # Note: Natural living heads have subtle micro-tremors (> 0.05px) even when trying to hold still.
-                # Perfectly rigid software injection / motionless static prints have std == 0.0.
                 if std_x == 0.0 and std_y == 0.0:
                     track["status"] = "SPOOF_FREEZE_DETECTED"
                     return False, consecutive, "SPOOF_DETECTED"
@@ -285,7 +287,7 @@ class TemporalMotionTracker:
             track["status"] = "REAL"
             return True, consecutive, "REAL"
         else:
-            status = f"VERIFYING ({consecutive}/{self.confirmation_frames})"
+            status = f"VERIFYING ({consecutive}/{target_frames})"
             track["status"] = status
             return False, consecutive, status
 

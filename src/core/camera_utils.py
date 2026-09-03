@@ -1,17 +1,37 @@
 import base64
+import io
 from typing import Optional, Tuple
 import cv2
 import numpy as np
+from PIL import Image, ImageOps
 
 
 def decode_image_bytes(image_bytes: bytes) -> Optional[np.ndarray]:
-    """Decodes raw JPEG/PNG image bytes into an OpenCV BGR numpy array."""
-    try:
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        return frame
-    except Exception:
+    """
+    Decodes raw JPEG/PNG/WebP image bytes into an OpenCV BGR numpy array
+    with automatic EXIF orientation transposition.
+    
+    Prevents mobile portrait photos from being rotated sideways (90° orientation)
+    which causes face recognition models to fail detection.
+    """
+    if not image_bytes or len(image_bytes) == 0:
         return None
+
+    try:
+        pil_img = Image.open(io.BytesIO(image_bytes))
+        pil_img = ImageOps.exif_transpose(pil_img)
+
+        if pil_img.mode != "RGB":
+            pil_img = pil_img.convert("RGB")
+
+        rgb_arr = np.array(pil_img)
+        return cv2.cvtColor(rgb_arr, cv2.COLOR_RGB2BGR)
+    except Exception:
+        try:
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        except Exception:
+            return None
 
 
 def encode_frame_to_jpeg(frame_bgr: np.ndarray, quality: int = 80) -> bytes:
@@ -60,6 +80,6 @@ def evaluate_image_quality(frame_bgr: np.ndarray) -> Tuple[bool, str]:
     # 2. Check blurriness via Laplacian variance
     laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
     if laplacian_var < 50.0:
-        return False, "Frame is blurry. Please hold steady."
+        return False, "Image is blurry or out of focus. Hold camera steady."
 
-    return True, "Good quality"
+    return True, "Image quality is acceptable."

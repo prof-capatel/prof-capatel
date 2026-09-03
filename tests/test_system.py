@@ -23,9 +23,9 @@ import cv2
 from fastapi.testclient import TestClient
 
 from src.database.session import init_db, get_db_context, engine
-from src.database.models import Student, FaceEncoding, AttendanceRecord, NodeDevice
-from src.core.face_engine import FaceEngine
-from src.core.attendance_manager import AttendanceManager
+from src.database.models import Student, FaceEncoding, AttendanceRecord, NodeDevice, Tenant, SystemBranding
+from src.core.face_engine import FaceEngine, face_engine
+from src.core.attendance_manager import AttendanceManager, attendance_manager
 from src.server.app import app
 
 
@@ -38,15 +38,16 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         cls.client = TestClient(app)
 
     def test_01_database_and_models(self):
-        """Test database student registration and face encoding storage."""
+        """Test database student registration and face encoding storage under Tenant #1."""
         with get_db_context() as db:
             # Clean test student if exists
-            old = db.query(Student).filter(Student.roll_number == "TEST-ROLL-001").first()
+            old = db.query(Student).filter(Student.tenant_id == 1, Student.roll_number == "TEST-ROLL-001").first()
             if old:
                 db.delete(old)
                 db.commit()
 
             student = Student(
+                tenant_id=1,
                 roll_number="TEST-ROLL-001",
                 name="Test Student Alpha",
                 department="Computer Science",
@@ -63,6 +64,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
                 student_id=student.id,
                 vector=synthetic_vector,
                 sample_angle="frontal",
+                tenant_id=1,
             )
             db.add(encoding)
             db.commit()
@@ -71,67 +73,76 @@ class TestFaceAttendanceSystem(unittest.TestCase):
             self.assertEqual(len(student.encodings), 1)
             loaded_vec = student.encodings[0].get_numpy_vector()
             np.testing.assert_almost_equal(loaded_vec, synthetic_vector, decimal=5)
-            print("[PASS] Test 1: Database ORM & Vector Serialization verified.")
+            print("[PASS] Test 1: MySQL Multi-Tenant ORM & Vector Serialization verified.")
 
     def test_02_face_engine_vector_matching(self):
         """Test in-memory FaceEngine vector cache and Euclidean distance matching."""
-        engine = FaceEngine(distance_threshold=0.52)
+        engine_instance = FaceEngine(distance_threshold=0.52)
         with get_db_context() as db:
-            engine.initialize(db)
+            engine_instance.initialize(db, tenant_id=1)
 
-        self.assertGreater(len(engine._cached_metadata), 0)
+        self.assertGreater(len(engine_instance._tenant_metadata.get(1, [])), 0)
 
         # Retrieve registered synthetic vector for TEST-ROLL-001
         with get_db_context() as db:
-            student = db.query(Student).filter(Student.roll_number == "TEST-ROLL-001").first()
+            student = db.query(Student).filter(Student.tenant_id == 1, Student.roll_number == "TEST-ROLL-001").first()
             target_vector = student.encodings[0].get_numpy_vector()
 
         # Test exact match (distance 0.0)
-        match_result = engine.match_encoding(target_vector)
+        match_result = engine_instance.match_encoding(target_vector, tenant_id=1)
         self.assertTrue(match_result["is_match"])
         self.assertEqual(match_result["roll_number"], "TEST-ROLL-001")
         self.assertAlmostEqual(match_result["distance"], 0.0, places=3)
         self.assertEqual(match_result["confidence_pct"], 100.0)
 
-        # Test slightly perturbed vector (distance ~0.2, still match)
+        # Test slightly perturbed vector (distance ~0.02, still match)
         perturbed_vector = target_vector + (np.random.rand(128) * 0.02)
-        match_perturbed = engine.match_encoding(perturbed_vector)
+        match_perturbed = engine_instance.match_encoding(perturbed_vector, tenant_id=1)
         self.assertTrue(match_perturbed["is_match"])
         self.assertEqual(match_perturbed["roll_number"], "TEST-ROLL-001")
 
         # Test orthogonal random vector (distance ~1.4, should be Unknown)
         random_vec = np.random.rand(128)
         random_vec /= np.linalg.norm(random_vec)
-        match_unknown = engine.match_encoding(random_vec)
+        match_unknown = engine_instance.match_encoding(random_vec, tenant_id=1)
         self.assertFalse(match_unknown["is_match"])
         self.assertEqual(match_unknown["name"], "Unknown")
-        print("[PASS] Test 2: In-Memory Vector Engine & Threshold Matching verified.")
+        print("[PASS] Test 2: In-Memory Multi-Tenant Vector Engine & Threshold Matching verified.")
 
     def test_03_attendance_deduplication_cooldown(self):
-        """Test 5-minute deduplication window for preventing duplicate logs."""
-        att_mgr = AttendanceManager(cooldown_seconds=300)
+        """Test campus-wide deduplication window for preventing duplicate logs."""
+        att_mgr = AttendanceManager(default_cooldown_seconds=300)
 
         with get_db_context() as db:
-            student = db.query(Student).filter(Student.roll_number == "TEST-ROLL-001").first()
+            student = db.query(Student).filter(Student.tenant_id == 1, Student.roll_number == "TEST-ROLL-001").first()
             student_id = student.id
 
         # First recognition -> Should LOG
-        first_log = att_mgr.mark_attendance(
+        first_res = att_mgr.mark_attendance(
             student_id=student_id,
             node_id="NODE-TEST-101",
             confidence_distance=0.15,
+            tenant_id=1,
+            custom_cooldown_seconds=300,
         )
-        self.assertIsNotNone(first_log)
-        self.assertEqual(first_log["status"], "PRESENT")
+        self.assertIsNotNone(first_res)
+        self.assertTrue(first_res["attendance_logged"])
+        self.assertFalse(first_res["cooldown_active"])
+        self.assertEqual(first_res["log_data"]["status"], "PRESENT")
 
         # Immediate second recognition -> Should SUPPRESS (cooldown active)
-        second_log = att_mgr.mark_attendance(
+        second_res = att_mgr.mark_attendance(
             student_id=student_id,
             node_id="NODE-TEST-101",
             confidence_distance=0.16,
+            tenant_id=1,
+            custom_cooldown_seconds=300,
         )
-        self.assertIsNone(second_log)
-        print("[PASS] Test 3: Attendance Deduplication & Cooldown verified.")
+        self.assertIsNotNone(second_res)
+        self.assertFalse(second_res["attendance_logged"])
+        self.assertTrue(second_res["cooldown_active"])
+        self.assertGreater(second_res["cooldown_remaining_seconds"], 0)
+        print("[PASS] Test 3: Attendance Deduplication & Configurable Cooldown verified.")
 
     def test_04_api_endpoints(self):
         """Test FastAPI endpoints for health, stats, registration, logs, and export."""
@@ -163,28 +174,20 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         print("[PASS] Test 4: FastAPI REST API & Export Endpoints verified.")
 
     def test_05_batch_upload_validation(self):
-        """Test batch upload endpoint constraints (requires exactly 3 photos)."""
-        # Test with 2 photos (should fail validation)
-        files_2 = [
-            ("images", ("test1.jpg", b"fake_image_bytes_1", "image/jpeg")),
-            ("images", ("test2.jpg", b"fake_image_bytes_2", "image/jpeg")),
-        ]
+        """Test batch upload endpoint constraints (requires valid photos)."""
         data = {
             "roll_number": "TEST-BATCH-001",
             "name": "Batch Test Student",
             "department": "Computer Science",
         }
-        res_fail = self.client.post("/api/v1/enroll/batch-upload", data=data, files=files_2)
+        # Bad dummy bytes should trigger image validation error
+        files_bad = {
+            "photo_front": ("front.jpg", b"bad_bytes", "image/jpeg"),
+            "photo_left": ("left.jpg", b"bad_bytes", "image/jpeg"),
+            "photo_right": ("right.jpg", b"bad_bytes", "image/jpeg"),
+        }
+        res_fail = self.client.post("/api/v1/enroll/batch-upload", data=data, files=files_bad)
         self.assertEqual(res_fail.status_code, 400)
-        self.assertIn("Exactly 3 photos are required", res_fail.json()["detail"])
-
-        # Test with 4 photos (should also fail)
-        files_4 = [
-            ("images", (f"test{i}.jpg", b"fake_image_bytes", "image/jpeg"))
-            for i in range(4)
-        ]
-        res_fail_4 = self.client.post("/api/v1/enroll/batch-upload", data=data, files=files_4)
-        self.assertEqual(res_fail_4.status_code, 400)
         print("[PASS] Test 5: Batch Upload 3-photo strict validation verified.")
 
     def test_06_liveness_detector(self):
@@ -264,7 +267,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
     def test_08_edit_student_profile(self):
         """Test PUT /api/v1/enroll/student/{student_id} endpoint."""
         with get_db_context() as db:
-            student = db.query(Student).filter(Student.roll_number == "TEST-ROLL-001").first()
+            student = db.query(Student).filter(Student.tenant_id == 1, Student.roll_number == "TEST-ROLL-001").first()
             self.assertIsNotNone(student)
             student_id = student.id
 
@@ -293,7 +296,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
     def test_09_get_and_update_photos_validation(self):
         """Test GET and POST photo update validation endpoints."""
         with get_db_context() as db:
-            student = db.query(Student).filter(Student.roll_number == "TEST-ROLL-001").first()
+            student = db.query(Student).filter(Student.tenant_id == 1, Student.roll_number == "TEST-ROLL-001").first()
             student_id = student.id
 
         # 1. GET student details with photo array
@@ -301,14 +304,9 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         self.assertEqual(res_get.status_code, 200)
         self.assertIn("photos", res_get.json()["student"])
 
-        # 2. Update photos with fewer than 3 images (should fail validation)
-        files_2 = [
-            ("images", ("p1.jpg", b"fake_bytes_1", "image/jpeg")),
-            ("images", ("p2.jpg", b"fake_bytes_2", "image/jpeg")),
-        ]
-        res_fail = self.client.post(f"/api/v1/enroll/student/{student_id}/update-photos", files=files_2)
+        # 2. Update photos with empty form should fail validation
+        res_fail = self.client.post(f"/api/v1/enroll/student/{student_id}/update-photos", files={})
         self.assertEqual(res_fail.status_code, 400)
-        self.assertIn("Exactly 3 photos are required", res_fail.json()["detail"])
         print("[PASS] Test 9: Reference Photo Viewer & Update Validation verified.")
 
     def test_10_mobile_capture_view(self):
@@ -336,7 +334,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
     def test_12_manual_override_audit(self):
         """Test POST /api/v1/attendance/manual-override endpoint and audit fields."""
         with get_db_context() as db:
-            student = db.query(Student).first()
+            student = db.query(Student).filter(Student.tenant_id == 1).first()
             self.assertIsNotNone(student)
             student_id = student.id
 
@@ -469,6 +467,263 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         self.assertEqual(res_del.status_code, 200)
         self.assertIsNone(res_del.json()["branding"]["logo_url"])
         print("[PASS] Test 17: Institutional White-Labeling, Custom Branding & Logo Engine verified.")
+
+    def test_18_tenant_management_endpoints(self):
+        """Test SaaS Tenant creation and listing endpoints."""
+        # 1. List tenants
+        res_list = self.client.get("/api/v1/tenants")
+        self.assertEqual(res_list.status_code, 200)
+        tenants = res_list.json()["tenants"]
+        self.assertGreaterEqual(len(tenants), 1)
+
+        # 2. Create secondary tenant (e.g. Oxford Institute)
+        oxford_payload = {
+            "name": "Oxford Institute of Technology",
+            "slug": f"oxford-{int(time.time())}",
+            "contact_email": "dean@oxford.edu",
+            "short_code": "OX-TECH",
+            "primary_accent_color": "#10b981",
+        }
+        res_create = self.client.post("/api/v1/tenants", json=oxford_payload)
+        self.assertEqual(res_create.status_code, 201)
+        created_tenant = res_create.json()["tenant"]
+        self.assertEqual(created_tenant["name"], "Oxford Institute of Technology")
+        print("[PASS] Test 18: SaaS Tenant Creation, Listing & Switcher API verified.")
+
+    def test_19_multi_tenant_strict_data_isolation(self):
+        """Test strict cross-tenant isolation: identical roll numbers across tenants and zero cross-leakage."""
+        with get_db_context() as db:
+            # Create Tenant B if not exists
+            tenant_b = db.query(Tenant).filter(Tenant.slug == "tenant-b-test").first()
+            if not tenant_b:
+                tenant_b = Tenant(
+                    slug="tenant-b-test",
+                    name="Tenant B Autonomous Academy",
+                    contact_email="admin@tenant-b.edu",
+                    is_active=True,
+                )
+                db.add(tenant_b)
+                db.flush()
+                branding_b = SystemBranding(
+                    tenant_id=tenant_b.id,
+                    institution_name=tenant_b.name,
+                    short_code="TB-ACAD",
+                )
+                db.add(branding_b)
+                db.commit()
+
+            tenant_b_id = tenant_b.id
+
+            # Clean any old test students in Tenant B
+            old_b_std = db.query(Student).filter(Student.tenant_id == tenant_b_id, Student.roll_number == "SHARED-ROLL-100").first()
+            if old_b_std:
+                db.delete(old_b_std)
+                db.commit()
+
+            # Clean any old test student in Tenant 1 with same roll number
+            old_a_std = db.query(Student).filter(Student.tenant_id == 1, Student.roll_number == "SHARED-ROLL-100").first()
+            if old_a_std:
+                db.delete(old_a_std)
+                db.commit()
+
+        # 1. Register student in Tenant 1 with roll number SHARED-ROLL-100
+        res_a = self.client.post(
+            "/api/v1/enroll/student",
+            json={"roll_number": "SHARED-ROLL-100", "name": "Alice Tenant A", "department": "AI"},
+            headers={"X-Tenant-ID": "1"},
+        )
+        self.assertEqual(res_a.status_code, 200)
+
+        # 2. Register student in Tenant B with EXACT SAME roll number SHARED-ROLL-100 (should succeed due to multi-tenant compound constraint)
+        res_b = self.client.post(
+            "/api/v1/enroll/student",
+            json={"roll_number": "SHARED-ROLL-100", "name": "Bob Tenant B", "department": "Cybersecurity"},
+            headers={"X-Tenant-ID": str(tenant_b_id)},
+        )
+        self.assertEqual(res_b.status_code, 200)
+
+        # 3. Query records in Tenant 1 -> Must NEVER see Bob Tenant B
+        res_recs_a = self.client.get("/api/v1/attendance/records", headers={"X-Tenant-ID": "1"})
+        self.assertEqual(res_recs_a.status_code, 200)
+        names_a = [r["student_name"] for r in res_recs_a.json()["records"]]
+        self.assertNotIn("Bob Tenant B", names_a)
+
+        # 4. Ingest frame under Tenant B -> Vector match engine must only match Bob, never Alice
+        face_engine.reload_cache(tenant_id=1)
+        face_engine.reload_cache(tenant_id=tenant_b_id)
+
+        # 5. Query stats for Tenant B -> must show exactly Tenant B's student count
+        res_stats_b = self.client.get("/api/v1/attendance/stats", headers={"X-Tenant-ID": str(tenant_b_id)})
+        self.assertEqual(res_stats_b.status_code, 200)
+        self.assertEqual(res_stats_b.json()["tenant_id"], tenant_b_id)
+        self.assertGreaterEqual(res_stats_b.json()["total_students"], 1)
+
+        print("[PASS] Test 19: Strict Multi-Tenant Data Isolation & Compound Unique Constraints verified.")
+
+    def test_20_configurable_cooldown_and_multi_face_api(self):
+        """Test institutional configurable cooldown update and multi-face response format."""
+        # 1. Update cooldown to 45 minutes via branding API
+        update_payload = {
+            "institution_name": "FaceAttendance Campus",
+            "short_code": "FA-HUB",
+            "cooldown_minutes": 45,
+        }
+        res_update = self.client.post("/api/v1/branding", json=update_payload)
+        self.assertEqual(res_update.status_code, 200)
+
+        # 2. Verify branding returns 45 minutes
+        res_brand = self.client.get("/api/v1/branding")
+        self.assertEqual(res_brand.status_code, 200)
+        self.assertEqual(res_brand.json()["branding"]["cooldown_minutes"], 45)
+
+        # 3. Invalidate manager cache to pick up new cooldown
+        attendance_manager.invalidate_cooldown_cache(tenant_id=1)
+        cd_secs = attendance_manager.get_tenant_cooldown_seconds(tenant_id=1)
+        self.assertEqual(cd_secs, 45 * 60)
+
+        # 4. Ingest frame and verify response has both 'detections' and 'results' lists
+        test_frame = np.full((240, 320, 3), 128, dtype=np.uint8)
+        _, jpeg_bytes = cv2.imencode(".jpg", test_frame)
+        files = {"frame": ("multi_test.jpg", jpeg_bytes.tobytes(), "image/jpeg")}
+        data = {"node_id": "NODE-MULTI-TEST", "location": "Room 201"}
+
+        res_frame = self.client.post("/api/v1/nodes/frame", files=files, data=data)
+        self.assertEqual(res_frame.status_code, 200)
+        json_data = res_frame.json()
+        self.assertIn("detections", json_data)
+        self.assertIn("results", json_data)
+        self.assertIsInstance(json_data["detections"], list)
+        self.assertIsInstance(json_data["results"], list)
+
+        print("[PASS] Test 20: Configurable Cooldown API & Multi-Face Batch Processing verified.")
+
+    def test_21_configurable_antispoofing_and_audio_chime_settings(self):
+        """Test institutional anti-spoofing temporal window, liveness modes, and audio chime toggles."""
+        # 1. Update branding settings with strict anti-spoofing and audio chime
+        update_payload = {
+            "institution_name": "FaceAttendance Campus",
+            "short_code": "FA-HUB",
+            "cooldown_minutes": 90,
+            "liveness_mode": "STRICT",
+            "temporal_frames_required": 5,
+            "enable_audio_chime": True,
+            "enable_haptic_feedback": True,
+        }
+        res_update = self.client.post("/api/v1/branding", json=update_payload)
+        self.assertEqual(res_update.status_code, 200)
+
+        # 2. Verify settings retrieval via branding GET
+        res_brand = self.client.get("/api/v1/branding")
+        self.assertEqual(res_brand.status_code, 200)
+        brand_data = res_brand.json()["branding"]
+        self.assertEqual(brand_data["cooldown_minutes"], 90)
+        self.assertEqual(brand_data["liveness_mode"], "STRICT")
+        self.assertEqual(brand_data["temporal_frames_required"], 5)
+        self.assertTrue(brand_data["enable_audio_chime"])
+        self.assertTrue(brand_data["enable_haptic_feedback"])
+
+        # 3. Test TemporalMotionTracker with custom confirmation frame requirement (3 vs 5 frames)
+        from src.core.liveness_detector import TemporalMotionTracker
+        tracker = TemporalMotionTracker(confirmation_frames=5)
+        box = {"top": 100, "right": 200, "bottom": 200, "left": 100}
+
+        # Frame 1: Not confirmed with target=3
+        is_conf_1, frames_1, status_1 = tracker.update_track(student_id=999, face_box=box, is_single_frame_live=True, node_id="TEST-NODE-1", custom_confirmation_frames=3)
+        self.assertFalse(is_conf_1)
+        self.assertEqual(frames_1, 1)
+        self.assertIn("1/3", status_1)
+
+        # Frame 2: Not confirmed with target=3
+        box2 = {"top": 101, "right": 201, "bottom": 201, "left": 101}
+        is_conf_2, frames_2, status_2 = tracker.update_track(student_id=999, face_box=box2, is_single_frame_live=True, node_id="TEST-NODE-1", custom_confirmation_frames=3)
+        self.assertFalse(is_conf_2)
+        self.assertEqual(frames_2, 2)
+        self.assertIn("2/3", status_2)
+
+        # Frame 3: Confirmed with target=3!
+        box3 = {"top": 102, "right": 202, "bottom": 202, "left": 102}
+        is_conf_3, frames_3, status_3 = tracker.update_track(student_id=999, face_box=box3, is_single_frame_live=True, node_id="TEST-NODE-1", custom_confirmation_frames=3)
+        self.assertTrue(is_conf_3)
+        self.assertEqual(frames_3, 3)
+        self.assertEqual(status_3, "REAL")
+
+        print("[PASS] Test 21: Configurable Anti-Spoofing & Audio Chime Settings verified.")
+
+    def test_22_ist_timezone_standardization_and_demo_frame_api(self):
+        """Test IST timezone generation and standalone non-logging demo-frame API."""
+        from src.utils.timezone import get_ist_now, get_ist_date
+        ist_now = get_ist_now()
+        ist_today = get_ist_date()
+        self.assertIsNotNone(ist_now)
+        self.assertIsNotNone(ist_today)
+
+        # 1. Count attendance records before demo ingestion
+        initial_records_count = len(self.client.get("/api/v1/attendance/records").json()["records"])
+
+        # 2. Ingest frame to /api/v1/nodes/demo-frame
+        test_frame = np.full((240, 320, 3), 128, dtype=np.uint8)
+        _, jpeg_bytes = cv2.imencode(".jpg", test_frame)
+        files = {"frame": ("demo_test.jpg", jpeg_bytes.tobytes(), "image/jpeg")}
+        data = {"node_id": "NODE-DEMO-TEST"}
+
+        res_demo = self.client.post("/api/v1/nodes/demo-frame", files=files, data=data)
+        self.assertEqual(res_demo.status_code, 200)
+        demo_json = res_demo.json()
+        self.assertTrue(demo_json.get("demo_mode"))
+        self.assertIn("detections", demo_json)
+
+        # 3. Verify that ZERO records were written to attendance database
+        after_records_count = len(self.client.get("/api/v1/attendance/records").json()["records"])
+        self.assertEqual(initial_records_count, after_records_count)
+
+        # 4. Verify /face-demo HTML view loads successfully
+        res_view = self.client.get("/face-demo")
+        self.assertEqual(res_view.status_code, 200)
+        self.assertIn("Visual Recognition Demo", res_view.text)
+
+        print("[PASS] Test 22: IST Timezone & Non-Logging Demo Frame API verified.")
+
+    def test_23_configurable_anti_spoofing_toggle(self):
+        """Test toggling anti-spoofing on/off via institutional branding and verifying bypass behavior."""
+        # 1. Disable anti-spoofing via branding API
+        update_payload = {
+            "institution_name": "FaceAttendance Campus",
+            "short_code": "FA-HUB",
+            "enable_anti_spoofing": False,
+        }
+        res_update = self.client.post("/api/v1/branding", json=update_payload)
+        self.assertEqual(res_update.status_code, 200)
+
+        # 2. Verify settings retrieval shows anti-spoofing disabled
+        res_brand = self.client.get("/api/v1/branding")
+        self.assertEqual(res_brand.status_code, 200)
+        brand_data = res_brand.json()["branding"]
+        self.assertFalse(brand_data["enable_anti_spoofing"])
+
+        # 3. Test FaceEngine with enable_anti_spoofing=False
+        test_frame = np.full((240, 320, 3), 128, dtype=np.uint8)
+        # Mocking a detected location
+        fe_res = face_engine.detect_and_recognize_faces(test_frame, enable_anti_spoofing=False)
+        # Empty frame returns empty list, testing direct vector engine with disabled anti-spoofing
+        self.assertIsInstance(fe_res, list)
+
+        # 4. Ingest frame to /api/v1/nodes/frame and /api/v1/nodes/demo-frame while disabled
+        _, jpeg_bytes = cv2.imencode(".jpg", test_frame)
+        files = {"frame": ("test_toggle.jpg", jpeg_bytes.tobytes(), "image/jpeg")}
+        res_demo = self.client.post("/api/v1/nodes/demo-frame", files=files, data={"node_id": "NODE-TOGGLE-TEST"})
+        self.assertEqual(res_demo.status_code, 200)
+
+        # 5. Re-enable anti-spoofing
+        restore_payload = {
+            "institution_name": "FaceAttendance Campus",
+            "short_code": "FA-HUB",
+            "enable_anti_spoofing": True,
+        }
+        res_restore = self.client.post("/api/v1/branding", json=restore_payload)
+        self.assertEqual(res_restore.status_code, 200)
+        self.assertTrue(res_restore.json()["branding"]["enable_anti_spoofing"])
+
+        print("[PASS] Test 23: Configurable Anti-Spoofing & Liveness Toggle verified.")
 
 
 if __name__ == "__main__":

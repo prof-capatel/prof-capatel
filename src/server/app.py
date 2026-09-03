@@ -7,7 +7,14 @@ from fastapi.staticfiles import StaticFiles
 from src.config import DATA_DIR, FACES_DIR, SNAPSHOTS_DIR
 from src.core.face_engine import face_engine
 from src.database.session import init_db
-from src.server.routes import api_nodes, api_enrollment, api_attendance, api_branding, views_dashboard
+from src.server.routes import (
+    api_nodes,
+    api_enrollment,
+    api_attendance,
+    api_branding,
+    api_tenants,
+    views_dashboard,
+)
 
 # Configure root logger
 logging.basicConfig(
@@ -19,28 +26,28 @@ logger = logging.getLogger("attendance_app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initializes SQLite database and preloads FaceEngine cache into RAM."""
-    logger.info("Initializing Attendance System...")
+    """Initializes MySQL database schema and preloads partitioned FaceEngine cache into RAM."""
+    logger.info("Initializing Multi-Tenant MySQL Attendance SaaS...")
     # 1. Initialize DB schema
     init_db()
-    logger.info("SQLite database schema initialized.")
+    logger.info("MySQL database schema and default tenant initialized.")
 
-    # 2. Preload face embeddings into in-memory matrix
+    # 2. Preload face embeddings into in-memory matrix partitioned by tenant
     try:
         face_engine.initialize()
     except Exception as e:
         logger.warning(f"FaceEngine initialization notice: {e}")
 
-    logger.info("Server startup complete. Ready for node streams.")
+    logger.info("Server startup complete. Ready for multi-tenant node streams.")
     yield
     logger.info("Server shutting down.")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="Thin-Client Face Recognition Attendance Hub",
-    description="Central recognition server for classroom edge capture nodes (Raspberry Pi Zero).",
-    version="1.0.0",
+    title="Multi-Tenant Thin-Client Face Recognition Attendance SaaS",
+    description="Central recognition server for classroom edge capture nodes across multiple institutions.",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -59,6 +66,7 @@ app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")
 
 # Register Routers
 app.include_router(views_dashboard.router)
+app.include_router(api_tenants.router)
 app.include_router(api_nodes.router)
 app.include_router(api_enrollment.router)
 app.include_router(api_attendance.router)
@@ -68,4 +76,4 @@ app.include_router(api_branding.router)
 @app.get("/health")
 def health_check():
     """Health check endpoint for node discovery."""
-    return {"status": "healthy", "service": "Face Recognition Attendance Server"}
+    return {"status": "healthy", "service": "Multi-Tenant Face Recognition Attendance SaaS"}

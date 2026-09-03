@@ -70,8 +70,118 @@
                     </div>
                 </div>
 
-                <button type="submit" id="btnSaveBranding" class="btn btn-primary" style="margin-top: 8px;">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Institutional Details
+                <!-- Configurable Institutional Cooldown Period -->
+                <div class="form-group" style="padding: 16px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="margin-bottom: 0; font-weight: 700; color: var(--text-heading); font-size: 13.5px;">
+                            <i class="fa-solid fa-hourglass-half" style="color: var(--accent-primary);"></i> Attendance Check-In Cooldown Window
+                        </label>
+                        <span id="cooldownLabel" style="font-size: 12px; font-weight: 800; color: var(--accent-primary); background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); padding: 3px 10px; border-radius: 20px;">
+                            {{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Minutes ({{ "%.1f"|format((branding.cooldown_minutes if branding and branding.cooldown_minutes else 60)/60) }} Hours)
+                        </span>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                        Prevents duplicate attendance logging within this sliding time window across all campus edge nodes and mobile cameras.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <input type="range" id="cooldownSlider" min="5" max="720" step="5" value="{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }}" style="flex: 1; accent-color: var(--accent-primary);" oninput="updateCooldownDisplay(this.value)">
+                        <input type="number" id="brandCooldownMinutes" class="form-control" style="width: 90px; text-align: center; font-weight: 700;" min="1" max="1440" value="{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }}" oninput="updateCooldownFromInput(this.value)">
+                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Mins</span>
+                    </div>
+                </div>
+
+                <!-- Configurable Anti-Spoofing & Liveness Security -->
+                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-shield-halved" style="color: var(--accent-emerald);"></i> Anti-Spoofing & Liveness Check
+                            </label>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">
+                                2D FFT spectral texture validation, specular reflection detection, and temporal micro-motion verification
+                            </span>
+                        </div>
+                        
+                        <!-- Dynamic Anti-Spoofing Toggle Switch -->
+                        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-card); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
+                            <span id="antiSpoofStatusBadge" class="badge {% if not branding or branding.enable_anti_spoofing %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 11px;">
+                                {% if not branding or branding.enable_anti_spoofing %}ENABLED{% else %}DISABLED{% endif %}
+                            </span>
+                            <label style="position: relative; display: inline-block; width: 42px; height: 22px; margin-bottom: 0; cursor: pointer;">
+                                <input type="checkbox" id="brandAntiSpoofingToggle" {% if not branding or branding.enable_anti_spoofing %}checked{% endif %} onchange="toggleAntiSpoofingControls(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <span id="toggleTrack" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: {% if not branding or branding.enable_anti_spoofing %}var(--accent-emerald){% else %}var(--border-color){% endif %}; transition: .25s; border-radius: 22px;"></span>
+                                <span id="toggleKnob" style="position: absolute; height: 16px; width: 16px; left: {% if not branding or branding.enable_anti_spoofing %}22px{% else %}3px{% endif %}; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Config Container (Active when Anti-Spoofing is Enabled) -->
+                    <div id="antiSpoofConfigContainer" style="transition: all 0.25s; {% if branding and not branding.enable_anti_spoofing %}opacity: 0.45; pointer-events: none;{% endif %}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Preset Security Tier:</span>
+                            <span id="livenessModeBadge" class="badge badge-sky" style="font-size: 11px;">
+                                {{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }}
+                            </span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
+                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveStrict" onclick="setLivenessPreset('STRICT', 5)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
+                                Strict (5 Frames)
+                            </button>
+                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveBalanced" onclick="setLivenessPreset('BALANCED', 3)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
+                                Balanced (3 Frames)
+                            </button>
+                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveFast" onclick="setLivenessPreset('FAST', 1)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
+                                Fast (1 Frame)
+                            </button>
+                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveDisabled" onclick="setLivenessPreset('DISABLED', 1)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
+                                Off / Passive
+                            </button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; white-space: nowrap;">Temporal Frames Required:</label>
+                            <input type="range" id="temporalFramesSlider" min="1" max="10" step="1" value="{{ branding.temporal_frames_required if branding and branding.temporal_frames_required else 3 }}" style="flex: 1; accent-color: var(--accent-emerald);" oninput="updateTemporalFramesDisplay(this.value)">
+                            <input type="number" id="brandTemporalFrames" class="form-control" style="width: 70px; text-align: center; font-weight: 700;" min="1" max="10" value="{{ branding.temporal_frames_required if branding and branding.temporal_frames_required else 3 }}" oninput="updateTemporalFramesFromInput(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Informational notice when disabled -->
+                    <div id="antiSpoofDisabledNotice" style="display: {% if branding and not branding.enable_anti_spoofing %}block{% else %}none{% endif %}; margin-top: 10px; padding: 8px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); font-size: 11.5px; color: #f87171;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <strong>Anti-Spoofing Inactive:</strong> Frame ingestion and demo recognition will bypass spectral texture and reflection checks for frictionless matching.
+                    </div>
+                </div>
+
+                <!-- Configurable Check-In Feedback & Audio Chime Settings -->
+                <div class="form-group" style="padding: 16px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label class="form-label" style="margin-bottom: 0; font-weight: 700; color: var(--text-heading); font-size: 13.5px;">
+                            <i class="fa-solid fa-bell" style="color: var(--accent-amber);"></i> Real-Time Check-In Audio & Feedback
+                        </label>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                        Configure instant auditory and visual notifications when a student's attendance is verified.
+                    </p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">Audio Chime</strong>
+                                <span style="font-size: 11px; color: var(--text-muted);">Play 2-tone biometric gate sound</span>
+                            </div>
+                            <input type="checkbox" id="brandAudioChime" {% if branding and branding.enable_audio_chime %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;">
+                        </div>
+                        <div style="padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">Mobile Haptics</strong>
+                                <span style="font-size: 11px; color: var(--text-muted);">Vibrate phone on check-in</span>
+                            </div>
+                            <input type="checkbox" id="brandHapticFeedback" {% if branding and branding.enable_haptic_feedback %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;">
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" id="brandLivenessMode" value="{{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }}">
+
+                <button type="submit" id="btnSaveBranding" class="btn btn-primary" style="margin-top: 14px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Institutional Settings & Security
                 </button>
                 <div id="brandingSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
             </form>
@@ -407,6 +517,90 @@ function syncColorPicker(val) {
     }
 }
 
+function updateCooldownDisplay(val) {
+    const mins = parseInt(val) || 60;
+    document.getElementById("brandCooldownMinutes").value = mins;
+    const hrs = (mins / 60).toFixed(1);
+    document.getElementById("cooldownLabel").innerText = `${mins} Minutes (${hrs} Hours)`;
+}
+
+function updateCooldownFromInput(val) {
+    let mins = parseInt(val) || 60;
+    mins = Math.max(1, Math.min(1440, mins));
+    document.getElementById("cooldownSlider").value = Math.min(720, mins);
+    const hrs = (mins / 60).toFixed(1);
+    document.getElementById("cooldownLabel").innerText = `${mins} Minutes (${hrs} Hours)`;
+}
+
+function setLivenessPreset(mode, frames) {
+    document.getElementById("brandLivenessMode").value = mode;
+    document.getElementById("livenessModeBadge").innerText = mode;
+    document.getElementById("temporalFramesSlider").value = frames;
+    document.getElementById("brandTemporalFrames").value = frames;
+
+    document.querySelectorAll(".liveness-preset-btn").forEach(b => {
+        b.classList.remove("btn-primary");
+        b.classList.add("btn-secondary");
+    });
+
+    const activeMap = {
+        "STRICT": "btnLiveStrict",
+        "BALANCED": "btnLiveBalanced",
+        "FAST": "btnLiveFast",
+        "DISABLED": "btnLiveDisabled"
+    };
+    const activeBtn = document.getElementById(activeMap[mode]);
+    if (activeBtn) {
+        activeBtn.classList.remove("btn-secondary");
+        activeBtn.classList.add("btn-primary");
+    }
+}
+
+function updateTemporalFramesDisplay(val) {
+    const frames = parseInt(val) || 3;
+    document.getElementById("brandTemporalFrames").value = frames;
+}
+
+function updateTemporalFramesFromInput(val) {
+    let frames = parseInt(val) || 3;
+    frames = Math.max(1, Math.min(10, frames));
+    document.getElementById("temporalFramesSlider").value = frames;
+}
+
+function toggleAntiSpoofingControls(isEnabled) {
+    const badge = document.getElementById("antiSpoofStatusBadge");
+    const container = document.getElementById("antiSpoofConfigContainer");
+    const notice = document.getElementById("antiSpoofDisabledNotice");
+    const track = document.getElementById("toggleTrack");
+    const knob = document.getElementById("toggleKnob");
+
+    if (isEnabled) {
+        if (badge) {
+            badge.innerText = "ENABLED";
+            badge.className = "badge badge-present";
+        }
+        if (track) track.style.backgroundColor = "var(--accent-emerald)";
+        if (knob) knob.style.left = "22px";
+        if (container) {
+            container.style.opacity = "1";
+            container.style.pointerEvents = "auto";
+        }
+        if (notice) notice.style.display = "none";
+    } else {
+        if (badge) {
+            badge.innerText = "DISABLED";
+            badge.className = "badge badge-unknown";
+        }
+        if (track) track.style.backgroundColor = "var(--border-color)";
+        if (knob) knob.style.left = "3px";
+        if (container) {
+            container.style.opacity = "0.45";
+            container.style.pointerEvents = "none";
+        }
+        if (notice) notice.style.display = "block";
+    }
+}
+
 function resetBrandColor() {
     document.getElementById("brandAccentColorPicker").value = "#6366f1";
     document.getElementById("brandAccentColorText").value = "#6366f1";
@@ -420,6 +614,12 @@ async function saveBrandingDetails(e) {
     const badgeText = document.getElementById("brandBadgeText").value.trim();
     const email = document.getElementById("brandContactEmail").value.trim();
     const color = document.getElementById("brandAccentColorText").value.trim();
+    const cooldownMins = parseInt(document.getElementById("brandCooldownMinutes").value) || 60;
+    const antiSpoofing = document.getElementById("brandAntiSpoofingToggle").checked;
+    const livenessMode = document.getElementById("brandLivenessMode").value || "BALANCED";
+    const temporalFrames = parseInt(document.getElementById("brandTemporalFrames").value) || 3;
+    const audioChime = document.getElementById("brandAudioChime").checked;
+    const hapticFeedback = document.getElementById("brandHapticFeedback").checked;
 
     const saveBtn = document.getElementById("btnSaveBranding");
     const alertBox = document.getElementById("brandingSaveAlert");
@@ -438,6 +638,12 @@ async function saveBrandingDetails(e) {
                 header_badge_text: badgeText,
                 contact_email: email || null,
                 primary_accent_color: color,
+                cooldown_minutes: cooldownMins,
+                enable_anti_spoofing: antiSpoofing,
+                liveness_mode: livenessMode,
+                temporal_frames_required: temporalFrames,
+                enable_audio_chime: audioChime,
+                enable_haptic_feedback: hapticFeedback,
             }),
         });
         const data = await res.json();

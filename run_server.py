@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -18,7 +19,7 @@ if os.path.exists(anaconda_bin):
 
 import socket
 import uvicorn
-from src.config import SERVER_HOST, SERVER_PORT
+from src.config import SERVER_HOST, SERVER_PORT, DATA_DIR
 
 
 def get_local_ip() -> str:
@@ -26,7 +27,6 @@ def get_local_ip() -> str:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(0.5)
-        # Doesn't have to be reachable; used to route socket interface
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
         s.close()
@@ -35,23 +35,88 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 
+def generate_self_signed_cert():
+    """Generates a self-signed SSL cert/key for local HTTPS LAN testing."""
+    ssl_dir = DATA_DIR / "ssl"
+    ssl_dir.mkdir(parents=True, exist_ok=True)
+    cert_path = ssl_dir / "cert.pem"
+    key_path = ssl_dir / "key.pem"
+
+    if not cert_path.exists() or not key_path.exists():
+        try:
+            from cryptography import x509
+            from cryptography.x509.oid import NameOID
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.asymmetric import rsa
+            from cryptography.hazmat.primitives import serialization
+            import datetime
+
+            key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            subject = issuer = x509.Name([
+                x509.NameAttribute(NameOID.COMMON_NAME, "FaceAttendance LAN Server"),
+            ])
+            cert = (
+                x509.CertificateBuilder()
+                .subject_name(subject)
+                .issuer_name(issuer)
+                .public_key(key.public_key())
+                .serial_number(x509.random_serial_number())
+                .not_valid_before(datetime.datetime.utcnow())
+                .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+                .sign(key, hashes.SHA256())
+            )
+
+            with open(key_path, "wb") as f:
+                f.write(key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryption_algorithm=serialization.NoEncryption(),
+                ))
+
+            with open(cert_path, "wb") as f:
+                f.write(cert.public_bytes(serialization.Encoding.PEM))
+
+            print("[*] Generated self-signed SSL certificate for local HTTPS testing.")
+        except Exception as e:
+            print(f"[!] Note: SSL certificate generation requires cryptography package: {e}")
+            return None, None
+
+    return str(cert_path), str(key_path)
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Central Attendance Server")
+    parser.add_argument("--host", type=str, default=SERVER_HOST, help="Bind Host (0.0.0.0)")
+    parser.add_argument("--port", type=int, default=SERVER_PORT, help="Port (8000)")
+    parser.add_argument("--ssl", action="store_true", help="Enable HTTPS with self-signed SSL for mobile WebRTC")
+    args = parser.parse_args()
+
     local_ip = get_local_ip()
+    protocol = "https" if args.ssl else "http"
 
     print("================================================================")
     print("  THIN-CLIENT FACE RECOGNITION ATTENDANCE SERVER (CENTRAL HUB)  ")
     print("================================================================")
-    print(f"[*] Dashboard URL    : http://localhost:{SERVER_PORT}")
-    print(f"[*] Local LAN URL    : http://{local_ip}:{SERVER_PORT}")
-    print(f"[*] Mobile Capture   : http://{local_ip}:{SERVER_PORT}/mobile-capture")
-    print(f"[*] Node Ingestion   : http://{local_ip}:{SERVER_PORT}/api/v1/nodes/frame")
-    print(f"[*] Interactive Docs : http://localhost:{SERVER_PORT}/docs")
+    print(f"[*] Dashboard URL    : {protocol}://localhost:{args.port}")
+    print(f"[*] Local LAN URL    : {protocol}://{local_ip}:{args.port}")
+    print(f"[*] Mobile Capture   : {protocol}://{local_ip}:{args.port}/mobile-capture")
+    print(f"[*] Node Ingestion   : {protocol}://{local_ip}:{args.port}/api/v1/nodes/frame")
+    print(f"[*] Interactive Docs : {protocol}://localhost:{args.port}/docs")
     print("================================================================\n")
 
-    uvicorn.run(
-        "src.server.app:app",
-        host=SERVER_HOST,
-        port=SERVER_PORT,
-        reload=False,
-        access_log=True,
-    )
+    ssl_cert, ssl_key = None, None
+    if args.ssl:
+        ssl_cert, ssl_key = generate_self_signed_cert()
+
+    uvicorn_kwargs = {
+        "app": "src.server.app:app",
+        "host": args.host,
+        "port": args.port,
+        "reload": True,
+        "access_log": True,
+    }
+    if ssl_cert and ssl_key:
+        uvicorn_kwargs["ssl_certfile"] = ssl_cert
+        uvicorn_kwargs["ssl_keyfile"] = ssl_key
+
+    uvicorn.run(**uvicorn_kwargs)
