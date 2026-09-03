@@ -42,6 +42,14 @@ async def ingest_node_frame(
 
     active_tenant_id = target_tenant.id
 
+    # Enforce Tenant Subscription Status (Suspended/Expired lockout)
+    sub_status = (target_tenant.subscription_status or "ACTIVE").upper()
+    if sub_status != "ACTIVE":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Tenant organization '{target_tenant.name}' is currently {sub_status}. Edge node ingestion is locked.",
+        )
+
     # 1. Read & decode image bytes
     contents = await frame.read()
     image_bgr = decode_image_bytes(contents)

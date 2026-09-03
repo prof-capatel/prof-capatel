@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import numpy as np
 from sqlalchemy import (
     Column,
@@ -20,6 +20,55 @@ from src.utils.timezone import get_ist_now
 Base = declarative_base()
 
 
+class User(Base):
+    """
+    User entity for Multi-Tier Role-Based Access Control (RBAC).
+    Roles:
+    - SUPER_ADMIN: Global control plane access across all SaaS tenants.
+    - TENANT_ADMIN: Institutional Dean, Principal, or Campus Admin.
+    - TEACHER: Faculty member assigned to specific classes & divisions.
+    - STUDENT: Student with access to personal records and attendance turnout.
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
+    username = Column(String(50), nullable=False, index=True)
+    email = Column(String(100), nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(30), nullable=False, default="STUDENT")  # SUPER_ADMIN, TENANT_ADMIN, TEACHER, STUDENT
+    full_name = Column(String(100), nullable=False)
+    phone_number = Column(String(30), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+    last_login_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_user_tenant_role", "tenant_id", "role"),
+        Index("ix_user_tenant_username", "tenant_id", "username"),
+    )
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="users")
+    teacher_assignments = relationship("TeacherClassAssignment", back_populates="teacher", cascade="all, delete-orphan")
+    student_profile = relationship("Student", back_populates="user", uselist=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "tenant_name": self.tenant.name if self.tenant else "Global Platform",
+            "username": self.username,
+            "email": self.email,
+            "role": self.role,
+            "full_name": self.full_name,
+            "phone_number": self.phone_number,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
+        }
+
+
 class Tenant(Base):
     """
     Multi-tenant Organization / Institute entity for SaaS isolation.
@@ -31,14 +80,27 @@ class Tenant(Base):
     name = Column(String(150), nullable=False)                          # e.g. 'FaceAttendance Campus'
     contact_email = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    
+    # SaaS Subscription & Quotas
+    subscription_plan = Column(String(30), default="STANDARD", nullable=False)   # FREE, STANDARD, ENTERPRISE
+    subscription_status = Column(String(30), default="ACTIVE", nullable=False)   # ACTIVE, SUSPENDED, EXPIRED
+    max_face_encodings = Column(Integer, default=500, nullable=False)
+    max_nodes = Column(Integer, default=10, nullable=False)
+    subscription_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=get_ist_now)
 
     # Relationships
+    users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     students = relationship("Student", back_populates="tenant", cascade="all, delete-orphan")
     attendance_records = relationship("AttendanceRecord", back_populates="tenant", cascade="all, delete-orphan")
     node_devices = relationship("NodeDevice", back_populates="tenant", cascade="all, delete-orphan")
     face_encodings = relationship("FaceEncoding", back_populates="tenant", cascade="all, delete-orphan")
     branding = relationship("SystemBranding", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
+    academic_years = relationship("AcademicYear", back_populates="tenant", cascade="all, delete-orphan")
+    classes = relationship("ClassModel", back_populates="tenant", cascade="all, delete-orphan")
+    divisions = relationship("Division", back_populates="tenant", cascade="all, delete-orphan")
+    teacher_assignments = relationship("TeacherClassAssignment", back_populates="tenant", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="tenant", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -47,6 +109,158 @@ class Tenant(Base):
             "name": self.name,
             "contact_email": self.contact_email,
             "is_active": self.is_active,
+            "subscription_plan": self.subscription_plan or "STANDARD",
+            "subscription_status": self.subscription_status or "ACTIVE",
+            "max_face_encodings": self.max_face_encodings or 500,
+            "max_nodes": self.max_nodes or 10,
+            "subscription_expires_at": self.subscription_expires_at.strftime("%Y-%m-%d") if self.subscription_expires_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "enrolled_faces_count": len(self.face_encodings) if self.face_encodings else 0,
+            "active_nodes_count": len(self.node_devices) if self.node_devices else 0,
+            "students_count": len(self.students) if self.students else 0,
+        }
+
+
+class AcademicYear(Base):
+    """
+    Academic Year entity per tenant (e.g. '2025-2026', '2026-2027').
+    """
+    __tablename__ = "academic_years"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    name = Column(String(50), nullable=False)  # e.g. "2026-2027"
+    is_current = Column(Boolean, default=True, nullable=False)
+    start_date = Column(String(30), nullable=True)
+    end_date = Column(String(30), nullable=True)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", name="uq_tenant_academic_year"),
+    )
+
+    tenant = relationship("Tenant", back_populates="academic_years")
+    students = relationship("Student", back_populates="academic_year")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "is_current": self.is_current,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ClassModel(Base):
+    """
+    Institutional Class / Course / Semester entity (e.g. 'FY Computer Science', 'SY IT').
+    """
+    __tablename__ = "classes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    department = Column(String(100), default="Computer Science", nullable=False)
+    name = Column(String(100), nullable=False)  # e.g. "FY Computer Science"
+    code = Column(String(30), nullable=True)   # e.g. "FY-CS"
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", name="uq_tenant_class_name"),
+    )
+
+    tenant = relationship("Tenant", back_populates="classes")
+    divisions = relationship("Division", back_populates="class_obj", cascade="all, delete-orphan")
+    students = relationship("Student", back_populates="class_obj", foreign_keys="[Student.class_id]")
+    teacher_assignments = relationship("TeacherClassAssignment", back_populates="class_obj", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "department": self.department,
+            "name": self.name,
+            "code": self.code or self.name,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "divisions": [d.to_dict() for d in (self.divisions or [])],
+            "students_count": len(self.students) if self.students else 0,
+        }
+
+
+class Division(Base):
+    """
+    Class Section / Division entity (e.g. 'Division A', 'Division B', 'Batch 1').
+    """
+    __tablename__ = "divisions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(50), nullable=False)  # e.g. "Division A"
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "class_id", "name", name="uq_tenant_class_division"),
+    )
+
+    tenant = relationship("Tenant", back_populates="divisions")
+    class_obj = relationship("ClassModel", back_populates="divisions")
+    students = relationship("Student", back_populates="division_obj", foreign_keys="[Student.division_id]")
+    teacher_assignments = relationship("TeacherClassAssignment", back_populates="division_obj", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "class_id": self.class_id,
+            "class_name": self.class_obj.name if self.class_obj else "Unknown Class",
+            "name": self.name,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "students_count": len(self.students) if self.students else 0,
+        }
+
+
+class TeacherClassAssignment(Base):
+    """
+    Mapping between Faculty (User with role TEACHER) and assigned Classes / Divisions.
+    """
+    __tablename__ = "teacher_class_assignments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    teacher_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False, index=True)
+    division_id = Column(Integer, ForeignKey("divisions.id", ondelete="CASCADE"), nullable=True, index=True)
+    academic_year_id = Column(Integer, ForeignKey("academic_years.id", ondelete="CASCADE"), nullable=True, index=True)
+    subject = Column(String(100), default="General", nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        Index("ix_teacher_assign_tenant_user", "tenant_id", "teacher_id"),
+    )
+
+    tenant = relationship("Tenant", back_populates="teacher_assignments")
+    teacher = relationship("User", back_populates="teacher_assignments")
+    class_obj = relationship("ClassModel", back_populates="teacher_assignments")
+    division_obj = relationship("Division", back_populates="teacher_assignments")
+    academic_year = relationship("AcademicYear")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "teacher_id": self.teacher_id,
+            "teacher_name": self.teacher.full_name if self.teacher else "Unknown Teacher",
+            "teacher_username": self.teacher.username if self.teacher else "N/A",
+            "class_id": self.class_id,
+            "class_name": self.class_obj.name if self.class_obj else "N/A",
+            "division_id": self.division_id,
+            "division_name": self.division_obj.name if self.division_obj else "All Divisions",
+            "academic_year_id": self.academic_year_id,
+            "academic_year_name": self.academic_year.name if self.academic_year else "Current",
+            "subject": self.subject,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -62,18 +276,36 @@ class Student(Base):
     email = Column(String(100), nullable=True)
     user_role = Column(String(30), default="student", nullable=False)  # student, teacher, admin_staff, other
     class_semester = Column(String(50), nullable=True, default="General")
+    
+    # Enhanced Academic Structure Links
+    class_id = Column(Integer, ForeignKey("classes.id", ondelete="SET NULL"), nullable=True, index=True)
+    division_id = Column(Integer, ForeignKey("divisions.id", ondelete="SET NULL"), nullable=True, index=True)
+    academic_year_id = Column(Integer, ForeignKey("academic_years.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Progression & Rollback History
+    previous_class_id = Column(Integer, nullable=True)
+    previous_division_id = Column(Integer, nullable=True)
+    previous_academic_year_id = Column(Integer, nullable=True)
+    last_promoted_at = Column(DateTime, nullable=True)
+
     created_at = Column(DateTime, default=get_ist_now)
     is_active = Column(Boolean, default=True)
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "roll_number", name="uq_tenant_student_roll"),
         Index("ix_student_tenant_active", "tenant_id", "is_active"),
+        Index("ix_student_class_div", "tenant_id", "class_id", "division_id"),
     )
 
     # Relationships
     tenant = relationship("Tenant", back_populates="students")
     encodings = relationship("FaceEncoding", back_populates="student", cascade="all, delete-orphan")
     attendance_records = relationship("AttendanceRecord", back_populates="student", cascade="all, delete-orphan")
+    class_obj = relationship("ClassModel", back_populates="students", foreign_keys=[class_id])
+    division_obj = relationship("Division", back_populates="students", foreign_keys=[division_id])
+    academic_year = relationship("AcademicYear", back_populates="students", foreign_keys=[academic_year_id])
+    user = relationship("User", back_populates="student_profile", foreign_keys=[user_id])
 
     def to_dict(self):
         photos_list = []
@@ -92,6 +324,10 @@ class Student(Base):
                 "created_at": enc.created_at.isoformat() if enc.created_at else None,
             })
 
+        class_display = self.class_obj.name if self.class_obj else (self.class_semester or "General")
+        division_display = self.division_obj.name if self.division_obj else "N/A"
+        year_display = self.academic_year.name if self.academic_year else "Current"
+
         return {
             "id": self.id,
             "tenant_id": self.tenant_id,
@@ -100,7 +336,17 @@ class Student(Base):
             "department": self.department,
             "email": self.email,
             "user_role": self.user_role or "student",
-            "class_semester": self.class_semester or "General",
+            "class_semester": class_display,
+            "class_id": self.class_id,
+            "class_name": class_display,
+            "division_id": self.division_id,
+            "division_name": division_display,
+            "academic_year_id": self.academic_year_id,
+            "academic_year_name": year_display,
+            "previous_class_id": self.previous_class_id,
+            "previous_division_id": self.previous_division_id,
+            "previous_academic_year_id": self.previous_academic_year_id,
+            "last_promoted_at": self.last_promoted_at.isoformat() if self.last_promoted_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "is_active": self.is_active,
             "samples_count": len(self.encodings) if self.encodings else 0,
@@ -166,6 +412,8 @@ class AttendanceRecord(Base):
     student = relationship("Student", back_populates="attendance_records")
 
     def to_dict(self):
+        class_name = self.student.class_obj.name if (self.student and self.student.class_obj) else (self.student.class_semester if self.student else "General")
+        div_name = self.student.division_obj.name if (self.student and self.student.division_obj) else "N/A"
         return {
             "id": self.id,
             "tenant_id": self.tenant_id,
@@ -174,7 +422,8 @@ class AttendanceRecord(Base):
             "roll_number": self.student.roll_number if self.student else "N/A",
             "department": self.student.department if self.student else "N/A",
             "user_role": self.student.user_role if self.student else "student",
-            "class_semester": self.student.class_semester if self.student else "General",
+            "class_semester": class_name,
+            "division_name": div_name,
             "node_id": self.node_id,
             "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S") if self.timestamp else None,
             "confidence_distance": round(self.confidence_distance, 4) if self.confidence_distance is not None else 0.0,
@@ -262,4 +511,47 @@ class SystemBranding(Base):
             "enable_audio_chime": bool(self.enable_audio_chime),
             "enable_haptic_feedback": bool(self.enable_haptic_feedback),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
+        }
+
+
+class AuditLog(Base):
+    """
+    Platform and Institutional Audit Trail entity.
+    Tracks administrative events like promotions, rollbacks, quota modifications, role adjustments, tenant suspensions.
+    """
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    actor_name = Column(String(100), nullable=False)
+    actor_role = Column(String(30), nullable=False)
+    action_type = Column(String(50), nullable=False, index=True)  # TENANT_CREATED, TENANT_SUSPENDED, STUDENT_PROMOTED, PROMOTION_ROLLBACK, etc.
+    target_type = Column(String(50), nullable=True)              # TENANT, STUDENT, CLASS, TEACHER, QUOTA
+    target_id = Column(String(50), nullable=True)
+    description = Column(Text, nullable=False)
+    ip_address = Column(String(50), nullable=True)
+    timestamp = Column(DateTime, default=get_ist_now, index=True)
+
+    __table_args__ = (
+        Index("ix_audit_tenant_action", "tenant_id", "action_type"),
+    )
+
+    tenant = relationship("Tenant", back_populates="audit_logs")
+    user = relationship("User")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "tenant_name": self.tenant.name if self.tenant else "Global Platform",
+            "user_id": self.user_id,
+            "actor_name": self.actor_name,
+            "actor_role": self.actor_role,
+            "action_type": self.action_type,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "description": self.description,
+            "ip_address": self.ip_address,
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S") if self.timestamp else None,
         }

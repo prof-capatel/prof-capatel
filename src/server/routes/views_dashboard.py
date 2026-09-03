@@ -5,9 +5,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from src.database.models import Student, AttendanceRecord, NodeDevice, SystemBranding, Tenant
+from src.database.models import Student, AttendanceRecord, NodeDevice, SystemBranding, Tenant, User, ClassModel, AcademicYear
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
+from src.server.rbac_middleware import get_current_user_optional
 
 templates = Jinja2Templates(directory="src/server/templates")
 
@@ -61,6 +62,7 @@ def page_dashboard(
     nodes = db.query(NodeDevice).filter(NodeDevice.tenant_id == current_tenant.id).all()
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "dashboard.html",
@@ -74,6 +76,7 @@ def page_dashboard(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -93,6 +96,7 @@ def page_students(
     )
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "students.html",
@@ -104,6 +108,7 @@ def page_students(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -117,6 +122,7 @@ def page_enroll(
     """Interactive Browser & Guided Face Enrollment."""
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "enroll.html",
@@ -127,6 +133,7 @@ def page_enroll(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -141,6 +148,7 @@ def page_logs(
     today_str = date.today().isoformat()
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "logs.html",
@@ -152,6 +160,7 @@ def page_logs(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -166,6 +175,7 @@ def page_nodes(
     nodes = db.query(NodeDevice).filter(NodeDevice.tenant_id == current_tenant.id).all()
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "nodes.html",
@@ -177,6 +187,7 @@ def page_nodes(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -190,6 +201,7 @@ def page_analytics(
     """Institutional Attendance Analytics & Defaulter Reports."""
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "analytics.html",
@@ -200,6 +212,7 @@ def page_analytics(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -213,6 +226,7 @@ def page_settings(
     """Visual Theme Engine & System Preferences Settings."""
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "settings.html",
@@ -223,6 +237,7 @@ def page_settings(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -236,6 +251,7 @@ def page_mobile_capture(
     """Dedicated Mobile Browser Attendance Node."""
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "mobile_capture.html",
@@ -246,6 +262,7 @@ def page_mobile_capture(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 
@@ -259,6 +276,7 @@ def page_face_demo(
     """Dedicated Non-Logging Visual Recognition Demo Page."""
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
 
     return templates.TemplateResponse(
         "face_demo.html",
@@ -269,5 +287,113 @@ def page_face_demo(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
+
+
+@router.get("/login", response_class=HTMLResponse)
+def page_login(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Modern Multi-Tier RBAC Login Interface."""
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
+
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "page_title": "Sign In - Enterprise SaaS Hub",
+            "active_page": "login",
+            "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
+        },
+    )
+
+
+@router.get("/super-admin", response_class=HTMLResponse)
+def page_super_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Super Admin Control Plane & SaaS Tenant Management."""
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
+
+    return templates.TemplateResponse(
+        "super_admin.html",
+        {
+            "request": request,
+            "page_title": "Super Admin Control Plane",
+            "active_page": "super-admin",
+            "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
+        },
+    )
+
+
+@router.get("/academic-management", response_class=HTMLResponse)
+def page_academic_management(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Tenant Admin Academic Structure, Faculty Assignments & Promotion Engine."""
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
+    classes = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id).all()
+    academic_years = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id).all()
+
+    return templates.TemplateResponse(
+        "academic_management.html",
+        {
+            "request": request,
+            "page_title": "Academic Management & Progression",
+            "active_page": "academic",
+            "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
+            "classes": [c.to_dict() for c in classes],
+            "academic_years": [y.to_dict() for y in academic_years],
+            "current_user": current_user.to_dict() if current_user else None,
+        },
+    )
+
+
+@router.get("/teacher-portal", response_class=HTMLResponse)
+def page_teacher_portal(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Tenant Teacher Classroom Attendance Workspace."""
+    branding = get_branding_dict(db, current_tenant.id)
+    all_tenants = get_all_active_tenants(db)
+    current_user = get_current_user_optional(request, db)
+    classes = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id).all()
+
+    return templates.TemplateResponse(
+        "teacher_portal.html",
+        {
+            "request": request,
+            "page_title": "Faculty Classroom Workspace",
+            "active_page": "teacher-portal",
+            "branding": branding,
+            "current_tenant": current_tenant.to_dict(),
+            "all_tenants": all_tenants,
+            "classes": [c.to_dict() for c in classes],
+            "current_user": current_user.to_dict() if current_user else None,
+        },
+    )
+

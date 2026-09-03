@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Sign In - {{ branding.institution_name if branding else 'FaceAttendance' }}</title>
+    <!-- Plus Jakarta Sans & Inter Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem("app_theme") || "light";
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body); padding: 20px;">
+
+    <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-xl); border-radius: var(--radius-md);">
+        <div class="card-header" style="text-align: center; flex-direction: column; padding: 28px 24px 16px; border-bottom: none;">
+            <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; margin: 0 auto 14px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-heading);">{{ branding.institution_name if branding else 'FaceAttendance' }}</h2>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Sign in to access your Enterprise SaaS role workspace</p>
+        </div>
+
+        <div class="card-body" style="padding: 0 24px 24px;">
+            <!-- Fast 1-Click Role Fill Buttons for Demo -->
+            <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; display: block; margin-bottom: 8px;">
+                    <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Quick-Login Demo Profiles
+                </span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('superadmin', 'admin123')">
+                        <i class="fa-solid fa-crown" style="color: #f59e0b;"></i> Super Admin
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('admin', 'admin123')">
+                        <i class="fa-solid fa-user-shield" style="color: var(--accent-primary);"></i> Tenant Admin
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('teacher1', 'teacher123')">
+                        <i class="fa-solid fa-chalkboard-user" style="color: var(--accent-emerald);"></i> Teacher
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('student1', 'student123')">
+                        <i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i> Student
+                    </button>
+                </div>
+            </div>
+
+            <form onsubmit="submitLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <div style="position: relative;">
+                        <input type="text" id="loginUsername" class="form-control" placeholder="e.g. admin or teacher1" required style="padding-left: 36px;">
+                        <i class="fa-solid fa-user" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted); font-size: 13px;"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required style="padding-left: 36px;">
+                        <i class="fa-solid fa-lock" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted); font-size: 13px;"></i>
+                    </div>
+                </div>
+
+                <div id="loginAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+
+                <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 700;">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Portal
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 18px;">
+                <a href="/" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 600;">
+                    &larr; Back to Campus Overview
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function fillLogin(u, p) {
+            document.getElementById("loginUsername").value = u;
+            document.getElementById("loginPassword").value = p;
+        }
+
+        async function submitLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById("loginUsername").value.trim();
+            const password = document.getElementById("loginPassword").value;
+            const alertBox = document.getElementById("loginAlert");
+            const btn = document.getElementById("btnLogin");
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
+
+            try {
+                const res = await fetch("/api/v1/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        tenant_id: parseInt(localStorage.getItem("active_tenant_id") || "1"),
+                    }),
+                });
+                const data = await res.json();
+
+                if (res.ok && data.user) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-emerald-bg)";
+                    alertBox.style.color = "var(--badge-emerald-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+
+                    // Redirect according to role
+                    setTimeout(() => {
+                        if (data.user.role === "SUPER_ADMIN") {
+                            window.location.href = "/super-admin";
+                        } else if (data.user.role === "TEACHER") {
+                            window.location.href = "/teacher-portal";
+                        } else {
+                            window.location.href = "/";
+                        }
+                    }, 600);
+                } else {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Invalid credentials.");
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Portal';
+                }
+            } catch (err) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Portal';
+            }
+        }
+    </script>
+</body>
+</html>

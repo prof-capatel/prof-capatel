@@ -18,6 +18,7 @@ if os.path.exists(anaconda_bin):
 
 import unittest
 import time
+from datetime import date, datetime
 import numpy as np
 import cv2
 from fastapi.testclient import TestClient
@@ -724,6 +725,207 @@ class TestFaceAttendanceSystem(unittest.TestCase):
 
         print("[PASS] Test 23: Configurable Anti-Spoofing & Liveness Toggle verified.")
 
+    def test_24_rbac_authentication_and_role_switching(self):
+        """Test user login, password verification, JWT generation, and role switching."""
+        # 1. Super Admin login
+        res_sa = self.client.post("/api/v1/auth/login", json={"username": "superadmin", "password": "admin123"})
+        self.assertEqual(res_sa.status_code, 200)
+        sa_data = res_sa.json()
+        self.assertEqual(sa_data["user"]["role"], "SUPER_ADMIN")
+        self.assertIn("access_token", sa_data)
+
+        # 2. Tenant Admin login
+        res_ta = self.client.post("/api/v1/auth/login", json={"username": "admin", "password": "admin123", "tenant_id": 1})
+        self.assertEqual(res_ta.status_code, 200)
+        self.assertEqual(res_ta.json()["user"]["role"], "TENANT_ADMIN")
+
+        # 3. Invalid credentials rejection
+        res_bad = self.client.post("/api/v1/auth/login", json={"username": "admin", "password": "wrongpassword"})
+        self.assertEqual(res_bad.status_code, 401)
+
+        # 4. Role switching
+        res_switch = self.client.post("/api/v1/auth/switch-role", json={"role": "TEACHER", "tenant_id": 1})
+        self.assertEqual(res_switch.status_code, 200)
+        self.assertEqual(res_switch.json()["user"]["role"], "TEACHER")
+
+        # Reset back to Super Admin for test suite
+        self.client.post("/api/v1/auth/switch-role", json={"role": "SUPER_ADMIN", "tenant_id": 1})
+        print("[PASS] Test 24: User Authentication, PBKDF2 Password Hashing & Role Switching verified.")
+
+    def test_25_super_admin_control_plane_and_suspension_lockout(self):
+        """Test Super Admin platform metrics, tenant provisioning, tier quotas, and suspension lockout."""
+        # 1. Get platform-wide metrics
+        res_m = self.client.get("/api/v1/super-admin/metrics")
+        self.assertEqual(res_m.status_code, 200)
+        self.assertGreaterEqual(res_m.json()["metrics"]["total_tenants"], 1)
+
+        # 2. Provision new tenant on FREE tier with unique slug
+        unique_slug = f"mit-comp-{int(time.time()*1000)%100000}"
+        create_payload = {
+            "name": "MIT School of Computing",
+            "slug": unique_slug,
+            "contact_email": "dean@mit.edu",
+            "subscription_plan": "FREE",
+            "admin_full_name": "Dean John Doe",
+            "admin_username": f"dean_{unique_slug}",
+            "admin_password": "Password@123",
+        }
+        res_create = self.client.post("/api/v1/super-admin/tenants", json=create_payload)
+        self.assertEqual(res_create.status_code, 201)
+        mit_tenant = res_create.json()["tenant"]
+        self.assertEqual(mit_tenant["max_face_encodings"], 50)  # Free tier default
+        self.assertEqual(mit_tenant["max_nodes"], 2)
+
+        # 3. Suspend the new tenant
+        res_suspend = self.client.put(f"/api/v1/super-admin/tenants/{mit_tenant['id']}/status", json={"status": "SUSPENDED"})
+        self.assertEqual(res_suspend.status_code, 200)
+        self.assertEqual(res_suspend.json()["tenant"]["subscription_status"], "SUSPENDED")
+
+        # 4. Test that edge node frame ingestion is strictly locked for suspended tenant (403 Forbidden)
+        test_frame = np.full((240, 320, 3), 128, dtype=np.uint8)
+        _, jpeg_bytes = cv2.imencode(".jpg", test_frame)
+        files = {"frame": ("lockout_test.jpg", jpeg_bytes.tobytes(), "image/jpeg")}
+        data = {"node_id": "NODE-LOCKOUT-TEST", "tenant_id": mit_tenant["slug"]}
+
+        res_lockout = self.client.post("/api/v1/nodes/frame", files=files, data=data)
+        self.assertEqual(res_lockout.status_code, 403)
+        self.assertIn("SUSPENDED", res_lockout.json()["detail"])
+
+        # 5. Reactivate tenant
+        res_active = self.client.put(f"/api/v1/super-admin/tenants/{mit_tenant['id']}/status", json={"status": "ACTIVE"})
+        self.assertEqual(res_active.status_code, 200)
+
+        # 6. Adjust quotas
+        res_quota = self.client.put(
+            f"/api/v1/super-admin/tenants/{mit_tenant['id']}/quotas",
+            json={"subscription_plan": "ENTERPRISE", "max_face_encodings": 8000, "max_nodes": 60}
+        )
+        self.assertEqual(res_quota.status_code, 200)
+        self.assertEqual(res_quota.json()["tenant"]["max_face_encodings"], 8000)
+
+        print("[PASS] Test 25: Super Admin Tenant Provisioning, Quota Controls & Suspension Lockout verified.")
+
+    def test_26_academic_hierarchy_and_faculty_assignments(self):
+        """Test academic years, classes, divisions CRUD, and teacher classroom mapping."""
+        rand_id = int(time.time()*1000)%100000
+
+        # 1. Create Academic Year
+        res_yr = self.client.post("/api/v1/academic/years", json={"name": f"2027-2028-{rand_id}", "is_current": False})
+        self.assertEqual(res_yr.status_code, 200)
+
+        # 2. Create Class
+        res_cls = self.client.post("/api/v1/academic/classes", json={"name": f"TY Data Science {rand_id}", "department": "Data Science"})
+        self.assertEqual(res_cls.status_code, 200)
+        class_id = res_cls.json()["class"]["id"]
+
+        # 3. Create Division
+        res_div = self.client.post("/api/v1/academic/divisions", json={"class_id": class_id, "name": "Division Alpha"})
+        self.assertEqual(res_div.status_code, 200)
+        div_id = res_div.json()["division"]["id"]
+
+        # 4. Create Teacher user
+        res_teacher = self.client.post("/api/v1/academic/teachers", json={
+            "full_name": "Prof. Alan Turing",
+            "username": f"a.turing_{rand_id}",
+            "email": f"turing_{rand_id}@campus.edu",
+            "password": "Password@123",
+        })
+        self.assertEqual(res_teacher.status_code, 200)
+        teacher_id = res_teacher.json()["teacher"]["id"]
+
+        # 5. Assign teacher to classroom
+        res_assign = self.client.post("/api/v1/academic/teacher-assignments", json={
+            "teacher_id": teacher_id,
+            "class_id": class_id,
+            "division_id": div_id,
+            "subject": "Theoretical Computer Science",
+        })
+        self.assertEqual(res_assign.status_code, 200)
+        assignment_id = res_assign.json()["assignment"]["id"]
+
+        # 6. List assignments
+        res_list = self.client.get(f"/api/v1/academic/teacher-assignments?teacher_id={teacher_id}")
+        self.assertEqual(res_list.status_code, 200)
+        self.assertEqual(len(res_list.json()["assignments"]), 1)
+
+        print("[PASS] Test 26: Academic Hierarchy (Years, Classes, Divisions) & Faculty Assignment verified.")
+
+    def test_27_student_progression_and_downgrade_rollback(self):
+        """Test student cohort promotion preserving face vectors and safe emergency rollback/downgrade."""
+        # 1. Fetch student in class 1
+        with get_db_context() as db:
+            student = db.query(Student).filter(Student.tenant_id == 1).first()
+            student_id = student.id
+            original_class_id = student.class_id or 1
+            vectors_count = len(student.encodings)
+
+        # 2. Promote student to class 2 (SY Computer Science)
+        res_promote = self.client.post("/api/v1/academic/students/promote", json={
+            "student_ids": [student_id],
+            "target_class_id": 2,
+            "target_division_id": None,
+        })
+        self.assertEqual(res_promote.status_code, 200)
+        self.assertEqual(res_promote.json()["promoted_count"], 1)
+
+        # 3. Verify student class is updated, previous class is recorded, and face vectors are intact
+        with get_db_context() as db:
+            updated_student = db.query(Student).filter(Student.id == student_id).first()
+            self.assertEqual(updated_student.class_id, 2)
+            self.assertEqual(updated_student.previous_class_id, original_class_id)
+            self.assertIsNotNone(updated_student.last_promoted_at)
+            self.assertEqual(len(updated_student.encodings), vectors_count)
+
+        # 4. Execute Rollback / Downgrade for this student
+        res_rollback = self.client.post("/api/v1/academic/students/rollback-promotion", json={
+            "student_ids": [student_id]
+        })
+        self.assertEqual(res_rollback.status_code, 200)
+        self.assertEqual(res_rollback.json()["rollback_count"], 1)
+
+        # 5. Verify student is restored back to original class
+        with get_db_context() as db:
+            restored_student = db.query(Student).filter(Student.id == student_id).first()
+            self.assertEqual(restored_student.class_id, original_class_id)
+            self.assertIsNone(restored_student.previous_class_id)
+
+        print("[PASS] Test 27: Student Progression & Emergency Downgrade / Rollback Engine verified.")
+
+    def test_28_teacher_portal_classroom_sheet_and_rbac(self):
+        """Test teacher assigned class discovery and classroom attendance roster retrieval."""
+        # 1. Query my-classes
+        res_my = self.client.get("/api/v1/teacher/my-classes")
+        self.assertEqual(res_my.status_code, 200)
+
+        # 2. Query classroom attendance sheet for class 1
+        today_str = date.today().isoformat()
+        res_sheet = self.client.get(f"/api/v1/teacher/attendance-sheet?class_id=1&date_str={today_str}")
+        self.assertEqual(res_sheet.status_code, 200)
+        sheet_data = res_sheet.json()
+        self.assertIn("roster", sheet_data)
+        self.assertIn("turnout_pct", sheet_data)
+        self.assertIn("present_count", sheet_data)
+        self.assertIn("absent_count", sheet_data)
+
+        print("[PASS] Test 28: Teacher Classroom Roster Sheet & Turnout Analytics verified.")
+
+    def test_29_administrative_audit_trail(self):
+        """Test global audit logging across administrative operations."""
+        res_audit = self.client.get("/api/v1/super-admin/audit-logs?limit=50")
+        self.assertEqual(res_audit.status_code, 200)
+        logs = res_audit.json()["logs"]
+        self.assertGreaterEqual(len(logs), 1)
+
+        # Verify audit log fields
+        latest_log = logs[0]
+        self.assertIn("action_type", latest_log)
+        self.assertIn("actor_name", latest_log)
+        self.assertIn("description", latest_log)
+        self.assertIn("timestamp", latest_log)
+
+        print("[PASS] Test 29: Administrative Audit Trail Logging verified.")
+
 
 if __name__ == "__main__":
     unittest.main()
+

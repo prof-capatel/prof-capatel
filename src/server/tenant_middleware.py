@@ -14,11 +14,9 @@ def resolve_tenant(db: Session, identifier: Optional[str]) -> Optional[Tenant]:
 
     identifier_str = str(identifier).strip()
     if identifier_str.isdigit():
-        tenant = db.query(Tenant).filter(Tenant.id == int(identifier_str), Tenant.is_active == True).first()
-        if tenant:
-            return tenant
+        return db.query(Tenant).filter(Tenant.id == int(identifier_str)).first()
 
-    return db.query(Tenant).filter(Tenant.slug == identifier_str.lower(), Tenant.is_active == True).first()
+    return db.query(Tenant).filter(Tenant.slug == identifier_str.lower()).first()
 
 
 def get_current_tenant(

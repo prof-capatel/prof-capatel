@@ -60,6 +60,38 @@
         </div>
 
         <ul class="nav-list">
+            <!-- Super Admin Link -->
+            {% if not current_user or current_user.role == 'SUPER_ADMIN' %}
+            <li>
+                <a href="/super-admin" class="nav-link {% if active_page == 'super-admin' %}active{% endif %}" onclick="closeMobileMenu()" style="border-left: 3px solid #f59e0b;">
+                    <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
+                    <span>Super Admin Plane</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Teacher Workspace -->
+            {% if not current_user or current_user.role in ['TEACHER', 'TENANT_ADMIN', 'SUPER_ADMIN'] %}
+            <li>
+                <a href="/teacher-portal" class="nav-link {% if active_page == 'teacher-portal' %}active{% endif %}" onclick="closeMobileMenu()" style="border-left: 3px solid #10b981;">
+                    <i class="fa-solid fa-chalkboard-user" style="color: #10b981;"></i>
+                    <span>Teacher Workspace</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Academic & Progression Management (Tenant Admin) -->
+            {% if not current_user or current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN'] %}
+            <li>
+                <a href="/academic-management" class="nav-link {% if active_page == 'academic' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-sitemap" style="color: var(--accent-primary);"></i>
+                    <span>Academic & Classes</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Core Operational Links -->
+            {% if not current_user or current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN'] %}
             <li>
                 <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-chart-pie"></i>
@@ -69,9 +101,11 @@
             <li>
                 <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-user-graduate"></i>
-                    <span>Students</span>
+                    <span>Students Directory</span>
                 </a>
             </li>
+            {% endif %}
+
             <li>
                 <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-user-plus"></i>
@@ -84,6 +118,8 @@
                     <span>Attendance Logs</span>
                 </a>
             </li>
+
+            {% if not current_user or current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN'] %}
             <li>
                 <a href="/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-chart-line"></i>
@@ -99,9 +135,12 @@
             <li>
                 <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-gear"></i>
-                    <span>Settings & Themes</span>
+                    <span>Settings & Branding</span>
                 </a>
             </li>
+            {% endif %}
+
+            <!-- Testing and Visual Demos -->
             <li>
                 <a href="/face-demo" class="nav-link {% if active_page == 'demo' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-eye" style="color: #f59e0b;"></i>
@@ -121,7 +160,7 @@
                 <span class="pulse-dot"></span>
                 <span id="footerShortCode">{{ branding.short_code if branding else 'FA-HUB' }} Online</span>
             </div>
-            <span style="font-size: 11px; opacity: 0.7;">SaaS v2.0</span>
+            <span style="font-size: 11px; opacity: 0.7;">Enterprise SaaS v3.0</span>
         </div>
     </aside>
 
@@ -139,6 +178,18 @@
                 </div>
             </div>
             <div class="top-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                
+                <!-- Fast Role Switcher & User Profile Capsule -->
+                <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <i class="fa-solid fa-user-shield" style="color: var(--accent-primary); font-size: 13px;"></i>
+                    <select id="fastRoleSelect" onchange="switchSessionRole(this.value)" style="background: transparent; border: none; color: var(--text-primary); font-weight: 700; font-size: 12.5px; outline: none; cursor: pointer;">
+                        <option value="SUPER_ADMIN" {% if current_user and current_user.role == 'SUPER_ADMIN' %}selected{% endif %}>Role: Super Admin (Global)</option>
+                        <option value="TENANT_ADMIN" {% if not current_user or current_user.role == 'TENANT_ADMIN' %}selected{% endif %}>Role: Tenant Admin (Dean)</option>
+                        <option value="TEACHER" {% if current_user and current_user.role == 'TEACHER' %}selected{% endif %}>Role: Teacher (Faculty)</option>
+                        <option value="STUDENT" {% if current_user and current_user.role == 'STUDENT' %}selected{% endif %}>Role: Student</option>
+                    </select>
+                </div>
+
                 <!-- SaaS Multi-Tenant Switcher -->
                 <div class="tenant-switcher-box" style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <i class="fa-solid fa-building-columns" style="color: var(--accent-primary); font-size: 13px;"></i>
@@ -160,7 +211,7 @@
                 </button>
                 <a href="/enroll" class="btn btn-primary">
                     <i class="fa-solid fa-plus"></i>
-                    <span>Enroll Student</span>
+                    <span>Enroll</span>
                 </a>
             </div>
         </header>
@@ -177,6 +228,27 @@
             document.cookie = "active_tenant_id=" + tenantId + "; path=/; max-age=31536000";
             localStorage.setItem("active_tenant_id", tenantId);
             window.location.reload();
+        }
+
+        async function switchSessionRole(targetRole) {
+            try {
+                const res = await fetch("/api/v1/auth/switch-role", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ role: targetRole, tenant_id: parseInt(localStorage.getItem("active_tenant_id") || "1") })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.cookie = "active_role=" + targetRole + "; path=/; max-age=86400";
+                    window.location.reload();
+                } else {
+                    alert("Could not switch role: " + (data.detail || "Error"));
+                }
+            } catch (err) {
+                console.error("Role switch error:", err);
+                document.cookie = "active_role=" + targetRole + "; path=/; max-age=86400";
+                window.location.reload();
+            }
         }
     </script>
     {% block scripts %}{% endblock %}

@@ -8,12 +8,16 @@ from src.config import DATA_DIR, FACES_DIR, SNAPSHOTS_DIR
 from src.core.face_engine import face_engine
 from src.database.session import init_db
 from src.server.routes import (
+    views_dashboard,
+    api_auth,
+    api_super_admin,
+    api_academic,
+    api_teacher,
+    api_tenants,
     api_nodes,
     api_enrollment,
     api_attendance,
     api_branding,
-    api_tenants,
-    views_dashboard,
 )
 
 # Configure root logger
@@ -66,6 +70,10 @@ app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")
 
 # Register Routers
 app.include_router(views_dashboard.router)
+app.include_router(api_auth.router)
+app.include_router(api_super_admin.router)
+app.include_router(api_academic.router)
+app.include_router(api_teacher.router)
 app.include_router(api_tenants.router)
 app.include_router(api_nodes.router)
 app.include_router(api_enrollment.router)
