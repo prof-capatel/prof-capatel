@@ -562,24 +562,23 @@ class TestFaceAttendanceSystem(unittest.TestCase):
 
     def test_20_configurable_cooldown_and_multi_face_api(self):
         """Test institutional configurable cooldown update and multi-face response format."""
-        # 1. Update cooldown to 45 minutes via branding API
+        # 1. Update cooldown to 1 minute via branding API
         update_payload = {
             "institution_name": "FaceAttendance Campus",
             "short_code": "FA-HUB",
-            "cooldown_minutes": 45,
+            "cooldown_minutes": 1,
         }
         res_update = self.client.post("/api/v1/branding", json=update_payload)
         self.assertEqual(res_update.status_code, 200)
 
-        # 2. Verify branding returns 45 minutes
+        # 2. Verify branding returns 1 minute
         res_brand = self.client.get("/api/v1/branding")
         self.assertEqual(res_brand.status_code, 200)
-        self.assertEqual(res_brand.json()["branding"]["cooldown_minutes"], 45)
+        self.assertEqual(res_brand.json()["branding"]["cooldown_minutes"], 1)
 
-        # 3. Invalidate manager cache to pick up new cooldown
-        attendance_manager.invalidate_cooldown_cache(tenant_id=1)
+        # 3. Verify attendance manager immediately reflects 60 seconds via automatic cache invalidation
         cd_secs = attendance_manager.get_tenant_cooldown_seconds(tenant_id=1)
-        self.assertEqual(cd_secs, 45 * 60)
+        self.assertEqual(cd_secs, 60)
 
         # 4. Ingest frame and verify response has both 'detections' and 'results' lists
         test_frame = np.full((240, 320, 3), 128, dtype=np.uint8)

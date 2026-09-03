@@ -79,6 +79,11 @@ async def ingest_node_frame(
         logger.error(f"Face recognition error on node '{node_id}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Face recognition error: {str(e)}")
 
+    # Compute active tenant cooldown in seconds
+    custom_cooldown_secs = None
+    if target_tenant.branding and target_tenant.branding.cooldown_minutes is not None:
+        custom_cooldown_secs = max(60, int(target_tenant.branding.cooldown_minutes * 60))
+
     processed_detections = []
 
     # 4. Process attendance for all detected faces with Anti-Spoofing gating
@@ -111,6 +116,7 @@ async def ingest_node_frame(
                     frame_bgr=image_bgr,
                     face_box=face_box,
                     tenant_id=active_tenant_id,
+                    custom_cooldown_seconds=custom_cooldown_secs,
                 )
                 if mark_res:
                     attendance_logged = mark_res.get("attendance_logged", False)

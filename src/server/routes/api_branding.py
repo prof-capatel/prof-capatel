@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.config import BRANDING_DIR
+from src.core.attendance_manager import attendance_manager
 from src.database.models import SystemBranding, Tenant
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
@@ -116,6 +117,9 @@ def update_branding(
 
     db.commit()
     db.refresh(branding)
+
+    # Invalidate dynamic in-memory cooldown cache for this tenant
+    attendance_manager.invalidate_cooldown_cache(current_tenant.id)
 
     return {
         "status": "success",
