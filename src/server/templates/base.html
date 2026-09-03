@@ -60,42 +60,24 @@
         </div>
 
         <ul class="nav-list">
-            <!-- Super Admin Link -->
-            {% if not current_user or current_user.role == 'SUPER_ADMIN' %}
+            <!-- 1. SUPER ADMIN MENU -->
+            {% if current_user and current_user.role == 'SUPER_ADMIN' %}
             <li>
                 <a href="/super-admin" class="nav-link {% if active_page == 'super-admin' %}active{% endif %}" onclick="closeMobileMenu()" style="border-left: 3px solid #f59e0b;">
                     <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
                     <span>Super Admin Plane</span>
                 </a>
             </li>
-            {% endif %}
-
-            <!-- Teacher Workspace -->
-            {% if not current_user or current_user.role in ['TEACHER', 'TENANT_ADMIN', 'SUPER_ADMIN'] %}
-            <li>
-                <a href="/teacher-portal" class="nav-link {% if active_page == 'teacher-portal' %}active{% endif %}" onclick="closeMobileMenu()" style="border-left: 3px solid #10b981;">
-                    <i class="fa-solid fa-chalkboard-user" style="color: #10b981;"></i>
-                    <span>Teacher Workspace</span>
-                </a>
-            </li>
-            {% endif %}
-
-            <!-- Academic & Progression Management (Tenant Admin) -->
-            {% if not current_user or current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN'] %}
-            <li>
-                <a href="/academic-management" class="nav-link {% if active_page == 'academic' %}active{% endif %}" onclick="closeMobileMenu()">
-                    <i class="fa-solid fa-sitemap" style="color: var(--accent-primary);"></i>
-                    <span>Academic & Classes</span>
-                </a>
-            </li>
-            {% endif %}
-
-            <!-- Core Operational Links -->
-            {% if not current_user or current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN'] %}
             <li>
                 <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-chart-pie"></i>
                     <span>Live Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="/academic-management" class="nav-link {% if active_page == 'academic' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-sitemap" style="color: var(--accent-primary);"></i>
+                    <span>Academic & Classes</span>
                 </a>
             </li>
             <li>
@@ -104,8 +86,6 @@
                     <span>Students Directory</span>
                 </a>
             </li>
-            {% endif %}
-
             <li>
                 <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-user-plus"></i>
@@ -118,8 +98,6 @@
                     <span>Attendance Logs</span>
                 </a>
             </li>
-
-            {% if not current_user or current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN'] %}
             <li>
                 <a href="/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-chart-line"></i>
@@ -138,10 +116,100 @@
                     <span>Settings & Branding</span>
                 </a>
             </li>
+
+            <!-- 2. TENANT ADMIN MENU -->
+            {% elif current_user and current_user.role == 'TENANT_ADMIN' %}
+            <li>
+                <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Live Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="/academic-management" class="nav-link {% if active_page == 'academic' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-sitemap" style="color: var(--accent-primary);"></i>
+                    <span>Academic & Classes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <span>Students Directory</span>
+                </a>
+            </li>
+            <li>
+                <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Face Enrollment</span>
+                </a>
+            </li>
+            <li>
+                <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Attendance Logs</span>
+                </a>
+            </li>
+            <li>
+                <a href="/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Analytics & Reports</span>
+                </a>
+            </li>
+            <li>
+                <a href="/nodes" class="nav-link {% if active_page == 'nodes' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Edge Nodes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Settings & Themes</span>
+                </a>
+            </li>
+
+            <!-- 3. TEACHER / FACULTY MENU -->
+            {% elif current_user and current_user.role == 'TEACHER' %}
+            <li>
+                <a href="/teacher-portal" class="nav-link {% if active_page == 'teacher-portal' %}active{% endif %}" onclick="closeMobileMenu()" style="border-left: 3px solid #10b981;">
+                    <i class="fa-solid fa-chalkboard-user" style="color: #10b981;"></i>
+                    <span>Teacher Workspace</span>
+                </a>
+            </li>
+            <li>
+                <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Classroom Face Enrollment</span>
+                </a>
+            </li>
+            <li>
+                <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Attendance History</span>
+                </a>
+            </li>
+
+            <!-- 4. STUDENT MENU -->
+            {% elif current_user and current_user.role == 'STUDENT' %}
+            <li>
+                <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-calendar-check" style="color: var(--accent-primary);"></i>
+                    <span>My Attendance Record</span>
+                </a>
+            </li>
+
+            <!-- 5. GUEST / DEFAULT FALLBACK -->
+            {% else %}
+            <li>
+                <a href="/login" class="nav-link {% if active_page == 'login' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-arrow-right-to-bracket" style="color: var(--accent-primary);"></i>
+                    <span>Sign In to Portal</span>
+                </a>
+            </li>
             {% endif %}
 
-            <!-- Testing and Visual Demos -->
-            <li>
+            <!-- Edge Nodes & Visual Demos (Available across all internal testers) -->
+            <li style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
                 <a href="/face-demo" class="nav-link {% if active_page == 'demo' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-eye" style="color: #f59e0b;"></i>
                     <span>Visual Demo (No DB)</span>
@@ -178,22 +246,12 @@
                 </div>
             </div>
             <div class="top-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                
-                <!-- Fast Role Switcher & User Profile Capsule -->
-                <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <i class="fa-solid fa-user-shield" style="color: var(--accent-primary); font-size: 13px;"></i>
-                    <select id="fastRoleSelect" onchange="switchSessionRole(this.value)" style="background: transparent; border: none; color: var(--text-primary); font-weight: 700; font-size: 12.5px; outline: none; cursor: pointer;">
-                        <option value="SUPER_ADMIN" {% if current_user and current_user.role == 'SUPER_ADMIN' %}selected{% endif %}>Role: Super Admin (Global)</option>
-                        <option value="TENANT_ADMIN" {% if not current_user or current_user.role == 'TENANT_ADMIN' %}selected{% endif %}>Role: Tenant Admin (Dean)</option>
-                        <option value="TEACHER" {% if current_user and current_user.role == 'TEACHER' %}selected{% endif %}>Role: Teacher (Faculty)</option>
-                        <option value="STUDENT" {% if current_user and current_user.role == 'STUDENT' %}selected{% endif %}>Role: Student</option>
-                    </select>
-                </div>
 
-                <!-- SaaS Multi-Tenant Switcher -->
-                <div class="tenant-switcher-box" style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <i class="fa-solid fa-building-columns" style="color: var(--accent-primary); font-size: 13px;"></i>
-                    <select id="globalTenantSelect" class="tenant-select" onchange="switchActiveTenant(this.value)" style="background: transparent; border: none; color: var(--text-primary); font-weight: 600; font-size: 13px; outline: none; cursor: pointer; max-width: 160px;">
+                <!-- Tenant Indicator / Global Tenant Switcher for Super Admin ONLY -->
+                {% if current_user and current_user.role == 'SUPER_ADMIN' %}
+                <div class="tenant-switcher-box" style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);" title="Global Tenant Switcher (Super Admin Only)">
+                    <i class="fa-solid fa-globe" style="color: #f59e0b; font-size: 13px;"></i>
+                    <select id="globalTenantSelect" class="tenant-select" onchange="switchActiveTenant(this.value)" style="background: transparent; border: none; color: var(--text-primary); font-weight: 700; font-size: 12.5px; outline: none; cursor: pointer; max-width: 170px;">
                         {% if all_tenants %}
                             {% for t in all_tenants %}
                             <option value="{{ t.id }}" {% if current_tenant and current_tenant.id == t.id %}selected{% endif %}>{{ t.name }}</option>
@@ -203,16 +261,53 @@
                         {% endif %}
                     </select>
                 </div>
+                {% else %}
+                <!-- Fixed Institutional Tenant Badge for Teachers, Admins & Students -->
+                <div style="display: flex; align-items: center; gap: 7px; background: var(--bg-subtle); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);" title="Your Enrolled Institution">
+                    <i class="fa-solid fa-building-columns" style="color: var(--accent-primary); font-size: 12px;"></i>
+                    <span style="font-weight: 700; font-size: 12px; color: var(--text-heading); max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ current_tenant.name if current_tenant else 'Default Campus' }}</span>
+                </div>
+                {% endif %}
+
+                <!-- User Profile Badge & Role Indicator (Fixed, cannot change) -->
+                {% if current_user %}
+                <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 5px 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="width: 26px; height: 26px; border-radius: 50%; background: var(--accent-gradient); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;">
+                        {{ current_user.full_name[:1] }}
+                    </div>
+                    <div style="display: flex; flex-direction: column; min-width: 0;">
+                        <span style="font-weight: 700; font-size: 12px; color: var(--text-heading); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px;">{{ current_user.full_name }}</span>
+                        <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: {% if current_user.role == 'SUPER_ADMIN' %}#f59e0b{% elif current_user.role == 'TEACHER' %}#10b981{% else %}var(--accent-primary){% endif %};">
+                            {{ current_user.role.replace('_', ' ') }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Log Out Button -->
+                <button class="btn btn-secondary" onclick="logoutUser()" title="Sign Out from {{ current_user.full_name }}" style="padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--accent-rose); border-color: var(--border-color);">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Log Out</span>
+                </button>
+
+                {% else %}
+                <a href="/login" class="btn btn-secondary" style="padding: 7px 12px; font-size: 12.5px; font-weight: 600;">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    <span>Sign In</span>
+                </a>
+                {% endif %}
 
                 <!-- 1-Click Theme Cycle Button -->
                 <button id="btnQuickThemeToggle" class="theme-quick-btn" onclick="cycleAppTheme()" title="Switch Visual Theme (Light / Dark / Academic)">
                     <i class="fa-solid fa-palette"></i>
                     <span id="quickThemeLabel">Theme</span>
                 </button>
-                <a href="/enroll" class="btn btn-primary">
+
+                {% if current_user and current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN', 'TEACHER'] %}
+                <a href="/enroll" class="btn btn-primary" style="padding: 7px 12px;">
                     <i class="fa-solid fa-plus"></i>
                     <span>Enroll</span>
                 </a>
+                {% endif %}
             </div>
         </header>
 
@@ -230,25 +325,13 @@
             window.location.reload();
         }
 
-        async function switchSessionRole(targetRole) {
+        async function logoutUser() {
             try {
-                const res = await fetch("/api/v1/auth/switch-role", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ role: targetRole, tenant_id: parseInt(localStorage.getItem("active_tenant_id") || "1") })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    document.cookie = "active_role=" + targetRole + "; path=/; max-age=86400";
-                    window.location.reload();
-                } else {
-                    alert("Could not switch role: " + (data.detail || "Error"));
-                }
-            } catch (err) {
-                console.error("Role switch error:", err);
-                document.cookie = "active_role=" + targetRole + "; path=/; max-age=86400";
-                window.location.reload();
-            }
+                await fetch("/api/v1/auth/logout", { method: "POST" });
+            } catch (e) {}
+            document.cookie = "access_token=; path=/; max-age=0";
+            document.cookie = "active_role=; path=/; max-age=0";
+            window.location.href = "/login";
         }
     </script>
     {% block scripts %}{% endblock %}

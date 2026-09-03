@@ -127,6 +127,8 @@
                             window.location.href = "/super-admin";
                         } else if (data.user.role === "TEACHER") {
                             window.location.href = "/teacher-portal";
+                        } else if (data.user.role === "STUDENT") {
+                            window.location.href = "/logs";
                         } else {
                             window.location.href = "/";
                         }
