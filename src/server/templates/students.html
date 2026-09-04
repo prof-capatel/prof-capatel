@@ -9,7 +9,7 @@
                 <span>Institutional Directory & Profile Management</span>
             </h3>
             <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Manage registered students, faculty, and administrative personnel.
+                Manage registered students, faculty, and administrative personnel with cascading dropdown filters.
             </p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -24,7 +24,30 @@
         </div>
     </div>
     <div class="card-body">
-        <!-- Advanced Multi-Parameter Filter Toolbar -->
+        {% if is_super_admin %}
+        <!-- Super Admin Mandatory Tenant Selector Banner -->
+        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.08)); padding: 14px 18px; border-radius: var(--radius-sm); border: 1.5px solid var(--accent-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px; color: var(--accent-primary);"><i class="fa-solid fa-crown"></i></span>
+                <div>
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Super Admin Global Directory Inspector</div>
+                    <div style="font-size: 11.5px; color: var(--text-muted);">Partitioned roster isolation: select an institution to inspect its registered student and faculty records.</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-heading); white-space: nowrap;">Tenant Org:</label>
+                <select id="superAdminTenantSelect" class="form-control" style="font-weight: 700; min-width: 240px;" onchange="window.location.href='/students?tenant_id=' + this.value">
+                    {% for t in all_tenants %}
+                    <option value="{{ t.id }}" {% if t.id == selected_tenant_id %}selected{% endif %}>
+                        {{ t.name }} (#{{ t.id }} - {{ t.slug }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Advanced Cascading Dropdown Filter Toolbar (No manual text inputs) -->
         <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
                 <!-- Search Name / Roll -->
@@ -33,36 +56,49 @@
                     <input type="text" id="dirSearchInput" class="form-control" placeholder="Search by name, roll number..." oninput="applyDirectoryFilters()">
                 </div>
 
-                <!-- Department Filter -->
+                <!-- 1. Department Dropdown Filter -->
                 <div style="flex: 1; min-width: 150px;">
                     <label class="form-label">Department</label>
-                    <select id="dirDeptFilter" class="form-control" onchange="applyDirectoryFilters()">
+                    <select id="dirDeptFilter" class="form-control" onchange="onDirDeptFilterChanged()">
                         <option value="">All Departments</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Information Technology">Information Technology</option>
-                        <option value="Artificial Intelligence">Artificial Intelligence</option>
-                        <option value="Electronics & Comm">Electronics & Comm</option>
-                        <option value="Mechanical Eng">Mechanical Eng</option>
-                        <option value="Administration">Administration</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
-                <!-- User Role Filter -->
+                <!-- 2. Class Dropdown Filter (Cascading) -->
+                <div style="flex: 1; min-width: 150px;">
+                    <label class="form-label">Class / Grade</label>
+                    <select id="dirClassFilter" class="form-control" onchange="onDirClassFilterChanged()">
+                        <option value="">All Classes</option>
+                        {% for c in classes %}
+                        <option value="{{ c.id }}" data-dept-id="{{ c.department_id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- 3. Division Dropdown Filter (Cascading) -->
                 <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label">Division / Section</label>
+                    <select id="dirDivFilter" class="form-control" onchange="applyDirectoryFilters()">
+                        <option value="">All Divisions</option>
+                        {% for dv in divisions %}
+                        <option value="{{ dv.id }}" data-class-id="{{ dv.class_id }}">{{ dv.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- 4. User Role Filter -->
+                <div style="flex: 1; min-width: 130px;">
                     <label class="form-label">User Role</label>
                     <select id="dirRoleFilter" class="form-control" onchange="applyDirectoryFilters()">
                         <option value="">All Roles</option>
                         <option value="student">Students</option>
-                        <option value="teacher">Teachers / Faculty</option>
+                        <option value="teacher">Faculty / Teachers</option>
                         <option value="admin_staff">Admin Staff</option>
                         <option value="other">Other Members</option>
                     </select>
-                </div>
-
-                <!-- Class / Semester Filter -->
-                <div style="flex: 1; min-width: 140px;">
-                    <label class="form-label">Class / Semester</label>
-                    <input type="text" id="dirClassFilter" class="form-control" placeholder="e.g. Semester 6" oninput="applyDirectoryFilters()">
                 </div>
 
                 <div>
@@ -88,8 +124,8 @@
                         <th>Roll / ID Number</th>
                         <th>Role</th>
                         <th>Department</th>
-                        <th>Class / Semester</th>
-                        <th>Enrolled 3-Pose Photos</th>
+                        <th>Class & Division</th>
+                        <th>Enrolled Face Photos</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -101,9 +137,13 @@
                             class="student-row"
                             data-name="{{ s.name|lower }}" 
                             data-roll="{{ s.roll_number|lower }}" 
+                            data-dept-id="{{ s.department_id or '' }}"
                             data-dept="{{ s.department }}" 
-                            data-role="{{ s.user_role }}" 
-                            data-class="{{ s.class_semester|lower if s.class_semester else '' }}">
+                            data-class-id="{{ s.class_id or '' }}"
+                            data-class="{{ s.class_name|lower if s.class_name else (s.class_semester|lower if s.class_semester else '') }}"
+                            data-div-id="{{ s.division_id or '' }}"
+                            data-div="{{ s.division_name|lower if s.division_name else '' }}"
+                            data-role="{{ s.user_role }}">
                             <td>#{{ s.id }}</td>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -128,8 +168,12 @@
                                     <span class="badge badge-present" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-graduate"></i> Student</span>
                                 {% endif %}
                             </td>
-                            <td id="stdDeptLabel{{ s.id }}">{{ s.department }}</td>
-                            <td id="stdClassLabel{{ s.id }}"><span class="badge badge-node">{{ s.class_semester or 'General' }}</span></td>
+                            <td id="stdDeptLabel{{ s.id }}">
+                                <span class="badge badge-indigo">{{ s.department }}</span>
+                            </td>
+                            <td id="stdClassLabel{{ s.id }}">
+                                <span class="badge badge-node">{{ s.class_name or s.class_semester or 'General' }}{% if s.division_name and s.division_name != 'N/A' %} &bull; {{ s.division_name }}{% endif %}</span>
+                            </td>
                             <td>
                                 <div class="photo-thumb-strip">
                                     {% if s.photos and s.photos|length > 0 %}
@@ -153,13 +197,13 @@
                                     <button onclick="openManualOverrideForStudent({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-emerald);" title="Force Mark Attendance Override">
                                         <i class="fa-solid fa-user-check"></i>
                                     </button>
-                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}', '{{ s.department }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_semester or 'General' }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
+                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}', '{{ s.department }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </button>
                                     <button onclick="openRetakeModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
                                         <i class="fa-solid fa-camera-rotate"></i>
                                     </button>
-                                    <button onclick="deleteStudent({{ s.id }}, '{{ s.name }}')" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Delete Student">
+                                    <button onclick="deleteStudent({{ s.id }}, '{{ s.name }}')" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Delete Profile">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </div>
@@ -171,7 +215,7 @@
                             <td colspan="9" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
                                 <i class="fa-solid fa-user-xmark" style="font-size: 36px; margin-bottom: 12px; color: var(--text-light);"></i>
                                 <p style="font-size: 15px; font-weight: 600; color: var(--text-heading);">No profiles registered yet.</p>
-                                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Enroll students via live webcam or 3-photo batch upload.</p>
+                                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Enroll members via live webcam or 3-photo batch upload.</p>
                                 <a href="/enroll" class="btn btn-primary" style="margin-top: 16px;">
                                     <i class="fa-solid fa-user-plus"></i> Enroll First Member
                                 </a>
@@ -185,7 +229,7 @@
 </div>
 
 <!-- ========================================================= -->
-<!-- MODAL 1: EDIT PROFILE & ROLE                              -->
+<!-- MODAL 1: EDIT PROFILE & ROLE (CASCADING DROPDOWNS)         -->
 <!-- ========================================================= -->
 <div id="editStudentModal" class="modal-overlay">
     <div class="modal-content">
@@ -215,7 +259,7 @@
 
                 <div class="form-group">
                     <label class="form-label">User Role *</label>
-                    <select id="editUserRole" class="form-control" required>
+                    <select id="editUserRole" class="form-control" required onchange="onEditRoleChanged()">
                         <option value="student">Student</option>
                         <option value="teacher">Teacher / Faculty</option>
                         <option value="admin_staff">Administrative Staff</option>
@@ -233,14 +277,36 @@
                     <input type="text" id="editRollNumber" class="form-control" required>
                 </div>
 
+                <!-- Dynamic Department Dropdown -->
                 <div class="form-group">
                     <label class="form-label">Department *</label>
-                    <input type="text" id="editDepartment" class="form-control" required>
+                    <select id="editDepartmentSelect" class="form-control" required onchange="onEditDeptSelectChanged()">
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Class / Semester / Section</label>
-                    <input type="text" id="editClassSemester" class="form-control" placeholder="e.g. Semester 6 - Section A">
+                <!-- Dynamic Cascading Class & Division Dropdowns -->
+                <div id="editClassDivSection" class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label class="form-label">Class / Grade</label>
+                        <select id="editClassSelect" class="form-control" onchange="onEditClassSelectChanged()">
+                            <option value="">Unassigned / General</option>
+                            {% for c in classes %}
+                            <option value="{{ c.id }}" data-dept-id="{{ c.department_id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Division / Section</label>
+                        <select id="editDivisionSelect" class="form-control">
+                            <option value="">Unassigned</option>
+                            {% for dv in divisions %}
+                            <option value="{{ dv.id }}" data-class-id="{{ dv.class_id }}">{{ dv.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -318,56 +384,64 @@
                     <div class="photo-preview-card">
                         <img id="retakePrevImg1" class="photo-preview-img" src="" style="display: none;">
                         <div id="retakePh1" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
-                        <div class="photo-preview-label">2. Left Angle</div>
+                        <div class="photo-preview-label">2. Left (~15°)</div>
                     </div>
                     <div class="photo-preview-card">
                         <img id="retakePrevImg2" class="photo-preview-img" src="" style="display: none;">
                         <div id="retakePh2" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
-                        <div class="photo-preview-label">3. Right Angle</div>
+                        <div class="photo-preview-label">3. Right (~15°)</div>
                     </div>
                 </div>
 
-                <div id="retakeUploadHint" style="font-size: 12px; color: var(--accent-amber); font-weight: 600; margin-top: 10px;">
-                    Please select exactly 3 photos to overwrite existing face encodings.
+                <div style="display: flex; gap: 10px; margin-top: 16px;">
+                    <button type="button" id="btnUploadRetakeSubmit" class="btn btn-primary" style="flex: 1;" onclick="submitRetakeUpload()" disabled>
+                        <i class="fa-solid fa-upload"></i> Upload & Replace Enrolled Vectors
+                    </button>
                 </div>
             </div>
 
             <!-- Tab 2: Live Webcam Retake -->
             <div id="secRetakeWebcam" style="display: none;">
-                <div class="camera-box" style="height: 240px;">
-                    <video id="retakeWebcamVideo" autoplay playsinline muted></video>
-                    <canvas id="retakeCaptureCanvas" style="display: none;"></canvas>
+                <div class="camera-card" style="aspect-ratio: 4/3; max-height: 280px; margin-bottom: 12px; position: relative;">
+                    <video id="retakeWebcamVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-sm);"></video>
+                    <div class="camera-guide-overlay" style="border-color: rgba(99, 102, 241, 0.7);"></div>
                 </div>
-                <div id="retakeCamFeedback" style="margin-top: 10px; font-size: 12.5px; color: var(--text-secondary);">
-                    Click poses in sequence: Frontal → Left → Right.
+                <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 14px;">
+                    <button type="button" id="btnToggleRetakeCam" class="btn btn-secondary" style="font-size: 12px;" onclick="toggleRetakeWebcam()">
+                        <i class="fa-solid fa-video"></i> Start Camera
+                    </button>
                 </div>
-                <div style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button type="button" id="btnRetakeCapFrontal" onclick="captureRetakeSample('frontal')" class="btn btn-secondary" style="flex: 1; font-size: 11.5px;">1. Frontal</button>
-                    <button type="button" id="btnRetakeCapLeft" onclick="captureRetakeSample('left')" class="btn btn-secondary" style="flex: 1; font-size: 11.5px;" disabled>2. Left</button>
-                    <button type="button" id="btnRetakeCapRight" onclick="captureRetakeSample('right')" class="btn btn-secondary" style="flex: 1; font-size: 11.5px;" disabled>3. Right</button>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <button type="button" class="btn btn-secondary" style="padding: 8px 4px; font-size: 11.5px;" onclick="captureRetakeSample('frontal')">
+                        <i class="fa-solid fa-camera"></i> 1. Frontal
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="padding: 8px 4px; font-size: 11.5px;" onclick="captureRetakeSample('left')">
+                        <i class="fa-solid fa-camera"></i> 2. Left (~15°)
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="padding: 8px 4px; font-size: 11.5px;" onclick="captureRetakeSample('right')">
+                        <i class="fa-solid fa-camera"></i> 3. Right (~15°)
+                    </button>
                 </div>
             </div>
 
-            <div id="retakeResultAlert" style="display: none; margin-top: 14px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            <div id="retakeAlert" style="display: none; margin-top: 14px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeRetakeModal()">Close</button>
-            <button type="button" id="btnSubmitRetakeUpload" onclick="submitRetakeUpload()" class="btn btn-primary" disabled>
-                <i class="fa-solid fa-upload"></i> Upload & Replace Vectors
-            </button>
         </div>
     </div>
 </div>
 
 <!-- ========================================================= -->
-<!-- MODAL 3: MANUAL ATTENDANCE OVERRIDE (BIOMETRIC FALLBACK)    -->
+<!-- MODAL 3: MANUAL ATTENDANCE OVERRIDE                       -->
 <!-- ========================================================= -->
 <div id="manualOverrideModal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 520px;">
         <div class="modal-header">
             <h3>
-                <i class="fa-solid fa-user-check" style="color: var(--accent-primary);"></i>
-                <span>Biometric Fallback / Manual Override</span>
+                <i class="fa-solid fa-user-check" style="color: var(--accent-emerald);"></i>
+                <span>Biometric Override / Manual Attendance</span>
             </h3>
             <button class="modal-close" onclick="closeManualOverrideModal()">
                 <i class="fa-solid fa-xmark"></i>
@@ -442,4 +516,12 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.allTenantClasses = {{ classes | tojson | safe }};
+    window.allTenantDivisions = {{ divisions | tojson | safe }};
+    window.allTenantDepartments = {{ departments | tojson | safe }};
+</script>
 {% endblock %}

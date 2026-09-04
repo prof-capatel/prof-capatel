@@ -3,6 +3,34 @@
 {% block content %}
 <div class="super-admin-container" style="display: flex; flex-direction: column; gap: 24px;">
 
+    <!-- Control Plane Top Header & Quick Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h2 style="font-size: 22px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px; margin: 0;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                    <i class="fa-solid fa-crown" style="font-size: 18px;"></i>
+                </span>
+                <span>Super Admin Global Control Plane</span>
+            </h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">
+                Platform-wide multi-tenant orchestration, automated subscription quotas, tenant suspension locks, and soft deletion lifecycle.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="openPlansModal()" style="display: inline-flex; align-items: center; gap: 7px; font-weight: 600;">
+                <i class="fa-solid fa-layer-group" style="color: var(--accent-primary);"></i>
+                <span>Manage Subscription Plans</span>
+            </button>
+            <button class="btn btn-primary" onclick="openCreateTenantModal()" style="display: inline-flex; align-items: center; gap: 7px; font-weight: 600; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);">
+                <i class="fa-solid fa-plus"></i>
+                <span>Provision New Tenant</span>
+            </button>
+            <button class="btn btn-secondary" onclick="refreshAllSuperAdminData()" title="Reload All Metrics & Tenants">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Top KPI Grid -->
     <div class="stats-grid" id="superAdminStatsGrid">
         <div class="stat-card">
@@ -10,9 +38,12 @@
                 <i class="fa-solid fa-building-columns"></i>
             </div>
             <div class="stat-info">
-                <span class="stat-label">Registered SaaS Tenants</span>
+                <span class="stat-label">SaaS Tenants Overview</span>
                 <h3 class="stat-value" id="statTotalTenants">--</h3>
-                <span class="stat-badge badge-present" id="statActiveTenantsBadge" style="font-size: 11px;">-- Active</span>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                    <span class="stat-badge badge-present" id="statActiveTenantsBadge" style="font-size: 10.5px;">-- Active</span>
+                    <span class="stat-badge badge-unknown" id="statSuspendedTenantsBadge" style="font-size: 10.5px;">-- Suspended</span>
+                </div>
             </div>
         </div>
 
@@ -23,7 +54,7 @@
             <div class="stat-info">
                 <span class="stat-label">Platform Enrolled Vectors</span>
                 <h3 class="stat-value" id="statTotalVectors">--</h3>
-                <span class="stat-badge badge-sky" id="statTotalStudentsBadge" style="font-size: 11px;">-- Students</span>
+                <span class="stat-badge badge-sky" id="statTotalStudentsBadge" style="font-size: 11px;">-- Registered Profiles</span>
             </div>
         </div>
 
@@ -32,9 +63,9 @@
                 <i class="fa-solid fa-microchip"></i>
             </div>
             <div class="stat-info">
-                <span class="stat-label">Active Edge & Mobile Nodes</span>
+                <span class="stat-label">Connected Edge Nodes</span>
                 <h3 class="stat-value" id="statTotalNodes">--</h3>
-                <span class="stat-badge badge-present" id="statOnlineNodesBadge" style="font-size: 11px;">-- Online</span>
+                <span class="stat-badge badge-present" id="statOnlineNodesBadge" style="font-size: 11px;">-- Online Streaming</span>
             </div>
         </div>
 
@@ -43,92 +74,123 @@
                 <i class="fa-solid fa-clipboard-check"></i>
             </div>
             <div class="stat-info">
-                <span class="stat-label">Total Attendance Logs</span>
+                <span class="stat-label">Platform Turnout Logs</span>
                 <h3 class="stat-value" id="statTotalLogs">--</h3>
-                <span class="stat-badge badge-present" id="statTodayLogsBadge" style="font-size: 11px;">-- Today</span>
+                <span class="stat-badge badge-present" id="statTodayLogsBadge" style="font-size: 11px;">-- Today IST</span>
             </div>
         </div>
     </div>
 
     <!-- Tenants Management Section -->
-    <div class="card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div class="card" style="box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; padding: 18px 20px;">
             <div>
-                <h3>
+                <h3 style="font-size: 16px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
                     <i class="fa-solid fa-cubes" style="color: var(--accent-primary);"></i>
                     <span>SaaS Multi-Tenant Lifecycle & Quota Management</span>
                 </h3>
-                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-                    Provision institutional tenants, assign subscription tiers, enforce vector/node quotas, and manage suspension locks.
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0 0;">
+                    Monitor tenant quota utilization, configure tier assignments, toggle read-only suspension, or execute soft deletion recovery.
                 </p>
             </div>
-            <button class="btn btn-primary" onclick="openCreateTenantModal()">
-                <i class="fa-solid fa-plus"></i>
-                <span>Provision New Tenant</span>
-            </button>
+
+            <!-- Filter Toolbar -->
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div style="position: relative;">
+                    <input type="text" id="tenantSearchInput" class="form-control" placeholder="Search tenant or slug..." oninput="filterTenantsGrid()" style="padding-left: 32px; font-size: 12.5px; width: 200px;">
+                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-muted);"></i>
+                </div>
+
+                <select id="tenantStatusFilter" class="form-control" onchange="filterTenantsGrid()" style="font-size: 12.5px; width: 140px;">
+                    <option value="ALL">All Statuses</option>
+                    <option value="ACTIVE">Active Only</option>
+                    <option value="SUSPENDED">Suspended Only</option>
+                    <option value="DELETED">Soft-Deleted Only</option>
+                </select>
+
+                <select id="tenantPlanFilter" class="form-control" onchange="filterTenantsGrid()" style="font-size: 12.5px; width: 130px;">
+                    <option value="ALL">All Plans</option>
+                    <option value="FREE">Free</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="ENTERPRISE">Enterprise</option>
+                </select>
+            </div>
         </div>
 
         <div class="card-body" style="padding: 0;">
             <div class="table-responsive">
-                <table class="data-table" id="tenantsTable">
+                <table class="data-table" id="tenantsTable" style="margin: 0; width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr>
-                            <th>Tenant & Slug</th>
-                            <th>Tier Plan</th>
-                            <th>Status & Lockout</th>
-                            <th>Enrolled Vectors / Quota</th>
-                            <th>Active Nodes / Quota</th>
-                            <th>Tenant Admin</th>
-                            <th style="text-align: right;">Actions</th>
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Tenant Organization</th>
+                            <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Tier Plan</th>
+                            <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Lifecycle Status</th>
+                            <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Face Vectors Quota</th>
+                            <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Edge Nodes Quota</th>
+                            <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Tenant Admin</th>
+                            <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Management Actions</th>
                         </tr>
                     </thead>
                     <tbody id="tenantsTableBody">
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">
-                                <i class="fa-solid fa-spinner fa-spin"></i> Loading SaaS Tenants...
+                            <td colspan="7" style="text-align: center; padding: 36px; color: var(--text-muted);">
+                                <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; margin-bottom: 8px;"></i>
+                                <div>Loading SaaS Tenants Control Plane...</div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <div style="padding: 12px 20px; background: var(--bg-subtle); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted);">
+            <span id="tenantsCountLabel">Showing 0 tenants</span>
+            <span style="font-size: 11.5px;"><i class="fa-solid fa-circle-info" style="color: var(--accent-primary);"></i> Soft-deleted tenants preserve historical records and can be restored at any time.</span>
+        </div>
     </div>
 
-    <!-- Global Audit Trail Section -->
-    <div class="card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h3>
-                    <i class="fa-solid fa-shield-halved" style="color: var(--accent-emerald);"></i>
-                    <span>Platform-Wide Administrative Audit Trail</span>
-                </h3>
-                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-                    Real-time log of promotions, quota modifications, role adjustments, and tenant lifecycle state changes.
-                </p>
+    <!-- Conditional Platform Audit Trail (Collapsible Accordion) -->
+    <div class="card" style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); overflow: hidden;">
+        <div class="card-header" onclick="toggleAuditAccordion()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; padding: 16px 20px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; background: var(--badge-emerald-bg); color: var(--accent-emerald);">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </span>
+                <div>
+                    <h3 style="font-size: 15px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <span>Platform-Wide Administrative Audit Trail</span>
+                        <span class="badge badge-sky" id="auditTrailBadge" style="font-size: 10px; font-weight: 700;">On-Demand Log</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">
+                        Real-time immutable log of tenant lifecycle transitions, quota adjustments, and administrative operations.
+                    </p>
+                </div>
             </div>
-            <button class="btn btn-secondary" onclick="loadAuditLogs()">
-                <i class="fa-solid fa-rotate-right"></i>
-                <span>Refresh Audit Log</span>
-            </button>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="btn btn-secondary" onclick="event.stopPropagation(); loadAuditLogs()" style="font-size: 11.5px; padding: 4px 10px;" title="Refresh Audit Log">
+                    <i class="fa-solid fa-rotate-right"></i> Refresh
+                </button>
+                <i id="auditAccordionIcon" class="fa-solid fa-chevron-down" style="font-size: 14px; color: var(--text-muted); transition: transform 0.25s ease;"></i>
+            </div>
         </div>
 
-        <div class="card-body" style="padding: 0;">
+        <div id="auditAccordionBody" style="display: none; border-top: 1px solid var(--border-color); padding: 0;">
             <div class="table-responsive">
-                <table class="data-table" id="auditLogsTable">
+                <table class="data-table" id="auditLogsTable" style="margin: 0; width: 100%;">
                     <thead>
-                        <tr>
-                            <th>Timestamp (IST)</th>
-                            <th>Actor & Role</th>
-                            <th>Tenant Org</th>
-                            <th>Action Type</th>
-                            <th>Description</th>
-                            <th>Client IP</th>
+                        <tr style="background: var(--bg-subtle);">
+                            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Timestamp (IST)</th>
+                            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Actor & Role</th>
+                            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tenant Org</th>
+                            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Action Type</th>
+                            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Description</th>
+                            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Client IP</th>
                         </tr>
                     </thead>
                     <tbody id="auditLogsTableBody">
                         <tr>
                             <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
-                                <i class="fa-solid fa-spinner fa-spin"></i> Loading Audit Logs...
+                                Click refresh or expand to load audit trail events.
                             </td>
                         </tr>
                     </tbody>
@@ -139,11 +201,11 @@
 
 </div>
 
-<!-- Modal: Create New Tenant -->
-<div id="createTenantModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+<!-- Modal 1: Provision New Tenant -->
+<div id="createTenantModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
     <div class="card" style="max-width: 580px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-color);">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="font-size: 16px;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
+            <h3 style="font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-building-circle-check" style="color: var(--accent-primary);"></i>
                 <span>Provision New SaaS Tenant</span>
             </h3>
@@ -151,45 +213,56 @@
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 20px;">
             <form id="createTenantForm" onsubmit="submitCreateTenant(event)">
                 <div class="form-group">
-                    <label class="form-label">Institution / Organization Name *</label>
-                    <input type="text" id="newTenantName" class="form-control" placeholder="e.g. Stanford School of Engineering" required>
+                    <label class="form-label" style="font-weight: 700;">Institution / Organization Name *</label>
+                    <input type="text" id="newTenantName" class="form-control" placeholder="e.g. Stanford School of Engineering" oninput="autoGenerateSlug(this.value)" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Subdomain Slug / Identifier *</label>
+                    <label class="form-label" style="font-weight: 700;">Subdomain Identifier / Slug *</label>
                     <input type="text" id="newTenantSlug" class="form-control" placeholder="e.g. stanford-eng" style="font-family: monospace;" required>
-                    <small style="color: var(--text-muted); font-size: 11.5px;">Lowercase letters, numbers, and hyphens only.</small>
+                    <small style="color: var(--text-muted); font-size: 11.5px;">Lowercase alphanumeric identifier used for routing and data isolation.</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Contact Email</label>
+                    <label class="form-label" style="font-weight: 700;">Contact Email</label>
                     <input type="email" id="newTenantEmail" class="form-control" placeholder="admin@stanford.edu">
                 </div>
 
-                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Subscription Tier Plan</label>
-                        <select id="newTenantPlan" class="form-control" onchange="updateTierQuotaDefaults(this.value)">
-                            <option value="FREE">Free Tier (50 Faces, 2 Nodes)</option>
-                            <option value="STANDARD" selected>Standard Tier (500 Faces, 10 Nodes)</option>
-                            <option value="ENTERPRISE">Enterprise Tier (5000 Faces, 50 Nodes)</option>
+                <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                    <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: var(--accent-primary); letter-spacing: 0.5px; display: block; margin-bottom: 10px;">
+                        <i class="fa-solid fa-layer-group"></i> Subscription Plan & Automated Quota Binding
+                    </span>
+
+                    <div class="form-group">
+                        <label class="form-label">Subscription Tier Plan *</label>
+                        <select id="newTenantPlan" class="form-control" onchange="onPlanSelectionChanged(this.value)" required>
+                            <!-- Populated dynamically via loadSubscriptionPlans() -->
                         </select>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Max Face Vectors Quota</label>
-                        <input type="number" id="newTenantMaxFaces" class="form-control" value="500" min="10" max="100000">
+
+                    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11.5px;">Max Face Vectors Quota</label>
+                            <input type="number" id="newTenantMaxFaces" class="form-control" style="background: var(--bg-card); cursor: not-allowed;" readonly disabled>
+                            <small style="color: var(--text-muted); font-size: 10.5px;">Auto-derived from tier</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11.5px;">Max Edge & Mobile Nodes</label>
+                            <input type="number" id="newTenantMaxNodes" class="form-control" style="background: var(--bg-card); cursor: not-allowed;" readonly disabled>
+                            <small style="color: var(--text-muted); font-size: 10.5px;">Auto-derived from tier</small>
+                        </div>
                     </div>
                 </div>
 
-                <div style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
-                    <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--accent-primary); letter-spacing: 0.5px;">
+                <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                    <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: var(--accent-emerald); letter-spacing: 0.5px; display: block; margin-bottom: 10px;">
                         <i class="fa-solid fa-user-shield"></i> Initial Tenant Administrator Account
                     </span>
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label class="form-label">Admin Full Name *</label>
+                    <div class="form-group">
+                        <label class="form-label">Administrator Full Name *</label>
                         <input type="text" id="newAdminFullName" class="form-control" placeholder="Dr. Robert Lang" required>
                     </div>
                     <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -206,7 +279,7 @@
 
                 <div id="createTenantAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                     <button type="button" class="btn btn-secondary" onclick="closeCreateTenantModal()">Cancel</button>
                     <button type="submit" id="btnSubmitTenant" class="btn btn-primary">
                         <i class="fa-solid fa-check"></i> Provision Tenant
@@ -217,63 +290,315 @@
     </div>
 </div>
 
-<!-- Modal: Edit Tenant Quotas -->
-<div id="editQuotasModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
-    <div class="card" style="max-width: 460px; width: 100%; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-color);">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="font-size: 15px;">
-                <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
-                <span id="editQuotasTitle">Adjust Tenant Quotas</span>
+<!-- Modal 2: Edit Tenant Details -->
+<div id="editTenantModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="max-width: 520px; width: 100%; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color);">
+            <h3 style="font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i>
+                <span id="editTenantModalTitle">Edit Tenant Organization</span>
             </h3>
-            <button type="button" onclick="closeEditQuotasModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
+            <button type="button" onclick="closeEditTenantModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <div class="card-body">
-            <form id="editQuotasForm" onsubmit="submitEditQuotas(event)">
-                <input type="hidden" id="editQuotaTenantId">
+        <div class="card-body" style="padding: 20px;">
+            <form id="editTenantForm" onsubmit="submitEditTenantDetails(event)">
+                <input type="hidden" id="editTenantId">
 
                 <div class="form-group">
-                    <label class="form-label">Subscription Tier Plan</label>
-                    <select id="editQuotaPlan" class="form-control">
-                        <option value="FREE">Free Tier (50 Faces, 2 Nodes)</option>
-                        <option value="STANDARD">Standard Tier (500 Faces, 10 Nodes)</option>
-                        <option value="ENTERPRISE">Enterprise Tier (5000 Faces, 50 Nodes)</option>
-                    </select>
+                    <label class="form-label">Institution / Organization Name *</label>
+                    <input type="text" id="editTenantName" class="form-control" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Custom Max Face Vectors</label>
-                    <input type="number" id="editQuotaMaxFaces" class="form-control" min="10" max="50000" required>
+                    <label class="form-label">Contact Email</label>
+                    <input type="email" id="editTenantEmail" class="form-control">
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Custom Max Edge / Mobile Nodes</label>
-                    <input type="number" id="editQuotaMaxNodes" class="form-control" min="1" max="500" required>
+                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Subscription Tier</label>
+                        <select id="editTenantPlan" class="form-control" onchange="onEditPlanChanged(this.value)">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Lifecycle Status</label>
+                        <select id="editTenantStatus" class="form-control">
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="SUSPENDED">SUSPENDED (Read-Only)</option>
+                            <option value="EXPIRED">EXPIRED</option>
+                            <option value="DELETED">DELETED (Soft-Deleted)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div id="editQuotasAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+                <div style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-heading);">
+                            Resource Quota Ceilings
+                        </span>
+                        <label style="font-size: 11px; color: var(--accent-primary); cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                            <input type="checkbox" id="editCustomQuotaToggle" onchange="toggleCustomQuotaEditing(this.checked)">
+                            <span>Custom Override</span>
+                        </label>
+                    </div>
+
+                    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11.5px;">Max Face Vectors</label>
+                            <input type="number" id="editTenantMaxFaces" class="form-control" min="10" max="100000" disabled required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11.5px;">Max Nodes</label>
+                            <input type="number" id="editTenantMaxNodes" class="form-control" min="1" max="500" disabled required>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="editTenantAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeEditQuotasModal()">Cancel</button>
-                    <button type="submit" id="btnSubmitQuotas" class="btn btn-primary">
-                        <i class="fa-solid fa-floppy-disk"></i> Save Quotas
+                    <button type="button" class="btn btn-secondary" onclick="closeEditTenantModal()">Cancel</button>
+                    <button type="submit" id="btnSubmitEditTenant" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<!-- Modal 3: Subscription Plans Management -->
+<div id="plansModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="max-width: 680px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color);">
+            <h3 style="font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-layer-group" style="color: var(--accent-primary);"></i>
+                <span>SaaS Subscription Plans & Quota Limits</span>
+            </h3>
+            <button type="button" onclick="closePlansModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <span style="font-size: 12.5px; color: var(--text-muted);">Configured subscription tiers available for tenant provisioning.</span>
+                <button class="btn btn-secondary" onclick="toggleNewPlanForm()" style="font-size: 11.5px; padding: 4px 10px;">
+                    <i class="fa-solid fa-plus"></i> Add New Plan
+                </button>
+            </div>
+
+            <!-- New Plan Inline Form (hidden by default) -->
+            <div id="newPlanFormContainer" style="display: none; background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                <h4 style="font-size: 13px; font-weight: 700; margin: 0 0 12px 0;">Define New Subscription Plan</h4>
+                <form id="newPlanForm" onsubmit="submitNewSubscriptionPlan(event)">
+                    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px; margin-bottom: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Plan Code *</label>
+                            <input type="text" id="newPlanCode" class="form-control" placeholder="PRO, CUSTOM" style="font-family: monospace; text-transform: uppercase;" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Plan Display Name *</label>
+                            <input type="text" id="newPlanDisplayName" class="form-control" placeholder="Professional Tier" required>
+                        </div>
+                    </div>
+                    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Max Face Vectors *</label>
+                            <input type="number" id="newPlanMaxFaces" class="form-control" value="1000" min="10" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Max Nodes *</label>
+                            <input type="number" id="newPlanMaxNodes" class="form-control" value="20" min="1" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Price / Mo ($)</label>
+                            <input type="number" id="newPlanPrice" class="form-control" value="99" min="0" step="0.1">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                        <button type="button" class="btn btn-secondary" onclick="toggleNewPlanForm()" style="font-size: 11.5px;">Cancel</button>
+                        <button type="submit" class="btn btn-primary" style="font-size: 11.5px;">Save Plan</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Plans Table -->
+            <div class="table-responsive">
+                <table class="data-table" id="plansTable" style="margin: 0; width: 100%;">
+                    <thead>
+                        <tr style="background: var(--bg-subtle);">
+                            <th style="padding: 10px 14px; font-size: 11.5px;">Code & Name</th>
+                            <th style="padding: 10px 14px; font-size: 11.5px;">Max Faces</th>
+                            <th style="padding: 10px 14px; font-size: 11.5px;">Max Nodes</th>
+                            <th style="padding: 10px 14px; font-size: 11.5px;">Price/Mo</th>
+                            <th style="padding: 10px 14px; font-size: 11.5px; text-align: right;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plansTableBody">
+                        <tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">Loading Plans...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+    let globalTenantsData = [];
+    let globalPlansData = [];
+
     document.addEventListener("DOMContentLoaded", () => {
-        loadSuperAdminMetrics();
-        loadTenantsList();
-        loadAuditLogs();
+        refreshAllSuperAdminData();
     });
 
+    async function refreshAllSuperAdminData() {
+        await Promise.all([
+            loadSubscriptionPlans(),
+            loadSuperAdminMetrics(),
+            loadTenantsList(),
+        ]);
+    }
+
+    // --- Subscription Plans Logic ---
+    async function loadSubscriptionPlans() {
+        try {
+            const res = await fetch("/api/v1/super-admin/plans");
+            const data = await res.json();
+            if (res.ok && data.plans) {
+                globalPlansData = data.plans;
+                populatePlanSelectDropdowns();
+                renderPlansTable();
+            }
+        } catch (e) {
+            console.error("Error loading subscription plans:", e);
+        }
+    }
+
+    function populatePlanSelectDropdowns() {
+        const createSelect = document.getElementById("newTenantPlan");
+        const editSelect = document.getElementById("editTenantPlan");
+
+        const optionsHtml = globalPlansData.map(p => `
+            <option value="${p.plan_code}" data-faces="${p.max_face_encodings}" data-nodes="${p.max_nodes}">
+                ${p.name} (${p.max_face_encodings} Faces, ${p.max_nodes} Nodes)
+            </option>
+        `).join("");
+
+        if (createSelect) {
+            createSelect.innerHTML = optionsHtml;
+            // Set initial defaults
+            if (globalPlansData.length > 0) {
+                onPlanSelectionChanged(globalPlansData[0].plan_code);
+            }
+        }
+        if (editSelect) {
+            editSelect.innerHTML = optionsHtml;
+        }
+    }
+
+    function renderPlansTable() {
+        const tbody = document.getElementById("plansTableBody");
+        if (!tbody) return;
+
+        if (globalPlansData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 16px;">No plans configured.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = globalPlansData.map(p => `
+            <tr>
+                <td>
+                    <div style="font-weight: 700; font-size: 13px;">${p.name}</div>
+                    <div style="font-size: 11px; font-family: monospace; color: var(--accent-primary);">${p.plan_code}</div>
+                </td>
+                <td style="font-weight: 700;">${p.max_face_encodings.toLocaleString()}</td>
+                <td style="font-weight: 700;">${p.max_nodes}</td>
+                <td style="font-family: monospace; font-weight: 600;">$${p.price_monthly.toFixed(2)}</td>
+                <td style="text-align: right;">
+                    <span class="badge ${p.is_active ? 'badge-present' : 'badge-slate'}" style="font-size: 10px;">
+                        ${p.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+            </tr>
+        `).join("");
+    }
+
+    function onPlanSelectionChanged(planCode) {
+        const plan = globalPlansData.find(p => p.plan_code === planCode);
+        if (plan) {
+            document.getElementById("newTenantMaxFaces").value = plan.max_face_encodings;
+            document.getElementById("newTenantMaxNodes").value = plan.max_nodes;
+        }
+    }
+
+    function onEditPlanChanged(planCode) {
+        const isCustom = document.getElementById("editCustomQuotaToggle").checked;
+        if (!isCustom) {
+            const plan = globalPlansData.find(p => p.plan_code === planCode);
+            if (plan) {
+                document.getElementById("editTenantMaxFaces").value = plan.max_face_encodings;
+                document.getElementById("editTenantMaxNodes").value = plan.max_nodes;
+            }
+        }
+    }
+
+    function toggleCustomQuotaEditing(enabled) {
+        document.getElementById("editTenantMaxFaces").disabled = !enabled;
+        document.getElementById("editTenantMaxNodes").disabled = !enabled;
+    }
+
+    function openPlansModal() {
+        document.getElementById("plansModal").style.display = "flex";
+        renderPlansTable();
+    }
+
+    function closePlansModal() {
+        document.getElementById("plansModal").style.display = "none";
+        document.getElementById("newPlanFormContainer").style.display = "none";
+    }
+
+    function toggleNewPlanForm() {
+        const container = document.getElementById("newPlanFormContainer");
+        container.style.display = (container.style.display === "none") ? "block" : "none";
+    }
+
+    async function submitNewSubscriptionPlan(e) {
+        e.preventDefault();
+        const payload = {
+            plan_code: document.getElementById("newPlanCode").value.trim().toUpperCase(),
+            name: document.getElementById("newPlanDisplayName").value.trim(),
+            max_face_encodings: parseInt(document.getElementById("newPlanMaxFaces").value) || 500,
+            max_nodes: parseInt(document.getElementById("newPlanMaxNodes").value) || 10,
+            price_monthly: parseFloat(document.getElementById("newPlanPrice").value) || 0.0,
+        };
+
+        try {
+            const res = await fetch("/api/v1/super-admin/plans", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                await loadSubscriptionPlans();
+                toggleNewPlanForm();
+                document.getElementById("newPlanForm").reset();
+            } else {
+                alert("Error: " + (data.detail || "Could not create plan."));
+            }
+        } catch (err) {
+            alert("Network error creating plan.");
+        }
+    }
+
+    // --- Metrics Logic ---
     async function loadSuperAdminMetrics() {
         try {
             const res = await fetch("/api/v1/super-admin/metrics");
@@ -281,12 +606,13 @@
             if (res.ok && data.metrics) {
                 const m = data.metrics;
                 document.getElementById("statTotalTenants").innerText = m.total_tenants;
-                document.getElementById("statActiveTenantsBadge").innerText = `${m.active_tenants} Active / ${m.suspended_tenants} Suspended`;
-                document.getElementById("statTotalVectors").innerText = m.total_face_vectors;
-                document.getElementById("statTotalStudentsBadge").innerText = `${m.total_students} Students`;
+                document.getElementById("statActiveTenantsBadge").innerText = `${m.active_tenants} Active`;
+                document.getElementById("statSuspendedTenantsBadge").innerText = `${m.suspended_tenants} Suspended / ${m.deleted_tenants || 0} Deleted`;
+                document.getElementById("statTotalVectors").innerText = m.total_face_vectors.toLocaleString();
+                document.getElementById("statTotalStudentsBadge").innerText = `${m.total_students} Profiles`;
                 document.getElementById("statTotalNodes").innerText = m.total_nodes;
                 document.getElementById("statOnlineNodesBadge").innerText = `${m.online_nodes} Online`;
-                document.getElementById("statTotalLogs").innerText = m.total_attendance_logs;
+                document.getElementById("statTotalLogs").innerText = m.total_attendance_logs.toLocaleString();
                 document.getElementById("statTodayLogsBadge").innerText = `${m.today_attendances} Today`;
             }
         } catch (e) {
@@ -294,111 +620,166 @@
         }
     }
 
+    // --- Tenants Management Table & Filtering ---
     async function loadTenantsList() {
         try {
-            const res = await fetch("/api/v1/super-admin/tenants");
+            const res = await fetch("/api/v1/super-admin/tenants?include_deleted=true");
             const data = await res.json();
-            const tbody = document.getElementById("tenantsTableBody");
-
-            if (!res.ok || !data.tenants || data.tenants.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No tenants registered.</td></tr>`;
-                return;
+            if (res.ok && data.tenants) {
+                globalTenantsData = data.tenants;
+                renderTenantsTable(globalTenantsData);
             }
-
-            tbody.innerHTML = data.tenants.map(t => {
-                const isSuspended = (t.subscription_status === 'SUSPENDED');
-                const isExpired = (t.subscription_status === 'EXPIRED');
-
-                let planBadgeClass = 'badge-sky';
-                if (t.subscription_plan === 'ENTERPRISE') planBadgeClass = 'badge-emerald';
-                if (t.subscription_plan === 'FREE') planBadgeClass = 'badge-slate';
-
-                let statusBadgeClass = 'badge-present';
-                if (isSuspended) statusBadgeClass = 'badge-unknown';
-                if (isExpired) statusBadgeClass = 'badge-absent';
-
-                return `
-                    <tr style="${isSuspended ? 'opacity: 0.75; background: rgba(239, 68, 68, 0.03);' : ''}">
-                        <td>
-                            <div style="font-weight: 700; color: var(--text-heading); font-size: 13.5px;">${t.name}</div>
-                            <div style="font-size: 11px; font-family: monospace; color: var(--accent-primary);">ID: #${t.id} &bull; slug: ${t.slug}</div>
-                        </td>
-                        <td>
-                            <span class="badge ${planBadgeClass}" style="font-size: 11px; font-weight: 800;">
-                                ${t.subscription_plan || 'STANDARD'}
-                            </span>
-                        </td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span class="badge ${statusBadgeClass}" style="font-size: 10.5px;">
-                                    ${t.subscription_status || 'ACTIVE'}
-                                </span>
-                                <button class="btn btn-secondary" style="font-size: 10.5px; padding: 2px 6px;" onclick="toggleTenantStatus(${t.id}, '${isSuspended ? 'ACTIVE' : 'SUSPENDED'}')" title="${isSuspended ? 'Activate Tenant' : 'Suspend Tenant'}">
-                                    <i class="fa-solid ${isSuspended ? 'fa-play' : 'fa-pause'}"></i>
-                                    ${isSuspended ? 'Activate' : 'Suspend'}
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div style="font-size: 12px; font-weight: 700;">${t.enrolled_faces_count} / ${t.max_face_encodings} (${t.face_quota_pct}%)</div>
-                            <div style="background: var(--border-color); height: 5px; border-radius: 3px; overflow: hidden; width: 100px; margin-top: 3px;">
-                                <div style="background: ${t.face_quota_pct > 85 ? 'var(--accent-rose)' : 'var(--accent-emerald)'}; height: 100%; width: ${Math.min(100, t.face_quota_pct)}%;"></div>
-                            </div>
-                        </td>
-                        <td>
-                            <div style="font-size: 12px; font-weight: 700;">${t.active_nodes_count} / ${t.max_nodes} (${t.node_quota_pct}%)</div>
-                            <div style="background: var(--border-color); height: 5px; border-radius: 3px; overflow: hidden; width: 80px; margin-top: 3px;">
-                                <div style="background: ${t.node_quota_pct > 85 ? 'var(--accent-rose)' : 'var(--accent-cyan)'}; height: 100%; width: ${Math.min(100, t.node_quota_pct)}%;"></div>
-                            </div>
-                        </td>
-                        <td>
-                            <div style="font-size: 12px; font-weight: 600; color: var(--text-heading);">${t.admin_username}</div>
-                            <div style="font-size: 11px; color: var(--text-muted);">${t.admin_email}</div>
-                        </td>
-                        <td style="text-align: right;">
-                            <button class="btn btn-secondary" style="font-size: 11.5px; padding: 5px 10px;" onclick='openEditQuotasModal(${JSON.stringify(t)})'>
-                                <i class="fa-solid fa-sliders"></i> Quotas
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join("");
         } catch (e) {
             console.error("Tenants load error:", e);
         }
     }
 
-    async function loadAuditLogs() {
-        try {
-            const res = await fetch("/api/v1/super-admin/audit-logs?limit=50");
-            const data = await res.json();
-            const tbody = document.getElementById("auditLogsTableBody");
+    function filterTenantsGrid() {
+        const query = (document.getElementById("tenantSearchInput").value || "").toLowerCase().trim();
+        const statusFilter = document.getElementById("tenantStatusFilter").value;
+        const planFilter = document.getElementById("tenantPlanFilter").value;
 
-            if (!res.ok || !data.logs || data.logs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">No audit events recorded yet.</td></tr>`;
-                return;
-            }
+        const filtered = globalTenantsData.filter(t => {
+            const matchesSearch = !query || t.name.toLowerCase().includes(query) || t.slug.toLowerCase().includes(query);
+            
+            let matchesStatus = true;
+            if (statusFilter === "ACTIVE") matchesStatus = (t.subscription_status === "ACTIVE" && !t.is_deleted);
+            else if (statusFilter === "SUSPENDED") matchesStatus = (t.subscription_status === "SUSPENDED" && !t.is_deleted);
+            else if (statusFilter === "DELETED") matchesStatus = t.is_deleted || t.subscription_status === "DELETED";
 
-            tbody.innerHTML = data.logs.map(l => `
-                <tr>
-                    <td style="font-family: monospace; font-size: 11.5px;">${l.timestamp}</td>
-                    <td>
-                        <div style="font-weight: 700; font-size: 12px;">${l.actor_name}</div>
-                        <span class="badge badge-sky" style="font-size: 9.5px;">${l.actor_role}</span>
-                    </td>
-                    <td style="font-size: 12px; font-weight: 600;">${l.tenant_name}</td>
-                    <td><span class="badge badge-indigo" style="font-size: 10.5px; font-weight: 700;">${l.action_type}</span></td>
-                    <td style="font-size: 12px; max-width: 320px;">${l.description}</td>
-                    <td style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${l.ip_address || '127.0.0.1'}</td>
-                </tr>
-            `).join("");
-        } catch (e) {
-            console.error("Audit log error:", e);
-        }
+            let matchesPlan = true;
+            if (planFilter !== "ALL") matchesPlan = (t.subscription_plan === planFilter);
+
+            return matchesSearch && matchesStatus && matchesPlan;
+        });
+
+        renderTenantsTable(filtered);
     }
 
-    async function toggleTenantStatus(tenantId, newStatus) {
-        if (!confirm(`Are you sure you want to set Tenant #${tenantId} to ${newStatus}?`)) return;
+    function renderTenantsTable(tenants) {
+        const tbody = document.getElementById("tenantsTableBody");
+        const countLabel = document.getElementById("tenantsCountLabel");
+
+        countLabel.innerText = `Showing ${tenants.length} of ${globalTenantsData.length} tenants`;
+
+        if (tenants.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">No tenants match the filter criteria.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = tenants.map(t => {
+            const isDeleted = Boolean(t.is_deleted || t.subscription_status === 'DELETED');
+            const isSuspended = (t.subscription_status === 'SUSPENDED' && !isDeleted);
+
+            // Tier styling
+            let planBadgeClass = 'badge-sky';
+            if (t.subscription_plan === 'ENTERPRISE') planBadgeClass = 'badge-emerald';
+            else if (t.subscription_plan === 'FREE') planBadgeClass = 'badge-slate';
+
+            // Lifecycle Badge
+            let statusPillHtml = '';
+            if (isDeleted) {
+                statusPillHtml = `<span class="badge badge-absent" style="font-size: 11px; font-weight: 700;"><i class="fa-solid fa-trash-can"></i> Deleted</span>`;
+            } else if (isSuspended) {
+                statusPillHtml = `<span class="badge badge-unknown" style="font-size: 11px; font-weight: 700;"><i class="fa-solid fa-pause"></i> Suspended (Read-Only)</span>`;
+            } else {
+                statusPillHtml = `<span class="badge badge-present" style="font-size: 11px; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Active</span>`;
+            }
+
+            // Quota bar colors
+            const facePct = t.face_quota_pct || 0;
+            const nodePct = t.node_quota_pct || 0;
+            const faceColor = facePct > 90 ? 'var(--accent-rose)' : (facePct > 75 ? 'var(--accent-amber)' : 'var(--accent-emerald)');
+            const nodeColor = nodePct > 90 ? 'var(--accent-rose)' : (nodePct > 75 ? 'var(--accent-amber)' : 'var(--accent-cyan)');
+
+            const rowStyle = isDeleted ? 'background: rgba(244, 63, 94, 0.04); opacity: 0.75;' : (isSuspended ? 'background: rgba(245, 158, 11, 0.03);' : '');
+
+            return `
+                <tr style="${rowStyle} border-bottom: 1px solid var(--border-subtle); transition: background 0.15s ease;">
+                    <td style="padding: 14px 16px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: var(--accent-primary);">
+                                ${t.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-heading); font-size: 13.5px;">${t.name}</div>
+                                <div style="font-size: 11px; font-family: monospace; color: var(--text-muted); margin-top: 1px;">
+                                    ID #${t.id} &bull; <span style="color: var(--accent-primary); font-weight: 600;">${t.slug}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td style="padding: 14px 16px;">
+                        <span class="badge ${planBadgeClass}" style="font-size: 11px; font-weight: 800; letter-spacing: 0.3px;">
+                            ${t.subscription_plan || 'STANDARD'}
+                        </span>
+                    </td>
+
+                    <td style="padding: 14px 16px;">
+                        ${statusPillHtml}
+                    </td>
+
+                    <td style="padding: 14px 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                            <span>${t.enrolled_faces_count} / ${t.max_face_encodings}</span>
+                            <span style="color: ${faceColor}; font-size: 11px;">${facePct}%</span>
+                        </div>
+                        <div style="background: var(--border-color); height: 6px; border-radius: 3px; overflow: hidden; width: 120px;">
+                            <div style="background: ${faceColor}; height: 100%; width: ${Math.min(100, facePct)}%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </td>
+
+                    <td style="padding: 14px 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                            <span>${t.active_nodes_count} / ${t.max_nodes}</span>
+                            <span style="color: ${nodeColor}; font-size: 11px;">${nodePct}%</span>
+                        </div>
+                        <div style="background: var(--border-color); height: 6px; border-radius: 3px; overflow: hidden; width: 90px;">
+                            <div style="background: ${nodeColor}; height: 100%; width: ${Math.min(100, nodePct)}%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </td>
+
+                    <td style="padding: 14px 16px;">
+                        <div style="font-size: 12px; font-weight: 700; color: var(--text-heading);">${t.admin_username}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">${t.admin_email}</div>
+                    </td>
+
+                    <td style="padding: 14px 16px; text-align: right;">
+                        <div style="display: inline-flex; gap: 6px; align-items: center;">
+                            ${isDeleted ? `
+                                <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--accent-emerald);" onclick="restoreSoftDeletedTenant(${t.id}, '${t.name}')" title="Restore Tenant to ACTIVE">
+                                    <i class="fa-solid fa-rotate-left"></i> Restore
+                                </button>
+                                <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick='openEditTenantModal(${JSON.stringify(t)})' title="Edit Tenant Details">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                            ` : `
+                                <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick='openEditTenantModal(${JSON.stringify(t)})' title="Edit Tenant Details">
+                                    <i class="fa-solid fa-pen"></i> Edit
+                                </button>
+                                <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: ${isSuspended ? 'var(--accent-emerald)' : 'var(--accent-amber)'};" onclick="toggleTenantStatus(${t.id}, '${isSuspended ? 'ACTIVE' : 'SUSPENDED'}', '${t.name}')" title="${isSuspended ? 'Reactivate Tenant' : 'Suspend Tenant (Read-Only Mode)'}">
+                                    <i class="fa-solid ${isSuspended ? 'fa-play' : 'fa-pause'}"></i> ${isSuspended ? 'Activate' : 'Suspend'}
+                                </button>
+                                <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--accent-rose);" onclick="softDeleteTenant(${t.id}, '${t.name}')" title="Soft Delete Tenant">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // --- Action Handlers: Suspend, Soft Delete, Restore ---
+    async function toggleTenantStatus(tenantId, newStatus, tenantName) {
+        const actionLabel = (newStatus === "SUSPENDED") 
+            ? `SUSPEND '${tenantName}'?\n\nThis locks out operational features (attendance ingestion, new enrollments) while preserving read-only historical viewing.`
+            : `REACTIVATE '${tenantName}' to ACTIVE operational state?`;
+
+        if (!confirm(actionLabel)) return;
+
         try {
             const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}/status`, {
                 method: "PUT",
@@ -407,52 +788,89 @@
             });
             const data = await res.json();
             if (res.ok) {
-                loadTenantsList();
-                loadSuperAdminMetrics();
-                loadAuditLogs();
+                refreshAllSuperAdminData();
             } else {
-                alert("Failed: " + (data.detail || "Error updating status."));
+                alert("Error: " + (data.detail || "Could not update status."));
             }
-        } catch (err) {
+        } catch (e) {
             alert("Network error updating status.");
         }
     }
 
+    async function softDeleteTenant(tenantId, tenantName) {
+        if (!confirm(`Are you sure you want to SOFT DELETE tenant '${tenantName}' (ID #${tenantId})?\n\nThis will deactivate user access immediately without wiping database rows. You can restore it anytime.`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+            if (res.ok) {
+                refreshAllSuperAdminData();
+            } else {
+                alert("Error: " + (data.detail || "Could not delete tenant."));
+            }
+        } catch (e) {
+            alert("Network error soft deleting tenant.");
+        }
+    }
+
+    async function restoreSoftDeletedTenant(tenantId, tenantName) {
+        if (!confirm(`Restore '${tenantName}' (ID #${tenantId}) back to ACTIVE status?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}/restore`, {
+                method: "POST",
+            });
+            const data = await res.json();
+            if (res.ok) {
+                refreshAllSuperAdminData();
+            } else {
+                alert("Error: " + (data.detail || "Could not restore tenant."));
+            }
+        } catch (e) {
+            alert("Network error restoring tenant.");
+        }
+    }
+
+    // --- Modal: Provision New Tenant ---
     function openCreateTenantModal() {
         document.getElementById("createTenantModal").style.display = "flex";
+        document.getElementById("createTenantAlert").style.display = "none";
+        document.getElementById("createTenantForm").reset();
+        if (globalPlansData.length > 0) {
+            onPlanSelectionChanged(globalPlansData[0].plan_code);
+        }
     }
 
     function closeCreateTenantModal() {
         document.getElementById("createTenantModal").style.display = "none";
     }
 
-    function updateTierQuotaDefaults(plan) {
-        if (plan === "FREE") {
-            document.getElementById("newTenantMaxFaces").value = 50;
-        } else if (plan === "STANDARD") {
-            document.getElementById("newTenantMaxFaces").value = 500;
-        } else if (plan === "ENTERPRISE") {
-            document.getElementById("newTenantMaxFaces").value = 5000;
-        }
+    function autoGenerateSlug(name) {
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        document.getElementById("newTenantSlug").value = slug;
     }
 
     async function submitCreateTenant(e) {
         e.preventDefault();
+        const alertEl = document.getElementById("createTenantAlert");
+        const btn = document.getElementById("btnSubmitTenant");
+        alertEl.style.display = "none";
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Provisioning...`;
+
         const payload = {
             name: document.getElementById("newTenantName").value.trim(),
             slug: document.getElementById("newTenantSlug").value.trim(),
             contact_email: document.getElementById("newTenantEmail").value.trim() || null,
             subscription_plan: document.getElementById("newTenantPlan").value,
-            max_face_encodings: parseInt(document.getElementById("newTenantMaxFaces").value) || 500,
             admin_full_name: document.getElementById("newAdminFullName").value.trim(),
             admin_username: document.getElementById("newAdminUsername").value.trim(),
             admin_password: document.getElementById("newAdminPassword").value,
         };
-
-        const btn = document.getElementById("btnSubmitTenant");
-        const alertBox = document.getElementById("createTenantAlert");
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Provisioning...';
 
         try {
             const res = await fetch("/api/v1/super-admin/tenants", {
@@ -463,91 +881,139 @@
             const data = await res.json();
 
             if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-emerald-bg)";
-                alertBox.style.color = "var(--badge-emerald-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
-                setTimeout(() => {
-                    closeCreateTenantModal();
-                    loadTenantsList();
-                    loadSuperAdminMetrics();
-                    loadAuditLogs();
-                }, 900);
+                closeCreateTenantModal();
+                refreshAllSuperAdminData();
             } else {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-rose-bg)";
-                alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Error provisioning tenant.");
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> Provision Tenant';
+                alertEl.style.display = "block";
+                alertEl.style.background = "rgba(239, 68, 68, 0.1)";
+                alertEl.style.border = "1px solid var(--accent-rose)";
+                alertEl.style.color = "var(--accent-rose)";
+                alertEl.innerText = data.detail || "Error provisioning tenant organization.";
             }
         } catch (err) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-rose-bg)";
-            alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            alertEl.style.display = "block";
+            alertEl.style.background = "rgba(239, 68, 68, 0.1)";
+            alertEl.style.border = "1px solid var(--accent-rose)";
+            alertEl.style.color = "var(--accent-rose)";
+            alertEl.innerText = "Network failure while provisioning tenant.";
+        } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Provision Tenant';
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Provision Tenant`;
         }
     }
 
-    function openEditQuotasModal(tenant) {
-        document.getElementById("editQuotaTenantId").value = tenant.id;
-        document.getElementById("editQuotasTitle").innerText = `Adjust Quotas: ${tenant.name}`;
-        document.getElementById("editQuotaPlan").value = tenant.subscription_plan || "STANDARD";
-        document.getElementById("editQuotaMaxFaces").value = tenant.max_face_encodings || 500;
-        document.getElementById("editQuotaMaxNodes").value = tenant.max_nodes || 10;
-        document.getElementById("editQuotasModal").style.display = "flex";
+    // --- Modal: Edit Tenant Details ---
+    function openEditTenantModal(tenant) {
+        document.getElementById("editTenantId").value = tenant.id;
+        document.getElementById("editTenantModalTitle").innerText = `Edit Tenant: ${tenant.name}`;
+        document.getElementById("editTenantName").value = tenant.name;
+        document.getElementById("editTenantEmail").value = tenant.contact_email || "";
+        document.getElementById("editTenantPlan").value = tenant.subscription_plan || "STANDARD";
+        document.getElementById("editTenantStatus").value = tenant.is_deleted ? "DELETED" : (tenant.subscription_status || "ACTIVE");
+        document.getElementById("editTenantMaxFaces").value = tenant.max_face_encodings || 500;
+        document.getElementById("editTenantMaxNodes").value = tenant.max_nodes || 10;
+
+        document.getElementById("editCustomQuotaToggle").checked = false;
+        toggleCustomQuotaEditing(false);
+
+        document.getElementById("editTenantAlert").style.display = "none";
+        document.getElementById("editTenantModal").style.display = "flex";
     }
 
-    function closeEditQuotasModal() {
-        document.getElementById("editQuotasModal").style.display = "none";
+    function closeEditTenantModal() {
+        document.getElementById("editTenantModal").style.display = "none";
     }
 
-    async function submitEditQuotas(e) {
+    async function submitEditTenantDetails(e) {
         e.preventDefault();
-        const tenantId = document.getElementById("editQuotaTenantId").value;
-        const payload = {
-            subscription_plan: document.getElementById("editQuotaPlan").value,
-            max_face_encodings: parseInt(document.getElementById("editQuotaMaxFaces").value) || 500,
-            max_nodes: parseInt(document.getElementById("editQuotaMaxNodes").value) || 10,
-        };
-
-        const alertBox = document.getElementById("editQuotasAlert");
-        const btn = document.getElementById("btnSubmitQuotas");
+        const tenantId = document.getElementById("editTenantId").value;
+        const alertEl = document.getElementById("editTenantAlert");
+        const btn = document.getElementById("btnSubmitEditTenant");
+        alertEl.style.display = "none";
         btn.disabled = true;
 
+        const payload = {
+            name: document.getElementById("editTenantName").value.trim(),
+            contact_email: document.getElementById("editTenantEmail").value.trim() || null,
+            subscription_plan: document.getElementById("editTenantPlan").value,
+            subscription_status: document.getElementById("editTenantStatus").value,
+            max_face_encodings: parseInt(document.getElementById("editTenantMaxFaces").value),
+            max_nodes: parseInt(document.getElementById("editTenantMaxNodes").value),
+        };
+
         try {
-            const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}/quotas`, {
+            const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-emerald-bg)";
-                alertBox.style.color = "var(--badge-emerald-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Quotas updated successfully!';
-                setTimeout(() => {
-                    closeEditQuotasModal();
-                    loadTenantsList();
-                    loadSuperAdminMetrics();
-                    loadAuditLogs();
-                }, 800);
+                closeEditTenantModal();
+                refreshAllSuperAdminData();
             } else {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-rose-bg)";
-                alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Error.");
-                btn.disabled = false;
+                alertEl.style.display = "block";
+                alertEl.style.background = "rgba(239, 68, 68, 0.1)";
+                alertEl.style.border = "1px solid var(--accent-rose)";
+                alertEl.style.color = "var(--accent-rose)";
+                alertEl.innerText = data.detail || "Error updating tenant details.";
             }
-        } catch (e) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-rose-bg)";
-            alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+        } catch (err) {
+            alertEl.style.display = "block";
+            alertEl.style.background = "rgba(239, 68, 68, 0.1)";
+            alertEl.style.border = "1px solid var(--accent-rose)";
+            alertEl.style.color = "var(--accent-rose)";
+            alertEl.innerText = "Network failure updating tenant.";
+        } finally {
             btn.disabled = false;
+        }
+    }
+
+    // --- Audit Accordion Logic ---
+    function toggleAuditAccordion() {
+        const body = document.getElementById("auditAccordionBody");
+        const icon = document.getElementById("auditAccordionIcon");
+        const isClosed = (body.style.display === "none");
+
+        if (isClosed) {
+            body.style.display = "block";
+            icon.style.transform = "rotate(180deg)";
+            loadAuditLogs();
+        } else {
+            body.style.display = "none";
+            icon.style.transform = "rotate(0deg)";
+        }
+    }
+
+    async function loadAuditLogs() {
+        try {
+            const res = await fetch("/api/v1/super-admin/audit-logs?limit=50");
+            const data = await res.json();
+            const tbody = document.getElementById("auditLogsTableBody");
+            const badge = document.getElementById("auditTrailBadge");
+
+            if (!res.ok || !data.logs || data.logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">No audit events recorded yet.</td></tr>`;
+                return;
+            }
+
+            badge.innerText = `${data.logs.length} Recent Events`;
+
+            tbody.innerHTML = data.logs.map(l => `
+                <tr style="border-bottom: 1px solid var(--border-subtle);">
+                    <td style="font-family: monospace; font-size: 11px; padding: 10px 14px;">${l.timestamp}</td>
+                    <td style="padding: 10px 14px;">
+                        <div style="font-weight: 700; font-size: 12px;">${l.actor_name}</div>
+                        <span class="badge badge-sky" style="font-size: 9px;">${l.actor_role}</span>
+                    </td>
+                    <td style="font-size: 12px; font-weight: 600; padding: 10px 14px;">${l.tenant_name}</td>
+                    <td style="padding: 10px 14px;"><span class="badge badge-indigo" style="font-size: 10px; font-weight: 700;">${l.action_type}</span></td>
+                    <td style="font-size: 12px; max-width: 320px; padding: 10px 14px;">${l.description}</td>
+                    <td style="font-family: monospace; font-size: 11px; color: var(--text-muted); padding: 10px 14px;">${l.ip_address || '127.0.0.1'}</td>
+                </tr>
+            `).join("");
+        } catch (e) {
+            console.error("Audit log error:", e);
         }
     }
 </script>

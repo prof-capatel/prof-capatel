@@ -16,6 +16,7 @@ from src.core.attendance_manager import attendance_manager
 from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
+from src.server.rbac_middleware import check_tenant_operational_access
 from src.utils.timezone import get_ist_now, get_ist_date
 
 router = APIRouter(prefix="/api/v1/attendance", tags=["Attendance Management"])
@@ -39,6 +40,7 @@ def mark_manual_override(
     Biometric Fallback / Manual Override:
     Force-marks a student present with an explicit audit tag, timestamp, and justification reason scoped to tenant.
     """
+    check_tenant_operational_access(current_tenant)
     student = db.query(Student).filter(
         Student.id == payload.student_id,
         Student.tenant_id == current_tenant.id,

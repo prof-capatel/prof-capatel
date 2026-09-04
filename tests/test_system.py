@@ -502,6 +502,10 @@ class TestFaceAttendanceSystem(unittest.TestCase):
                     name="Tenant B Autonomous Academy",
                     contact_email="admin@tenant-b.edu",
                     is_active=True,
+                    subscription_status="ACTIVE",
+                    subscription_plan="STANDARD",
+                    max_face_encodings=500,
+                    max_nodes=10,
                 )
                 db.add(tenant_b)
                 db.flush()
@@ -511,6 +515,11 @@ class TestFaceAttendanceSystem(unittest.TestCase):
                     short_code="TB-ACAD",
                 )
                 db.add(branding_b)
+                db.commit()
+            else:
+                tenant_b.subscription_status = "ACTIVE"
+                tenant_b.is_active = True
+                tenant_b.is_deleted = False
                 db.commit()
 
             tenant_b_id = tenant_b.id
@@ -807,6 +816,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
 
     def test_26_academic_hierarchy_and_faculty_assignments(self):
         """Test academic years, classes, divisions CRUD, and teacher classroom mapping."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "TENANT_ADMIN", "tenant_id": 1})
         rand_id = int(time.time()*1000)%100000
 
         # 1. Create Academic Year
@@ -852,6 +862,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
 
     def test_27_student_progression_and_downgrade_rollback(self):
         """Test student cohort promotion preserving face vectors and safe emergency rollback/downgrade."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "TENANT_ADMIN", "tenant_id": 1})
         # 1. Fetch student in class 1
         with get_db_context() as db:
             student = db.query(Student).filter(Student.tenant_id == 1).first()
@@ -893,6 +904,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
 
     def test_28_teacher_portal_classroom_sheet_and_rbac(self):
         """Test teacher assigned class discovery and classroom attendance roster retrieval."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "TEACHER", "tenant_id": 1})
         # 1. Query my-classes
         res_my = self.client.get("/api/v1/teacher/my-classes")
         self.assertEqual(res_my.status_code, 200)
@@ -911,6 +923,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
 
     def test_29_administrative_audit_trail(self):
         """Test global audit logging across administrative operations."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "SUPER_ADMIN", "tenant_id": 1})
         res_audit = self.client.get("/api/v1/super-admin/audit-logs?limit=50")
         self.assertEqual(res_audit.status_code, 200)
         logs = res_audit.json()["logs"]
@@ -925,7 +938,220 @@ class TestFaceAttendanceSystem(unittest.TestCase):
 
         print("[PASS] Test 29: Administrative Audit Trail Logging verified.")
 
+    def test_30_subscription_plans_crud_and_automated_quota_derivation(self):
+        """Test Super Admin Subscription Plans CRUD and automated quota derivation on tenant creation."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "SUPER_ADMIN", "tenant_id": 1})
+
+        # 1. List subscription plans
+        res_plans = self.client.get("/api/v1/super-admin/plans")
+        self.assertEqual(res_plans.status_code, 200)
+        plans = res_plans.json()["plans"]
+        self.assertGreaterEqual(len(plans), 3)
+
+        # 2. Create custom subscription plan
+        rand_suffix = int(time.time()*1000)%100000
+        plan_code = f"PRO_{rand_suffix}"
+        res_create_plan = self.client.post("/api/v1/super-admin/plans", json={
+            "plan_code": plan_code,
+            "name": f"Professional Tier {rand_suffix}",
+            "max_face_encodings": 1500,
+            "max_nodes": 25,
+            "price_monthly": 89.0,
+            "description": "High performance mid-tier plan",
+        })
+        self.assertEqual(res_create_plan.status_code, 201)
+        created_plan = res_create_plan.json()["plan"]
+        self.assertEqual(created_plan["max_face_encodings"], 1500)
+        self.assertEqual(created_plan["max_nodes"], 25)
+
+        # 3. Create Tenant selecting this plan -> Quotas must be automatically populated from plan
+        tenant_slug = f"pro-org-{rand_suffix}"
+        res_tenant = self.client.post("/api/v1/super-admin/tenants", json={
+            "name": f"Pro Academy {rand_suffix}",
+            "slug": tenant_slug,
+            "contact_email": f"dean@{tenant_slug}.edu",
+            "subscription_plan": plan_code,
+            "admin_full_name": "Dean Pro",
+            "admin_username": f"admin_{tenant_slug}",
+            "admin_password": "Password@123",
+        })
+        self.assertEqual(res_tenant.status_code, 201)
+        t_data = res_tenant.json()["tenant"]
+        self.assertEqual(t_data["subscription_plan"], plan_code)
+        self.assertEqual(t_data["max_face_encodings"], 1500)
+        self.assertEqual(t_data["max_nodes"], 25)
+
+        print("[PASS] Test 30: Subscription Plans CRUD & Automated Quota Derivation verified.")
+
+    def test_31_tenant_edit_details_api(self):
+        """Test Super Admin comprehensive tenant details editing (name, plan, status, quotas)."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "SUPER_ADMIN", "tenant_id": 1})
+
+        # 1. Create a test tenant
+        rand_id = int(time.time()*1000)%100000
+        slug = f"edit-test-{rand_id}"
+        res_create = self.client.post("/api/v1/super-admin/tenants", json={
+            "name": f"Original Tenant Name {rand_id}",
+            "slug": slug,
+            "subscription_plan": "FREE",
+            "admin_full_name": "Admin Edit",
+            "admin_username": f"admin_{slug}",
+            "admin_password": "Password@123",
+        })
+        self.assertEqual(res_create.status_code, 201)
+        tenant_id = res_create.json()["tenant"]["id"]
+
+        # 2. Edit details: change name, plan, contact email, and custom quota override
+        res_edit = self.client.put(f"/api/v1/super-admin/tenants/{tenant_id}", json={
+            "name": f"Updated Tenant Name {rand_id}",
+            "contact_email": "updated@tenant.edu",
+            "subscription_plan": "ENTERPRISE",
+            "max_face_encodings": 7500,
+            "max_nodes": 45,
+        })
+        self.assertEqual(res_edit.status_code, 200)
+        edited_t = res_edit.json()["tenant"]
+        self.assertEqual(edited_t["name"], f"Updated Tenant Name {rand_id}")
+        self.assertEqual(edited_t["contact_email"], "updated@tenant.edu")
+        self.assertEqual(edited_t["subscription_plan"], "ENTERPRISE")
+        self.assertEqual(edited_t["max_face_encodings"], 7500)
+        self.assertEqual(edited_t["max_nodes"], 45)
+
+        print("[PASS] Test 31: Tenant Details & Custom Quotas Editing API verified.")
+
+    def test_32_suspended_tenant_read_only_access_enforcement(self):
+        """Test that suspended tenants allow read-only viewing but block all operational write actions."""
+        # 1. Create tenant and suspend it
+        rand_id = int(time.time()*1000)%100000
+        slug = f"susp-test-{rand_id}"
+        res_create = self.client.post("/api/v1/super-admin/tenants", json={
+            "name": f"Suspended College {rand_id}",
+            "slug": slug,
+            "subscription_plan": "STANDARD",
+            "admin_full_name": "Dean Suspended",
+            "admin_username": f"dean_{slug}",
+            "admin_password": "Password@123",
+        })
+        self.assertEqual(res_create.status_code, 201)
+        tenant_id = res_create.json()["tenant"]["id"]
+
+        # Suspend the tenant
+        res_susp = self.client.put(f"/api/v1/super-admin/tenants/{tenant_id}/status", json={"status": "SUSPENDED"})
+        self.assertEqual(res_susp.status_code, 200)
+
+        # 2. Test Read operations -> Must SUCCEED (Read-only historical access)
+        res_records = self.client.get("/api/v1/attendance/records", headers={"X-Tenant-ID": str(tenant_id)})
+        self.assertEqual(res_records.status_code, 200)
+
+        res_students = self.client.get("/api/v1/super-admin/tenants/" + str(tenant_id) + "/students")
+        self.assertEqual(res_students.status_code, 200)
+
+        # 3. Test Write / Operational operations -> Must FAIL with 403 Forbidden
+        # A. Register new student
+        res_enroll = self.client.post(
+            "/api/v1/enroll/student",
+            json={"roll_number": "SUSP-ST-1", "name": "Suspended Student"},
+            headers={"X-Tenant-ID": str(tenant_id)},
+        )
+        self.assertEqual(res_enroll.status_code, 403)
+        self.assertIn("SUSPENDED", res_enroll.json()["detail"])
+
+        # B. Manual attendance override
+        res_override = self.client.post(
+            "/api/v1/attendance/manual-override",
+            json={"student_id": 9999, "reason": "Test override during suspension"},
+            headers={"X-Tenant-ID": str(tenant_id)},
+        )
+        self.assertEqual(res_override.status_code, 403)
+        self.assertIn("SUSPENDED", res_override.json()["detail"])
+
+        # C. Edge node frame ingestion
+        test_frame = np.full((120, 160, 3), 100, dtype=np.uint8)
+        _, jpeg_bytes = cv2.imencode(".jpg", test_frame)
+        files = {"frame": ("susp_frame.jpg", jpeg_bytes.tobytes(), "image/jpeg")}
+        data = {"node_id": "NODE-SUSP-1", "tenant_id": slug}
+        res_frame = self.client.post("/api/v1/nodes/frame", files=files, data=data)
+        self.assertEqual(res_frame.status_code, 403)
+        self.assertIn("SUSPENDED", res_frame.json()["detail"])
+
+        print("[PASS] Test 32: Suspended Tenant Read-Only Historical Access & Operational Lockdown verified.")
+
+    def test_33_soft_delete_and_restore_tenant(self):
+        """Test soft deleting a tenant and restoring it without database data loss."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "SUPER_ADMIN", "tenant_id": 1})
+
+        # 1. Create tenant
+        rand_id = int(time.time()*1000)%100000
+        slug = f"del-test-{rand_id}"
+        res_create = self.client.post("/api/v1/super-admin/tenants", json={
+            "name": f"Soft Delete Institute {rand_id}",
+            "slug": slug,
+            "subscription_plan": "STANDARD",
+            "admin_full_name": "Dean Delete",
+            "admin_username": f"dean_{slug}",
+            "admin_password": "Password@123",
+        })
+        self.assertEqual(res_create.status_code, 201)
+        tenant_id = res_create.json()["tenant"]["id"]
+
+        # 2. Soft-delete the tenant
+        res_del = self.client.delete(f"/api/v1/super-admin/tenants/{tenant_id}")
+        self.assertEqual(res_del.status_code, 200)
+        del_t = res_del.json()["tenant"]
+        self.assertTrue(del_t["is_deleted"])
+        self.assertEqual(del_t["subscription_status"], "DELETED")
+        self.assertIsNotNone(del_t["deleted_at"])
+
+        # 3. Attempt to log in with soft-deleted tenant admin -> Must be REJECTED (403)
+        res_login = self.client.post("/api/v1/auth/login", json={
+            "username": f"dean_{slug}",
+            "password": "Password@123",
+            "tenant_id": tenant_id,
+        })
+        self.assertEqual(res_login.status_code, 403)
+        self.assertIn("deactivated or deleted", res_login.json()["detail"])
+
+        # 4. Restore the tenant
+        res_restore = self.client.post(f"/api/v1/super-admin/tenants/{tenant_id}/restore")
+        self.assertEqual(res_restore.status_code, 200)
+        restored_t = res_restore.json()["tenant"]
+        self.assertFalse(restored_t["is_deleted"])
+        self.assertEqual(restored_t["subscription_status"], "ACTIVE")
+        self.assertIsNone(restored_t["deleted_at"])
+
+        # 5. Log in again -> Must SUCCEED after restore
+        res_login_ok = self.client.post("/api/v1/auth/login", json={
+            "username": f"dean_{slug}",
+            "password": "Password@123",
+            "tenant_id": tenant_id,
+        })
+        self.assertEqual(res_login_ok.status_code, 200)
+
+        print("[PASS] Test 33: Tenant Soft Deletion & Super Admin Recovery verified.")
+
+    def test_34_super_admin_student_directory_tenant_scoping(self):
+        """Test Super Admin student directory scoped querying preventing cross-tenant leakage."""
+        self.client.post("/api/v1/auth/switch-role", json={"role": "SUPER_ADMIN", "tenant_id": 1})
+
+        # 1. Query students for Tenant 1
+        res_t1 = self.client.get("/api/v1/super-admin/tenants/1/students")
+        self.assertEqual(res_t1.status_code, 200)
+        t1_students = res_t1.json()["students"]
+        self.assertIsInstance(t1_students, list)
+
+        # 2. Query students via mandatory tenant_id query filter
+        res_filter = self.client.get("/api/v1/super-admin/students?tenant_id=1")
+        self.assertEqual(res_filter.status_code, 200)
+        self.assertEqual(len(res_filter.json()["students"]), len(t1_students))
+
+        # 3. Query without tenant_id -> FastAPI validation error (422 Unprocessable Entity)
+        res_no_param = self.client.get("/api/v1/super-admin/students")
+        self.assertEqual(res_no_param.status_code, 422)
+
+        print("[PASS] Test 34: Super Admin Tenant-Scoped Student Directory Enforcement verified.")
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

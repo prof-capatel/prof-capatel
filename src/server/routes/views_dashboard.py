@@ -5,7 +5,18 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from src.database.models import Student, AttendanceRecord, NodeDevice, SystemBranding, Tenant, User, ClassModel, AcademicYear
+from src.database.models import (
+    Student,
+    AttendanceRecord,
+    NodeDevice,
+    SystemBranding,
+    Tenant,
+    User,
+    Department,
+    ClassModel,
+    Division,
+    AcademicYear,
+)
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
 from src.server.rbac_middleware import get_current_user_optional
@@ -103,18 +114,30 @@ def page_dashboard(
 @router.get("/students", response_class=HTMLResponse)
 def page_students(
     request: Request,
+    tenant_id: Optional[int] = None,
     db: Session = Depends(get_db),
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Student Directory & Face Profile Management."""
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
+    is_super_admin = bool(current_user and current_user.role == "SUPER_ADMIN")
+
+    selected_tenant = current_tenant
+    if is_super_admin and tenant_id:
+        custom_t = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        if custom_t:
+            selected_tenant = custom_t
+
     students = (
         db.query(Student)
-        .filter(Student.tenant_id == current_tenant.id)
+        .filter(Student.tenant_id == selected_tenant.id)
         .order_by(Student.name.asc())
         .all()
     )
-    branding = get_branding_dict(db, current_tenant.id)
+    departments = db.query(Department).filter(Department.tenant_id == selected_tenant.id).order_by(Department.name.asc()).all()
+    classes = db.query(ClassModel).filter(ClassModel.tenant_id == selected_tenant.id).order_by(ClassModel.name.asc()).all()
+    divisions = db.query(Division).filter(Division.tenant_id == selected_tenant.id).order_by(Division.name.asc()).all()
+    branding = get_branding_dict(db, selected_tenant.id)
     all_tenants = get_all_active_tenants(db)
 
     return templates.TemplateResponse(
@@ -124,10 +147,15 @@ def page_students(
             "page_title": "Student Directory",
             "active_page": "students",
             "students": [s.to_dict() for s in students],
+            "departments": [d.to_dict() for d in departments],
+            "classes": [c.to_dict() for c in classes],
+            "divisions": [dv.to_dict() for dv in divisions],
             "branding": branding,
-            "current_tenant": current_tenant.to_dict(),
+            "current_tenant": selected_tenant.to_dict(),
             "all_tenants": all_tenants,
             "current_user": current_user.to_dict() if current_user else None,
+            "is_super_admin": is_super_admin,
+            "selected_tenant_id": selected_tenant.id,
         },
     )
 
@@ -140,6 +168,9 @@ def page_enroll(
 ):
     """Interactive Browser & Guided Face Enrollment."""
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
+    departments = db.query(Department).filter(Department.tenant_id == current_tenant.id).order_by(Department.name.asc()).all()
+    classes = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id).order_by(ClassModel.name.asc()).all()
+    divisions = db.query(Division).filter(Division.tenant_id == current_tenant.id).order_by(Division.name.asc()).all()
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
 
@@ -149,6 +180,9 @@ def page_enroll(
             "request": request,
             "page_title": "Enroll New Student",
             "active_page": "enroll",
+            "departments": [d.to_dict() for d in departments],
+            "classes": [c.to_dict() for c in classes],
+            "divisions": [dv.to_dict() for dv in divisions],
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
@@ -369,10 +403,17 @@ def page_academic_management(
 ):
     """Tenant Admin Academic Structure, Faculty Assignments & Promotion Engine."""
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
+    
+    # Super Admin scope cleanup: redirect Super Admin away from tenant-only academic management
+    if current_user and current_user.role == "SUPER_ADMIN":
+        return RedirectResponse("/super-admin", status_code=303)
+
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
-    classes = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id).all()
-    academic_years = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id).all()
+    departments = db.query(Department).filter(Department.tenant_id == current_tenant.id).order_by(Department.name.asc()).all()
+    classes = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id).order_by(ClassModel.name.asc()).all()
+    divisions = db.query(Division).filter(Division.tenant_id == current_tenant.id).order_by(Division.name.asc()).all()
+    academic_years = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id).order_by(AcademicYear.id.desc()).all()
 
     return templates.TemplateResponse(
         "academic_management.html",
@@ -383,7 +424,9 @@ def page_academic_management(
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
+            "departments": [d.to_dict() for d in departments],
             "classes": [c.to_dict() for c in classes],
+            "divisions": [dv.to_dict() for dv in divisions],
             "academic_years": [y.to_dict() for y in academic_years],
             "current_user": current_user.to_dict() if current_user else None,
         },

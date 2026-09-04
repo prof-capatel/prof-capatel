@@ -142,11 +142,48 @@ def require_roles(allowed_roles: List[str]):
     return role_checker
 
 
-def check_tenant_subscription_active(tenant: Tenant):
-    """Verifies that a tenant is ACTIVE and has not been SUSPENDED or EXPIRED."""
-    status_upper = (tenant.subscription_status or "ACTIVE").upper()
-    if status_upper != "ACTIVE":
+def check_tenant_login_access(tenant: Tenant):
+    """
+    Verifies that a tenant is permitted to log in.
+    Soft-deleted tenants are completely blocked from logging in.
+    Suspended tenants ARE permitted to log in for read-only historical review.
+    """
+    if not tenant:
+        return
+    if getattr(tenant, "is_deleted", False) or (tenant.subscription_status or "").upper() == "DELETED":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Tenant organization '{tenant.name}' is currently {status_upper}. Access is restricted.",
+            detail="This institution account has been deactivated or deleted. Please contact platform support.",
         )
+
+
+def check_tenant_operational_access(tenant: Tenant):
+    """
+    Verifies that a tenant is in an operational (ACTIVE) state.
+    Suspended or soft-deleted tenants are locked out of mutations, face captures, enrollments, and node streaming.
+    """
+    if not tenant:
+        return
+    if getattr(tenant, "is_deleted", False) or (tenant.subscription_status or "").upper() == "DELETED":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Tenant organization '{tenant.name}' is deactivated/deleted. Operational features are blocked.",
+        )
+
+    status_upper = (tenant.subscription_status or "ACTIVE").upper()
+    if status_upper == "SUSPENDED":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Tenant organization '{tenant.name}' is currently SUSPENDED by Super Admin. Read-only mode is active; operational actions (attendance ingestion, enrollment, edits) are locked.",
+        )
+    elif status_upper != "ACTIVE":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Tenant organization '{tenant.name}' is {status_upper}. Operational actions are locked.",
+        )
+
+
+def check_tenant_subscription_active(tenant: Tenant):
+    """Alias for operational check."""
+    check_tenant_operational_access(tenant)
+

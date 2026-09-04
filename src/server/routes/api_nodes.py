@@ -10,6 +10,7 @@ from src.core.attendance_manager import attendance_manager
 from src.database.models import NodeDevice, Tenant
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
+from src.server.rbac_middleware import check_tenant_operational_access
 
 logger = logging.getLogger("api_nodes")
 
@@ -42,13 +43,8 @@ async def ingest_node_frame(
 
     active_tenant_id = target_tenant.id
 
-    # Enforce Tenant Subscription Status (Suspended/Expired lockout)
-    sub_status = (target_tenant.subscription_status or "ACTIVE").upper()
-    if sub_status != "ACTIVE":
-        raise HTTPException(
-            status_code=403,
-            detail=f"Tenant organization '{target_tenant.name}' is currently {sub_status}. Edge node ingestion is locked.",
-        )
+    # Enforce Tenant Subscription & Operational Status (Suspended/Deleted lockout)
+    check_tenant_operational_access(target_tenant)
 
     # 1. Read & decode image bytes
     contents = await frame.read()

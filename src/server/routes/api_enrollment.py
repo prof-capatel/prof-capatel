@@ -5,13 +5,15 @@ import cv2
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from src.config import FACES_DIR
 from src.core.camera_utils import decode_image_bytes, evaluate_image_quality
 from src.core.face_engine import face_engine, FaceEngine
-from src.database.models import Student, FaceEncoding, Tenant
+from src.database.models import Student, FaceEncoding, Tenant, Department, ClassModel, Division, AcademicYear
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
+from src.server.rbac_middleware import check_tenant_operational_access
 
 router = APIRouter(prefix="/api/v1/enroll", tags=["Student Enrollment"])
 
@@ -19,7 +21,11 @@ router = APIRouter(prefix="/api/v1/enroll", tags=["Student Enrollment"])
 class StudentCreate(BaseModel):
     roll_number: str
     name: str
+    department_id: Optional[int] = None
     department: Optional[str] = "Computer Science"
+    class_id: Optional[int] = None
+    division_id: Optional[int] = None
+    academic_year_id: Optional[int] = None
     email: Optional[str] = None
     user_role: Optional[str] = "student"
     class_semester: Optional[str] = "General"
@@ -28,10 +34,54 @@ class StudentCreate(BaseModel):
 class StudentUpdate(BaseModel):
     roll_number: str
     name: str
+    department_id: Optional[int] = None
     department: Optional[str] = "Computer Science"
+    class_id: Optional[int] = None
+    division_id: Optional[int] = None
+    academic_year_id: Optional[int] = None
     email: Optional[str] = None
     user_role: Optional[str] = "student"
     class_semester: Optional[str] = "General"
+
+
+@router.get("/students")
+def list_enrolled_students(
+    department_id: Optional[int] = None,
+    class_id: Optional[int] = None,
+    division_id: Optional[int] = None,
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Lists all enrolled students for current tenant with optional cascading filters."""
+    query = db.query(Student).filter(Student.tenant_id == current_tenant.id)
+
+    if department_id:
+        query = query.filter(Student.department_id == department_id)
+    if class_id:
+        query = query.filter(Student.class_id == class_id)
+    if division_id:
+        query = query.filter(Student.division_id == division_id)
+    if role:
+        query = query.filter(Student.user_role == role.strip().lower())
+    if search:
+        search_clean = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Student.name.ilike(search_clean),
+                Student.roll_number.ilike(search_clean),
+                Student.email.ilike(search_clean),
+            )
+        )
+
+    students = query.order_by(Student.name.asc()).all()
+    return {
+        "status": "success",
+        "tenant_id": current_tenant.id,
+        "students": [s.to_dict() for s in students],
+        "count": len(students),
+    }
 
 
 @router.post("/student")
@@ -41,6 +91,7 @@ def register_student(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Registers a new student profile before capturing face samples scoped to current tenant."""
+    check_tenant_operational_access(current_tenant)
     clean_roll = payload.roll_number.strip().upper()
     existing = db.query(Student).filter(
         Student.tenant_id == current_tenant.id,
@@ -53,14 +104,55 @@ def register_student(
             detail=f"User with Roll/ID Number '{clean_roll}' already exists in this institution.",
         )
 
+    # Resolve Department
+    dept_id = payload.department_id
+    dept_name = (payload.department or "Computer Science").strip()
+    if dept_id:
+        dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.id == dept_id).first()
+        if dept_obj:
+            dept_name = dept_obj.name
+    else:
+        dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.name == dept_name).first()
+        if dept_obj:
+            dept_id = dept_obj.id
+
+    # Resolve Class
+    cls_id = payload.class_id
+    cls_name = (payload.class_semester or "General").strip()
+    if cls_id:
+        cls_obj = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id, ClassModel.id == cls_id).first()
+        if cls_obj:
+            cls_name = cls_obj.name
+            if not dept_id and cls_obj.department_id:
+                dept_id = cls_obj.department_id
+                dept_name = cls_obj.department
+
+    # Resolve Division
+    div_id = payload.division_id
+    if div_id:
+        div_obj = db.query(Division).filter(Division.tenant_id == current_tenant.id, Division.id == div_id).first()
+        if not div_obj:
+            div_id = None
+
+    # Resolve Academic Year
+    acad_id = payload.academic_year_id
+    if not acad_id:
+        active_year = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id, AcademicYear.is_current == True).first()
+        if active_year:
+            acad_id = active_year.id
+
     student = Student(
         tenant_id=current_tenant.id,
         roll_number=clean_roll,
         name=payload.name.strip(),
-        department=payload.department.strip() if payload.department else "Computer Science",
+        department_id=dept_id,
+        department=dept_name,
+        class_id=cls_id,
+        class_semester=cls_name,
+        division_id=div_id,
+        academic_year_id=acad_id,
         email=payload.email.strip() if payload.email else None,
         user_role=payload.user_role.strip().lower() if payload.user_role else "student",
-        class_semester=payload.class_semester.strip() if payload.class_semester else "General",
     )
     db.add(student)
     db.commit()
@@ -86,6 +178,7 @@ async def capture_face_sample(
     Validates, extracts 128-d facial vector from uploaded frame,
     persists sample to MySQL and disk, and refreshes the tenant's in-memory FaceEngine cache.
     """
+    check_tenant_operational_access(current_tenant)
     student = db.query(Student).filter(
         Student.id == student_id,
         Student.tenant_id == current_tenant.id,
@@ -182,7 +275,11 @@ async def capture_face_sample(
 async def batch_upload_enrollment(
     name: str = Form(...),
     roll_number: str = Form(...),
+    department_id: Optional[int] = Form(None),
     department: str = Form("Computer Science"),
+    class_id: Optional[int] = Form(None),
+    division_id: Optional[int] = Form(None),
+    academic_year_id: Optional[int] = Form(None),
     email: Optional[str] = Form(None),
     user_role: str = Form("student"),
     class_semester: Optional[str] = Form("General"),
@@ -193,9 +290,10 @@ async def batch_upload_enrollment(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """
-    All-in-one 3-photo batch enrollment: creates student profile, processes 3 photos,
-    extracts vectors, and hot-reloads vector memory cache for current tenant.
+    All-in-one 3-photo batch enrollment: creates student profile with referential links,
+    processes 3 photos, extracts vectors, and hot-reloads vector memory cache for current tenant.
     """
+    check_tenant_operational_access(current_tenant)
     clean_roll = roll_number.strip().upper()
 
     # Check duplicate
@@ -209,6 +307,43 @@ async def batch_upload_enrollment(
             status_code=400,
             detail=f"User with ID / Roll '{clean_roll}' already exists in this institution.",
         )
+
+    # Resolve Department
+    dept_id = department_id
+    dept_name = department.strip() if department else "Computer Science"
+    if dept_id:
+        dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.id == dept_id).first()
+        if dept_obj:
+            dept_name = dept_obj.name
+    else:
+        dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.name == dept_name).first()
+        if dept_obj:
+            dept_id = dept_obj.id
+
+    # Resolve Class
+    cls_id = class_id
+    cls_name = class_semester.strip() if class_semester else "General"
+    if cls_id:
+        cls_obj = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id, ClassModel.id == cls_id).first()
+        if cls_obj:
+            cls_name = cls_obj.name
+            if not dept_id and cls_obj.department_id:
+                dept_id = cls_obj.department_id
+                dept_name = cls_obj.department
+
+    # Resolve Division
+    div_id = division_id
+    if div_id:
+        div_obj = db.query(Division).filter(Division.tenant_id == current_tenant.id, Division.id == div_id).first()
+        if not div_obj:
+            div_id = None
+
+    # Resolve Academic Year
+    acad_id = academic_year_id
+    if not acad_id:
+        active_year = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id, AcademicYear.is_current == True).first()
+        if active_year:
+            acad_id = active_year.id
 
     # Process all 3 photos
     photos = [
@@ -269,10 +404,14 @@ async def batch_upload_enrollment(
         tenant_id=current_tenant.id,
         roll_number=clean_roll,
         name=name.strip(),
-        department=department.strip(),
+        department_id=dept_id,
+        department=dept_name,
+        class_id=cls_id,
+        class_semester=cls_name,
+        division_id=div_id,
+        academic_year_id=acad_id,
         email=email.strip() if email else None,
         user_role=user_role.strip().lower() if user_role else "student",
-        class_semester=class_semester.strip() if class_semester else "General",
     )
     db.add(student)
     db.flush()
@@ -310,6 +449,7 @@ def update_student_profile(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Updates an existing student/staff profile information within the tenant."""
+    check_tenant_operational_access(current_tenant)
     student = db.query(Student).filter(
         Student.id == student_id,
         Student.tenant_id == current_tenant.id,
@@ -334,12 +474,40 @@ def update_student_profile(
             detail=f"Roll Number / ID '{clean_roll}' is already assigned to another user in this institute.",
         )
 
+    # Resolve Department
+    dept_id = payload.department_id
+    dept_name = (payload.department or "Computer Science").strip()
+    if dept_id:
+        dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.id == dept_id).first()
+        if dept_obj:
+            dept_name = dept_obj.name
+    elif payload.department:
+        dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.name == dept_name).first()
+        if dept_obj:
+            dept_id = dept_obj.id
+
+    # Resolve Class
+    cls_id = payload.class_id
+    cls_name = (payload.class_semester or "General").strip()
+    if cls_id:
+        cls_obj = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id, ClassModel.id == cls_id).first()
+        if cls_obj:
+            cls_name = cls_obj.name
+
+    # Resolve Division
+    div_id = payload.division_id
+
     student.roll_number = clean_roll
     student.name = payload.name.strip()
-    student.department = payload.department.strip() if payload.department else "Computer Science"
+    student.department_id = dept_id
+    student.department = dept_name
+    student.class_id = cls_id
+    student.class_semester = cls_name
+    student.division_id = div_id
+    if payload.academic_year_id:
+        student.academic_year_id = payload.academic_year_id
     student.email = payload.email.strip() if payload.email else None
     student.user_role = payload.user_role.strip().lower() if payload.user_role else "student"
-    student.class_semester = payload.class_semester.strip() if payload.class_semester else "General"
 
     db.commit()
     db.refresh(student)
@@ -365,6 +533,7 @@ async def update_student_photos(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Selectively replaces biometric face sample photos and encodings for a student."""
+    check_tenant_operational_access(current_tenant)
     student = db.query(Student).filter(
         Student.id == student_id,
         Student.tenant_id == current_tenant.id,
@@ -487,6 +656,7 @@ def delete_student_profile(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Deletes a student profile and cascading encodings/records within the tenant."""
+    check_tenant_operational_access(current_tenant)
     student = db.query(Student).filter(
         Student.id == student_id,
         Student.tenant_id == current_tenant.id,

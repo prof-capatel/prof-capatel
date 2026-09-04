@@ -11,6 +11,7 @@ from src.server.rbac_middleware import (
     create_access_token,
     get_current_user,
     get_current_user_optional,
+    check_tenant_login_access,
 )
 from src.utils.auth_utils import verify_password, hash_password
 from src.utils.timezone import get_ist_now
@@ -67,6 +68,10 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password.",
         )
+
+    # If tenant-scoped user, check that tenant is not soft-deleted
+    if user.tenant_id and user.tenant:
+        check_tenant_login_access(user.tenant)
 
     user.last_login_at = get_ist_now()
     db.commit()

@@ -262,28 +262,86 @@ function exportData(format) {
 /* ==========================================================
    Student Directory Multi-Parameter Filtering Handlers
    ========================================================== */
+function onDirDeptFilterChanged() {
+    const deptId = document.getElementById("dirDeptFilter")?.value || "";
+    const classSelect = document.getElementById("dirClassFilter");
+    const divSelect = document.getElementById("dirDivFilter");
+
+    if (classSelect) {
+        Array.from(classSelect.options).forEach((opt, idx) => {
+            if (idx === 0) {
+                opt.style.display = "";
+                return;
+            }
+            const optDeptId = opt.getAttribute("data-dept-id");
+            if (!deptId || !optDeptId || optDeptId === deptId) {
+                opt.style.display = "";
+            } else {
+                opt.style.display = "none";
+            }
+        });
+        classSelect.value = "";
+    }
+
+    if (divSelect) {
+        divSelect.value = "";
+    }
+
+    applyDirectoryFilters();
+}
+
+function onDirClassFilterChanged() {
+    const classId = document.getElementById("dirClassFilter")?.value || "";
+    const divSelect = document.getElementById("dirDivFilter");
+
+    if (divSelect) {
+        Array.from(divSelect.options).forEach((opt, idx) => {
+            if (idx === 0) {
+                opt.style.display = "";
+                return;
+            }
+            const optClassId = opt.getAttribute("data-class-id");
+            if (!classId || !optClassId || optClassId === classId) {
+                opt.style.display = "";
+            } else {
+                opt.style.display = "none";
+            }
+        });
+        divSelect.value = "";
+    }
+
+    applyDirectoryFilters();
+}
+
 function applyDirectoryFilters() {
     const searchVal = (document.getElementById("dirSearchInput")?.value || "").toLowerCase().trim();
-    const deptVal = document.getElementById("dirDeptFilter")?.value || "";
+    const deptFilterEl = document.getElementById("dirDeptFilter");
+    const deptIdVal = deptFilterEl?.value || "";
+    const deptTextVal = deptIdVal && deptFilterEl ? (deptFilterEl.options[deptFilterEl.selectedIndex]?.text || "").toLowerCase().trim() : "";
+
+    const classIdVal = document.getElementById("dirClassFilter")?.value || "";
+    const divIdVal = document.getElementById("dirDivFilter")?.value || "";
     const roleVal = document.getElementById("dirRoleFilter")?.value || "";
-    const classVal = (document.getElementById("dirClassFilter")?.value || "").toLowerCase().trim();
 
     const rows = document.querySelectorAll(".student-row");
     let visibleCount = 0;
 
     rows.forEach(row => {
-        const name = row.getAttribute("data-name") || "";
-        const roll = row.getAttribute("data-roll") || "";
-        const dept = row.getAttribute("data-dept") || "";
-        const role = row.getAttribute("data-role") || "student";
-        const classSem = row.getAttribute("data-class") || "";
+        const name = (row.getAttribute("data-name") || "").toLowerCase();
+        const roll = (row.getAttribute("data-roll") || "").toLowerCase();
+        const rowDeptId = row.getAttribute("data-dept-id") || "";
+        const rowDept = (row.getAttribute("data-dept") || "").toLowerCase();
+        const rowClassId = row.getAttribute("data-class-id") || "";
+        const rowDivId = row.getAttribute("data-div-id") || "";
+        const rowRole = row.getAttribute("data-role") || "student";
 
         let matchSearch = !searchVal || name.includes(searchVal) || roll.includes(searchVal);
-        let matchDept = !deptVal || dept === deptVal;
-        let matchRole = !roleVal || role === roleVal;
-        let matchClass = !classVal || classSem.includes(classVal);
+        let matchDept = !deptIdVal || rowDeptId === deptIdVal || (rowDept && rowDept === deptTextVal);
+        let matchClass = !classIdVal || rowClassId === classIdVal;
+        let matchDiv = !divIdVal || rowDivId === divIdVal;
+        let matchRole = !roleVal || rowRole === roleVal;
 
-        if (matchSearch && matchDept && matchRole && matchClass) {
+        if (matchSearch && matchDept && matchClass && matchDiv && matchRole) {
             row.style.display = "";
             visibleCount++;
         } else {
@@ -301,7 +359,19 @@ function resetDirectoryFilters() {
     if (document.getElementById("dirSearchInput")) document.getElementById("dirSearchInput").value = "";
     if (document.getElementById("dirDeptFilter")) document.getElementById("dirDeptFilter").value = "";
     if (document.getElementById("dirRoleFilter")) document.getElementById("dirRoleFilter").value = "";
-    if (document.getElementById("dirClassFilter")) document.getElementById("dirClassFilter").value = "";
+    
+    const classSelect = document.getElementById("dirClassFilter");
+    if (classSelect) {
+        Array.from(classSelect.options).forEach(opt => opt.style.display = "");
+        classSelect.value = "";
+    }
+
+    const divSelect = document.getElementById("dirDivFilter");
+    if (divSelect) {
+        Array.from(divSelect.options).forEach(opt => opt.style.display = "");
+        divSelect.value = "";
+    }
+
     applyDirectoryFilters();
 }
 
@@ -347,19 +417,112 @@ function closeLightbox() {
 }
 
 /* ==========================================================
-   Edit Student Profile Modal
+   Edit Student Profile Modal (Cascading Dropdowns)
    ========================================================== */
-function openEditModal(id, name, roll, dept, email, role, classSem) {
+function onEditRoleChanged() {
+    const role = document.getElementById("editUserRole")?.value || "student";
+    const classDivSec = document.getElementById("editClassDivSection");
+    if (classDivSec) {
+        // Classes and Divisions are relevant for students, optional for teachers/staff
+        classDivSec.style.opacity = role === "student" ? "1" : "0.75";
+    }
+}
+
+function onEditDeptSelectChanged() {
+    const deptId = document.getElementById("editDepartmentSelect")?.value || "";
+    const classSelect = document.getElementById("editClassSelect");
+    const divSelect = document.getElementById("editDivisionSelect");
+
+    if (classSelect) {
+        Array.from(classSelect.options).forEach((opt, idx) => {
+            if (idx === 0) {
+                opt.style.display = "";
+                return;
+            }
+            const optDeptId = opt.getAttribute("data-dept-id");
+            if (!deptId || !optDeptId || optDeptId === deptId) {
+                opt.style.display = "";
+            } else {
+                opt.style.display = "none";
+            }
+        });
+        classSelect.value = "";
+    }
+
+    if (divSelect) {
+        divSelect.value = "";
+    }
+}
+
+function onEditClassSelectChanged() {
+    const classId = document.getElementById("editClassSelect")?.value || "";
+    const divSelect = document.getElementById("editDivisionSelect");
+
+    if (divSelect) {
+        Array.from(divSelect.options).forEach((opt, idx) => {
+            if (idx === 0) {
+                opt.style.display = "";
+                return;
+            }
+            const optClassId = opt.getAttribute("data-class-id");
+            if (!classId || !optClassId || optClassId === classId) {
+                opt.style.display = "";
+            } else {
+                opt.style.display = "none";
+            }
+        });
+        divSelect.value = "";
+    }
+}
+
+function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId) {
     const modal = document.getElementById("editStudentModal");
     if (!modal) return;
 
     document.getElementById("editStudentId").value = id;
     document.getElementById("editStudentName").value = name;
     document.getElementById("editRollNumber").value = roll;
-    document.getElementById("editDepartment").value = dept || "Computer Science";
     document.getElementById("editEmail").value = email || "";
-    if (document.getElementById("editUserRole")) document.getElementById("editUserRole").value = role || "student";
-    if (document.getElementById("editClassSemester")) document.getElementById("editClassSemester").value = classSem || "General";
+    if (document.getElementById("editUserRole")) {
+        document.getElementById("editUserRole").value = role || "student";
+    }
+
+    const deptSelect = document.getElementById("editDepartmentSelect");
+    if (deptSelect) {
+        if (deptId) {
+            deptSelect.value = deptId;
+        } else {
+            // Find by text
+            for (let i = 0; i < deptSelect.options.length; i++) {
+                if (deptSelect.options[i].text.toLowerCase() === (dept || "").toLowerCase()) {
+                    deptSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        onEditDeptSelectChanged();
+    }
+
+    const classSelect = document.getElementById("editClassSelect");
+    if (classSelect) {
+        if (classId) {
+            classSelect.value = classId;
+        } else {
+            classSelect.value = "";
+        }
+        onEditClassSelectChanged();
+    }
+
+    const divSelect = document.getElementById("editDivisionSelect");
+    if (divSelect) {
+        if (divId) {
+            divSelect.value = divId;
+        } else {
+            divSelect.value = "";
+        }
+    }
+
+    onEditRoleChanged();
 
     const alertBox = document.getElementById("editResultAlert");
     if (alertBox) alertBox.style.display = "none";
@@ -403,10 +566,19 @@ async function submitStudentEdit(e) {
     const id = document.getElementById("editStudentId").value;
     const name = document.getElementById("editStudentName").value.trim();
     const roll = document.getElementById("editRollNumber").value.trim();
-    const dept = document.getElementById("editDepartment").value.trim();
     const email = document.getElementById("editEmail").value.trim();
     const role = document.getElementById("editUserRole")?.value || "student";
-    const classSem = document.getElementById("editClassSemester")?.value.trim() || "General";
+
+    const deptSelect = document.getElementById("editDepartmentSelect");
+    const deptId = deptSelect?.value ? parseInt(deptSelect.value) : null;
+    const deptName = deptSelect && deptSelect.selectedIndex >= 0 ? deptSelect.options[deptSelect.selectedIndex].text : "Computer Science";
+
+    const classSelect = document.getElementById("editClassSelect");
+    const classId = classSelect?.value ? parseInt(classSelect.value) : null;
+    const className = classSelect && classSelect.selectedIndex > 0 ? classSelect.options[classSelect.selectedIndex].text : "General";
+
+    const divSelect = document.getElementById("editDivisionSelect");
+    const divId = divSelect?.value ? parseInt(divSelect.value) : null;
 
     const saveBtn = document.getElementById("btnSaveEdit");
     const alertBox = document.getElementById("editResultAlert");
@@ -421,10 +593,13 @@ async function submitStudentEdit(e) {
             body: JSON.stringify({
                 name: name,
                 roll_number: roll,
-                department: dept,
+                department_id: deptId,
+                department: deptName,
+                class_id: classId,
+                class_semester: className,
+                division_id: divId,
                 email: email || null,
                 user_role: role,
-                class_semester: classSem,
             }),
         });
         const data = await res.json();
@@ -436,40 +611,25 @@ async function submitStudentEdit(e) {
             alertBox.style.border = "1px solid var(--badge-emerald-border)";
             alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Profile updated successfully!';
 
-            // Update row inline
-            const nameEl = document.getElementById(`stdNameLabel${id}`);
-            const rollEl = document.getElementById(`stdRollLabel${id}`);
-            const deptEl = document.getElementById(`stdDeptLabel${id}`);
-            const emailEl = document.getElementById(`stdEmailLabel${id}`);
-            const classEl = document.getElementById(`stdClassLabel${id}`);
-
-            if (nameEl) nameEl.innerText = name;
-            if (rollEl) rollEl.innerText = roll;
-            if (deptEl) deptEl.innerText = dept;
-            if (emailEl) emailEl.innerText = email || "No email registered";
-            if (classEl) classEl.innerHTML = `<span class="badge badge-node">${classSem}</span>`;
-
             setTimeout(() => {
                 closeEditModal();
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
                 window.location.reload();
-            }, 800);
+            }, 700);
         } else {
             alertBox.style.display = "block";
             alertBox.style.background = "var(--badge-rose-bg)";
             alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.style.border = "1px solid var(--badge-rose-border)";
-            alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Failed to update profile.'}`;
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Update failed.");
             saveBtn.disabled = false;
             saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
         }
-    } catch (err) {
+    } catch (e) {
         alertBox.style.display = "block";
         alertBox.style.background = "var(--badge-rose-bg)";
         alertBox.style.color = "var(--badge-rose-text)";
-        alertBox.style.border = "1px solid var(--badge-rose-border)";
-        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.';
+        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
         saveBtn.disabled = false;
         saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
     }

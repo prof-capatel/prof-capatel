@@ -22,14 +22,14 @@
         <div class="card-header">
             <h3>
                 <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i>
-                <span>1. Student Information</span>
+                <span>1. Student / Member Information</span>
             </h3>
         </div>
         <div class="card-body">
             <form id="enrollStudentForm">
                 <div class="form-group">
                     <label class="form-label">User Role *</label>
-                    <select id="userRole" class="form-control" required>
+                    <select id="userRole" class="form-control" required onchange="onEnrollRoleChanged('webcam')">
                         <option value="student" selected>Student</option>
                         <option value="teacher">Teacher / Faculty</option>
                         <option value="admin_staff">Administrative Staff</option>
@@ -47,14 +47,37 @@
                     <input type="text" id="studentName" class="form-control" placeholder="e.g. Jane Doe" required>
                 </div>
 
+                <!-- Cascading Department -->
                 <div class="form-group">
-                    <label class="form-label">Department</label>
-                    <input type="text" id="department" class="form-control" value="Computer Science" placeholder="e.g. Computer Science">
+                    <label class="form-label">Department *</label>
+                    <select id="enrollDeptSelect" class="form-control" required onchange="onEnrollDeptChanged('webcam')">
+                        <option value="">-- Select Department --</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}" data-name="{{ d.name }}">{{ d.name }} ({{ d.code or 'N/A' }})</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Class / Semester / Section</label>
-                    <input type="text" id="classSemester" class="form-control" placeholder="e.g. Semester 6 - Section A">
+                <!-- Cascading Class / Semester -->
+                <div class="form-group" id="enrollClassGroup">
+                    <label class="form-label">Class / Semester <span id="enrollClassReqStar" style="color: var(--accent-rose);">*</span></label>
+                    <select id="enrollClassSelect" class="form-control" required onchange="onEnrollClassChanged('webcam')">
+                        <option value="">-- Select Class --</option>
+                        {% for c in classes %}
+                        <option value="{{ c.id }}" data-dept-id="{{ c.department_id }}" data-name="{{ c.name }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Cascading Division -->
+                <div class="form-group" id="enrollDivGroup">
+                    <label class="form-label">Division / Section (Optional)</label>
+                    <select id="enrollDivSelect" class="form-control">
+                        <option value="">-- Select Division (Optional) --</option>
+                        {% for dv in divisions %}
+                        <option value="{{ dv.id }}" data-class-id="{{ dv.class_id }}" data-name="{{ dv.name }}">{{ dv.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -139,7 +162,7 @@
 
             <div id="camFeedback" style="margin-top: 14px; padding: 12px 16px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px;">
                 <i class="fa-solid fa-circle-info" style="color: var(--accent-cyan);"></i>
-                <span>Click "Start Camera" or register student profile to begin face capture.</span>
+                <span>Click "Start Camera" or register profile to begin face capture.</span>
             </div>
 
             <!-- Alternative CLI helper notice -->
@@ -161,14 +184,14 @@
             <div class="card-header">
                 <h3>
                     <i class="fa-solid fa-cloud-arrow-up" style="color: var(--accent-primary);"></i>
-                    <span>Student Details & Batch Upload</span>
+                    <span>Member Details & Batch Upload</span>
                 </h3>
             </div>
             <div class="card-body">
                 <form id="batchUploadForm">
                     <div class="form-group">
                         <label class="form-label">User Role *</label>
-                        <select id="batchUserRole" class="form-control" required>
+                        <select id="batchUserRole" class="form-control" required onchange="onEnrollRoleChanged('batch')">
                             <option value="student" selected>Student</option>
                             <option value="teacher">Teacher / Faculty</option>
                             <option value="admin_staff">Administrative Staff</option>
@@ -186,14 +209,37 @@
                         <input type="text" id="batchStudentName" class="form-control" placeholder="e.g. Alex Morgan" required>
                     </div>
 
+                    <!-- Cascading Department -->
                     <div class="form-group">
-                        <label class="form-label">Department</label>
-                        <input type="text" id="batchDepartment" class="form-control" value="Computer Science" placeholder="e.g. Computer Science">
+                        <label class="form-label">Department *</label>
+                        <select id="batchEnrollDeptSelect" class="form-control" required onchange="onEnrollDeptChanged('batch')">
+                            <option value="">-- Select Department --</option>
+                            {% for d in departments %}
+                            <option value="{{ d.id }}" data-name="{{ d.name }}">{{ d.name }} ({{ d.code or 'N/A' }})</option>
+                            {% endfor %}
+                        </select>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Class / Semester / Section</label>
-                        <input type="text" id="batchClassSemester" class="form-control" placeholder="e.g. Semester 6 - Section A">
+                    <!-- Cascading Class / Semester -->
+                    <div class="form-group" id="batchEnrollClassGroup">
+                        <label class="form-label">Class / Semester <span id="batchEnrollClassReqStar" style="color: var(--accent-rose);">*</span></label>
+                        <select id="batchEnrollClassSelect" class="form-control" required onchange="onEnrollClassChanged('batch')">
+                            <option value="">-- Select Class --</option>
+                            {% for c in classes %}
+                            <option value="{{ c.id }}" data-dept-id="{{ c.department_id }}" data-name="{{ c.name }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Cascading Division -->
+                    <div class="form-group" id="batchEnrollDivGroup">
+                        <label class="form-label">Division / Section (Optional)</label>
+                        <select id="batchEnrollDivSelect" class="form-control">
+                            <option value="">-- Select Division (Optional) --</option>
+                            {% for dv in divisions %}
+                            <option value="{{ dv.id }}" data-class-id="{{ dv.class_id }}" data-name="{{ dv.name }}">{{ dv.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -272,6 +318,78 @@
 
 {% block scripts %}
 <script>
+// Master Data Caches
+const ENROLL_DEPARTMENTS = {{ departments | tojson | safe }};
+const ENROLL_CLASSES = {{ classes | tojson | safe }};
+const ENROLL_DIVISIONS = {{ divisions | tojson | safe }};
+
+// ==========================================================
+// Cascading Dropdown Handlers
+// ==========================================================
+function onEnrollDeptChanged(mode) {
+    const isBatch = mode === "batch";
+    const deptSelect = document.getElementById(isBatch ? "batchEnrollDeptSelect" : "enrollDeptSelect");
+    const classSelect = document.getElementById(isBatch ? "batchEnrollClassSelect" : "enrollClassSelect");
+    const divSelect = document.getElementById(isBatch ? "batchEnrollDivSelect" : "enrollDivSelect");
+
+    const deptId = deptSelect.value ? parseInt(deptSelect.value) : null;
+
+    // Filter Classes
+    const filteredClasses = deptId ? ENROLL_CLASSES.filter(c => c.department_id === deptId) : ENROLL_CLASSES;
+
+    let classHtml = '<option value="">-- Select Class --</option>';
+    filteredClasses.forEach(c => {
+        classHtml += `<option value="${c.id}" data-dept-id="${c.department_id || ''}" data-name="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`;
+    });
+    classSelect.innerHTML = classHtml;
+
+    // Reset Division
+    divSelect.innerHTML = '<option value="">-- Select Division (Optional) --</option>';
+}
+
+function onEnrollClassChanged(mode) {
+    const isBatch = mode === "batch";
+    const classSelect = document.getElementById(isBatch ? "batchEnrollClassSelect" : "enrollClassSelect");
+    const divSelect = document.getElementById(isBatch ? "batchEnrollDivSelect" : "enrollDivSelect");
+
+    const classId = classSelect.value ? parseInt(classSelect.value) : null;
+
+    // Filter Divisions
+    const filteredDivs = classId ? ENROLL_DIVISIONS.filter(d => d.class_id === classId) : ENROLL_DIVISIONS;
+
+    let divHtml = '<option value="">-- Select Division (Optional) --</option>';
+    filteredDivs.forEach(dv => {
+        divHtml += `<option value="${dv.id}" data-class-id="${dv.class_id}" data-name="${escapeHtml(dv.name)}">${escapeHtml(dv.name)}</option>`;
+    });
+    divSelect.innerHTML = divHtml;
+}
+
+function onEnrollRoleChanged(mode) {
+    const isBatch = mode === "batch";
+    const roleSelect = document.getElementById(isBatch ? "batchUserRole" : "userRole");
+    const classSelect = document.getElementById(isBatch ? "batchEnrollClassSelect" : "enrollClassSelect");
+    const reqStar = document.getElementById(isBatch ? "batchEnrollClassReqStar" : "enrollClassReqStar");
+    const role = roleSelect.value;
+
+    if (role === "student") {
+        classSelect.required = true;
+        if (reqStar) reqStar.style.display = "inline";
+    } else {
+        classSelect.required = false;
+        if (reqStar) reqStar.style.display = "none";
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return "";
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // ==========================================================
 // Mode Switching (Webcam vs Batch Upload)
 // ==========================================================
@@ -352,10 +470,27 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
     e.preventDefault();
     const rollNumber = document.getElementById("rollNumber").value.trim();
     const name = document.getElementById("studentName").value.trim();
-    const department = document.getElementById("department").value.trim();
-    const email = document.getElementById("email").value.trim();
     const userRole = document.getElementById("userRole").value.trim();
-    const classSemester = document.getElementById("classSemester").value.trim();
+    
+    const deptSelect = document.getElementById("enrollDeptSelect");
+    const deptId = deptSelect.value ? parseInt(deptSelect.value) : null;
+    const deptOption = deptSelect.options[deptSelect.selectedIndex];
+    const deptName = deptOption ? (deptOption.dataset.name || deptOption.text) : "Computer Science";
+
+    const classSelect = document.getElementById("enrollClassSelect");
+    const classId = classSelect.value ? parseInt(classSelect.value) : null;
+    const classOption = classSelect.options[classSelect.selectedIndex];
+    const className = classOption ? (classOption.dataset.name || classOption.text) : "";
+
+    const divSelect = document.getElementById("enrollDivSelect");
+    const divId = divSelect.value ? parseInt(divSelect.value) : null;
+
+    const email = document.getElementById("email").value.trim();
+
+    if (userRole === "student" && !classId) {
+        alert("Please select a valid Class/Semester for the student.");
+        return;
+    }
 
     try {
         const res = await fetch("/api/v1/enroll/student", {
@@ -364,10 +499,13 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
             body: JSON.stringify({
                 roll_number: rollNumber,
                 name: name,
-                department: department,
-                email: email,
+                department_id: deptId,
+                department: deptName,
+                class_id: classId,
+                class_semester: className || "General",
+                division_id: divId,
+                email: email || null,
                 user_role: userRole,
-                class_semester: classSemester,
             })
         });
         const data = await res.json();
@@ -389,7 +527,7 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
 
 async function captureSample(angle) {
     if (!currentStudentId) {
-        alert("Please register the student profile first.");
+        alert("Please register the member profile first.");
         return;
     }
     if (!videoStream) {
@@ -542,10 +680,27 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
 
     const rollNumber = document.getElementById("batchRollNumber").value.trim();
     const name = document.getElementById("batchStudentName").value.trim();
-    const department = document.getElementById("batchDepartment").value.trim();
-    const email = document.getElementById("batchEmail").value.trim();
     const userRole = document.getElementById("batchUserRole").value.trim();
-    const classSemester = document.getElementById("batchClassSemester").value.trim();
+    
+    const deptSelect = document.getElementById("batchEnrollDeptSelect");
+    const deptId = deptSelect.value ? parseInt(deptSelect.value) : null;
+    const deptOption = deptSelect.options[deptSelect.selectedIndex];
+    const deptName = deptOption ? (deptOption.dataset.name || deptOption.text) : "Computer Science";
+
+    const classSelect = document.getElementById("batchEnrollClassSelect");
+    const classId = classSelect.value ? parseInt(classSelect.value) : null;
+    const classOption = classSelect.options[classSelect.selectedIndex];
+    const className = classOption ? (classOption.dataset.name || classOption.text) : "";
+
+    const divSelect = document.getElementById("batchEnrollDivSelect");
+    const divId = divSelect.value ? parseInt(divSelect.value) : null;
+
+    const email = document.getElementById("batchEmail").value.trim();
+
+    if (userRole === "student" && !classId) {
+        alert("Please select a valid Class/Semester for the student.");
+        return;
+    }
 
     const submitBtn = document.getElementById("btnSubmitBatch");
     const alertBox = document.getElementById("batchResultAlert");
@@ -561,14 +716,18 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     const formData = new FormData();
     formData.append("roll_number", rollNumber);
     formData.append("name", name);
-    formData.append("department", department);
-    if (email) formData.append("email", email);
     formData.append("user_role", userRole);
-    formData.append("class_semester", classSemester);
+    if (deptId) formData.append("department_id", deptId);
+    if (deptName) formData.append("department", deptName);
+    if (classId) formData.append("class_id", classId);
+    if (className) formData.append("class_semester", className);
+    if (divId) formData.append("division_id", divId);
+    if (email) formData.append("email", email);
 
-    batchFiles.forEach((file) => {
-        formData.append("images", file);
-    });
+    // Send exactly 3 distinct named files for API compatibility
+    formData.append("photo_front", batchFiles[0]);
+    formData.append("photo_left", batchFiles[1]);
+    formData.append("photo_right", batchFiles[2]);
 
     try {
         const res = await fetch("/api/v1/enroll/batch-upload", {
@@ -586,7 +745,7 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
                     <strong style="color: var(--badge-emerald-text); font-size: 14px;">${data.message}</strong>
                 </div>
                 <div style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px;">
-                    Student <strong>${data.student.name}</strong> (${data.student.roll_number}) enrolled with 3 vectors cached in RAM.
+                    Profile <strong>${data.student.name}</strong> (${data.student.roll_number}) enrolled with 3 vectors cached in RAM.
                 </div>
                 <a href="/students" class="btn btn-primary" style="padding: 7px 16px; font-size: 12.5px;">
                     <i class="fa-solid fa-users"></i> View in Student Directory
@@ -615,3 +774,4 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
 });
 </script>
 {% endblock %}
+

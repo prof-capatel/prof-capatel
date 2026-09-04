@@ -1,6 +1,6 @@
 import logging
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -14,6 +14,7 @@ from src.database.models import (
     AttendanceRecord,
     SystemBranding,
     AuditLog,
+    SubscriptionPlan,
 )
 from src.database.session import get_db
 from src.server.rbac_middleware import require_roles, get_current_user
@@ -27,24 +28,53 @@ router = APIRouter(
     dependencies=[Depends(require_roles(["SUPER_ADMIN"]))],
 )
 
-# Quota Defaults by Tier
-TIER_LIMITS = {
-    "FREE": {"max_faces": 50, "max_nodes": 2},
-    "STANDARD": {"max_faces": 500, "max_nodes": 10},
-    "ENTERPRISE": {"max_faces": 5000, "max_nodes": 50},
+# Fallback limits if database is initializing
+DEFAULT_TIER_LIMITS = {
+    "FREE": {"max_faces": 50, "max_nodes": 2, "name": "Starter Free Tier"},
+    "STANDARD": {"max_faces": 500, "max_nodes": 10, "name": "Standard Campus Tier"},
+    "ENTERPRISE": {"max_faces": 5000, "max_nodes": 50, "name": "Enterprise Multi-Campus"},
 }
+
+
+# --- Request & Response Models ---
+class SubscriptionPlanRequest(BaseModel):
+    plan_code: str
+    name: str
+    max_face_encodings: int
+    max_nodes: int
+    price_monthly: Optional[float] = 0.0
+    description: Optional[str] = ""
+    is_active: Optional[bool] = True
+
+
+class UpdateSubscriptionPlanRequest(BaseModel):
+    name: Optional[str] = None
+    max_face_encodings: Optional[int] = None
+    max_nodes: Optional[int] = None
+    price_monthly: Optional[float] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class CreateTenantRequest(BaseModel):
     name: str
     slug: str
     contact_email: Optional[str] = None
-    subscription_plan: str = "STANDARD"  # FREE, STANDARD, ENTERPRISE
+    subscription_plan: str = "STANDARD"  # FREE, STANDARD, ENTERPRISE, or custom
     max_face_encodings: Optional[int] = None
     max_nodes: Optional[int] = None
     admin_username: str
     admin_password: str
     admin_full_name: str
+
+
+class EditTenantDetailsRequest(BaseModel):
+    name: Optional[str] = None
+    contact_email: Optional[str] = None
+    subscription_plan: Optional[str] = None
+    subscription_status: Optional[str] = None  # ACTIVE, SUSPENDED, EXPIRED, DELETED
+    max_face_encodings: Optional[int] = None
+    max_nodes: Optional[int] = None
 
 
 class UpdateTenantStatusRequest(BaseModel):
@@ -57,15 +87,142 @@ class UpdateTenantQuotasRequest(BaseModel):
     max_nodes: Optional[int] = None
 
 
+# --- 1. Subscription Plans Management ---
+@router.get("/plans")
+def list_subscription_plans(db: Session = Depends(get_db)):
+    """Lists all configured SaaS subscription tiers and quota limits."""
+    plans = db.query(SubscriptionPlan).order_by(SubscriptionPlan.id.asc()).all()
+    
+    # If no plans in DB, ensure defaults
+    if not plans:
+        for code, cfg in DEFAULT_TIER_LIMITS.items():
+            p = SubscriptionPlan(
+                plan_code=code,
+                name=cfg["name"],
+                max_face_encodings=cfg["max_faces"],
+                max_nodes=cfg["max_nodes"],
+                price_monthly=0.0 if code == "FREE" else (49.0 if code == "STANDARD" else 199.0),
+                is_active=True,
+            )
+            db.add(p)
+        db.commit()
+        plans = db.query(SubscriptionPlan).order_by(SubscriptionPlan.id.asc()).all()
+
+    return {
+        "status": "success",
+        "total": len(plans),
+        "plans": [p.to_dict() for p in plans],
+    }
+
+
+@router.post("/plans", status_code=status.HTTP_201_CREATED)
+def create_subscription_plan(
+    payload: SubscriptionPlanRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Creates a new SaaS Subscription Plan with defined face vector and node quotas."""
+    code_clean = payload.plan_code.strip().upper()
+    existing = db.query(SubscriptionPlan).filter(SubscriptionPlan.plan_code == code_clean).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Subscription plan code '{code_clean}' already exists.",
+        )
+
+    plan = SubscriptionPlan(
+        plan_code=code_clean,
+        name=payload.name.strip(),
+        max_face_encodings=max(10, int(payload.max_face_encodings)),
+        max_nodes=max(1, int(payload.max_nodes)),
+        price_monthly=max(0.0, float(payload.price_monthly or 0.0)),
+        description=payload.description.strip() if payload.description else "",
+        is_active=bool(payload.is_active if payload.is_active is not None else True),
+    )
+    db.add(plan)
+    db.flush()
+
+    audit = AuditLog(
+        tenant_id=None,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="PLAN_CREATED",
+        target_type="PLAN",
+        target_id=str(plan.id),
+        description=f"Created subscription plan '{plan.name}' ({code_clean}: {plan.max_face_encodings} faces, {plan.max_nodes} nodes).",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Subscription plan '{plan.name}' created successfully.",
+        "plan": plan.to_dict(),
+    }
+
+
+@router.put("/plans/{plan_id}")
+def update_subscription_plan(
+    plan_id: int,
+    payload: UpdateSubscriptionPlanRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Modifies quotas, pricing, or details for an existing subscription plan."""
+    plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Subscription plan #{plan_id} not found.")
+
+    if payload.name is not None:
+        plan.name = payload.name.strip()
+    if payload.max_face_encodings is not None:
+        plan.max_face_encodings = max(10, int(payload.max_face_encodings))
+    if payload.max_nodes is not None:
+        plan.max_nodes = max(1, int(payload.max_nodes))
+    if payload.price_monthly is not None:
+        plan.price_monthly = max(0.0, float(payload.price_monthly))
+    if payload.description is not None:
+        plan.description = payload.description.strip()
+    if payload.is_active is not None:
+        plan.is_active = bool(payload.is_active)
+
+    audit = AuditLog(
+        tenant_id=None,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="PLAN_UPDATED",
+        target_type="PLAN",
+        target_id=str(plan.id),
+        description=f"Updated plan '{plan.name}' ({plan.plan_code}): {plan.max_face_encodings} faces, {plan.max_nodes} nodes.",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Subscription plan '{plan.name}' updated successfully.",
+        "plan": plan.to_dict(),
+    }
+
+
+# --- 2. Platform Metrics & Tenant Lifecycle Management ---
 @router.get("/metrics")
 def get_platform_metrics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Aggregates SaaS platform-wide KPIs across all tenants."""
+    """Aggregates SaaS platform-wide KPIs across all active and suspended tenants."""
     total_tenants = db.query(Tenant).count()
-    active_tenants = db.query(Tenant).filter(Tenant.subscription_status == "ACTIVE").count()
-    suspended_tenants = db.query(Tenant).filter(Tenant.subscription_status == "SUSPENDED").count()
+    active_tenants = db.query(Tenant).filter(Tenant.subscription_status == "ACTIVE", Tenant.is_deleted == False).count()
+    suspended_tenants = db.query(Tenant).filter(Tenant.subscription_status == "SUSPENDED", Tenant.is_deleted == False).count()
+    deleted_tenants = db.query(Tenant).filter(Tenant.is_deleted == True).count()
+
     total_students = db.query(Student).count()
     total_face_vectors = db.query(FaceEncoding).count()
     total_nodes = db.query(NodeDevice).count()
@@ -82,6 +239,7 @@ def get_platform_metrics(
             "total_tenants": total_tenants,
             "active_tenants": active_tenants,
             "suspended_tenants": suspended_tenants,
+            "deleted_tenants": deleted_tenants,
             "total_students": total_students,
             "total_face_vectors": total_face_vectors,
             "total_nodes": total_nodes,
@@ -95,10 +253,15 @@ def get_platform_metrics(
 
 @router.get("/tenants")
 def list_tenants(
+    include_deleted: bool = Query(True, description="Whether to include soft-deleted tenants"),
     db: Session = Depends(get_db),
 ):
-    """Lists all registered tenants with their subscription tier, quota utilization, and status."""
-    tenants = db.query(Tenant).order_by(Tenant.id.asc()).all()
+    """Lists all registered tenants with tier, quota utilization, soft delete status, and admin details."""
+    query = db.query(Tenant)
+    if not include_deleted:
+        query = query.filter(Tenant.is_deleted == False)
+
+    tenants = query.order_by(Tenant.is_deleted.asc(), Tenant.id.asc()).all()
     tenant_list = []
 
     for t in tenants:
@@ -111,8 +274,10 @@ def list_tenants(
         t_dict["enrolled_faces_count"] = face_count
         t_dict["active_nodes_count"] = node_count
         t_dict["students_count"] = student_count
-        t_dict["face_quota_pct"] = round((face_count / (t.max_face_encodings or 500)) * 100, 1)
-        t_dict["node_quota_pct"] = round((node_count / (t.max_nodes or 10)) * 100, 1)
+        max_faces = t.max_face_encodings or 500
+        max_nds = t.max_nodes or 10
+        t_dict["face_quota_pct"] = round((face_count / max_faces) * 100, 1) if max_faces > 0 else 0
+        t_dict["node_quota_pct"] = round((node_count / max_nds) * 100, 1) if max_nds > 0 else 0
         t_dict["admin_username"] = admin_user.username if admin_user else "N/A"
         t_dict["admin_email"] = admin_user.email if admin_user else "N/A"
         tenant_list.append(t_dict)
@@ -132,14 +297,12 @@ def create_tenant(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Creates a new SaaS Tenant organization with tier quotas and an initial Tenant Admin account.
+    Creates a new SaaS Tenant organization with tier-derived quotas and initial Tenant Admin.
+    Quota values are automatically derived from the selected Subscription Plan.
     """
     slug_clean = payload.slug.strip().lower()
     name_clean = payload.name.strip()
     plan_clean = payload.subscription_plan.strip().upper()
-
-    if plan_clean not in TIER_LIMITS:
-        plan_clean = "STANDARD"
 
     # Validate slug uniqueness
     existing_tenant = db.query(Tenant).filter(Tenant.slug == slug_clean).first()
@@ -149,16 +312,23 @@ def create_tenant(
             detail=f"Tenant slug '{slug_clean}' already exists. Please choose a unique identifier.",
         )
 
-    tier_cfg = TIER_LIMITS[plan_clean]
-    max_faces = payload.max_face_encodings or tier_cfg["max_faces"]
-    max_nodes = payload.max_nodes or tier_cfg["max_nodes"]
+    # 1. Resolve quotas from SubscriptionPlan table or default fallback
+    plan_record = db.query(SubscriptionPlan).filter(SubscriptionPlan.plan_code == plan_clean, SubscriptionPlan.is_active == True).first()
+    if plan_record:
+        max_faces = plan_record.max_face_encodings
+        max_nodes = plan_record.max_nodes
+    else:
+        fallback = DEFAULT_TIER_LIMITS.get(plan_clean, DEFAULT_TIER_LIMITS["STANDARD"])
+        max_faces = fallback["max_faces"]
+        max_nodes = fallback["max_nodes"]
 
-    # 1. Create Tenant
+    # 2. Create Tenant
     new_tenant = Tenant(
         slug=slug_clean,
         name=name_clean,
         contact_email=payload.contact_email.strip() if payload.contact_email else None,
         is_active=True,
+        is_deleted=False,
         subscription_plan=plan_clean,
         subscription_status="ACTIVE",
         max_face_encodings=max_faces,
@@ -167,7 +337,7 @@ def create_tenant(
     db.add(new_tenant)
     db.flush()
 
-    # 2. Create System Branding for Tenant
+    # 3. Create System Branding for Tenant
     branding = SystemBranding(
         tenant_id=new_tenant.id,
         institution_name=name_clean,
@@ -180,7 +350,7 @@ def create_tenant(
     )
     db.add(branding)
 
-    # 3. Create initial Tenant Admin User
+    # 4. Create initial Tenant Admin User
     admin_user = User(
         tenant_id=new_tenant.id,
         username=payload.admin_username.strip().lower(),
@@ -192,7 +362,7 @@ def create_tenant(
     )
     db.add(admin_user)
 
-    # 4. Record Audit Log
+    # 5. Record Audit Log
     audit = AuditLog(
         tenant_id=new_tenant.id,
         user_id=current_user.id,
@@ -201,7 +371,7 @@ def create_tenant(
         action_type="TENANT_CREATED",
         target_type="TENANT",
         target_id=str(new_tenant.id),
-        description=f"Super Admin created tenant '{name_clean}' ({plan_clean} Tier, max {max_faces} faces, max {max_nodes} nodes).",
+        description=f"Super Admin created tenant '{name_clean}' ({plan_clean} Tier: {max_faces} faces, {max_nodes} nodes).",
         ip_address=request.client.host if request.client else None,
     )
     db.add(audit)
@@ -209,9 +379,86 @@ def create_tenant(
 
     return {
         "status": "success",
-        "message": f"Tenant '{name_clean}' created successfully with {plan_clean} Tier.",
+        "message": f"Tenant '{name_clean}' created successfully with {plan_clean} Tier quotas.",
         "tenant": new_tenant.to_dict(),
         "admin_user": admin_user.to_dict(),
+    }
+
+
+@router.put("/tenants/{tenant_id}")
+def edit_tenant_details(
+    tenant_id: int,
+    payload: EditTenantDetailsRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Edits comprehensive tenant parameters: name, contact email, plan, status, and quotas.
+    """
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail=f"Tenant #{tenant_id} not found.")
+
+    changes = []
+
+    if payload.name is not None and payload.name.strip():
+        old_name = tenant.name
+        tenant.name = payload.name.strip()
+        changes.append(f"Name: '{old_name}' -> '{tenant.name}'")
+
+    if payload.contact_email is not None:
+        tenant.contact_email = payload.contact_email.strip() if payload.contact_email.strip() else None
+        changes.append(f"Email: {tenant.contact_email}")
+
+    if payload.subscription_plan is not None:
+        plan_clean = payload.subscription_plan.strip().upper()
+        if plan_clean != tenant.subscription_plan:
+            old_plan = tenant.subscription_plan
+            tenant.subscription_plan = plan_clean
+            changes.append(f"Plan: {old_plan} -> {plan_clean}")
+
+    if payload.subscription_status is not None:
+        new_status = payload.subscription_status.strip().upper()
+        if new_status in ["ACTIVE", "SUSPENDED", "EXPIRED", "DELETED"]:
+            if new_status != tenant.subscription_status:
+                old_status = tenant.subscription_status
+                tenant.subscription_status = new_status
+                tenant.is_active = (new_status == "ACTIVE")
+                if new_status == "DELETED":
+                    tenant.is_deleted = True
+                    tenant.deleted_at = get_ist_now()
+                else:
+                    tenant.is_deleted = False
+                    tenant.deleted_at = None
+                changes.append(f"Status: {old_status} -> {new_status}")
+
+    if payload.max_face_encodings is not None:
+        tenant.max_face_encodings = max(10, int(payload.max_face_encodings))
+        changes.append(f"MaxFaces: {tenant.max_face_encodings}")
+
+    if payload.max_nodes is not None:
+        tenant.max_nodes = max(1, int(payload.max_nodes))
+        changes.append(f"MaxNodes: {tenant.max_nodes}")
+
+    audit = AuditLog(
+        tenant_id=tenant.id,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="TENANT_DETAILS_UPDATED",
+        target_type="TENANT",
+        target_id=str(tenant.id),
+        description=f"Updated Tenant #{tenant.id}: " + (", ".join(changes) if changes else "No fields changed."),
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Tenant #{tenant_id} ('{tenant.name}') details updated successfully.",
+        "tenant": tenant.to_dict(),
     }
 
 
@@ -225,7 +472,7 @@ def update_tenant_status(
 ):
     """
     Toggles a tenant's subscription status between ACTIVE, SUSPENDED, and EXPIRED.
-    Suspended tenants immediately lock out edge nodes and portal access.
+    Suspended tenants immediately lock out operational features while maintaining read-only access.
     """
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
@@ -238,8 +485,10 @@ def update_tenant_status(
     old_status = tenant.subscription_status
     tenant.subscription_status = new_status
     tenant.is_active = (new_status == "ACTIVE")
+    if tenant.is_deleted:
+        tenant.is_deleted = False
+        tenant.deleted_at = None
 
-    # Record Audit Log
     audit = AuditLog(
         tenant_id=tenant.id,
         user_id=current_user.id,
@@ -278,13 +527,13 @@ def update_tenant_quotas(
 
     if payload.subscription_plan:
         plan_upper = payload.subscription_plan.strip().upper()
-        if plan_upper in TIER_LIMITS:
-            tenant.subscription_plan = plan_upper
-            # If explicit limits were not passed, apply default tier limits
+        plan_rec = db.query(SubscriptionPlan).filter(SubscriptionPlan.plan_code == plan_upper).first()
+        tenant.subscription_plan = plan_upper
+        if plan_rec:
             if payload.max_face_encodings is None:
-                tenant.max_face_encodings = TIER_LIMITS[plan_upper]["max_faces"]
+                tenant.max_face_encodings = plan_rec.max_face_encodings
             if payload.max_nodes is None:
-                tenant.max_nodes = TIER_LIMITS[plan_upper]["max_nodes"]
+                tenant.max_nodes = plan_rec.max_nodes
 
     if payload.max_face_encodings is not None:
         tenant.max_face_encodings = max(10, int(payload.max_face_encodings))
@@ -313,6 +562,124 @@ def update_tenant_quotas(
     }
 
 
+@router.delete("/tenants/{tenant_id}")
+def soft_delete_tenant(
+    tenant_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Soft-deletes a tenant without dropping database tables or historical data.
+    Sets is_deleted=True, subscription_status='DELETED', and records deletion timestamp.
+    """
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail=f"Tenant #{tenant_id} not found.")
+
+    if tenant.is_deleted:
+        raise HTTPException(status_code=400, detail=f"Tenant #{tenant_id} is already soft-deleted.")
+
+    tenant.is_deleted = True
+    tenant.deleted_at = get_ist_now()
+    tenant.subscription_status = "DELETED"
+    tenant.is_active = False
+
+    audit = AuditLog(
+        tenant_id=tenant.id,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="TENANT_SOFT_DELETED",
+        target_type="TENANT",
+        target_id=str(tenant.id),
+        description=f"Tenant '{tenant.name}' (#{tenant.id}) was soft-deleted by Super Admin.",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Tenant '{tenant.name}' (#{tenant.id}) has been soft-deleted.",
+        "tenant": tenant.to_dict(),
+    }
+
+
+@router.post("/tenants/{tenant_id}/restore")
+def restore_tenant(
+    tenant_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Restores a previously soft-deleted tenant back to ACTIVE state.
+    """
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail=f"Tenant #{tenant_id} not found.")
+
+    if not tenant.is_deleted:
+        raise HTTPException(status_code=400, detail=f"Tenant #{tenant_id} is not deleted.")
+
+    tenant.is_deleted = False
+    tenant.deleted_at = None
+    tenant.subscription_status = "ACTIVE"
+    tenant.is_active = True
+
+    audit = AuditLog(
+        tenant_id=tenant.id,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="TENANT_RESTORED",
+        target_type="TENANT",
+        target_id=str(tenant.id),
+        description=f"Tenant '{tenant.name}' (#{tenant.id}) was restored to ACTIVE by Super Admin.",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Tenant '{tenant.name}' (#{tenant.id}) has been successfully restored to ACTIVE.",
+        "tenant": tenant.to_dict(),
+    }
+
+
+# --- 3. Super Admin Tenant-Scoped Student Directory ---
+@router.get("/tenants/{tenant_id}/students")
+def get_tenant_students(
+    tenant_id: int,
+    db: Session = Depends(get_db),
+):
+    """Fetches student directory partitioned strictly to the specified tenant."""
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail=f"Tenant #{tenant_id} not found.")
+
+    students = db.query(Student).filter(Student.tenant_id == tenant_id).order_by(Student.name.asc()).all()
+    return {
+        "status": "success",
+        "tenant_id": tenant.id,
+        "tenant_name": tenant.name,
+        "total": len(students),
+        "students": [s.to_dict() for s in students],
+    }
+
+
+@router.get("/students")
+def get_scoped_students(
+    tenant_id: int = Query(..., description="Mandatory tenant ID filter for student directory"),
+    db: Session = Depends(get_db),
+):
+    """Enforces mandatory tenant selection for Super Admin viewing student directories."""
+    return get_tenant_students(tenant_id=tenant_id, db=db)
+
+
+# --- 4. Global Administrative Audit Trail ---
 @router.get("/audit-logs")
 def get_global_audit_logs(
     limit: int = 100,

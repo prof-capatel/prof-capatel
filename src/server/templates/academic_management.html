@@ -5,13 +5,17 @@
 
     <!-- Top Navigation Tabs -->
     <div style="display: flex; gap: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; flex-wrap: wrap;">
-        <button class="btn btn-primary tab-btn" id="tabBtnProgression" onclick="switchAcademicTab('progression')">
-            <i class="fa-solid fa-graduation-cap"></i>
-            <span>Student Promotion & Downgrade Engine</span>
+        <button class="btn btn-primary tab-btn" id="tabBtnDepartments" onclick="switchAcademicTab('departments')">
+            <i class="fa-solid fa-building-columns"></i>
+            <span>Departments</span>
         </button>
         <button class="btn btn-secondary tab-btn" id="tabBtnClasses" onclick="switchAcademicTab('classes')">
             <i class="fa-solid fa-sitemap"></i>
             <span>Classes & Divisions</span>
+        </button>
+        <button class="btn btn-secondary tab-btn" id="tabBtnProgression" onclick="switchAcademicTab('progression')">
+            <i class="fa-solid fa-graduation-cap"></i>
+            <span>Student Promotion & Downgrade Engine</span>
         </button>
         <button class="btn btn-secondary tab-btn" id="tabBtnFaculty" onclick="switchAcademicTab('faculty')">
             <i class="fa-solid fa-chalkboard-user"></i>
@@ -23,8 +27,210 @@
         </button>
     </div>
 
-    <!-- TAB 1: Student Promotion & Downgrade Engine -->
-    <div id="tabContentProgression" class="tab-pane">
+    <!-- ========================================================= -->
+    <!-- TAB 1: DEPARTMENTS MANAGEMENT (CRUD)                      -->
+    <!-- ========================================================= -->
+    <div id="tabContentDepartments" class="tab-pane">
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 24px;">
+            <!-- Create Department Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-building-circle-check" style="color: var(--accent-primary);"></i> Add New Department</h3>
+                </div>
+                <div class="card-body">
+                    <form onsubmit="submitCreateDepartment(event)">
+                        <div class="form-group">
+                            <label class="form-label">Department Name *</label>
+                            <input type="text" id="newDeptName" class="form-control" placeholder="e.g. Artificial Intelligence & Data Science" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Department Code / Short Code</label>
+                            <input type="text" id="newDeptCode" class="form-control" placeholder="e.g. AI-DS">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description / Notes</label>
+                            <textarea id="newDeptDesc" class="form-control" rows="3" placeholder="Department overview, laboratory, and student cohort description..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fa-solid fa-plus"></i> Create Department
+                        </button>
+                    </form>
+                    <div id="createDeptAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+                </div>
+            </div>
+
+            <!-- List Departments Table -->
+            <div class="card">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3><i class="fa-solid fa-building-columns" style="color: var(--accent-emerald);"></i> Registered Departments (<span id="deptCount">{{ departments|length }}</span>)</h3>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Department Name</th>
+                                    <th>Code</th>
+                                    <th>Classes</th>
+                                    <th>Students</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="departmentsTableBody">
+                                {% for d in departments %}
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 700; color: var(--text-heading);">{{ d.name }}</div>
+                                        <div style="font-size: 11.5px; color: var(--text-muted);">{{ d.description or 'No description' }}</div>
+                                    </td>
+                                    <td><span class="badge badge-indigo" style="font-family: monospace;">{{ d.code }}</span></td>
+                                    <td style="font-weight: 600;">{{ d.classes_count }} Classes</td>
+                                    <td style="font-weight: 600; color: var(--accent-primary);">{{ d.students_count }} Students</td>
+                                    <td style="text-align: right;">
+                                        <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; margin-right: 4px;" onclick="openEditDepartmentModal({{ d.id }}, '{{ d.name }}', '{{ d.code }}', '{{ d.description | replace('\'', '\\\'') }}')" title="Edit Department">
+                                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                                        </button>
+                                        <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--accent-rose); border-color: var(--accent-rose);" onclick="deleteDepartment({{ d.id }}, '{{ d.name }}')" title="Delete Department">
+                                            <i class="fa-solid fa-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">No departments configured yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: CLASSES & DIVISIONS (CRUD & DROPDOWN DEPARTMENT)   -->
+    <!-- ========================================================= -->
+    <div id="tabContentClasses" class="tab-pane" style="display: none;">
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 24px;">
+            <!-- Create Class & Division Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-plus" style="color: var(--accent-primary);"></i> Add Class or Division</h3>
+                </div>
+                <div class="card-body">
+                    <form onsubmit="submitCreateClass(event)">
+                        <span style="font-size: 12px; font-weight: 700; color: var(--text-heading); text-transform: uppercase;">1. Create New Class</span>
+                        <div class="form-group" style="margin-top: 8px;">
+                            <label class="form-label">Department *</label>
+                            <select id="newClassDeptSelect" class="form-control" required>
+                                {% for d in departments %}
+                                <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Class / Grade Name *</label>
+                            <input type="text" id="newClassName" class="form-control" placeholder="e.g. FY Computer Science" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Class Code</label>
+                            <input type="text" id="newClassCode" class="form-control" placeholder="e.g. FY-CS">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Create Class</button>
+                    </form>
+
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                    <form onsubmit="submitCreateDivision(event)">
+                        <span style="font-size: 12px; font-weight: 700; color: var(--text-heading); text-transform: uppercase;">2. Create Division / Section</span>
+                        <div class="form-group" style="margin-top: 8px;">
+                            <label class="form-label">Parent Class *</label>
+                            <select id="divParentClassSelect" class="form-control" required>
+                                {% for c in classes %}
+                                <option value="{{ c.id }}">{{ c.name }} ({{ c.department }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Division Name *</label>
+                            <input type="text" id="newDivisionName" class="form-control" placeholder="e.g. Division A" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="width: 100%;">Create Division</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- List of Classes & Divisions -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-layer-group" style="color: var(--accent-emerald);"></i> Institutional Academic Structure</h3>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Class Name</th>
+                                    <th>Department</th>
+                                    <th>Divisions</th>
+                                    <th>Students</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in classes %}
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 700; color: var(--text-heading);">{{ c.name }}</div>
+                                        <span class="badge badge-node" style="font-size: 10px; font-family: monospace;">{{ c.code }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-indigo">{{ c.department }}</span>
+                                    </td>
+                                    <td>
+                                        {% if c.divisions %}
+                                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                            {% for d in c.divisions %}
+                                            <span class="badge badge-present" style="font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">
+                                                <span>{{ d.name }}</span>
+                                                <button onclick="deleteDivision({{ d.id }}, '{{ d.name }}')" style="background: none; border: none; padding: 0; color: inherit; cursor: pointer; font-size: 9px;" title="Delete Division">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </button>
+                                            </span>
+                                            {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <span style="color: var(--text-muted); font-size: 11.5px;">No divisions</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-weight: 600; color: var(--accent-primary);">{{ c.students_count }} Students</td>
+                                    <td style="text-align: right; white-space: nowrap;">
+                                        <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; margin-right: 4px;" onclick="openEditClassModal({{ c.id }}, '{{ c.name }}', {{ c.department_id or 'null' }}, '{{ c.code or '' }}')" title="Edit Class">
+                                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                                        </button>
+                                        <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--accent-rose); border-color: var(--accent-rose);" onclick="deleteClass({{ c.id }}, '{{ c.name }}')" title="Delete Class">
+                                            <i class="fa-solid fa-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">No classes created yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- TAB 3: STUDENT PROMOTION & DOWNGRADE ENGINE               -->
+    <!-- ========================================================= -->
+    <div id="tabContentProgression" class="tab-pane" style="display: none;">
         <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
             
             <!-- Step 1: Select Source Cohort -->
@@ -32,15 +238,26 @@
                 <div class="card-header">
                     <h3>
                         <i class="fa-solid fa-filter" style="color: var(--accent-primary);"></i>
-                        <span>1. Select Source Cohort</span>
+                        <span>1. Select Source Cohort (Cascading)</span>
                     </h3>
                 </div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label class="form-label">Source Academic Year</label>
+                        <label class="form-label">Academic Year</label>
                         <select id="sourceYearSelect" class="form-control" onchange="loadSourceStudents()">
+                            <option value="">All Academic Years</option>
                             {% for y in academic_years %}
                             <option value="{{ y.id }}" {% if y.is_current %}selected{% endif %}>{{ y.name }} {% if y.is_current %}(Current){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Source Department</label>
+                        <select id="sourceDeptSelect" class="form-control" onchange="onSourceDeptChanged()">
+                            <option value="">All Departments</option>
+                            {% for d in departments %}
+                            <option value="{{ d.id }}">{{ d.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -48,9 +265,10 @@
                     <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group">
                             <label class="form-label">Source Class</label>
-                            <select id="sourceClassSelect" class="form-control" onchange="loadSourceDivisions(); loadSourceStudents();">
+                            <select id="sourceClassSelect" class="form-control" onchange="onSourceClassChanged()">
+                                <option value="">All Classes</option>
                                 {% for c in classes %}
-                                <option value="{{ c.id }}">{{ c.name }}</option>
+                                <option value="{{ c.id }}" data-dept-id="{{ c.department_id }}">{{ c.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -64,7 +282,7 @@
 
                     <div style="margin-top: 14px; padding: 12px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 12px; color: var(--text-muted);">
                         <i class="fa-solid fa-info-circle" style="color: var(--accent-primary);"></i>
-                        Promoting updates class enrollment while keeping all registered face embeddings and historical attendance logs intact.
+                        Promoting updates student class enrollment while strictly preserving all registered 128-d face embeddings and historical attendance records intact.
                     </div>
                 </div>
             </div>
@@ -87,19 +305,30 @@
                         </select>
                     </div>
 
+                    <div class="form-group">
+                        <label class="form-label">Target Department</label>
+                        <select id="targetDeptSelect" class="form-control" onchange="onTargetDeptChanged()">
+                            <option value="">Select Department</option>
+                            {% for d in departments %}
+                            <option value="{{ d.id }}">{{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                     <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group">
-                            <label class="form-label">Target Class</label>
-                            <select id="targetClassSelect" class="form-control" onchange="loadTargetDivisions()">
+                            <label class="form-label">Target Class *</label>
+                            <select id="targetClassSelect" class="form-control" onchange="loadTargetDivisions()" required>
+                                <option value="">Select Target Class</option>
                                 {% for c in classes %}
-                                <option value="{{ c.id }}" {% if loop.index == 2 %}selected{% endif %}>{{ c.name }}</option>
+                                <option value="{{ c.id }}" data-dept-id="{{ c.department_id }}">{{ c.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Target Division</label>
                             <select id="targetDivSelect" class="form-control">
-                                <option value="">Division A</option>
+                                <option value="">Default / Unassigned</option>
                             </select>
                         </div>
                     </div>
@@ -121,7 +350,7 @@
                 <div>
                     <h3>
                         <i class="fa-solid fa-users-viewfinder" style="color: var(--accent-primary);"></i>
-                        <span>Source Class Student Roster (<span id="sourceStudentCount">0</span> Students)</span>
+                        <span>Source Cohort Student Roster (<span id="sourceStudentCount">0</span> Students Found)</span>
                     </h3>
                     <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                         Select all students or check individual candidates for academic progression.
@@ -142,15 +371,16 @@
                                 </th>
                                 <th>Roll Number</th>
                                 <th>Student Name</th>
+                                <th>Department</th>
                                 <th>Current Class & Div</th>
-                                <th>Face Embeddings</th>
+                                <th>Face Samples</th>
                                 <th>Last Promoted</th>
                             </tr>
                         </thead>
                         <tbody id="sourceStudentsTableBody">
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
-                                    Select a source class above to view students.
+                                <td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                                    Select filters above to load students.
                                 </td>
                             </tr>
                         </tbody>
@@ -161,18 +391,18 @@
 
         <!-- Rollback / Downgrade Section -->
         <div class="card" style="border: 1.5px dashed var(--accent-rose);">
-            <div class="card-header" style="background: rgba(239, 68, 68, 0.04);">
+            <div class="card-header" style="background: rgba(239, 68, 68, 0.04); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
                     <h3 style="color: var(--accent-rose);">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span>Emergency Downgrade & Promotion Rollback</span>
                     </h3>
                     <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                        If a wrong class promotion was executed, you can instantly downgrade and restore the entire cohort back to their prior class.
+                        If a wrong class promotion was executed, you can instantly downgrade and restore the cohort back to their prior class.
                     </p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <select id="rollbackClassSelect" class="form-control" style="max-width: 200px;">
+                    <select id="rollbackClassSelect" class="form-control" style="max-width: 220px;">
                         {% for c in classes %}
                         <option value="{{ c.id }}">{{ c.name }}</option>
                         {% endfor %}
@@ -186,91 +416,9 @@
         </div>
     </div>
 
-    <!-- TAB 2: Classes & Divisions -->
-    <div id="tabContentClasses" class="tab-pane" style="display: none;">
-        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px;">
-            <!-- Create Class & Division Form -->
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fa-solid fa-plus" style="color: var(--accent-primary);"></i> Add Class or Division</h3>
-                </div>
-                <div class="card-body">
-                    <form onsubmit="submitCreateClass(event)">
-                        <span style="font-size: 12px; font-weight: 700; color: var(--text-heading); text-transform: uppercase;">Create New Class</span>
-                        <div class="form-group" style="margin-top: 8px;">
-                            <label class="form-label">Class Name *</label>
-                            <input type="text" id="newClassName" class="form-control" placeholder="e.g. Final Year CS" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Department</label>
-                            <input type="text" id="newClassDept" class="form-control" value="Computer Science">
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Create Class</button>
-                    </form>
-
-                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
-
-                    <form onsubmit="submitCreateDivision(event)">
-                        <span style="font-size: 12px; font-weight: 700; color: var(--text-heading); text-transform: uppercase;">Create Division / Section</span>
-                        <div class="form-group" style="margin-top: 8px;">
-                            <label class="form-label">Parent Class *</label>
-                            <select id="divParentClassSelect" class="form-control">
-                                {% for c in classes %}
-                                <option value="{{ c.id }}">{{ c.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Division Name *</label>
-                            <input type="text" id="newDivisionName" class="form-control" placeholder="e.g. Division C" required>
-                        </div>
-                        <button type="submit" class="btn btn-secondary" style="width: 100%;">Create Division</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- List of Classes & Divisions -->
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fa-solid fa-layer-group" style="color: var(--accent-emerald);"></i> Institutional Academic Structure</h3>
-                </div>
-                <div class="card-body" style="padding: 0;">
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Class Name</th>
-                                    <th>Department</th>
-                                    <th>Divisions</th>
-                                    <th>Enrolled Students</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for c in classes %}
-                                <tr>
-                                    <td style="font-weight: 700; color: var(--text-heading);">{{ c.name }}</td>
-                                    <td>{{ c.department }}</td>
-                                    <td>
-                                        {% if c.divisions %}
-                                            {% for d in c.divisions %}
-                                            <span class="badge badge-indigo" style="font-size: 10.5px; margin-right: 4px;">{{ d.name }}</span>
-                                            {% endfor %}
-                                        {% else %}
-                                            <span style="color: var(--text-muted); font-size: 11.5px;">No divisions created</span>
-                                        {% endif %}
-                                    </td>
-                                    <td style="font-weight: 600;">{{ c.students_count }} Students</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- TAB 3: Faculty & Assignments -->
+    <!-- ========================================================= -->
+    <!-- TAB 4: FACULTY & ASSIGNMENTS                             -->
+    <!-- ========================================================= -->
     <div id="tabContentFaculty" class="tab-pane" style="display: none;">
         <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px;">
             <!-- Create Teacher & Assignment Form -->
@@ -363,7 +511,9 @@
         </div>
     </div>
 
-    <!-- TAB 4: Academic Years -->
+    <!-- ========================================================= -->
+    <!-- TAB 5: ACADEMIC YEARS                                     -->
+    <!-- ========================================================= -->
     <div id="tabContentYears" class="tab-pane" style="display: none;">
         <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px;">
             <div class="card">
@@ -424,15 +574,87 @@
     </div>
 
 </div>
+
+<!-- ========================================================= -->
+<!-- MODAL: EDIT DEPARTMENT                                    -->
+<!-- ========================================================= -->
+<div id="editDepartmentModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> Edit Department</h3>
+            <button class="modal-close" onclick="closeEditDepartmentModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form onsubmit="submitEditDepartment(event)">
+            <div class="modal-body">
+                <input type="hidden" id="editDeptId">
+                <div class="form-group">
+                    <label class="form-label">Department Name *</label>
+                    <input type="text" id="editDeptName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Department Code</label>
+                    <input type="text" id="editDeptCode" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="editDeptDesc" class="form-control" rows="3"></textarea>
+                </div>
+                <div id="editDeptAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditDepartmentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL: EDIT CLASS                                         -->
+<!-- ========================================================= -->
+<div id="editClassModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> Edit Class</h3>
+            <button class="modal-close" onclick="closeEditClassModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form onsubmit="submitEditClass(event)">
+            <div class="modal-body">
+                <input type="hidden" id="editClassId">
+                <div class="form-group">
+                    <label class="form-label">Department *</label>
+                    <select id="editClassDeptSelect" class="form-control" required>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Class Name *</label>
+                    <input type="text" id="editClassName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Class Code</label>
+                    <input type="text" id="editClassCode" class="form-control">
+                </div>
+                <div id="editClassAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditClassModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     let sourceStudentsData = [];
+    const allTenantClasses = {{ classes | tojson | safe }};
+    const allTenantDepartments = {{ departments | tojson | safe }};
 
     document.addEventListener("DOMContentLoaded", () => {
-        loadSourceDivisions();
-        loadTargetDivisions();
         loadSourceStudents();
         loadFacultyList();
     });
@@ -451,6 +673,247 @@
             activeBtn.classList.remove("btn-secondary");
             activeBtn.classList.add("btn-primary");
         }
+    }
+
+    /* ==========================================================
+       Department Lifecycle Actions
+       ========================================================== */
+    async function submitCreateDepartment(e) {
+        e.preventDefault();
+        const name = document.getElementById("newDeptName").value.trim();
+        const code = document.getElementById("newDeptCode").value.trim();
+        const description = document.getElementById("newDeptDesc").value.trim();
+        const alertBox = document.getElementById("createDeptAlert");
+
+        try {
+            const res = await fetch("/api/v1/academic/departments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, code, description })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Department created successfully!");
+                window.location.reload();
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Error creating department.");
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    function openEditDepartmentModal(id, name, code, desc) {
+        document.getElementById("editDeptId").value = id;
+        document.getElementById("editDeptName").value = name;
+        document.getElementById("editDeptCode").value = code || "";
+        document.getElementById("editDeptDesc").value = desc || "";
+        document.getElementById("editDeptAlert").style.display = "none";
+        document.getElementById("editDepartmentModal").classList.add("active");
+    }
+
+    function closeEditDepartmentModal() {
+        document.getElementById("editDepartmentModal").classList.remove("active");
+    }
+
+    async function submitEditDepartment(e) {
+        e.preventDefault();
+        const id = document.getElementById("editDeptId").value;
+        const name = document.getElementById("editDeptName").value.trim();
+        const code = document.getElementById("editDeptCode").value.trim();
+        const description = document.getElementById("editDeptDesc").value.trim();
+        const alertBox = document.getElementById("editDeptAlert");
+
+        try {
+            const res = await fetch(`/api/v1/academic/departments/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, code, description })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Department updated successfully!");
+                window.location.reload();
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Error updating department.");
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    async function deleteDepartment(id, name) {
+        if (!confirm(`Are you sure you want to delete department "${name}"?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/academic/departments/${id}`, { method: "DELETE" });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || "Department deleted.");
+                window.location.reload();
+            } else {
+                alert("Cannot Delete Department:\n" + (data.detail || "Deletion restricted due to linked records."));
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    /* ==========================================================
+       Class & Division Actions
+       ========================================================== */
+    async function submitCreateClass(e) {
+        e.preventDefault();
+        const deptId = parseInt(document.getElementById("newClassDeptSelect").value);
+        const name = document.getElementById("newClassName").value.trim();
+        const code = document.getElementById("newClassCode").value.trim();
+
+        try {
+            const res = await fetch("/api/v1/academic/classes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, department_id: deptId, code })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Class created successfully!");
+                window.location.reload();
+            } else {
+                alert("Error: " + (data.detail || "Could not create class."));
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    function openEditClassModal(id, name, deptId, code) {
+        document.getElementById("editClassId").value = id;
+        document.getElementById("editClassName").value = name;
+        if (deptId && document.getElementById("editClassDeptSelect")) {
+            document.getElementById("editClassDeptSelect").value = deptId;
+        }
+        document.getElementById("editClassCode").value = code || "";
+        document.getElementById("editClassAlert").style.display = "none";
+        document.getElementById("editClassModal").classList.add("active");
+    }
+
+    function closeEditClassModal() {
+        document.getElementById("editClassModal").classList.remove("active");
+    }
+
+    async function submitEditClass(e) {
+        e.preventDefault();
+        const id = document.getElementById("editClassId").value;
+        const deptId = parseInt(document.getElementById("editClassDeptSelect").value);
+        const name = document.getElementById("editClassName").value.trim();
+        const code = document.getElementById("editClassCode").value.trim();
+        const alertBox = document.getElementById("editClassAlert");
+
+        try {
+            const res = await fetch(`/api/v1/academic/classes/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, department_id: deptId, code })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Class updated successfully!");
+                window.location.reload();
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Error updating class.");
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    async function deleteClass(id, name) {
+        if (!confirm(`Are you sure you want to delete class "${name}"?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/academic/classes/${id}`, { method: "DELETE" });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || "Class deleted.");
+                window.location.reload();
+            } else {
+                alert("Cannot Delete Class:\n" + (data.detail || "Deletion restricted due to enrolled students."));
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    async function submitCreateDivision(e) {
+        e.preventDefault();
+        const classId = parseInt(document.getElementById("divParentClassSelect").value);
+        const name = document.getElementById("newDivisionName").value.trim();
+
+        try {
+            const res = await fetch("/api/v1/academic/divisions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ class_id: classId, name })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Division created successfully!");
+                window.location.reload();
+            } else {
+                alert("Error: " + (data.detail || "Could not create division."));
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    async function deleteDivision(id, name) {
+        if (!confirm(`Are you sure you want to delete division "${name}"?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/academic/divisions/${id}`, { method: "DELETE" });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || "Division deleted.");
+                window.location.reload();
+            } else {
+                alert("Cannot Delete Division:\n" + (data.detail || "Deletion restricted due to enrolled students."));
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    /* ==========================================================
+       Cascading Selection & Promotion Engine
+       ========================================================== */
+    function onSourceDeptChanged() {
+        const deptId = document.getElementById("sourceDeptSelect").value;
+        const classSelect = document.getElementById("sourceClassSelect");
+        
+        classSelect.innerHTML = '<option value="">All Classes</option>';
+        allTenantClasses.forEach(c => {
+            if (!deptId || c.department_id == deptId) {
+                classSelect.innerHTML += `<option value="${c.id}" data-dept-id="${c.department_id}">${c.name}</option>`;
+            }
+        });
+
+        loadSourceDivisions();
+        loadSourceStudents();
+    }
+
+    function onSourceClassChanged() {
+        loadSourceDivisions();
+        loadSourceStudents();
     }
 
     async function loadSourceDivisions() {
@@ -472,10 +935,23 @@
         }
     }
 
+    function onTargetDeptChanged() {
+        const deptId = document.getElementById("targetDeptSelect").value;
+        const classSelect = document.getElementById("targetClassSelect");
+        
+        classSelect.innerHTML = '<option value="">Select Target Class</option>';
+        allTenantClasses.forEach(c => {
+            if (!deptId || c.department_id == deptId) {
+                classSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            }
+        });
+        loadTargetDivisions();
+    }
+
     async function loadTargetDivisions() {
         const classId = document.getElementById("targetClassSelect").value;
         const select = document.getElementById("targetDivSelect");
-        select.innerHTML = '';
+        select.innerHTML = '<option value="">Default / Unassigned</option>';
         if (!classId) return;
 
         try {
@@ -492,48 +968,56 @@
     }
 
     async function loadSourceStudents() {
-        const classId = document.getElementById("sourceClassSelect").value;
-        const divId = document.getElementById("sourceDivSelect").value;
+        const yearId = document.getElementById("sourceYearSelect")?.value || "";
+        const deptId = document.getElementById("sourceDeptSelect")?.value || "";
+        const classId = document.getElementById("sourceClassSelect")?.value || "";
+        const divId = document.getElementById("sourceDivSelect")?.value || "";
         const tbody = document.getElementById("sourceStudentsTableBody");
 
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading students...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading students...</td></tr>`;
+
+        let queryParams = [];
+        if (deptId) queryParams.push(`department_id=${deptId}`);
+        if (classId) queryParams.push(`class_id=${classId}`);
+        if (divId) queryParams.push(`division_id=${divId}`);
+        if (yearId) queryParams.push(`academic_year_id=${yearId}`);
+
+        const url = `/api/v1/academic/students` + (queryParams.length ? `?${queryParams.join("&")}` : "");
 
         try {
-            const res = await fetch(`/api/v1/enrollment/students`);
+            const res = await fetch(url);
             const data = await res.json();
             if (res.ok && data.students) {
-                let filtered = data.students.filter(s => s.class_id == classId || (!s.class_id && classId == 1));
-                if (divId) {
-                    filtered = filtered.filter(s => s.division_id == divId);
-                }
+                sourceStudentsData = data.students;
+                document.getElementById("sourceStudentCount").innerText = data.students.length;
 
-                sourceStudentsData = filtered;
-                document.getElementById("sourceStudentCount").innerText = filtered.length;
-
-                if (filtered.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">No enrolled students found in this class.</td></tr>`;
+                if (data.students.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No enrolled students found matching the selected filters.</td></tr>`;
                     return;
                 }
 
-                tbody.innerHTML = filtered.map(s => `
+                tbody.innerHTML = data.students.map(s => `
                     <tr>
                         <td style="text-align: center;">
                             <input type="checkbox" class="student-checkbox" value="${s.id}" checked>
                         </td>
                         <td style="font-family: monospace; font-weight: 700; color: var(--accent-primary);">${s.roll_number}</td>
                         <td style="font-weight: 700; color: var(--text-heading);">${s.name}</td>
+                        <td><span class="badge badge-indigo">${s.department || 'General'}</span></td>
                         <td>${s.class_name || 'General'} &bull; ${s.division_name || 'N/A'}</td>
                         <td>
-                            <span class="badge badge-present" style="font-size: 11px;">${s.samples_count} Vectors</span>
+                            <span class="badge badge-present" style="font-size: 11px;">${s.samples_count || 0} Vectors</span>
                         </td>
                         <td style="font-size: 11.5px; color: var(--text-muted);">
                             ${s.last_promoted_at ? s.last_promoted_at.slice(0, 10) : 'Original'}
                         </td>
                     </tr>
                 `).join("");
+            } else {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--accent-rose);">Could not load student roster.</td></tr>`;
             }
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--accent-rose);">Error loading students.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--accent-rose);">Network error loading students.</td></tr>`;
         }
     }
 
@@ -545,7 +1029,8 @@
 
     async function executeBatchPromotion() {
         const selectedIds = Array.from(document.querySelectorAll(".student-checkbox:checked")).map(cb => parseInt(cb.value));
-        const targetClassId = parseInt(document.getElementById("targetClassSelect").value);
+        const targetClassSelect = document.getElementById("targetClassSelect");
+        const targetClassId = targetClassSelect.value ? parseInt(targetClassSelect.value) : null;
         const targetDivId = document.getElementById("targetDivSelect").value ? parseInt(document.getElementById("targetDivSelect").value) : null;
         const targetYearId = document.getElementById("targetYearSelect").value ? parseInt(document.getElementById("targetYearSelect").value) : null;
 
@@ -559,7 +1044,15 @@
             return;
         }
 
-        if (!confirm(`Are you sure you want to promote ${selectedIds.length} students to target class? Face vectors will be preserved.`)) return;
+        if (!targetClassId) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Please select a valid target class.';
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to promote ${selectedIds.length} student(s) to target class? Biometric face vectors and attendance records will remain safe.`)) return;
 
         try {
             const res = await fetch("/api/v1/academic/students/promote", {
@@ -579,14 +1072,12 @@
                 alertBox.style.background = "var(--badge-emerald-bg)";
                 alertBox.style.color = "var(--badge-emerald-text)";
                 alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
-                setTimeout(() => {
-                    loadSourceStudents();
-                }, 1000);
+                setTimeout(() => loadSourceStudents(), 1000);
             } else {
                 alertBox.style.display = "block";
                 alertBox.style.background = "var(--badge-rose-bg)";
                 alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Error.");
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Promotion failed.");
             }
         } catch (e) {
             alertBox.style.display = "block";
@@ -695,52 +1186,6 @@
         } catch (e) {}
     }
 
-    async function submitCreateClass(e) {
-        e.preventDefault();
-        const name = document.getElementById("newClassName").value.trim();
-        const dept = document.getElementById("newClassDept").value.trim();
-
-        try {
-            const res = await fetch("/api/v1/academic/classes", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, department: dept })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert("Class created successfully!");
-                window.location.reload();
-            } else {
-                alert("Error: " + (data.detail || "Could not create class."));
-            }
-        } catch (err) {
-            alert("Network error.");
-        }
-    }
-
-    async function submitCreateDivision(e) {
-        e.preventDefault();
-        const classId = parseInt(document.getElementById("divParentClassSelect").value);
-        const name = document.getElementById("newDivisionName").value.trim();
-
-        try {
-            const res = await fetch("/api/v1/academic/divisions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ class_id: classId, name })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert("Division created successfully!");
-                window.location.reload();
-            } else {
-                alert("Error: " + (data.detail || "Could not create division."));
-            }
-        } catch (err) {
-            alert("Network error.");
-        }
-    }
-
     async function submitCreateTeacher(e) {
         e.preventDefault();
         const payload = {
@@ -823,6 +1268,8 @@
             if (res.ok) {
                 alert("Academic year created!");
                 window.location.reload();
+            } else {
+                alert("Error: " + (data.detail || "Could not create academic year."));
             }
         } catch (e) {}
     }

@@ -17,6 +17,7 @@ from src.config import (
 from src.database.models import (
     Base,
     Tenant,
+    Department,
     SystemBranding,
     User,
     AcademicYear,
@@ -24,6 +25,7 @@ from src.database.models import (
     Division,
     TeacherClassAssignment,
     Student,
+    SubscriptionPlan,
 )
 from src.utils.auth_utils import hash_password
 
@@ -71,10 +73,59 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+def seed_default_subscription_plans(db: Session):
+    """Seeds default standard SaaS subscription plans if not existing."""
+    default_plans = [
+        {
+            "plan_code": "FREE",
+            "name": "Starter Free Tier",
+            "max_face_encodings": 50,
+            "max_nodes": 2,
+            "price_monthly": 0.0,
+            "description": "Evaluation tier for small pilot deployments and trial classrooms.",
+        },
+        {
+            "plan_code": "STANDARD",
+            "name": "Standard Campus Tier",
+            "max_face_encodings": 500,
+            "max_nodes": 10,
+            "price_monthly": 49.0,
+            "description": "Comprehensive biometric attendance for schools and single departments.",
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "name": "Enterprise Multi-Campus",
+            "max_face_encodings": 5000,
+            "max_nodes": 50,
+            "price_monthly": 199.0,
+            "description": "High-throughput cluster with unlimited departments and multi-node capture.",
+        },
+    ]
+
+    for p in default_plans:
+        existing = db.query(SubscriptionPlan).filter(SubscriptionPlan.plan_code == p["plan_code"]).first()
+        if not existing:
+            new_plan = SubscriptionPlan(
+                plan_code=p["plan_code"],
+                name=p["name"],
+                max_face_encodings=p["max_face_encodings"],
+                max_nodes=p["max_nodes"],
+                price_monthly=p["price_monthly"],
+                description=p["description"],
+                is_active=True,
+            )
+            db.add(new_plan)
+            logger.info(f"Seeded SubscriptionPlan '{p['plan_code']}'.")
+    db.flush()
+
+
 def seed_default_tenant_and_branding():
     """Seeds default tenant, branding, RBAC users, and academic structure if database is fresh."""
     with SessionLocal() as db:
         try:
+            # 0. Subscription Plans
+            seed_default_subscription_plans(db)
+
             # 1. Default Tenant
             default_tenant = db.query(Tenant).filter(Tenant.id == DEFAULT_TENANT_ID).first()
             if not default_tenant:
@@ -171,7 +222,37 @@ def seed_default_tenant_and_branding():
                 db.add(student_user)
                 logger.info("Seeded default STUDENT user ('student1').")
 
-            # 4. Seed Academic Hierarchy (Years, Classes, Divisions)
+            # 4. Seed Academic Hierarchy (Departments, Years, Classes, Divisions)
+            # Default Departments
+            default_departments_data = [
+                {"name": "Computer Science", "code": "CS", "description": "Department of Computer Science & Engineering"},
+                {"name": "Information Technology", "code": "IT", "description": "Department of Information Technology"},
+                {"name": "Artificial Intelligence & Data Science", "code": "AI-DS", "description": "Department of Artificial Intelligence & Data Science"},
+                {"name": "Electronics & Communication", "code": "ECE", "description": "Department of Electronics & Communication"},
+                {"name": "Mechanical Engineering", "code": "MECH", "description": "Department of Mechanical Engineering"},
+                {"name": "Administration", "code": "ADMIN", "description": "Administrative & Institutional Staff"},
+            ]
+            seeded_departments = {}
+            for d_data in default_departments_data:
+                dept_obj = db.query(Department).filter(
+                    Department.tenant_id == DEFAULT_TENANT_ID,
+                    Department.name == d_data["name"]
+                ).first()
+                if not dept_obj:
+                    dept_obj = Department(
+                        tenant_id=DEFAULT_TENANT_ID,
+                        name=d_data["name"],
+                        code=d_data["code"],
+                        description=d_data["description"],
+                    )
+                    db.add(dept_obj)
+                    db.flush()
+                    logger.info(f"Seeded default Department '{d_data['name']}'.")
+                seeded_departments[d_data["name"]] = dept_obj
+
+            cs_dept = seeded_departments.get("Computer Science")
+            cs_dept_id = cs_dept.id if cs_dept else None
+
             # Academic Year
             acad_year = db.query(AcademicYear).filter(AcademicYear.tenant_id == DEFAULT_TENANT_ID, AcademicYear.name == "2026-2027").first()
             if not acad_year:
@@ -191,34 +272,43 @@ def seed_default_tenant_and_branding():
             if not class_fy:
                 class_fy = ClassModel(
                     tenant_id=DEFAULT_TENANT_ID,
+                    department_id=cs_dept_id,
                     department="Computer Science",
                     name="FY Computer Science",
                     code="FY-CS",
                 )
                 db.add(class_fy)
                 db.flush()
+            elif class_fy.department_id is None and cs_dept_id:
+                class_fy.department_id = cs_dept_id
 
             class_sy = db.query(ClassModel).filter(ClassModel.tenant_id == DEFAULT_TENANT_ID, ClassModel.name == "SY Computer Science").first()
             if not class_sy:
                 class_sy = ClassModel(
                     tenant_id=DEFAULT_TENANT_ID,
+                    department_id=cs_dept_id,
                     department="Computer Science",
                     name="SY Computer Science",
                     code="SY-CS",
                 )
                 db.add(class_sy)
                 db.flush()
+            elif class_sy.department_id is None and cs_dept_id:
+                class_sy.department_id = cs_dept_id
 
             class_ty = db.query(ClassModel).filter(ClassModel.tenant_id == DEFAULT_TENANT_ID, ClassModel.name == "TY Computer Science").first()
             if not class_ty:
                 class_ty = ClassModel(
                     tenant_id=DEFAULT_TENANT_ID,
+                    department_id=cs_dept_id,
                     department="Computer Science",
                     name="TY Computer Science",
                     code="TY-CS",
                 )
                 db.add(class_ty)
                 db.flush()
+            elif class_ty.department_id is None and cs_dept_id:
+                class_ty.department_id = cs_dept_id
 
             # Divisions for FY
             div_a = db.query(Division).filter(Division.tenant_id == DEFAULT_TENANT_ID, Division.class_id == class_fy.id, Division.name == "Division A").first()
@@ -260,15 +350,42 @@ def seed_default_tenant_and_branding():
                     db.add(assignment)
                     logger.info("Seeded default TeacherClassAssignment for 'teacher1'.")
 
-            # Link existing students to FY-CS Division A if not assigned
-            unassigned_students = db.query(Student).filter(Student.tenant_id == DEFAULT_TENANT_ID, Student.class_id == None).all()
-            for std in unassigned_students:
-                std.class_id = class_fy.id
-                std.division_id = div_a.id if div_a else None
-                std.academic_year_id = acad_year.id if acad_year else None
+            # Link existing students and classes to departments and divisions if unassigned
+            all_tenant_classes = db.query(ClassModel).filter(ClassModel.tenant_id == DEFAULT_TENANT_ID).all()
+            for cls in all_tenant_classes:
+                if cls.department_id is None:
+                    matched_dept = db.query(Department).filter(
+                        Department.tenant_id == DEFAULT_TENANT_ID,
+                        Department.name == cls.department
+                    ).first()
+                    if matched_dept:
+                        cls.department_id = matched_dept.id
+                    elif cs_dept_id:
+                        cls.department_id = cs_dept_id
+
+            all_tenant_students = db.query(Student).filter(Student.tenant_id == DEFAULT_TENANT_ID).all()
+            for std in all_tenant_students:
+                if std.department_id is None:
+                    matched_dept = db.query(Department).filter(
+                        Department.tenant_id == DEFAULT_TENANT_ID,
+                        Department.name == std.department
+                    ).first()
+                    if matched_dept:
+                        std.department_id = matched_dept.id
+                    elif cs_dept_id:
+                        std.department_id = cs_dept_id
+                        std.department = cs_dept.name
+
+                if std.class_id is None:
+                    std.class_id = class_fy.id
+                    std.class_semester = class_fy.name
+                if std.division_id is None and div_a:
+                    std.division_id = div_a.id
+                if std.academic_year_id is None and acad_year:
+                    std.academic_year_id = acad_year.id
 
             db.commit()
-            logger.info("Database default seeds completed successfully.")
+            logger.info("Database default seeds and referential links completed successfully.")
         except Exception as e:
             db.rollback()
             logger.warning(f"Default seeding note: {e}")
@@ -329,7 +446,28 @@ def run_schema_migrations():
                 conn.execute(text("ALTER TABLE tenants ADD COLUMN subscription_expires_at DATETIME NULL"))
                 logger.info("Migrated tenants table: added subscription_expires_at column.")
 
-            # 3. Students table academic structure & progression columns
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'is_deleted'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE NOT NULL"))
+                logger.info("Migrated tenants table: added is_deleted column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'deleted_at'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN deleted_at DATETIME NULL"))
+                logger.info("Migrated tenants table: added deleted_at column.")
+
+            # 3. Classes table department_id column
+            res = conn.execute(text("SHOW COLUMNS FROM classes LIKE 'department_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE classes ADD COLUMN department_id INT NULL"))
+                logger.info("Migrated classes table: added department_id column.")
+
+            # 4. Students table academic structure & progression columns
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'department_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN department_id INT NULL"))
+                logger.info("Migrated students table: added department_id column.")
+
             res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'class_id'")).fetchall()
             if not res:
                 conn.execute(text("ALTER TABLE students ADD COLUMN class_id INT NULL"))
