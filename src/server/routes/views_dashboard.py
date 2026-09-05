@@ -16,6 +16,7 @@ from src.database.models import (
     ClassModel,
     Division,
     AcademicYear,
+    StudentBatchUpload,
 )
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
@@ -414,6 +415,7 @@ def page_academic_management(
     classes = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id).order_by(ClassModel.name.asc()).all()
     divisions = db.query(Division).filter(Division.tenant_id == current_tenant.id).order_by(Division.name.asc()).all()
     academic_years = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id).order_by(AcademicYear.id.desc()).all()
+    batches = db.query(StudentBatchUpload).filter(StudentBatchUpload.tenant_id == current_tenant.id).order_by(StudentBatchUpload.id.desc()).all()
 
     return templates.TemplateResponse(
         "academic_management.html",
@@ -428,6 +430,7 @@ def page_academic_management(
             "classes": [c.to_dict() for c in classes],
             "divisions": [dv.to_dict() for dv in divisions],
             "academic_years": [y.to_dict() for y in academic_years],
+            "batches": [b.to_dict() for b in batches],
             "current_user": current_user.to_dict() if current_user else None,
         },
     )

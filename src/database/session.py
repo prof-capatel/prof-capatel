@@ -508,6 +508,31 @@ def run_schema_migrations():
                 conn.execute(text("ALTER TABLE students ADD COLUMN last_promoted_at DATETIME NULL"))
                 logger.info("Migrated students table: added last_promoted_at column.")
 
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'gender'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN gender VARCHAR(20) DEFAULT 'Other' NULL"))
+                logger.info("Migrated students table: added gender column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'batch_upload_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN batch_upload_id INT NULL"))
+                logger.info("Migrated students table: added batch_upload_id column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'previous_department_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN previous_department_id INT NULL"))
+                logger.info("Migrated students table: added previous_department_id column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'last_transferred_at'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN last_transferred_at DATETIME NULL"))
+                logger.info("Migrated students table: added last_transferred_at column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'phone_number'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN phone_number VARCHAR(50) NULL"))
+                logger.info("Migrated students table: added phone_number column.")
+
     except Exception as e:
         logger.warning(f"Schema migration note: {e}")
 

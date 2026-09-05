@@ -104,6 +104,7 @@ class Tenant(Base):
     divisions = relationship("Division", back_populates="tenant", cascade="all, delete-orphan")
     teacher_assignments = relationship("TeacherClassAssignment", back_populates="tenant", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="tenant", cascade="all, delete-orphan")
+    batch_uploads = relationship("StudentBatchUpload", back_populates="tenant", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -309,6 +310,44 @@ class TeacherClassAssignment(Base):
         }
 
 
+class StudentBatchUpload(Base):
+    """
+    Tracks bulk Excel spreadsheet upload sessions with validation statistics and soft-delete/rollback support.
+    """
+    __tablename__ = "student_batch_uploads"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    filename = Column(String(255), nullable=False)
+    uploaded_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    total_rows = Column(Integer, default=0)
+    valid_rows = Column(Integer, default=0)
+    imported_count = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True, nullable=False)  # False when batch is rolled back / soft-deleted
+    created_at = Column(DateTime, default=get_ist_now)
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="batch_uploads")
+    uploaded_by = relationship("User", foreign_keys=[uploaded_by_user_id])
+    students = relationship("Student", back_populates="batch_upload", foreign_keys="Student.batch_upload_id")
+
+    def to_dict(self):
+        active_student_count = sum(1 for s in (self.students or []) if s.is_active)
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "filename": self.filename,
+            "uploaded_by_user_id": self.uploaded_by_user_id,
+            "uploader_name": self.uploaded_by.full_name if self.uploaded_by else "Admin",
+            "total_rows": self.total_rows,
+            "valid_rows": self.valid_rows,
+            "imported_count": self.imported_count,
+            "active_student_count": active_student_count,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class Student(Base):
     __tablename__ = "students"
 
@@ -316,9 +355,11 @@ class Student(Base):
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
     roll_number = Column(String(50), nullable=False, index=True)
     name = Column(String(100), nullable=False)
+    gender = Column(String(20), nullable=True, default="Other")  # Male, Female, Other
     department_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True)
     department = Column(String(100), default="Computer Science")
     email = Column(String(100), nullable=True)
+    phone_number = Column(String(50), nullable=True)
     user_role = Column(String(30), default="student", nullable=False)  # student, teacher, admin_staff, other
     class_semester = Column(String(50), nullable=True, default="General")
     
@@ -327,12 +368,15 @@ class Student(Base):
     division_id = Column(Integer, ForeignKey("divisions.id", ondelete="SET NULL"), nullable=True, index=True)
     academic_year_id = Column(Integer, ForeignKey("academic_years.id", ondelete="SET NULL"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    batch_upload_id = Column(Integer, ForeignKey("student_batch_uploads.id", ondelete="SET NULL"), nullable=True, index=True)
 
-    # Progression & Rollback History
+    # Progression & Transfer Tracking History
+    previous_department_id = Column(Integer, nullable=True)
     previous_class_id = Column(Integer, nullable=True)
     previous_division_id = Column(Integer, nullable=True)
     previous_academic_year_id = Column(Integer, nullable=True)
     last_promoted_at = Column(DateTime, nullable=True)
+    last_transferred_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=get_ist_now)
     is_active = Column(Boolean, default=True)
@@ -341,6 +385,7 @@ class Student(Base):
         UniqueConstraint("tenant_id", "roll_number", name="uq_tenant_student_roll"),
         Index("ix_student_tenant_active", "tenant_id", "is_active"),
         Index("ix_student_class_div", "tenant_id", "class_id", "division_id"),
+        Index("ix_student_batch", "tenant_id", "batch_upload_id"),
     )
 
     # Relationships
@@ -352,6 +397,7 @@ class Student(Base):
     division_obj = relationship("Division", back_populates="students", foreign_keys=[division_id])
     academic_year = relationship("AcademicYear", back_populates="students", foreign_keys=[academic_year_id])
     user = relationship("User", back_populates="student_profile", foreign_keys=[user_id])
+    batch_upload = relationship("StudentBatchUpload", back_populates="students", foreign_keys=[batch_upload_id])
 
     def to_dict(self):
         photos_list = []
@@ -380,10 +426,12 @@ class Student(Base):
             "tenant_id": self.tenant_id,
             "roll_number": self.roll_number,
             "name": self.name,
+            "gender": self.gender or "Other",
             "department_id": self.department_id,
             "department": dept_display,
             "department_code": self.department_rel.code if self.department_rel else "",
             "email": self.email,
+            "phone_number": self.phone_number,
             "user_role": self.user_role or "student",
             "class_semester": class_display,
             "class_id": self.class_id,
@@ -392,10 +440,13 @@ class Student(Base):
             "division_name": division_display,
             "academic_year_id": self.academic_year_id,
             "academic_year_name": year_display,
+            "batch_upload_id": self.batch_upload_id,
+            "previous_department_id": self.previous_department_id,
             "previous_class_id": self.previous_class_id,
             "previous_division_id": self.previous_division_id,
             "previous_academic_year_id": self.previous_academic_year_id,
             "last_promoted_at": self.last_promoted_at.isoformat() if self.last_promoted_at else None,
+            "last_transferred_at": self.last_transferred_at.isoformat() if self.last_transferred_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "is_active": self.is_active,
             "samples_count": len(self.encodings) if self.encodings else 0,

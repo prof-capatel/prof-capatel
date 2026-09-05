@@ -10,7 +10,14 @@ __pycache__/
 *.so
 .pytest_cache/
 
-# Data artifacts & local databases that might be large (optional backup)
-# We keep database schema and code tracked
+# Data artifacts, snapshots & runtime face crops
+data/snapshots/
+data/crops/
+data/faces/
+data/ssl/
+data/*.sqlite3
+data/*.db
+graphify-out/
+
 .DS_Store
 Thumbs.db

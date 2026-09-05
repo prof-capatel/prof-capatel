@@ -200,6 +200,9 @@
                                     <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}', '{{ s.department }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </button>
+                                    <a href="/academic-management" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="Transfer Student (Academic Management)">
+                                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                                    </a>
                                     <button onclick="openRetakeModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
                                         <i class="fa-solid fa-camera-rotate"></i>
                                     </button>
