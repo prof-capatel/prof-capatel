@@ -227,6 +227,13 @@ function renderLogsTable(records) {
         let verificationBadge = `<span class="badge badge-present">✓ ${r.match_confidence_pct}% Face Match</span>`;
         if (r.is_manual_override) {
             verificationBadge = `<span class="badge badge-amber" title="Override Reason: ${r.override_reason || 'N/A'} (By ${r.override_by || 'Admin'})"><i class="fa-solid fa-shield-check"></i> Manual Override</span>`;
+        } else if (r.is_self_attendance) {
+            verificationBadge = `<span class="badge badge-emerald" title="GPS Dist: ${r.geo_distance_meters !== null ? r.geo_distance_meters + 'm' : 'Verified'} • Lat: ${r.geo_latitude || 'N/A'}, Lon: ${r.geo_longitude || 'N/A'}"><i class="fa-solid fa-satellite-dish"></i> ${r.match_confidence_pct}% (GPS)</span>`;
+        }
+
+        let nodeBadge = `<span class="badge ${r.is_manual_override ? 'badge-amber' : 'badge-node'}">${r.node_id}</span>`;
+        if (r.is_self_attendance) {
+            nodeBadge = `<span class="badge badge-emerald" title="GPS Geofenced Check-in"><i class="fa-solid fa-mobile-screen"></i> ${r.geo_distance_meters !== null ? r.geo_distance_meters + 'm from Campus' : 'Self-Mobile'}</span>`;
         }
 
         return `
@@ -244,7 +251,7 @@ function renderLogsTable(records) {
                 <td>${roleBadge}</td>
                 <td>${r.department}</td>
                 <td><span class="badge badge-node">${r.class_semester || 'General'}</span></td>
-                <td><span class="badge ${r.is_manual_override ? 'badge-amber' : 'badge-node'}">${r.node_id}</span></td>
+                <td>${nodeBadge}</td>
                 <td>${r.timestamp}</td>
                 <td>${verificationBadge}</td>
             </tr>

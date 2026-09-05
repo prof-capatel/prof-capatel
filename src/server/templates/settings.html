@@ -184,6 +184,107 @@
                     </div>
                 </div>
 
+                <!-- Configurable Self-Attendance via Personal Device & Geofencing -->
+                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-primary);"></i> Self-Attendance & Geofencing
+                            </label>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">
+                                Allow students & staff to mark presence from personal smartphones with strict campus GPS validation
+                            </span>
+                        </div>
+                        
+                        <!-- Self-Attendance Toggle Switch -->
+                        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-card); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
+                            <span id="selfAttendanceStatusBadge" class="badge {% if branding and branding.enable_self_attendance %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 11px;">
+                                {% if branding and branding.enable_self_attendance %}ENABLED{% else %}DISABLED{% endif %}
+                            </span>
+                            <label style="position: relative; display: inline-block; width: 42px; height: 22px; margin-bottom: 0; cursor: pointer;">
+                                <input type="checkbox" id="brandSelfAttendanceToggle" {% if branding and branding.enable_self_attendance %}checked{% endif %} onchange="toggleSelfAttendanceControls(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <span id="selfToggleTrack" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: {% if branding and branding.enable_self_attendance %}var(--accent-emerald){% else %}var(--border-color){% endif %}; transition: .25s; border-radius: 22px;"></span>
+                                <span id="selfToggleKnob" style="position: absolute; height: 16px; width: 16px; left: {% if branding and branding.enable_self_attendance %}22px{% else %}3px{% endif %}; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Geofencing Configuration Container -->
+                    <div id="selfAttendanceConfigContainer" style="transition: all 0.25s; {% if not branding or not branding.enable_self_attendance %}opacity: 0.45; pointer-events: none;{% endif %}">
+                        <!-- GPS Coordinates Center -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                            <div>
+                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Campus Latitude (Center)</label>
+                                <input type="number" step="0.000001" id="brandGeoLatitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_latitude if branding and branding.geo_latitude is not none else '' }}" placeholder="e.g. 19.076090">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Campus Longitude (Center)</label>
+                                <input type="number" step="0.000001" id="brandGeoLongitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_longitude if branding and branding.geo_longitude is not none else '' }}" placeholder="e.g. 72.877426">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                            <button type="button" class="btn btn-secondary" style="font-size: 11.5px; padding: 6px 12px;" onclick="fetchAdminGpsLocation()">
+                                <i class="fa-solid fa-crosshairs" style="color: var(--accent-primary);"></i> Auto-Detect My Current GPS Location
+                            </button>
+                            <span id="gpsDetectStatus" style="font-size: 11px; color: var(--text-muted);"></span>
+                        </div>
+
+                        <!-- Geofence Radius Slider -->
+                        <div style="margin-bottom: 14px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Allowed Geofencing Radius:</label>
+                                <span id="geoRadiusBadge" class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
+                                    {{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }} Meters
+                                </span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <input type="range" id="geoRadiusSlider" min="10" max="2000" step="10" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" style="flex: 1; accent-color: var(--accent-primary);" oninput="updateGeoRadiusDisplay(this.value)">
+                                <input type="number" id="brandGeoRadius" class="form-control" style="width: 80px; text-align: center; font-weight: 700;" min="10" max="50000" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" oninput="updateGeoRadiusFromInput(this.value)">
+                                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">M</span>
+                            </div>
+                        </div>
+
+                        <!-- GPS Accuracy Gate & Face Confidence Slider -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                            <div>
+                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Max GPS Inaccuracy Tolerance:</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="number" id="brandGpsAccuracy" class="form-control" style="font-weight: 700;" min="5" max="200" value="{{ branding.max_gps_accuracy_meters|round(0)|int if branding and branding.max_gps_accuracy_meters is not none else 50 }}">
+                                    <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">± Meters (Option A: 50m)</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Biometric Match Threshold:</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="number" step="0.01" id="brandFaceThreshold" class="form-control" style="font-weight: 700;" min="0.30" max="0.70" value="{{ branding.self_attendance_face_threshold if branding and branding.self_attendance_face_threshold is not none else 0.52 }}">
+                                    <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">(0.52 Balanced)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Direct Student Link & Portal Access Box -->
+                        <div style="padding: 12px 14px; background: var(--bg-card); border: 1px dashed var(--accent-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">
+                                    <i class="fa-solid fa-link" style="color: var(--accent-primary);"></i> Self-Attendance Dedicated URL
+                                </strong>
+                                <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace;" id="selfAttendanceUrlSpan">
+                                    /self-attendance/{{ current_tenant.slug if current_tenant else 'default' }}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px;" onclick="copySelfAttendanceLink()">
+                                    <i class="fa-solid fa-copy"></i> Copy Link
+                                </button>
+                                <a href="/self-attendance/{{ current_tenant.slug if current_tenant else 'default' }}" target="_blank" class="btn btn-primary" style="font-size: 11px; padding: 5px 10px; text-decoration: none;">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Portal
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <input type="hidden" id="brandLivenessMode" value="{{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }}">
 
                 <button type="submit" id="btnSaveBranding" class="btn btn-primary" style="margin-top: 14px;">
@@ -620,6 +721,90 @@ function toggleAntiSpoofingControls(isEnabled) {
     }
 }
 
+function toggleSelfAttendanceControls(isEnabled) {
+    const badge = document.getElementById("selfAttendanceStatusBadge");
+    const container = document.getElementById("selfAttendanceConfigContainer");
+    const track = document.getElementById("selfToggleTrack");
+    const knob = document.getElementById("selfToggleKnob");
+
+    if (isEnabled) {
+        if (badge) {
+            badge.innerText = "ENABLED";
+            badge.className = "badge badge-present";
+        }
+        if (track) track.style.backgroundColor = "var(--accent-emerald)";
+        if (knob) knob.style.left = "22px";
+        if (container) {
+            container.style.opacity = "1";
+            container.style.pointerEvents = "auto";
+        }
+    } else {
+        if (badge) {
+            badge.innerText = "DISABLED";
+            badge.className = "badge badge-unknown";
+        }
+        if (track) track.style.backgroundColor = "var(--border-color)";
+        if (knob) knob.style.left = "3px";
+        if (container) {
+            container.style.opacity = "0.45";
+            container.style.pointerEvents = "none";
+        }
+    }
+}
+
+function updateGeoRadiusDisplay(val) {
+    const radius = Math.max(10, parseInt(val) || 150);
+    document.getElementById("brandGeoRadius").value = radius;
+    document.getElementById("geoRadiusBadge").innerText = `${radius} Meters`;
+}
+
+function updateGeoRadiusFromInput(val) {
+    let radius = parseInt(val) || 150;
+    radius = Math.max(10, Math.min(50000, radius));
+    document.getElementById("geoRadiusSlider").value = Math.min(2000, radius);
+    document.getElementById("geoRadiusBadge").innerText = `${radius} Meters`;
+}
+
+function fetchAdminGpsLocation() {
+    const statusEl = document.getElementById("gpsDetectStatus");
+    if (!navigator.geolocation) {
+        if (statusEl) statusEl.innerHTML = '<span style="color: var(--danger-color);">Geolocation not supported by browser.</span>';
+        return;
+    }
+
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching precise coordinates...';
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lon = pos.coords.longitude.toFixed(6);
+            const acc = pos.coords.accuracy.toFixed(1);
+            document.getElementById("brandGeoLatitude").value = lat;
+            document.getElementById("brandGeoLongitude").value = lon;
+            if (statusEl) {
+                statusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;"><i class="fa-solid fa-check"></i> Lat: ${lat}, Lon: ${lon} (±${acc}m)</span>`;
+            }
+        },
+        (err) => {
+            if (statusEl) {
+                statusEl.innerHTML = `<span style="color: var(--danger-color);">GPS Error: ${err.message}. Please allow location access.</span>`;
+            }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+function copySelfAttendanceLink() {
+    const span = document.getElementById("selfAttendanceUrlSpan");
+    if (!span) return;
+    const fullUrl = window.location.origin + span.innerText.trim();
+    navigator.clipboard.writeText(fullUrl).then(() => {
+        alert("Self-attendance portal URL copied to clipboard:\n" + fullUrl);
+    }).catch(() => {
+        prompt("Copy this URL:", fullUrl);
+    });
+}
+
 function resetBrandColor() {
     document.getElementById("brandAccentColorPicker").value = "#6366f1";
     document.getElementById("brandAccentColorText").value = "#6366f1";
@@ -640,6 +825,14 @@ async function saveBrandingDetails(e) {
     const temporalFrames = parseInt(document.getElementById("brandTemporalFrames").value) || 3;
     const audioChime = document.getElementById("brandAudioChime").checked;
     const hapticFeedback = document.getElementById("brandHapticFeedback").checked;
+    const enableSelfAttendance = document.getElementById("brandSelfAttendanceToggle").checked;
+    const rawLat = document.getElementById("brandGeoLatitude").value.trim();
+    const rawLon = document.getElementById("brandGeoLongitude").value.trim();
+    const geoLat = rawLat ? parseFloat(rawLat) : null;
+    const geoLon = rawLon ? parseFloat(rawLon) : null;
+    const geoRadius = parseFloat(document.getElementById("brandGeoRadius").value) || 150.0;
+    const gpsAccuracy = parseFloat(document.getElementById("brandGpsAccuracy").value) || 50.0;
+    const faceThreshold = parseFloat(document.getElementById("brandFaceThreshold").value) || 0.52;
 
     const saveBtn = document.getElementById("btnSaveBranding");
     const alertBox = document.getElementById("brandingSaveAlert");
@@ -664,6 +857,12 @@ async function saveBrandingDetails(e) {
                 temporal_frames_required: temporalFrames,
                 enable_audio_chime: audioChime,
                 enable_haptic_feedback: hapticFeedback,
+                enable_self_attendance: enableSelfAttendance,
+                geo_latitude: geoLat,
+                geo_longitude: geoLon,
+                geo_radius_meters: geoRadius,
+                max_gps_accuracy_meters: gpsAccuracy,
+                self_attendance_face_threshold: faceThreshold,
             }),
         });
         const data = await res.json();

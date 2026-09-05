@@ -110,6 +110,7 @@ class FaceEngine:
         custom_temporal_frames: Optional[int] = None,
         is_single_shot: bool = False,
         enable_anti_spoofing: Optional[bool] = None,
+        custom_distance_threshold: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """
         Takes a BGR image frame, detects all faces (using CPU-optimized scaled HOG),
@@ -173,7 +174,11 @@ class FaceEngine:
 
         results = []
         for location, encoding in zip(face_locations, detected_encodings):
-            match_info = self.match_encoding(encoding, tenant_id=tenant_id)
+            match_info = self.match_encoding(
+                encoding,
+                tenant_id=tenant_id,
+                custom_distance_threshold=custom_distance_threshold,
+            )
             box = {
                 "top": location[0],
                 "right": location[1],
@@ -226,13 +231,23 @@ class FaceEngine:
 
         return results
 
-    def match_encoding(self, target_encoding: np.ndarray, tenant_id: int = DEFAULT_TENANT_ID) -> Dict[str, Any]:
+    def match_encoding(
+        self,
+        target_encoding: np.ndarray,
+        tenant_id: int = DEFAULT_TENANT_ID,
+        custom_distance_threshold: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """
         Vectorized Euclidean distance matching against tenant's cached student matrix.
         Returns the closest matching student if within distance_threshold.
         """
         cached_vectors = self._tenant_vectors.get(tenant_id)
         cached_metadata = self._tenant_metadata.get(tenant_id)
+        effective_threshold = (
+            custom_distance_threshold
+            if custom_distance_threshold is not None
+            else self.distance_threshold
+        )
 
         if cached_vectors is None or len(cached_vectors) == 0:
             return {
@@ -255,7 +270,7 @@ class FaceEngine:
         # Confidence percentage mapping (0.0 distance = 100%, 0.6 distance = 0%)
         confidence_pct = max(0.0, min(100.0, round((1.0 - (min_dist / 0.60)) * 100, 1)))
 
-        if min_dist <= self.distance_threshold:
+        if min_dist <= effective_threshold:
             matched_meta = cached_metadata[best_idx]
             return {
                 "tenant_id": tenant_id,
@@ -265,7 +280,7 @@ class FaceEngine:
                 "department": matched_meta["department"],
                 "user_role": matched_meta.get("user_role", "student"),
                 "distance": round(min_dist, 4),
-                "threshold": self.distance_threshold,
+                "threshold": effective_threshold,
                 "confidence_pct": confidence_pct,
                 "is_match": True,
             }
@@ -281,7 +296,7 @@ class FaceEngine:
                 "closest_candidate_name": closest_meta["name"] if closest_meta else None,
                 "closest_candidate_roll": closest_meta["roll_number"] if closest_meta else None,
                 "distance": round(min_dist, 4),
-                "threshold": self.distance_threshold,
+                "threshold": effective_threshold,
                 "confidence_pct": 0.0,
                 "is_match": False,
             }

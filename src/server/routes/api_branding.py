@@ -31,6 +31,12 @@ class BrandingUpdateRequest(BaseModel):
     temporal_frames_required: Optional[int] = 3
     enable_audio_chime: Optional[bool] = True
     enable_haptic_feedback: Optional[bool] = True
+    enable_self_attendance: Optional[bool] = False
+    geo_latitude: Optional[float] = None
+    geo_longitude: Optional[float] = None
+    geo_radius_meters: Optional[float] = 150.0
+    max_gps_accuracy_meters: Optional[float] = 50.0
+    self_attendance_face_threshold: Optional[float] = 0.52
 
 
 def get_or_create_tenant_branding(db: Session, tenant_id: int, tenant_name: str = "FaceAttendance Campus") -> SystemBranding:
@@ -50,6 +56,12 @@ def get_or_create_tenant_branding(db: Session, tenant_id: int, tenant_name: str 
             temporal_frames_required=3,
             enable_audio_chime=True,
             enable_haptic_feedback=True,
+            enable_self_attendance=False,
+            geo_latitude=None,
+            geo_longitude=None,
+            geo_radius_meters=150.0,
+            max_gps_accuracy_meters=50.0,
+            self_attendance_face_threshold=0.52,
         )
         db.add(branding)
         db.commit()
@@ -111,6 +123,24 @@ def update_branding(
 
     if payload.enable_haptic_feedback is not None:
         branding.enable_haptic_feedback = bool(payload.enable_haptic_feedback)
+
+    if payload.enable_self_attendance is not None:
+        branding.enable_self_attendance = bool(payload.enable_self_attendance)
+
+    if payload.geo_latitude is not None:
+        branding.geo_latitude = float(payload.geo_latitude)
+
+    if payload.geo_longitude is not None:
+        branding.geo_longitude = float(payload.geo_longitude)
+
+    if payload.geo_radius_meters is not None:
+        branding.geo_radius_meters = max(10.0, min(50000.0, float(payload.geo_radius_meters)))
+
+    if payload.max_gps_accuracy_meters is not None:
+        branding.max_gps_accuracy_meters = max(5.0, min(500.0, float(payload.max_gps_accuracy_meters)))
+
+    if payload.self_attendance_face_threshold is not None:
+        branding.self_attendance_face_threshold = max(0.30, min(0.70, float(payload.self_attendance_face_threshold)))
 
     # Also sync Tenant name
     current_tenant.name = branding.institution_name

@@ -14,10 +14,8 @@ __pycache__/
 data/snapshots/
 data/crops/
 data/faces/
-data/ssl/
-data/*.sqlite3
-data/*.db
 graphify-out/
-
+scratch/
 .DS_Store
 Thumbs.db
+

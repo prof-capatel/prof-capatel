@@ -19,7 +19,7 @@ from src.database.models import (
     StudentBatchUpload,
 )
 from src.database.session import get_db
-from src.server.tenant_middleware import get_current_tenant
+from src.server.tenant_middleware import get_current_tenant, resolve_tenant
 from src.server.rbac_middleware import get_current_user_optional
 
 templates = Jinja2Templates(directory="src/server/templates")
@@ -459,5 +459,57 @@ def page_teacher_portal(
             "all_tenants": all_tenants,
             "classes": [c.to_dict() for c in classes],
             "current_user": current_user.to_dict() if current_user else None,
+        },
+    )
+
+
+@router.get("/self-attendance", response_class=HTMLResponse)
+def page_self_attendance_default(
+    request: Request,
+    db: Session = Depends(get_db),
+    fallback_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Public login-free self-attendance camera page for current/default tenant."""
+    branding = get_branding_dict(db, fallback_tenant.id)
+    is_enabled = bool(branding.get("enable_self_attendance", False))
+    is_geo_set = branding.get("geo_latitude") is not None and branding.get("geo_longitude") is not None
+
+    return templates.TemplateResponse(
+        "self_attendance.html",
+        {
+            "request": request,
+            "page_title": f"Self Attendance - {branding.get('institution_name', 'Campus')}",
+            "branding": branding,
+            "current_tenant": fallback_tenant.to_dict(),
+            "tenant_slug": fallback_tenant.slug,
+            "is_self_attendance_enabled": is_enabled,
+            "is_geofence_configured": is_geo_set,
+        },
+    )
+
+
+@router.get("/self-attendance/{tenant_slug}", response_class=HTMLResponse)
+def page_self_attendance_tenant(
+    tenant_slug: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    fallback_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Public login-free self-attendance camera page for specific institution slug."""
+    target_tenant = resolve_tenant(db, tenant_slug) or fallback_tenant
+    branding = get_branding_dict(db, target_tenant.id)
+    is_enabled = bool(branding.get("enable_self_attendance", False))
+    is_geo_set = branding.get("geo_latitude") is not None and branding.get("geo_longitude") is not None
+
+    return templates.TemplateResponse(
+        "self_attendance.html",
+        {
+            "request": request,
+            "page_title": f"Self Attendance - {branding.get('institution_name', 'Campus')}",
+            "branding": branding,
+            "current_tenant": target_tenant.to_dict(),
+            "tenant_slug": target_tenant.slug,
+            "is_self_attendance_enabled": is_enabled,
+            "is_geofence_configured": is_geo_set,
         },
     )

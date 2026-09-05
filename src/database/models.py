@@ -502,6 +502,10 @@ class AttendanceRecord(Base):
     is_manual_override = Column(Boolean, default=False, nullable=False)
     override_reason = Column(String(255), nullable=True)
     override_by = Column(String(100), nullable=True)
+    geo_latitude = Column(Float, nullable=True)
+    geo_longitude = Column(Float, nullable=True)
+    geo_distance_meters = Column(Float, nullable=True)
+    is_self_attendance = Column(Boolean, default=False, nullable=False)
 
     __table_args__ = (
         Index("ix_attendance_tenant_ts", "tenant_id", "timestamp"),
@@ -533,6 +537,10 @@ class AttendanceRecord(Base):
             "is_manual_override": bool(self.is_manual_override),
             "override_reason": self.override_reason,
             "override_by": self.override_by,
+            "geo_latitude": self.geo_latitude,
+            "geo_longitude": self.geo_longitude,
+            "geo_distance_meters": round(self.geo_distance_meters, 1) if self.geo_distance_meters is not None else None,
+            "is_self_attendance": bool(self.is_self_attendance),
         }
 
 
@@ -587,6 +595,12 @@ class SystemBranding(Base):
     temporal_frames_required = Column(Integer, default=3, nullable=False)
     enable_audio_chime = Column(Boolean, default=True, nullable=False)
     enable_haptic_feedback = Column(Boolean, default=True, nullable=False)
+    enable_self_attendance = Column(Boolean, default=False, nullable=False)
+    geo_latitude = Column(Float, nullable=True)
+    geo_longitude = Column(Float, nullable=True)
+    geo_radius_meters = Column(Float, default=150.0, nullable=False)
+    max_gps_accuracy_meters = Column(Float, default=50.0, nullable=False)
+    self_attendance_face_threshold = Column(Float, default=0.52, nullable=False)
     updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
 
     tenant = relationship("Tenant", back_populates="branding")
@@ -610,6 +624,12 @@ class SystemBranding(Base):
             "temporal_frames_required": self.temporal_frames_required if self.temporal_frames_required is not None else 3,
             "enable_audio_chime": bool(self.enable_audio_chime),
             "enable_haptic_feedback": bool(self.enable_haptic_feedback),
+            "enable_self_attendance": bool(self.enable_self_attendance if self.enable_self_attendance is not None else False),
+            "geo_latitude": self.geo_latitude,
+            "geo_longitude": self.geo_longitude,
+            "geo_radius_meters": float(self.geo_radius_meters if self.geo_radius_meters is not None else 150.0),
+            "max_gps_accuracy_meters": float(self.max_gps_accuracy_meters if self.max_gps_accuracy_meters is not None else 50.0),
+            "self_attendance_face_threshold": float(self.self_attendance_face_threshold if self.self_attendance_face_threshold is not None else 0.52),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
         }
 

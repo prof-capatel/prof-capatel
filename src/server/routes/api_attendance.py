@@ -3,7 +3,7 @@ from datetime import datetime, date, timedelta, time as dt_time
 import io
 import json
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, File, Form, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import pandas as pd
@@ -13,10 +13,13 @@ from openpyxl.styles import Font, PatternFill, Alignment
 
 from src.config import EXPORTS_DIR
 from src.core.attendance_manager import attendance_manager
+from src.core.camera_utils import decode_image_bytes
+from src.core.face_engine import face_engine
 from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant
 from src.database.session import get_db
-from src.server.tenant_middleware import get_current_tenant
+from src.server.tenant_middleware import get_current_tenant, resolve_tenant
 from src.server.rbac_middleware import check_tenant_operational_access
+from src.utils.geo_utils import validate_geofence, haversine_distance
 from src.utils.timezone import get_ist_now, get_ist_date
 
 router = APIRouter(prefix="/api/v1/attendance", tags=["Attendance Management"])
@@ -636,3 +639,207 @@ async def live_stream_events():
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/self-config")
+def get_self_attendance_config(
+    tenant_slug: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """
+    Returns public self-attendance and geofencing configuration for student camera view.
+    Does not require login.
+    """
+    target_tenant = current_tenant
+    if tenant_slug:
+        t = resolve_tenant(db, tenant_slug)
+        if t:
+            target_tenant = t
+
+    branding = target_tenant.branding
+    is_enabled = bool(branding.enable_self_attendance) if branding and branding.enable_self_attendance is not None else False
+    is_geo_set = branding is not None and branding.geo_latitude is not None and branding.geo_longitude is not None
+
+    return {
+        "status": "success",
+        "tenant_id": target_tenant.id,
+        "tenant_slug": target_tenant.slug,
+        "tenant_name": target_tenant.name,
+        "institution_name": branding.institution_name if branding else target_tenant.name,
+        "short_code": branding.short_code if branding else "FA-HUB",
+        "logo_url": f"/data/branding/{branding.logo_filename}" if branding and branding.logo_filename else None,
+        "primary_accent_color": branding.primary_accent_color if branding else "#6366f1",
+        "enable_self_attendance": is_enabled,
+        "is_configured": is_geo_set,
+        "geo_latitude": branding.geo_latitude if branding else None,
+        "geo_longitude": branding.geo_longitude if branding else None,
+        "geo_radius_meters": float(branding.geo_radius_meters) if (branding and branding.geo_radius_meters) else 150.0,
+        "max_gps_accuracy_meters": float(branding.max_gps_accuracy_meters) if (branding and branding.max_gps_accuracy_meters) else 50.0,
+        "face_threshold": float(branding.self_attendance_face_threshold) if (branding and branding.self_attendance_face_threshold) else 0.52,
+    }
+
+
+@router.post("/self-mark")
+async def self_mark_attendance(
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    accuracy: float = Form(...),
+    tenant_slug: Optional[str] = Form(None),
+    frame: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """
+    Frictionless Face-Based Self-Attendance via Personal Device:
+    1. Validates strict anti-mock HTML5 GPS geofence against campus coordinates.
+    2. Runs face detection & 1:N biometric similarity matching against active tenant's face vectors.
+    3. Enforces single-face policy, anti-spoofing liveness, and sliding deduplication window.
+    """
+    target_tenant = current_tenant
+    if tenant_slug:
+        t = resolve_tenant(db, tenant_slug)
+        if t:
+            target_tenant = t
+
+    # Tenant Operational Status check
+    check_tenant_operational_access(target_tenant)
+
+    branding = target_tenant.branding
+    if not branding or not branding.enable_self_attendance:
+        raise HTTPException(
+            status_code=403,
+            detail="Self-attendance is currently disabled by institution administration.",
+        )
+
+    if branding.geo_latitude is None or branding.geo_longitude is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Institution geofence coordinates have not been configured by the administrator.",
+        )
+
+    # 1. Geofence & GPS Accuracy Validation
+    max_radius = branding.geo_radius_meters if branding.geo_radius_meters is not None else 150.0
+    max_acc = branding.max_gps_accuracy_meters if branding.max_gps_accuracy_meters is not None else 50.0
+
+    is_valid_geo, dist_meters, geo_err = validate_geofence(
+        user_lat=latitude,
+        user_lon=longitude,
+        user_accuracy=accuracy,
+        target_lat=branding.geo_latitude,
+        target_lon=branding.geo_longitude,
+        max_radius_meters=max_radius,
+        max_accuracy_meters=max_acc,
+    )
+
+    if not is_valid_geo:
+        raise HTTPException(
+            status_code=403,
+            detail=geo_err or "GPS Geofence validation failed. You must be on campus premises.",
+        )
+
+    # 2. Read & Decode Camera Image
+    contents = await frame.read()
+    image_bgr = decode_image_bytes(contents)
+    if image_bgr is None:
+        raise HTTPException(status_code=400, detail="Invalid camera capture image.")
+
+    # 3. Biometric Face Detection & Recognition
+    enable_anti_spoof = True
+    if branding.enable_anti_spoofing is not None:
+        enable_anti_spoof = bool(branding.enable_anti_spoofing)
+    if branding.liveness_mode == "DISABLED":
+        enable_anti_spoof = False
+
+    face_thresh = branding.self_attendance_face_threshold if branding.self_attendance_face_threshold is not None else 0.52
+
+    try:
+        detections = face_engine.detect_and_recognize_faces(
+            image_bgr,
+            node_id="SELF-ATTENDANCE-MOBILE",
+            tenant_id=target_tenant.id,
+            is_single_shot=True,
+            enable_anti_spoofing=enable_anti_spoof,
+            custom_distance_threshold=face_thresh,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Biometric processing error: {str(e)}")
+
+    # 4. Strict Single-Face Only Gate (Decision 1 A)
+    if len(detections) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No face detected in camera frame. Please center your face inside the circle with clear lighting.",
+        )
+
+    if len(detections) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Multiple faces ({len(detections)}) detected. Only 1 person is allowed in the frame for self-attendance.",
+        )
+
+    det = detections[0]
+
+    # 5. Anti-Spoofing Gate
+    if not det.get("is_live", True):
+        reasons = ", ".join(det.get("liveness_reasons", ["Anti-spoof liveness check failed"]))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Liveness verification failed ({reasons}). Please look directly at the camera in natural lighting.",
+        )
+
+    # 6. Biometric Identity Match Gate
+    if not det.get("is_match", False) or det.get("student_id") is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Face not recognized in institution records. Please verify you are registered or contact admin.",
+        )
+
+    student_id = det["student_id"]
+    confidence_dist = det.get("distance", 1.0)
+    face_box = det.get("box")
+
+    # Cooldown window
+    custom_cooldown_secs = max(60, int((branding.cooldown_minutes or 60) * 60))
+
+    # 7. Persist Attendance Record
+    mark_res = attendance_manager.mark_attendance(
+        student_id=student_id,
+        node_id="SELF-ATTENDANCE-MOBILE",
+        confidence_distance=confidence_dist,
+        frame_bgr=image_bgr,
+        face_box=face_box,
+        tenant_id=target_tenant.id,
+        custom_cooldown_seconds=custom_cooldown_secs,
+        geo_latitude=latitude,
+        geo_longitude=longitude,
+        geo_distance_meters=dist_meters,
+        is_self_attendance=True,
+    )
+
+    if mark_res.get("cooldown_active"):
+        return {
+            "status": "cooldown",
+            "message": f"Attendance already recorded recently. Next check-in allowed in {mark_res['cooldown_remaining_minutes']} minutes.",
+            "cooldown_remaining_seconds": mark_res.get("cooldown_remaining_seconds", 0),
+            "student_name": det.get("name"),
+            "student_roll": det.get("roll_number"),
+            "distance_meters": dist_meters,
+        }
+
+    return {
+        "status": "success",
+        "message": f"Attendance successfully marked for {det.get('name')}!",
+        "student": {
+            "id": student_id,
+            "name": det.get("name"),
+            "roll_number": det.get("roll_number"),
+            "department": det.get("department"),
+            "user_role": det.get("user_role", "student"),
+        },
+        "confidence_pct": det.get("confidence_pct", 0.0),
+        "distance_meters": dist_meters,
+        "timestamp": mark_res["record"]["timestamp"],
+        "record": mark_res["record"],
+    }
+

@@ -139,6 +139,10 @@ class AttendanceManager:
         face_box: Optional[Dict[str, int]] = None,
         tenant_id: int = DEFAULT_TENANT_ID,
         custom_cooldown_seconds: Optional[int] = None,
+        geo_latitude: Optional[float] = None,
+        geo_longitude: Optional[float] = None,
+        geo_distance_meters: Optional[float] = None,
+        is_self_attendance: bool = False,
     ) -> Optional[Dict[str, Any]]:
         """
         Processes a recognized face:
@@ -179,6 +183,10 @@ class AttendanceManager:
                 confidence_distance=confidence_distance,
                 status="PRESENT",
                 snapshot_path=snapshot_rel_path,
+                geo_latitude=geo_latitude,
+                geo_longitude=geo_longitude,
+                geo_distance_meters=geo_distance_meters,
+                is_self_attendance=is_self_attendance,
             )
             db.add(record)
             db.flush()

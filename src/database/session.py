@@ -420,6 +420,57 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE system_branding ADD COLUMN enable_haptic_feedback BOOLEAN DEFAULT TRUE NOT NULL"))
 
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'enable_self_attendance'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN enable_self_attendance BOOLEAN DEFAULT FALSE NOT NULL"))
+                logger.info("Migrated system_branding table: added enable_self_attendance column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'geo_latitude'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN geo_latitude FLOAT NULL"))
+                logger.info("Migrated system_branding table: added geo_latitude column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'geo_longitude'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN geo_longitude FLOAT NULL"))
+                logger.info("Migrated system_branding table: added geo_longitude column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'geo_radius_meters'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN geo_radius_meters FLOAT DEFAULT 150.0 NOT NULL"))
+                logger.info("Migrated system_branding table: added geo_radius_meters column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'max_gps_accuracy_meters'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN max_gps_accuracy_meters FLOAT DEFAULT 50.0 NOT NULL"))
+                logger.info("Migrated system_branding table: added max_gps_accuracy_meters column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'self_attendance_face_threshold'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN self_attendance_face_threshold FLOAT DEFAULT 0.52 NOT NULL"))
+                logger.info("Migrated system_branding table: added self_attendance_face_threshold column.")
+
+            # 1b. Attendance Records geofencing columns
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'geo_latitude'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN geo_latitude FLOAT NULL"))
+                logger.info("Migrated attendance_records table: added geo_latitude column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'geo_longitude'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN geo_longitude FLOAT NULL"))
+                logger.info("Migrated attendance_records table: added geo_longitude column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'geo_distance_meters'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN geo_distance_meters FLOAT NULL"))
+                logger.info("Migrated attendance_records table: added geo_distance_meters column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'is_self_attendance'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN is_self_attendance BOOLEAN DEFAULT FALSE NOT NULL"))
+                logger.info("Migrated attendance_records table: added is_self_attendance column.")
+
             # 2. Tenants table subscription columns
             res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'subscription_plan'")).fetchall()
             if not res:
