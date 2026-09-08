@@ -121,6 +121,23 @@
                     alertBox.style.color = "var(--badge-emerald-text)";
                     alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
 
+                    // Store authentication tokens and cookies
+                    if (data.access_token) {
+                        document.cookie = "access_token=" + data.access_token + "; path=/; max-age=86400";
+                        localStorage.setItem("access_token", data.access_token);
+                    }
+                    if (data.user.role) {
+                        document.cookie = "active_role=" + data.user.role + "; path=/; max-age=86400";
+                        localStorage.setItem("user_role", data.user.role);
+                    }
+                    if (data.user.role === "SUPER_ADMIN") {
+                        document.cookie = "active_tenant_id=; path=/; max-age=0";
+                        localStorage.removeItem("active_tenant_id");
+                    } else if (data.user.tenant_id) {
+                        document.cookie = "active_tenant_id=" + data.user.tenant_id + "; path=/; max-age=86400";
+                        localStorage.setItem("active_tenant_id", data.user.tenant_id);
+                    }
+
                     // Redirect according to role
                     setTimeout(() => {
                         if (data.user.role === "SUPER_ADMIN") {
@@ -132,7 +149,7 @@
                         } else {
                             window.location.href = "/";
                         }
-                    }, 600);
+                    }, 400);
                 } else {
                     alertBox.style.display = "block";
                     alertBox.style.background = "var(--badge-rose-bg)";

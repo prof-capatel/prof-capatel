@@ -1,4 +1,6 @@
 import logging
+import uuid
+import secrets
 from contextlib import contextmanager
 import pymysql
 from sqlalchemy import create_engine, text
@@ -131,6 +133,7 @@ def seed_default_tenant_and_branding():
             if not default_tenant:
                 default_tenant = Tenant(
                     id=DEFAULT_TENANT_ID,
+                    uuid=str(uuid.uuid4()),
                     slug=DEFAULT_TENANT_SLUG,
                     name="FaceAttendance Campus",
                     contact_email="admin@campus.edu",
@@ -139,12 +142,31 @@ def seed_default_tenant_and_branding():
                     subscription_status="ACTIVE",
                     max_face_encodings=5000,
                     max_nodes=50,
+                    admin_token=secrets.token_urlsafe(32),
+                    onboarding_token=secrets.token_urlsafe(32),
+                    attendance_slug=secrets.token_urlsafe(24),
                 )
                 db.add(default_tenant)
                 db.flush()
                 logger.info(f"Seeded default Tenant #{DEFAULT_TENANT_ID} ('{DEFAULT_TENANT_SLUG}').")
+            else:
+                updated = False
+                if not default_tenant.uuid:
+                    default_tenant.uuid = str(uuid.uuid4())
+                    updated = True
+                if not default_tenant.admin_token:
+                    default_tenant.admin_token = secrets.token_urlsafe(32)
+                    updated = True
+                if not default_tenant.onboarding_token:
+                    default_tenant.onboarding_token = secrets.token_urlsafe(32)
+                    updated = True
+                if not default_tenant.attendance_slug:
+                    default_tenant.attendance_slug = secrets.token_urlsafe(24)
+                    updated = True
+                if updated:
+                    db.flush()
 
-            # 2. Default Branding
+            # 2. Default Branding (Warm Academic, Anti-Spoofing OFF, Self-Attendance OFF)
             branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == DEFAULT_TENANT_ID).first()
             if not branding:
                 branding = SystemBranding(
@@ -152,10 +174,12 @@ def seed_default_tenant_and_branding():
                     institution_name="FaceAttendance Campus",
                     short_code="FA-HUB",
                     tagline="Raspberry Pi Zero Edge Nodes & Central Face Recognition",
-                    primary_accent_color="#6366f1",
+                    primary_accent_color="#c2410c",
                     header_badge_text="Thin-Client Hub",
                     cooldown_minutes=60,
-                    enable_anti_spoofing=True,
+                    enable_anti_spoofing=False,
+                    liveness_mode="off",
+                    enable_self_attendance=False,
                 )
                 db.add(branding)
                 logger.info(f"Seeded default SystemBranding for Tenant #{DEFAULT_TENANT_ID}.")
@@ -471,7 +495,12 @@ def run_schema_migrations():
                 conn.execute(text("ALTER TABLE attendance_records ADD COLUMN is_self_attendance BOOLEAN DEFAULT FALSE NOT NULL"))
                 logger.info("Migrated attendance_records table: added is_self_attendance column.")
 
-            # 2. Tenants table subscription columns
+            # 2. Tenants table subscription & organization type columns
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'tenant_type'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN tenant_type VARCHAR(30) DEFAULT 'educational' NOT NULL"))
+                logger.info("Migrated tenants table: added tenant_type column.")
+
             res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'subscription_plan'")).fetchall()
             if not res:
                 conn.execute(text("ALTER TABLE tenants ADD COLUMN subscription_plan VARCHAR(30) DEFAULT 'STANDARD' NOT NULL"))
@@ -506,6 +535,46 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE tenants ADD COLUMN deleted_at DATETIME NULL"))
                 logger.info("Migrated tenants table: added deleted_at column.")
+
+            # 2b. Tenants table tokenized links columns & backfill
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'uuid'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN uuid VARCHAR(36) NULL"))
+                conn.execute(text("CREATE UNIQUE INDEX ix_tenants_uuid ON tenants(uuid)"))
+                logger.info("Migrated tenants table: added uuid column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'admin_token'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN admin_token VARCHAR(64) NULL"))
+                conn.execute(text("CREATE UNIQUE INDEX ix_tenants_admin_token ON tenants(admin_token)"))
+                logger.info("Migrated tenants table: added admin_token column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'onboarding_token'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN onboarding_token VARCHAR(64) NULL"))
+                conn.execute(text("CREATE UNIQUE INDEX ix_tenants_onboarding_token ON tenants(onboarding_token)"))
+                logger.info("Migrated tenants table: added onboarding_token column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'attendance_slug'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN attendance_slug VARCHAR(64) NULL"))
+                conn.execute(text("CREATE UNIQUE INDEX ix_tenants_attendance_slug ON tenants(attendance_slug)"))
+                logger.info("Migrated tenants table: added attendance_slug column.")
+
+            # Backfill any existing tenants with missing tokens
+            tenant_rows = conn.execute(text("SELECT id, uuid, admin_token, onboarding_token, attendance_slug FROM tenants")).fetchall()
+            for r in tenant_rows:
+                t_id = r[0]
+                t_uuid = r[1] or str(uuid.uuid4())
+                t_adm = r[2] or secrets.token_urlsafe(32)
+                t_onb = r[3] or secrets.token_urlsafe(32)
+                t_att = r[4] or secrets.token_urlsafe(24)
+                if not (r[1] and r[2] and r[3] and r[4]):
+                    conn.execute(
+                        text("UPDATE tenants SET uuid = :u, admin_token = :adm, onboarding_token = :onb, attendance_slug = :att WHERE id = :tid"),
+                        {"u": t_uuid, "adm": t_adm, "onb": t_onb, "att": t_att, "tid": t_id}
+                    )
+                    logger.info(f"Backfilled tokens & uuid for Tenant #{t_id}.")
 
             # 3. Classes table department_id column
             res = conn.execute(text("SHOW COLUMNS FROM classes LIKE 'department_id'")).fetchall()

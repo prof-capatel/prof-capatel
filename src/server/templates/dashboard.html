@@ -5,17 +5,17 @@
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-info">
-            <span>Enrolled Students</span>
+            <span>{% if is_corporate %}Total Enrolled Employees{% else %}Enrolled Students{% endif %}</span>
             <h3 id="statTotalStudents">{{ total_students }}</h3>
         </div>
         <div class="stat-icon purple">
-            <i class="fa-solid fa-users"></i>
+            <i class="fa-solid {% if is_corporate %}fa-users-gear{% else %}fa-users{% endif %}"></i>
         </div>
     </div>
 
     <div class="stat-card">
         <div class="stat-info">
-            <span>Present Today</span>
+            <span>{% if is_corporate %}Employees Present Today{% else %}Present Today{% endif %}</span>
             <h3 id="statPresentCount">0</h3>
         </div>
         <div class="stat-icon emerald">
@@ -135,6 +135,52 @@
                     </div>
                 {% endif %}
 
+                <!-- Direct Access & Corporate Gateways Card -->
+                <div style="margin-top: 12px; padding: 16px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 13px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-link" style="color: var(--accent-primary);"></i> Quick Access Gateways
+                        </span>
+                        {% if branding and branding.enable_self_attendance %}
+                            <span class="badge badge-present" style="font-size: 10px;">GEOFENCE ACTIVE</span>
+                        {% else %}
+                            <span class="badge badge-unknown" style="font-size: 10px;">SETUP IN SETTINGS</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Permanent Self-Attendance Check-In URL -->
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: flex; justify-content: space-between;">
+                            <span><i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> Daily Check-In URL:</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="dashCheckinUrl" readonly class="form-input" style="font-size: 11px; padding: 6px 8px; font-family: monospace; background: var(--bg-subtle);" value="{{ current_tenant.checkin_url or '/check-in/' ~ current_tenant.slug ~ '/corporate-checkin' }}">
+                            <button type="button" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" onclick="copyDashLink('dashCheckinUrl', this)" title="Copy Check-In Link">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                            <a id="dashCheckinOpen" href="{{ current_tenant.checkin_url or '/self-attendance/' ~ current_tenant.slug }}" target="_blank" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" title="Launch Check-In Portal">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Employee Self-Onboarding Link -->
+                    <div>
+                        <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">
+                            <i class="fa-solid fa-user-plus" style="color: #6366f1;"></i> Self-Onboarding Link:
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="dashOnboardUrl" readonly class="form-input" style="font-size: 11px; padding: 6px 8px; font-family: monospace; background: var(--bg-subtle);" value="{{ current_tenant.onboarding_url or '/onboard/' ~ (current_tenant.uuid or current_tenant.slug) ~ '/' ~ (current_tenant.onboarding_token or 'register') }}">
+                            <button type="button" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" onclick="copyDashLink('dashOnboardUrl', this)" title="Copy Onboarding Link">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                            <a id="dashOnboardOpen" href="{{ current_tenant.onboarding_url or '#' }}" target="_blank" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" title="Launch Onboarding Portal">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Quick Simulator Launch Guide -->
                 <div style="margin-top: 8px; padding: 16px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-sm); font-size: 12px;">
                     <div style="font-weight: 700; color: var(--accent-primary); margin-bottom: 6px;">
@@ -150,7 +196,6 @@
 
 {% block scripts %}
 <script>
-    // Fetch stats on page load
     async function loadStats() {
         try {
             const res = await fetch('/api/v1/attendance/stats');
@@ -171,5 +216,34 @@
         } catch (e) {}
     }
     loadStats();
+
+    // Copy Gateway Links with Full Origin
+    function copyDashLink(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        let fullUrl = input.value;
+        if (fullUrl.startsWith('/')) {
+            fullUrl = window.location.origin + fullUrl;
+        }
+        navigator.clipboard.writeText(fullUrl).then(() => {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+            }, 1800);
+        }).catch(err => {
+            console.error('Failed to copy link:', err);
+        });
+    }
+
+    // Format input fields with origin on load
+    document.addEventListener('DOMContentLoaded', () => {
+        ['dashCheckinUrl', 'dashOnboardUrl'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.value.startsWith('/')) {
+                el.value = window.location.origin + el.value;
+            }
+        });
+    });
 </script>
 {% endblock %}

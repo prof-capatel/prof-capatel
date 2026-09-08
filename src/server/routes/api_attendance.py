@@ -18,7 +18,7 @@ from src.core.face_engine import face_engine
 from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
-from src.server.rbac_middleware import check_tenant_operational_access
+from src.server.rbac_middleware import check_tenant_operational_access, create_access_token
 from src.utils.geo_utils import validate_geofence, haversine_distance
 from src.utils.timezone import get_ist_now, get_ist_date
 
@@ -108,6 +108,7 @@ def mark_manual_override(
 
 
 @router.get("/records")
+@router.get("/history")
 def get_attendance_records(
     date_str: Optional[str] = Query(None, description="Date filter YYYY-MM-DD"),
     roll_number: Optional[str] = Query(None, description="Filter by student roll number"),
@@ -169,16 +170,65 @@ def get_attendance_stats(
     start_today = datetime.combine(today, dt_time.min)
     end_today = datetime.combine(today, dt_time.max)
 
-    # Active student headcount in this tenant
-    total_students = (
-        db.query(Student)
-        .filter(
-            Student.tenant_id == current_tenant.id,
-            Student.is_active == True,
-            Student.user_role == "student",
+    tenant_type = (current_tenant.tenant_type or "educational").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+
+    # For corporate tenants, track active corporate workforce (role != 'student' or all active)
+    # For educational tenants, track active students (role == 'student')
+    if is_corporate:
+        target_role_filter = Student.user_role != "student"
+        total_members = (
+            db.query(Student)
+            .filter(
+                Student.tenant_id == current_tenant.id,
+                Student.is_active == True,
+                target_role_filter,
+            )
+            .count()
         )
-        .count()
-    )
+        if total_members == 0:
+            total_members = (
+                db.query(Student)
+                .filter(
+                    Student.tenant_id == current_tenant.id,
+                    Student.is_active == True,
+                )
+                .count()
+            )
+            target_role_filter = True
+
+        present_today = (
+            db.query(distinct(AttendanceRecord.student_id))
+            .join(Student, AttendanceRecord.student_id == Student.id)
+            .filter(
+                AttendanceRecord.tenant_id == current_tenant.id,
+                AttendanceRecord.timestamp.between(start_today, end_today),
+                target_role_filter,
+            )
+            .count()
+        )
+        member_label = "Employees"
+    else:
+        total_members = (
+            db.query(Student)
+            .filter(
+                Student.tenant_id == current_tenant.id,
+                Student.is_active == True,
+                Student.user_role == "student",
+            )
+            .count()
+        )
+        present_today = (
+            db.query(distinct(AttendanceRecord.student_id))
+            .join(Student, AttendanceRecord.student_id == Student.id)
+            .filter(
+                AttendanceRecord.tenant_id == current_tenant.id,
+                AttendanceRecord.timestamp.between(start_today, end_today),
+                Student.user_role == "student",
+            )
+            .count()
+        )
+        member_label = "Students"
 
     # Total registered profiles across all roles in this tenant
     total_all_users = (
@@ -186,18 +236,6 @@ def get_attendance_stats(
         .filter(
             Student.tenant_id == current_tenant.id,
             Student.is_active == True,
-        )
-        .count()
-    )
-
-    # Count unique students present today in this tenant
-    present_today = (
-        db.query(distinct(AttendanceRecord.student_id))
-        .join(Student, AttendanceRecord.student_id == Student.id)
-        .filter(
-            AttendanceRecord.tenant_id == current_tenant.id,
-            AttendanceRecord.timestamp.between(start_today, end_today),
-            Student.user_role == "student",
         )
         .count()
     )
@@ -220,11 +258,14 @@ def get_attendance_stats(
         .count()
     )
 
-    attendance_pct = round((present_today / total_students * 100), 1) if total_students > 0 else 0.0
+    attendance_pct = round((present_today / total_members * 100), 1) if total_members > 0 else 0.0
 
     return {
         "tenant_id": current_tenant.id,
-        "total_students": total_students,
+        "is_corporate": is_corporate,
+        "member_label": member_label,
+        "total_students": total_members,
+        "total_members": total_members,
         "total_all_users": total_all_users,
         "present_today": present_today,
         "attendance_percentage": attendance_pct,
@@ -249,24 +290,79 @@ def get_analytics_metrics(
     start_today = datetime.combine(today, dt_time.min)
     end_today = datetime.combine(today, dt_time.max)
 
-    # 1. Role Headcount Distribution for current tenant
-    students_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "student").count()
-    teachers_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "teacher").count()
-    staff_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "admin_staff").count()
-    other_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "other").count()
+    tenant_type = (current_tenant.tenant_type or "educational").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+    member_label = "Employees" if is_corporate else "Students"
 
-    # 2. Today's Student Turnout
+    # 1. Role Headcount Distribution for current tenant
+    if is_corporate:
+        employees_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role.in_(["employee", "contractor", "intern"])).count()
+        managers_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "manager").count()
+        staff_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "admin_staff").count()
+        other_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, ~Student.user_role.in_(["employee", "contractor", "intern", "manager", "admin_staff", "student"])).count()
+        
+        # If specific roles are not yet assigned, count all active as employees
+        if employees_count == 0 and managers_count == 0 and staff_count == 0:
+            employees_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True).count()
+
+        headcount = {
+            "employees": employees_count,
+            "managers": managers_count,
+            "staff": staff_count,
+            "other": other_count,
+            "students": employees_count,
+            "teachers": managers_count,
+            "total": employees_count + managers_count + staff_count + other_count,
+        }
+        tracked_filter = Student.user_role != "student"
+        tracked_query = db.query(Student).filter(
+            Student.tenant_id == current_tenant.id,
+            Student.is_active == True,
+            tracked_filter,
+        )
+        if tracked_query.count() == 0:
+            tracked_filter = True
+            tracked_query = db.query(Student).filter(
+                Student.tenant_id == current_tenant.id,
+                Student.is_active == True,
+            )
+        tracked_students = tracked_query.all()
+    else:
+        students_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "student").count()
+        teachers_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "teacher").count()
+        staff_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "admin_staff").count()
+        other_count = db.query(Student).filter(Student.tenant_id == current_tenant.id, Student.is_active == True, ~Student.user_role.in_(["student", "teacher", "admin_staff"])).count()
+
+        headcount = {
+            "students": students_count,
+            "teachers": teachers_count,
+            "staff": staff_count,
+            "other": other_count,
+            "employees": students_count,
+            "managers": teachers_count,
+            "total": students_count + teachers_count + staff_count + other_count,
+        }
+        tracked_filter = Student.user_role == "student"
+        tracked_students = db.query(Student).filter(
+            Student.tenant_id == current_tenant.id,
+            Student.is_active == True,
+            tracked_filter,
+        ).all()
+
+    primary_count = len(tracked_students)
+
+    # 2. Today's Turnout
     present_today = (
         db.query(distinct(AttendanceRecord.student_id))
         .join(Student, AttendanceRecord.student_id == Student.id)
         .filter(
             AttendanceRecord.tenant_id == current_tenant.id,
             AttendanceRecord.timestamp.between(start_today, end_today),
-            Student.user_role == "student",
+            tracked_filter,
         )
         .count()
     )
-    today_rate = round((present_today / students_count * 100), 1) if students_count > 0 else 0.0
+    today_rate = round((present_today / primary_count * 100), 1) if primary_count > 0 else 0.0
 
     # 3. Daily Attendance Trend for the last N days
     daily_trends = []
@@ -281,21 +377,24 @@ def get_analytics_metrics(
             .filter(
                 AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.timestamp.between(d_start, d_end),
-                Student.user_role == "student",
+                tracked_filter,
             )
             .count()
         )
-        rate = round((present_on_date / students_count * 100), 1) if students_count > 0 else 0.0
+        rate = round((present_on_date / primary_count * 100), 1) if primary_count > 0 else 0.0
 
         daily_trends.append({
+            "label": target_date.strftime("%b %d"),
             "date": target_date.strftime("%b %d"),
             "full_date": target_date.isoformat(),
             "present_count": present_on_date,
-            "total_students": students_count,
+            "total_students": primary_count,
+            "total_members": primary_count,
             "attendance_rate": rate,
+            "rate_pct": rate,
         })
 
-    # 4. Department Breakdown (Aggregated strictly for students in active tenant)
+    # 4. Department Breakdown (Aggregated strictly for tracked members in active tenant)
     dept_rows = (
         db.query(
             Student.department,
@@ -304,7 +403,7 @@ def get_analytics_metrics(
         .filter(
             Student.tenant_id == current_tenant.id,
             Student.is_active == True,
-            Student.user_role == "student",
+            tracked_filter,
         )
         .group_by(Student.department)
         .all()
@@ -319,7 +418,7 @@ def get_analytics_metrics(
                 AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.timestamp.between(start_today, end_today),
                 Student.department == dept_name,
-                Student.user_role == "student",
+                tracked_filter,
             )
             .count()
         )
@@ -327,27 +426,23 @@ def get_analytics_metrics(
         departments_summary.append({
             "department": dept_name or "General",
             "total_students": dept_total,
+            "total_members": dept_total,
             "present_today": dept_present_today,
             "turnout_percentage": dept_rate,
+            "rate_pct": dept_rate,
         })
 
-    # 5. Defaulter Identification (Students below threshold across unique attendance sessions)
+    # 5. Defaulter Identification (Members below threshold across unique attendance sessions)
     total_dates_recorded = (
         db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
         .filter(AttendanceRecord.tenant_id == current_tenant.id)
         .scalar()
     ) or 1
 
-    students_list = db.query(Student).filter(
-        Student.tenant_id == current_tenant.id,
-        Student.is_active == True,
-        Student.user_role == "student",
-    ).all()
-
     defaulters = []
     satisfactory_count = 0
 
-    for s in students_list:
+    for s in tracked_students:
         attended_days = (
             db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
             .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.student_id == s.id)
@@ -372,8 +467,10 @@ def get_analytics_metrics(
                 "student_id": s.id,
                 "name": s.name,
                 "roll_number": s.roll_number,
-                "department": s.department,
-                "class_semester": s.class_semester,
+                "employee_code": s.roll_number,
+                "department": s.department or "General",
+                "user_role": s.user_role or ("employee" if is_corporate else "student"),
+                "class_semester": "" if is_corporate else (s.class_semester or "General"),
                 "attended_days": attended_days,
                 "total_days": total_dates_recorded,
                 "attendance_pct": pct,
@@ -386,17 +483,15 @@ def get_analytics_metrics(
     return {
         "status": "success",
         "tenant_id": current_tenant.id,
+        "is_corporate": is_corporate,
+        "member_label": member_label,
         "defaulter_threshold": defaulter_threshold,
-        "headcount": {
-            "students": students_count,
-            "teachers": teachers_count,
-            "staff": staff_count,
-            "other": other_count,
-            "total": students_count + teachers_count + staff_count + other_count,
-        },
+        "headcount": headcount,
         "today_turnout": {
             "present_students": present_today,
-            "total_students": students_count,
+            "present_members": present_today,
+            "total_students": primary_count,
+            "total_members": primary_count,
             "turnout_pct": today_rate,
         },
         "daily_trends": daily_trends,
@@ -415,13 +510,16 @@ def export_compliance_report(
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Exports structured institutional compliance audit report in Excel or CSV format for active tenant."""
+    """Exports structured institutional/corporate compliance audit report in Excel or CSV format for active tenant."""
     total_dates_recorded = (
         db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
         .filter(AttendanceRecord.tenant_id == current_tenant.id)
         .scalar()
     ) or 1
     total_dates_recorded = max(1, total_dates_recorded)
+
+    tenant_type = (current_tenant.tenant_type or "educational").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
 
     students = (
         db.query(Student)
@@ -451,18 +549,31 @@ def export_compliance_report(
         pct = round((attended / total_dates_recorded * 100), 1) if total_dates_recorded > 0 else 0.0
         status_label = "COMPLIANT" if pct >= defaulter_threshold else "DEFAULTER"
 
-        rows.append({
-            "Student ID / Roll": s.roll_number,
-            "Full Name": s.name,
-            "Role": (s.user_role or "student").capitalize(),
-            "Department": s.department or "General",
-            "Class / Semester": s.class_semester or "General",
-            "Total Sessions Held": total_dates_recorded,
-            "Sessions Attended": attended,
-            "Manual Overrides Count": override_count,
-            "Attendance Percentage (%)": pct,
-            "Compliance Status": status_label,
-        })
+        if is_corporate:
+            rows.append({
+                "Employee Code / ID": s.roll_number,
+                "Full Name": s.name,
+                "Designation / Role": (s.user_role or "Employee").capitalize(),
+                "Department": s.department or "General",
+                "Working Days Recorded": total_dates_recorded,
+                "Days Present": attended,
+                "Manual Overrides Count": override_count,
+                "Attendance Percentage (%)": pct,
+                "Compliance Status": status_label,
+            })
+        else:
+            rows.append({
+                "Student ID / Roll": s.roll_number,
+                "Full Name": s.name,
+                "Role": (s.user_role or "student").capitalize(),
+                "Department": s.department or "General",
+                "Class / Semester": s.class_semester or "General",
+                "Total Sessions Held": total_dates_recorded,
+                "Sessions Attended": attended,
+                "Manual Overrides Count": override_count,
+                "Attendance Percentage (%)": pct,
+                "Compliance Status": status_label,
+            })
 
     df = pd.DataFrame(rows)
     today_str = get_ist_date().strftime("%Y%m%d")
@@ -474,8 +585,8 @@ def export_compliance_report(
 
     if export_format == "csv":
         csv_buffer = io.StringIO()
-        csv_buffer.write(f"# INSTITUTION: {inst_name} ({short_code})\n")
-        csv_buffer.write(f"# REPORT: Institutional Attendance Compliance Audit\n")
+        csv_buffer.write(f"# INSTITUTION / COMPANY: {inst_name} ({short_code})\n")
+        csv_buffer.write(f"# REPORT: {'Corporate Attendance & Workforce Compliance Audit' if is_corporate else 'Institutional Attendance Compliance Audit'}\n")
         csv_buffer.write(f"# DEFAULTER THRESHOLD: {defaulter_threshold}%\n")
         csv_buffer.write(f"# GENERATED (IST): {get_ist_now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         df.to_csv(csv_buffer, index=False)
@@ -487,13 +598,14 @@ def export_compliance_report(
         )
     else:
         excel_buffer = io.BytesIO()
+        sheet_title = "Workforce Compliance" if is_corporate else "Compliance Audit"
         with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Compliance Audit", startrow=4)
-            ws = writer.sheets["Compliance Audit"]
+            df.to_excel(writer, index=False, sheet_name=sheet_title, startrow=4)
+            ws = writer.sheets[sheet_title]
 
             # Header Banner styling
             ws.merge_cells("A1:K1")
-            ws["A1"] = f"{inst_name} ({short_code}) — Attendance Compliance Report"
+            ws["A1"] = f"{inst_name} ({short_code}) — {'Corporate Attendance Compliance Report' if is_corporate else 'Attendance Compliance Report'}"
             ws["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
             ws["A1"].fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
             ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
@@ -514,6 +626,10 @@ def export_compliance_report(
 @router.get("/export")
 def export_attendance_report(
     date_str: Optional[str] = Query(None, description="Filter date YYYY-MM-DD"),
+    roll_number: Optional[str] = Query(None, description="Filter by roll/employee number"),
+    department: Optional[str] = Query(None, description="Filter by department"),
+    user_role: Optional[str] = Query(None, description="Filter by user role"),
+    is_override: Optional[bool] = Query(None, description="Filter only manual overrides"),
     export_format: str = Query("csv", pattern="^(csv|xlsx)$"),
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
@@ -546,6 +662,18 @@ def export_attendance_report(
             query = query.filter(AttendanceRecord.timestamp.between(start_dt, end_dt))
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    if roll_number:
+        query = query.filter(Student.roll_number.ilike(f"%{roll_number.strip()}%"))
+
+    if department:
+        query = query.filter(Student.department == department.strip())
+
+    if user_role:
+        query = query.filter(Student.user_role == user_role.strip().lower())
+
+    if is_override is not None:
+        query = query.filter(AttendanceRecord.is_manual_override == is_override)
 
     results = query.all()
 
@@ -642,6 +770,7 @@ async def live_stream_events():
 
 
 @router.get("/self-config")
+@router.get("/geofence-config")
 def get_self_attendance_config(
     tenant_slug: Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -827,9 +956,18 @@ async def self_mark_attendance(
             "distance_meters": dist_meters,
         }
 
+    token = create_access_token(
+        user_id=student_id,
+        role=det.get("user_role", "STUDENT").upper(),
+        tenant_id=target_tenant.id,
+        username=det.get("roll_number") or f"student_{student_id}",
+    )
+
     return {
         "status": "success",
         "message": f"Attendance successfully marked for {det.get('name')}!",
+        "access_token": token,
+        "token_type": "bearer",
         "student": {
             "id": student_id,
             "name": det.get("name"),

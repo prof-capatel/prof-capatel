@@ -587,7 +587,8 @@
     </main>
 
     <script>
-        const TENANT_SLUG = "{{ tenant_slug }}";
+        const TENANT_SLUG = "{{ tenant_slug or '' }}";
+        const TENANT_UUID = "{{ tenant_uuid or '' }}";
         let campusConfig = null;
         let userLocation = null;
         let locationWatchId = null;
@@ -833,8 +834,9 @@
                 formData.append("latitude", userLocation.latitude);
                 formData.append("longitude", userLocation.longitude);
                 formData.append("accuracy", userLocation.accuracy);
-                if (TENANT_SLUG) {
-                    formData.append("tenant_slug", TENANT_SLUG);
+                const activeTenantParam = TENANT_UUID || TENANT_SLUG;
+                if (activeTenantParam) {
+                    formData.append("tenant_slug", activeTenantParam);
                 }
                 formData.append("frame", blob, "self_capture.jpg");
 
@@ -910,7 +912,8 @@
 
             // Fetch public self-attendance config
             try {
-                const query = TENANT_SLUG ? `?tenant_slug=${encodeURIComponent(TENANT_SLUG)}` : '';
+                const targetParam = TENANT_UUID || TENANT_SLUG;
+                const query = targetParam ? `?tenant_slug=${encodeURIComponent(targetParam)}` : '';
                 const res = await fetch(`/api/v1/attendance/self-config${query}`);
                 if (res.ok) {
                     const data = await res.json();

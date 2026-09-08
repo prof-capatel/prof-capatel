@@ -74,9 +74,9 @@ function handleNewAttendanceEvent(data) {
                     : `<span>${data.student_name ? data.student_name.charAt(0) : 'U'}</span>`}
             </div>
             <div>
-                <h4 style="font-size: 14px; font-weight: 700; color: var(--text-heading);">${data.student_name || "Unknown Student"}</h4>
+                <h4 style="font-size: 14px; font-weight: 700; color: var(--text-heading);">${data.student_name || "Unknown Member"}</h4>
                 <div style="font-size: 12px; color: var(--text-muted); display: flex; gap: 10px; margin-top: 2px;">
-                    <span>Roll: <strong>${data.roll_number || 'N/A'}</strong></span>
+                    <span>ID: <strong>${data.roll_number || 'N/A'}</strong></span>
                     <span>•</span>
                     <span>Node: <strong>${data.node_id}</strong></span>
                 </div>
@@ -222,7 +222,15 @@ function renderLogsTable(records) {
         let roleBadge = '<span class="badge badge-present">Student</span>';
         if (r.user_role === 'teacher') roleBadge = '<span class="badge badge-node">Faculty</span>';
         else if (r.user_role === 'admin_staff') roleBadge = '<span class="badge badge-amber">Admin Staff</span>';
+        else if (r.user_role === 'employee') roleBadge = '<span class="badge badge-present">Employee</span>';
+        else if (r.user_role === 'manager') roleBadge = '<span class="badge badge-node">Manager</span>';
+        else if (r.user_role === 'contractor') roleBadge = '<span class="badge badge-amber">Contractor</span>';
+        else if (r.user_role === 'intern') roleBadge = '<span class="badge badge-node">Intern</span>';
         else if (r.user_role === 'other') roleBadge = '<span class="badge badge-node">Other</span>';
+        else if (r.user_role) {
+            const formatted = r.user_role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            roleBadge = `<span class="badge badge-node">${formatted}</span>`;
+        }
 
         let verificationBadge = `<span class="badge badge-present">✓ ${r.match_confidence_pct}% Face Match</span>`;
         if (r.is_manual_override) {
@@ -242,14 +250,14 @@ function renderLogsTable(records) {
                 <td>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
-                            ${r.snapshot_path ? `<img src="/data/${r.snapshot_path}" alt="Face">` : `<span>${r.student_name.charAt(0)}</span>`}
+                            ${r.snapshot_path ? `<img src="/data/${r.snapshot_path}" alt="Face">` : `<span>${(r.student_name || 'U').charAt(0)}</span>`}
                         </div>
-                        <strong style="color: var(--text-heading);">${r.student_name}</strong>
+                        <strong style="color: var(--text-heading);">${r.student_name || 'Unknown'}</strong>
                     </div>
                 </td>
-                <td><code>${r.roll_number}</code></td>
+                <td><code>${r.roll_number || 'N/A'}</code></td>
                 <td>${roleBadge}</td>
-                <td>${r.department}</td>
+                <td>${r.department || 'N/A'}</td>
                 <td><span class="badge badge-node">${r.class_semester || 'General'}</span></td>
                 <td>${nodeBadge}</td>
                 <td>${r.timestamp}</td>
@@ -261,8 +269,16 @@ function renderLogsTable(records) {
 
 function exportData(format) {
     const dateInput = document.getElementById("filterDate")?.value || "";
+    const rollInput = document.getElementById("filterRoll")?.value || "";
+    const deptInput = document.getElementById("filterDept")?.value || "";
+    const roleInput = document.getElementById("filterRole")?.value || "";
+    const overrideInput = document.getElementById("filterOverride")?.value || "";
     let url = `/api/v1/attendance/export?export_format=${format}`;
     if (dateInput) url += `&date_str=${encodeURIComponent(dateInput)}`;
+    if (rollInput) url += `&roll_number=${encodeURIComponent(rollInput)}`;
+    if (deptInput) url += `&department=${encodeURIComponent(deptInput)}`;
+    if (roleInput) url += `&user_role=${encodeURIComponent(roleInput)}`;
+    if (overrideInput !== undefined && overrideInput !== "") url += `&is_override=${encodeURIComponent(overrideInput)}`;
     window.location.href = url;
 }
 

@@ -21,8 +21,8 @@
     <div class="card">
         <div class="card-header">
             <h3>
-                <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i>
-                <span>1. Student / Member Information</span>
+                <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-briefcase{% else %}fa-user-plus{% endif %}" style="color: var(--accent-primary);"></i>
+                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}1. Employee / Staff Information{% else %}1. Student / Member Information{% endif %}</span>
             </h3>
         </div>
         <div class="card-body">
@@ -30,16 +30,23 @@
                 <div class="form-group">
                     <label class="form-label">User Role *</label>
                     <select id="userRole" class="form-control" required onchange="onEnrollRoleChanged('webcam')">
+                        {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                        <option value="employee" selected>Employee / Staff Member</option>
+                        <option value="manager">Manager / Team Lead</option>
+                        <option value="admin_staff">Administrative Staff</option>
+                        <option value="contractor">Contractor / Other Member</option>
+                        {% else %}
                         <option value="student" selected>Student</option>
                         <option value="teacher">Teacher / Faculty</option>
                         <option value="admin_staff">Administrative Staff</option>
                         <option value="other">Other Institutional Member</option>
+                        {% endif %}
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Roll Number / Staff ID *</label>
-                    <input type="text" id="rollNumber" class="form-control" placeholder="e.g. CS2026-001 or EMP-101" required>
+                    <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID / Staff Code *{% else %}Roll Number / Staff ID *{% endif %}</label>
+                    <input type="text" id="rollNumber" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. EMP-101 or ENG-402{% else %}e.g. CS2026-001 or EMP-101{% endif %}" required>
                 </div>
 
                 <div class="form-group">
@@ -58,7 +65,8 @@
                     </select>
                 </div>
 
-                <!-- Cascading Class / Semester -->
+                {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
+                <!-- Cascading Class / Semester (Educational only) -->
                 <div class="form-group" id="enrollClassGroup">
                     <label class="form-label">Class / Semester <span id="enrollClassReqStar" style="color: var(--accent-rose);">*</span></label>
                     <select id="enrollClassSelect" class="form-control" required onchange="onEnrollClassChanged('webcam')">
@@ -69,7 +77,7 @@
                     </select>
                 </div>
 
-                <!-- Cascading Division -->
+                <!-- Cascading Division (Educational only) -->
                 <div class="form-group" id="enrollDivGroup">
                     <label class="form-label">Division / Section (Optional)</label>
                     <select id="enrollDivSelect" class="form-control">
@@ -79,6 +87,7 @@
                         {% endfor %}
                     </select>
                 </div>
+                {% endif %}
 
                 <div class="form-group">
                     <label class="form-label">Email Address (Optional)</label>
@@ -192,16 +201,23 @@
                     <div class="form-group">
                         <label class="form-label">User Role *</label>
                         <select id="batchUserRole" class="form-control" required onchange="onEnrollRoleChanged('batch')">
+                            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                            <option value="employee" selected>Employee / Staff Member</option>
+                            <option value="manager">Manager / Team Lead</option>
+                            <option value="admin_staff">Administrative Staff</option>
+                            <option value="contractor">Contractor / Other Member</option>
+                            {% else %}
                             <option value="student" selected>Student</option>
                             <option value="teacher">Teacher / Faculty</option>
                             <option value="admin_staff">Administrative Staff</option>
                             <option value="other">Other Institutional Member</option>
+                            {% endif %}
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Roll Number / Staff ID *</label>
-                        <input type="text" id="batchRollNumber" class="form-control" placeholder="e.g. CS2026-002 or EMP-102" required>
+                        <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID / Staff Code *{% else %}Roll Number / Staff ID *{% endif %}</label>
+                        <input type="text" id="batchRollNumber" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. EMP-102 or ENG-501{% else %}e.g. CS2026-002 or EMP-102{% endif %}" required>
                     </div>
 
                     <div class="form-group">
@@ -220,7 +236,8 @@
                         </select>
                     </div>
 
-                    <!-- Cascading Class / Semester -->
+                    {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
+                    <!-- Cascading Class / Semester (Educational only) -->
                     <div class="form-group" id="batchEnrollClassGroup">
                         <label class="form-label">Class / Semester <span id="batchEnrollClassReqStar" style="color: var(--accent-rose);">*</span></label>
                         <select id="batchEnrollClassSelect" class="form-control" required onchange="onEnrollClassChanged('batch')">
@@ -231,7 +248,7 @@
                         </select>
                     </div>
 
-                    <!-- Cascading Division -->
+                    <!-- Cascading Division (Educational only) -->
                     <div class="form-group" id="batchEnrollDivGroup">
                         <label class="form-label">Division / Section (Optional)</label>
                         <select id="batchEnrollDivSelect" class="form-control">
@@ -241,6 +258,7 @@
                             {% endfor %}
                         </select>
                     </div>
+                    {% endif %}
 
                     <div class="form-group">
                         <label class="form-label">Email Address (Optional)</label>

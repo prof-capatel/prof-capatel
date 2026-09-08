@@ -1,0 +1,11 @@
+{
+  "name": "FaceAttendance Auto-Checkin & History",
+  "short_name": "FaceAttendance",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#6366f1",
+  "description": "Lightweight Flutter Web App for Auto-Check-In and Attendance History",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}

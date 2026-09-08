@@ -5,11 +5,15 @@
     <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
         <div>
             <h3>
-                <i class="fa-solid fa-user-graduate" style="color: var(--accent-primary);"></i>
-                <span>Institutional Directory & Profile Management</span>
+                <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-users-gear{% else %}fa-user-graduate{% endif %}" style="color: var(--accent-primary);"></i>
+                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Corporate Directory & Employee Management{% else %}Institutional Directory & Profile Management{% endif %}</span>
             </h3>
             <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                Manage registered employees, team leads, and staff with department and role filters.
+                {% else %}
                 Manage registered students, faculty, and administrative personnel with cascading dropdown filters.
+                {% endif %}
             </p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -19,7 +23,7 @@
             </button>
             <a href="/enroll" class="btn btn-primary">
                 <i class="fa-solid fa-user-plus"></i>
-                <span>Enroll Profile</span>
+                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Enroll Employee{% else %}Enroll Profile{% endif %}</span>
             </a>
         </div>
     </div>
@@ -47,13 +51,13 @@
         </div>
         {% endif %}
 
-        <!-- Advanced Cascading Dropdown Filter Toolbar (No manual text inputs) -->
+        <!-- Advanced Filter Toolbar -->
         <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
                 <!-- Search Name / Roll -->
                 <div style="flex: 1.5; min-width: 180px;">
-                    <label class="form-label">Search Name or ID Number</label>
-                    <input type="text" id="dirSearchInput" class="form-control" placeholder="Search by name, roll number..." oninput="applyDirectoryFilters()">
+                    <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Search Name or Employee ID{% else %}Search Name or Roll Number{% endif %}</label>
+                    <input type="text" id="dirSearchInput" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Search by name, employee ID...{% else %}Search by name, roll number...{% endif %}" oninput="applyDirectoryFilters()">
                 </div>
 
                 <!-- 1. Department Dropdown Filter -->
@@ -67,7 +71,8 @@
                     </select>
                 </div>
 
-                <!-- 2. Class Dropdown Filter (Cascading) -->
+                {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
+                <!-- 2. Class Dropdown Filter (Cascading for Educational only) -->
                 <div style="flex: 1; min-width: 150px;">
                     <label class="form-label">Class / Grade</label>
                     <select id="dirClassFilter" class="form-control" onchange="onDirClassFilterChanged()">
@@ -78,7 +83,7 @@
                     </select>
                 </div>
 
-                <!-- 3. Division Dropdown Filter (Cascading) -->
+                <!-- 3. Division Dropdown Filter (Cascading for Educational only) -->
                 <div style="flex: 1; min-width: 140px;">
                     <label class="form-label">Division / Section</label>
                     <select id="dirDivFilter" class="form-control" onchange="applyDirectoryFilters()">
@@ -88,16 +93,24 @@
                         {% endfor %}
                     </select>
                 </div>
+                {% endif %}
 
                 <!-- 4. User Role Filter -->
                 <div style="flex: 1; min-width: 130px;">
                     <label class="form-label">User Role</label>
                     <select id="dirRoleFilter" class="form-control" onchange="applyDirectoryFilters()">
                         <option value="">All Roles</option>
+                        {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                        <option value="employee">Employees</option>
+                        <option value="manager">Managers / Leads</option>
+                        <option value="admin_staff">HR & Admin Staff</option>
+                        <option value="contractor">Contractors / Other</option>
+                        {% else %}
                         <option value="student">Students</option>
                         <option value="teacher">Faculty / Teachers</option>
                         <option value="admin_staff">Admin Staff</option>
                         <option value="other">Other Members</option>
+                        {% endif %}
                     </select>
                 </div>
 
@@ -121,10 +134,12 @@
                     <tr>
                         <th>ID</th>
                         <th>User Profile</th>
-                        <th>Roll / ID Number</th>
+                        <th>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID{% else %}Roll / ID Number{% endif %}</th>
                         <th>Role</th>
                         <th>Department</th>
+                        {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
                         <th>Class & Division</th>
+                        {% endif %}
                         <th>Enrolled Face Photos</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -158,12 +173,16 @@
                             </td>
                             <td><code id="stdRollLabel{{ s.id }}">{{ s.roll_number }}</code></td>
                             <td>
-                                {% if s.user_role == 'teacher' %}
+                                {% if s.user_role in ['teacher', 'faculty'] %}
                                     <span class="badge badge-node" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-chalkboard-user"></i> Faculty</span>
+                                {% elif s.user_role == 'manager' %}
+                                    <span class="badge badge-sky" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-gear"></i> Manager</span>
                                 {% elif s.user_role == 'admin_staff' %}
-                                    <span class="badge badge-amber" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-tie"></i> Admin Staff</span>
-                                {% elif s.user_role == 'other' %}
-                                    <span class="badge badge-node" id="stdRoleBadge{{ s.id }}">Other</span>
+                                    <span class="badge badge-amber" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-shield"></i> Admin Staff</span>
+                                {% elif s.user_role == 'employee' %}
+                                    <span class="badge badge-present" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-briefcase"></i> Employee</span>
+                                {% elif s.user_role in ['other', 'contractor'] %}
+                                    <span class="badge badge-node" id="stdRoleBadge{{ s.id }}">{{ s.user_role|capitalize }}</span>
                                 {% else %}
                                     <span class="badge badge-present" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-graduate"></i> Student</span>
                                 {% endif %}
@@ -171,9 +190,11 @@
                             <td id="stdDeptLabel{{ s.id }}">
                                 <span class="badge badge-indigo">{{ s.department }}</span>
                             </td>
+                            {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
                             <td id="stdClassLabel{{ s.id }}">
                                 <span class="badge badge-node">{{ s.class_name or s.class_semester or 'General' }}{% if s.division_name and s.division_name != 'N/A' %} &bull; {{ s.division_name }}{% endif %}</span>
                             </td>
+                            {% endif %}
                             <td>
                                 <div class="photo-thumb-strip">
                                     {% if s.photos and s.photos|length > 0 %}

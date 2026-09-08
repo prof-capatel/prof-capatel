@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Leaflet.js Interactive Map Engine -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <!-- Settings Header -->
 <div style="margin-bottom: 24px;">
     <h3 style="font-size: 20px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
@@ -211,15 +215,42 @@
 
                     <!-- Geofencing Configuration Container -->
                     <div id="selfAttendanceConfigContainer" style="transition: all 0.25s; {% if not branding or not branding.enable_self_attendance %}opacity: 0.45; pointer-events: none;{% endif %}">
-                        <!-- GPS Coordinates Center -->
+                        
+                        <!-- Interactive Map Location Picker -->
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                                <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 0;">
+                                    <i class="fa-solid fa-map-location-dot" style="color: var(--accent-emerald);"></i> Interactive Office Geofence Pin & Radar
+                                </label>
+                                <span id="mapPinStatusBadge" class="badge badge-subtle" style="font-size: 11px; font-weight: 600;">
+                                    <i class="fa-solid fa-satellite-dish"></i> Initializing GPS...
+                                </span>
+                            </div>
+
+                            <!-- Map Address Search -->
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <div style="position: relative; flex: 1;">
+                                    <input type="text" id="mapSearchInput" class="form-control" placeholder="Search office address, landmark, or city..." style="padding-left: 32px; font-size: 12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchMapLocation();}">
+                                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-muted);"></i>
+                                </div>
+                                <button type="button" class="btn btn-secondary" style="width: auto; font-size: 11.5px; padding: 0 14px;" onclick="searchMapLocation()">
+                                    <i class="fa-solid fa-search"></i> Search
+                                </button>
+                            </div>
+
+                            <!-- Map Container -->
+                            <div id="officeMapPicker" style="height: 250px; width: 100%; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); background: var(--bg-base); position: relative; z-index: 1;"></div>
+                        </div>
+
+                        <!-- GPS Coordinates Center Manual Entry -->
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div>
-                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Campus Latitude (Center)</label>
-                                <input type="number" step="0.000001" id="brandGeoLatitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_latitude if branding and branding.geo_latitude is not none else '' }}" placeholder="e.g. 19.076090">
+                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Latitude (Center)</label>
+                                <input type="number" step="0.000001" id="brandGeoLatitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_latitude if branding and branding.geo_latitude is not none else '' }}" placeholder="e.g. 19.076090" oninput="onManualCoordinateChange()">
                             </div>
                             <div>
-                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Campus Longitude (Center)</label>
-                                <input type="number" step="0.000001" id="brandGeoLongitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_longitude if branding and branding.geo_longitude is not none else '' }}" placeholder="e.g. 72.877426">
+                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Longitude (Center)</label>
+                                <input type="number" step="0.000001" id="brandGeoLongitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_longitude if branding and branding.geo_longitude is not none else '' }}" placeholder="e.g. 72.877426" oninput="onManualCoordinateChange()">
                             </div>
                         </div>
 
@@ -233,7 +264,7 @@
                         <!-- Geofence Radius Slider -->
                         <div style="margin-bottom: 14px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Allowed Geofencing Radius:</label>
+                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Allowed Geofencing Radius (Live Radar Circle):</label>
                                 <span id="geoRadiusBadge" class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
                                     {{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }} Meters
                                 </span>
@@ -251,7 +282,7 @@
                                 <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Max GPS Inaccuracy Tolerance:</label>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <input type="number" id="brandGpsAccuracy" class="form-control" style="font-weight: 700;" min="5" max="200" value="{{ branding.max_gps_accuracy_meters|round(0)|int if branding and branding.max_gps_accuracy_meters is not none else 50 }}">
-                                    <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">± Meters (Option A: 50m)</span>
+                                    <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">± Meters</span>
                                 </div>
                             </div>
                             <div>
@@ -263,23 +294,46 @@
                             </div>
                         </div>
 
-                        <!-- Direct Student Link & Portal Access Box -->
-                        <div style="padding: 12px 14px; background: var(--bg-card); border: 1px dashed var(--accent-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">
-                                    <i class="fa-solid fa-link" style="color: var(--accent-primary);"></i> Self-Attendance Dedicated URL
-                                </strong>
-                                <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace;" id="selfAttendanceUrlSpan">
-                                    /self-attendance/{{ current_tenant.slug if current_tenant else 'default' }}
-                                </span>
+                        <!-- Direct Access Link Cards -->
+                        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
+                            <!-- Permanent Self-Attendance Link -->
+                            <div style="padding: 12px 14px; background: var(--bg-card); border: 1px dashed var(--accent-emerald); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <strong style="font-size: 12.5px; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-mobile-screen" style="color: var(--accent-emerald);"></i> Permanent Daily Self-Attendance Check-In URL
+                                    </strong>
+                                    <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace;" id="selfAttendanceUrlSpan">
+                                        /check-in/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.attendance_slug if current_tenant and current_tenant.attendance_slug else '' }}
+                                    </span>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px;" onclick="copyPermanentCheckinLink()">
+                                        <i class="fa-solid fa-copy"></i> Copy Link
+                                    </button>
+                                    <a id="btnCheckinPortalOpen" href="/check-in/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.attendance_slug if current_tenant and current_tenant.attendance_slug else '' }}" target="_blank" class="btn btn-primary" style="font-size: 11px; padding: 5px 10px; text-decoration: none;">
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                                    </a>
+                                </div>
                             </div>
-                            <div style="display: flex; gap: 8px;">
-                                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px;" onclick="copySelfAttendanceLink()">
-                                    <i class="fa-solid fa-copy"></i> Copy Link
-                                </button>
-                                <a href="/self-attendance/{{ current_tenant.slug if current_tenant else 'default' }}" target="_blank" class="btn btn-primary" style="font-size: 11px; padding: 5px 10px; text-decoration: none;">
-                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Portal
-                                </a>
+
+                            <!-- Employee Onboarding Link -->
+                            <div style="padding: 12px 14px; background: var(--bg-card); border: 1px dashed var(--accent-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <strong style="font-size: 12.5px; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i> Employee Self-Onboarding Portal URL
+                                    </strong>
+                                    <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace;" id="employeeOnboardingUrlSpan">
+                                        /onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}
+                                    </span>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px;" onclick="copyEmployeeOnboardLink()">
+                                        <i class="fa-solid fa-copy"></i> Copy Link
+                                    </button>
+                                    <a id="btnOnboardPortalOpen" href="/onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px; text-decoration: none;">
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -606,6 +660,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     updateThemeSelectionCards();
     loadSavedSystemPreferences();
+    initOfficeMap();
 });
 
 function updateBrandingLivePreview() {
@@ -738,6 +793,9 @@ function toggleSelfAttendanceControls(isEnabled) {
             container.style.opacity = "1";
             container.style.pointerEvents = "auto";
         }
+        if (officeMap) {
+            setTimeout(() => officeMap.invalidateSize(), 200);
+        }
     } else {
         if (badge) {
             badge.innerText = "DISABLED";
@@ -752,17 +810,245 @@ function toggleSelfAttendanceControls(isEnabled) {
     }
 }
 
+// --- Interactive Leaflet Map Office Locator & Geofencing ---
+let officeMap = null;
+let officeMarker = null;
+let officeCircle = null;
+
+// Central Gujarat, India regional fallback coordinates
+const DEFAULT_FALLBACK_LAT = 23.022505;
+const DEFAULT_FALLBACK_LON = 72.571362;
+
+function setMapPinBadge(text, badgeClass = "badge-subtle", iconHtml = '<i class="fa-solid fa-location-dot"></i>') {
+    const badge = document.getElementById("mapPinStatusBadge");
+    if (!badge) return;
+    badge.className = `badge ${badgeClass}`;
+    badge.innerHTML = `${iconHtml} <span>${text}</span>`;
+}
+
+function initOfficeMap() {
+    const mapContainer = document.getElementById("officeMapPicker");
+    if (!mapContainer || typeof L === "undefined") return;
+
+    // Destroy existing map instance if already initialized to prevent leaks
+    if (officeMap) {
+        officeMap.remove();
+        officeMap = null;
+    }
+
+    const latInput = document.getElementById("brandGeoLatitude");
+    const lonInput = document.getElementById("brandGeoLongitude");
+    const radiusInput = document.getElementById("brandGeoRadius");
+
+    const rawLat = parseFloat(latInput ? latInput.value : "");
+    const rawLon = parseFloat(lonInput ? lonInput.value : "");
+    const radius = parseFloat(radiusInput ? radiusInput.value : "") || 150;
+
+    const hasSavedCoords = !isNaN(rawLat) && !isNaN(rawLon) && rawLat !== 0 && rawLon !== 0;
+
+    if (hasSavedCoords) {
+        // Option A: Preserve saved office coordinates if already configured in database
+        const initLat = rawLat;
+        const initLon = rawLon;
+
+        officeMap = L.map('officeMapPicker').setView([initLat, initLon], 16);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(officeMap);
+
+        officeMarker = L.marker([initLat, initLon], {
+            draggable: true,
+            title: "Office Geofence Center"
+        }).addTo(officeMap);
+
+        officeCircle = L.circle([initLat, initLon], {
+            radius: radius,
+            color: '#10b981',
+            fillColor: '#10b981',
+            fillOpacity: 0.18,
+            weight: 2
+        }).addTo(officeMap);
+
+        bindMapEvents();
+        setMapPinBadge("Saved Office Coordinates", "badge-present", '<i class="fa-solid fa-building"></i>');
+    } else {
+        // Unconfigured: Initialize immediately at Gujarat regional fallback and request live GPS
+        officeMap = L.map('officeMapPicker').setView([DEFAULT_FALLBACK_LAT, DEFAULT_FALLBACK_LON], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(officeMap);
+
+        officeMarker = L.marker([DEFAULT_FALLBACK_LAT, DEFAULT_FALLBACK_LON], {
+            draggable: true,
+            title: "Office Geofence Center"
+        }).addTo(officeMap);
+
+        officeCircle = L.circle([DEFAULT_FALLBACK_LAT, DEFAULT_FALLBACK_LON], {
+            radius: radius,
+            color: '#10b981',
+            fillColor: '#10b981',
+            fillOpacity: 0.18,
+            weight: 2
+        }).addTo(officeMap);
+
+        bindMapEvents();
+        setMapPinBadge("Detecting Live GPS...", "badge-node", '<i class="fa-solid fa-spinner fa-spin"></i>');
+
+        // Automatically query HTML5 browser geolocation to center live pin
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = parseFloat(pos.coords.latitude.toFixed(6));
+                    const lon = parseFloat(pos.coords.longitude.toFixed(6));
+                    const acc = parseFloat(pos.coords.accuracy.toFixed(1));
+
+                    if (latInput) latInput.value = lat;
+                    if (lonInput) lonInput.value = lon;
+
+                    if (officeMarker) officeMarker.setLatLng([lat, lon]);
+                    if (officeCircle) officeCircle.setLatLng([lat, lon]);
+                    if (officeMap) officeMap.flyTo([lat, lon], 16, { animate: true, duration: 1.2 });
+
+                    setMapPinBadge(`Auto-Centered to Live GPS (±${acc}m)`, "badge-present", '<i class="fa-solid fa-crosshairs" style="color: #10b981;"></i>');
+                    
+                    const statusEl = document.getElementById("gpsDetectStatus");
+                    if (statusEl) {
+                        statusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;"><i class="fa-solid fa-check"></i> Live GPS locked: ${lat}, ${lon} (±${acc}m)</span>`;
+                    }
+                },
+                (err) => {
+                    // Graceful fallback to Gujarat, India default
+                    if (latInput && !latInput.value) latInput.value = DEFAULT_FALLBACK_LAT.toFixed(6);
+                    if (lonInput && !lonInput.value) lonInput.value = DEFAULT_FALLBACK_LON.toFixed(6);
+
+                    setMapPinBadge("Gujarat, India (Fallback Default)", "badge-unknown", '<i class="fa-solid fa-location-dot"></i>');
+                    
+                    const statusEl = document.getElementById("gpsDetectStatus");
+                    if (statusEl) {
+                        statusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 11px;">GPS permission denied/unavailable. Using regional center default.</span>`;
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            );
+        } else {
+            if (latInput && !latInput.value) latInput.value = DEFAULT_FALLBACK_LAT.toFixed(6);
+            if (lonInput && !lonInput.value) lonInput.value = DEFAULT_FALLBACK_LON.toFixed(6);
+            setMapPinBadge("Gujarat, India (Geolocation Unsupported)", "badge-unknown", '<i class="fa-solid fa-location-dot"></i>');
+        }
+    }
+
+    // Invalidate map rendering size after DOM draw
+    setTimeout(() => {
+        if (officeMap) officeMap.invalidateSize();
+    }, 250);
+}
+
+function bindMapEvents() {
+    if (!officeMarker || !officeMap) return;
+
+    // Marker Drag Event -> Live update input values & circle position
+    officeMarker.on('drag', (e) => {
+        const pos = e.target.getLatLng();
+        updateCoordinatesFromMap(pos.lat, pos.lng);
+        setMapPinBadge("Pin Position Selected", "badge-node", '<i class="fa-solid fa-hand-pointer"></i>');
+    });
+
+    // Map Click Event -> Move marker to click point & update inputs
+    officeMap.on('click', (e) => {
+        officeMarker.setLatLng(e.latlng);
+        updateCoordinatesFromMap(e.latlng.lat, e.latlng.lng);
+        setMapPinBadge("Pin Position Selected", "badge-node", '<i class="fa-solid fa-hand-pointer"></i>');
+    });
+}
+
+function updateCoordinatesFromMap(lat, lon) {
+    const latInput = document.getElementById("brandGeoLatitude");
+    const lonInput = document.getElementById("brandGeoLongitude");
+    if (latInput) latInput.value = lat.toFixed(6);
+    if (lonInput) lonInput.value = lon.toFixed(6);
+    if (officeCircle) {
+        officeCircle.setLatLng([lat, lon]);
+    }
+}
+
+function onManualCoordinateChange() {
+    const latInput = document.getElementById("brandGeoLatitude");
+    const lonInput = document.getElementById("brandGeoLongitude");
+    if (!latInput || !lonInput) return;
+
+    const lat = parseFloat(latInput.value);
+    const lon = parseFloat(lonInput.value);
+
+    if (!isNaN(lat) && !isNaN(lon) && officeMap && officeMarker && officeCircle) {
+        officeMarker.setLatLng([lat, lon]);
+        officeCircle.setLatLng([lat, lon]);
+        officeMap.panTo([lat, lon]);
+        setMapPinBadge("Coordinates Manually Entered", "badge-node", '<i class="fa-solid fa-pen"></i>');
+    }
+}
+
 function updateGeoRadiusDisplay(val) {
     const radius = Math.max(10, parseInt(val) || 150);
-    document.getElementById("brandGeoRadius").value = radius;
-    document.getElementById("geoRadiusBadge").innerText = `${radius} Meters`;
+    const brandGeoRadius = document.getElementById("brandGeoRadius");
+    const geoRadiusBadge = document.getElementById("geoRadiusBadge");
+    if (brandGeoRadius) brandGeoRadius.value = radius;
+    if (geoRadiusBadge) geoRadiusBadge.innerText = `${radius} Meters`;
+    if (officeCircle) {
+        officeCircle.setRadius(radius);
+    }
 }
 
 function updateGeoRadiusFromInput(val) {
     let radius = parseInt(val) || 150;
     radius = Math.max(10, Math.min(50000, radius));
-    document.getElementById("geoRadiusSlider").value = Math.min(2000, radius);
-    document.getElementById("geoRadiusBadge").innerText = `${radius} Meters`;
+    const geoRadiusSlider = document.getElementById("geoRadiusSlider");
+    const geoRadiusBadge = document.getElementById("geoRadiusBadge");
+    if (geoRadiusSlider) geoRadiusSlider.value = Math.min(2000, radius);
+    if (geoRadiusBadge) geoRadiusBadge.innerText = `${radius} Meters`;
+    if (officeCircle) {
+        officeCircle.setRadius(radius);
+    }
+}
+
+async function searchMapLocation() {
+    const searchInput = document.getElementById("mapSearchInput");
+    if (!searchInput) return;
+    const query = searchInput.value.trim();
+    if (!query) return;
+
+    setMapPinBadge("Searching location...", "badge-node", '<i class="fa-solid fa-spinner fa-spin"></i>');
+
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+            const first = data[0];
+            const lat = parseFloat(first.lat);
+            const lon = parseFloat(first.lon);
+
+            const latInput = document.getElementById("brandGeoLatitude");
+            const lonInput = document.getElementById("brandGeoLongitude");
+            if (latInput) latInput.value = lat.toFixed(6);
+            if (lonInput) lonInput.value = lon.toFixed(6);
+
+            if (officeMap && officeMarker && officeCircle) {
+                officeMarker.setLatLng([lat, lon]);
+                officeCircle.setLatLng([lat, lon]);
+                officeMap.flyTo([lat, lon], 16, { animate: true, duration: 1.2 });
+            }
+            setMapPinBadge(`Found: ${query.substring(0, 24)}...`, "badge-present", '<i class="fa-solid fa-location-crosshairs"></i>');
+        } else {
+            setMapPinBadge("Location Not Found", "badge-unknown", '<i class="fa-solid fa-triangle-exclamation"></i>');
+            alert("No geographic locations found for: " + query);
+        }
+    } catch (err) {
+        setMapPinBadge("Search Service Unavailable", "badge-unknown", '<i class="fa-solid fa-triangle-exclamation"></i>');
+        alert("Location search failed. Please enter coordinates manually.");
+    }
 }
 
 function fetchAdminGpsLocation() {
@@ -772,37 +1058,66 @@ function fetchAdminGpsLocation() {
         return;
     }
 
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching precise coordinates...';
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching high-accuracy GPS coordinates...';
+    setMapPinBadge("Locating Live GPS...", "badge-node", '<i class="fa-solid fa-spinner fa-spin"></i>');
 
     navigator.geolocation.getCurrentPosition(
         (pos) => {
-            const lat = pos.coords.latitude.toFixed(6);
-            const lon = pos.coords.longitude.toFixed(6);
-            const acc = pos.coords.accuracy.toFixed(1);
-            document.getElementById("brandGeoLatitude").value = lat;
-            document.getElementById("brandGeoLongitude").value = lon;
+            const lat = parseFloat(pos.coords.latitude.toFixed(6));
+            const lon = parseFloat(pos.coords.longitude.toFixed(6));
+            const acc = parseFloat(pos.coords.accuracy.toFixed(1));
+
+            const latInput = document.getElementById("brandGeoLatitude");
+            const lonInput = document.getElementById("brandGeoLongitude");
+            if (latInput) latInput.value = lat;
+            if (lonInput) lonInput.value = lon;
+
+            if (officeMap && officeMarker && officeCircle) {
+                officeMarker.setLatLng([lat, lon]);
+                officeCircle.setLatLng([lat, lon]);
+                officeMap.flyTo([lat, lon], 16, { animate: true, duration: 1.0 });
+            }
+
+            setMapPinBadge(`Live GPS Locked (±${acc}m)`, "badge-present", '<i class="fa-solid fa-crosshairs" style="color: #10b981;"></i>');
+
             if (statusEl) {
                 statusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;"><i class="fa-solid fa-check"></i> Lat: ${lat}, Lon: ${lon} (±${acc}m)</span>`;
             }
         },
         (err) => {
+            setMapPinBadge("GPS Request Failed", "badge-unknown", '<i class="fa-solid fa-triangle-exclamation"></i>');
             if (statusEl) {
-                statusEl.innerHTML = `<span style="color: var(--danger-color);">GPS Error: ${err.message}. Please allow location access.</span>`;
+                statusEl.innerHTML = `<span style="color: var(--danger-color);">GPS Error: ${err.message}. Please check browser location permissions.</span>`;
             }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
 }
 
-function copySelfAttendanceLink() {
+function copyPermanentCheckinLink() {
     const span = document.getElementById("selfAttendanceUrlSpan");
     if (!span) return;
     const fullUrl = window.location.origin + span.innerText.trim();
     navigator.clipboard.writeText(fullUrl).then(() => {
-        alert("Self-attendance portal URL copied to clipboard:\n" + fullUrl);
+        alert("Permanent daily self-attendance URL copied to clipboard:\n" + fullUrl);
     }).catch(() => {
         prompt("Copy this URL:", fullUrl);
     });
+}
+
+function copyEmployeeOnboardLink() {
+    const span = document.getElementById("employeeOnboardingUrlSpan");
+    if (!span) return;
+    const fullUrl = window.location.origin + span.innerText.trim();
+    navigator.clipboard.writeText(fullUrl).then(() => {
+        alert("Employee self-onboarding portal URL copied to clipboard:\n" + fullUrl);
+    }).catch(() => {
+        prompt("Copy this URL:", fullUrl);
+    });
+}
+
+function copySelfAttendanceLink() {
+    copyPermanentCheckinLink();
 }
 
 function resetBrandColor() {

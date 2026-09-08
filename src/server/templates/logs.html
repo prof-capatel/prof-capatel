@@ -39,8 +39,8 @@
 
                 <!-- Search Roll / Name -->
                 <div style="flex: 1.2; min-width: 160px;">
-                    <label class="form-label">Search Roll / Name</label>
-                    <input type="text" id="filterRoll" class="form-control" placeholder="e.g. CS2026 or Jane">
+                    <label class="form-label">{% if is_corporate %}Search Code / Name{% else %}Search Roll / Name{% endif %}</label>
+                    <input type="text" id="filterRoll" class="form-control" placeholder="{% if is_corporate %}e.g. EMP101 or Jane{% else %}e.g. CS2026 or Jane{% endif %}">
                 </div>
 
                 <!-- Department Filter -->
@@ -48,12 +48,9 @@
                     <label class="form-label">Department</label>
                     <select id="filterDept" class="form-control">
                         <option value="">All Departments</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Information Technology">Information Technology</option>
-                        <option value="Artificial Intelligence">Artificial Intelligence</option>
-                        <option value="Electronics & Comm">Electronics & Comm</option>
-                        <option value="Mechanical Eng">Mechanical Eng</option>
-                        <option value="Administration">Administration</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}">{{ dept }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -62,10 +59,20 @@
                     <label class="form-label">User Role</label>
                     <select id="filterRole" class="form-control">
                         <option value="">All Roles</option>
-                        <option value="student">Students</option>
-                        <option value="teacher">Teachers</option>
-                        <option value="admin_staff">Admin Staff</option>
-                        <option value="other">Other Members</option>
+                        {% for role in tenant_roles %}
+                        <option value="{{ role }}">
+                            {% if role == 'student' %}Students
+                            {% elif role == 'teacher' %}Teachers / Faculty
+                            {% elif role == 'admin_staff' %}Admin Staff
+                            {% elif role == 'employee' %}Employees
+                            {% elif role == 'manager' %}Managers / Leads
+                            {% elif role == 'contractor' %}Contractors / External
+                            {% elif role == 'intern' %}Interns
+                            {% elif role == 'other' %}Other Members
+                            {% else %}{{ role|replace('_', ' ')|title }}
+                            {% endif %}
+                        </option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -94,10 +101,10 @@
                     <tr>
                         <th>Log ID</th>
                         <th>Member Profile</th>
-                        <th>Roll / ID Number</th>
+                        <th>{% if is_corporate %}Employee Code / ID{% else %}Roll / ID Number{% endif %}</th>
                         <th>Role</th>
                         <th>Department</th>
-                        <th>Class / Semester</th>
+                        <th>{% if is_corporate %}Team / Designation / Class{% else %}Class / Semester{% endif %}</th>
                         <th>Ingestion Node</th>
                         <th>Timestamp</th>
                         <th>Verification Status</th>

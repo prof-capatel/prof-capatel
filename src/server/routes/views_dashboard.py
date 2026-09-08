@@ -17,10 +17,12 @@ from src.database.models import (
     Division,
     AcademicYear,
     StudentBatchUpload,
+    AuditLog,
 )
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
-from src.server.rbac_middleware import get_current_user_optional
+from src.server.rbac_middleware import get_current_user_optional, create_access_token, check_tenant_login_access
+from src.utils.timezone import get_ist_now
 
 templates = Jinja2Templates(directory="src/server/templates")
 
@@ -40,9 +42,13 @@ def get_branding_dict(db: Session, tenant_id: int) -> dict:
         "tagline": "Raspberry Pi Zero Edge Nodes & Central Face Recognition",
         "logo_filename": None,
         "logo_url": None,
-        "primary_accent_color": "#6366f1",
+        "primary_accent_color": "#c2410c",
         "header_badge_text": "Thin-Client Hub",
         "contact_email": None,
+        "cooldown_minutes": 60,
+        "enable_anti_spoofing": False,
+        "liveness_mode": "off",
+        "enable_self_attendance": False,
     }
 
 
@@ -79,11 +85,29 @@ def page_dashboard(
     if current_user and current_user.role == "TEACHER":
         return RedirectResponse(url="/teacher-portal")
 
-    total_students = (
-        db.query(Student)
-        .filter(Student.tenant_id == current_tenant.id, Student.is_active == True)
-        .count()
-    )
+    tenant_type = (current_tenant.tenant_type or "educational").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+    member_label = "Employees" if is_corporate else "Students"
+
+    if is_corporate:
+        total_students = (
+            db.query(Student)
+            .filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role != "student")
+            .count()
+        )
+        if total_students == 0:
+            total_students = (
+                db.query(Student)
+                .filter(Student.tenant_id == current_tenant.id, Student.is_active == True)
+                .count()
+            )
+    else:
+        total_students = (
+            db.query(Student)
+            .filter(Student.tenant_id == current_tenant.id, Student.is_active == True, Student.user_role == "student")
+            .count()
+        )
+
     recent_logs = (
         db.query(AttendanceRecord)
         .filter(AttendanceRecord.tenant_id == current_tenant.id)
@@ -102,6 +126,8 @@ def page_dashboard(
             "page_title": "Live Overview",
             "active_page": "dashboard",
             "total_students": total_students,
+            "is_corporate": is_corporate,
+            "member_label": member_label,
             "recent_logs": [r.to_dict() for r in recent_logs],
             "nodes": [n.to_dict() for n in nodes],
             "branding": branding,
@@ -204,6 +230,54 @@ def page_logs(
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
 
+    # 1. Fetch tenant-scoped departments
+    dept_objs = (
+        db.query(Department)
+        .filter(Department.tenant_id == current_tenant.id)
+        .order_by(Department.name.asc())
+        .all()
+    )
+    dept_names = [d.name for d in dept_objs if d.name]
+
+    # Also grab any distinct student departments in this tenant
+    student_depts = [
+        s[0] for s in db.query(Student.department)
+        .filter(Student.tenant_id == current_tenant.id, Student.department.isnot(None), Student.department != "")
+        .distinct()
+        .all()
+        if s[0]
+    ]
+    seen_depts = set(dept_names)
+    for s_dept in student_depts:
+        if s_dept not in seen_depts:
+            dept_names.append(s_dept)
+            seen_depts.add(s_dept)
+
+    # 2. Determine tenant type & base roles
+    tenant_type = (current_tenant.tenant_type or "education").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+
+    if is_corporate:
+        base_roles = ["employee", "manager", "admin_staff", "contractor", "intern", "other"]
+    else:
+        base_roles = ["student", "teacher", "admin_staff", "other"]
+
+    # 3. Query distinct user roles stored for this tenant (supports custom tenant roles)
+    db_roles = [
+        r[0] for r in db.query(Student.user_role)
+        .filter(Student.tenant_id == current_tenant.id, Student.user_role.isnot(None), Student.user_role != "")
+        .distinct()
+        .all()
+        if r[0]
+    ]
+
+    seen_roles = set(base_roles)
+    combined_roles = list(base_roles)
+    for role in db_roles:
+        if role not in seen_roles:
+            combined_roles.append(role)
+            seen_roles.add(role)
+
     return templates.TemplateResponse(
         "logs.html",
         {
@@ -215,6 +289,9 @@ def page_logs(
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
             "current_user": current_user.to_dict() if current_user else None,
+            "departments": dept_names,
+            "tenant_roles": combined_roles,
+            "is_corporate": is_corporate,
         },
     )
 
@@ -252,21 +329,27 @@ def page_analytics(
     db: Session = Depends(get_db),
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Institutional Attendance Analytics & Defaulter Reports."""
+    """Institutional / Corporate Attendance Analytics & Defaulter Reports."""
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+
+    tenant_type = (current_tenant.tenant_type or "educational").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+    member_label = "Employees" if is_corporate else "Students"
 
     return templates.TemplateResponse(
         "analytics.html",
         {
             "request": request,
-            "page_title": "Attendance Analytics & Reports",
+            "page_title": "Workforce Analytics & Reports" if is_corporate else "Attendance Analytics & Reports",
             "active_page": "analytics",
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
             "current_user": current_user.to_dict() if current_user else None,
+            "is_corporate": is_corporate,
+            "member_label": member_label,
         },
     )
 
@@ -379,6 +462,11 @@ def page_super_admin(
 ):
     """Super Admin Control Plane & SaaS Tenant Management."""
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
+    
+    # Strictly enforce SUPER_ADMIN role; redirect to login otherwise
+    if not current_user or current_user.role != "SUPER_ADMIN":
+        return RedirectResponse("/login?next=/super-admin", status_code=303)
+
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
 
@@ -421,7 +509,7 @@ def page_academic_management(
         "academic_management.html",
         {
             "request": request,
-            "page_title": "Academic Management & Progression",
+            "page_title": "Departments & Teams" if current_tenant.tenant_type == "corporate" else "Academic Management & Progression",
             "active_page": "academic",
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
@@ -509,6 +597,190 @@ def page_self_attendance_tenant(
             "branding": branding,
             "current_tenant": target_tenant.to_dict(),
             "tenant_slug": target_tenant.slug,
+            "tenant_uuid": target_tenant.uuid or target_tenant.slug,
+            "attendance_slug": target_tenant.attendance_slug,
+            "is_self_attendance_enabled": is_enabled,
+            "is_geofence_configured": is_geo_set,
+        },
+    )
+
+
+# ==============================================================================
+# --- Tokenized Permanent Gateways (Passwordless Admin, Onboarding, Check-In) --
+# ==============================================================================
+
+@router.get("/auth/token-login/{tenant_uuid}/{admin_token}")
+def handle_passwordless_admin_login(
+    tenant_uuid: str,
+    admin_token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Passwordless Instant Tenant Admin Login via unique tokenized URL.
+    Validates tenant UUID and admin token, issues session cookies, and redirects to Dashboard.
+    """
+    tenant = db.query(Tenant).filter(
+        (Tenant.uuid == tenant_uuid) | (Tenant.slug == tenant_uuid),
+        Tenant.admin_token == admin_token,
+    ).first()
+
+    if not tenant:
+        return RedirectResponse(url="/login?error=invalid_admin_token", status_code=303)
+
+    if tenant.is_deleted or (tenant.subscription_status or "").upper() == "DELETED":
+        return RedirectResponse(url="/login?error=tenant_deactivated", status_code=303)
+
+    # Find or resolve primary TENANT_ADMIN user for this tenant
+    admin_user = db.query(User).filter(
+        User.tenant_id == tenant.id,
+        User.role == "TENANT_ADMIN",
+        User.is_active == True,
+    ).first()
+
+    if not admin_user:
+        # Fallback: search any active admin user in tenant
+        admin_user = db.query(User).filter(
+            User.tenant_id == tenant.id,
+            User.is_active == True,
+        ).first()
+
+    if not admin_user:
+        # Create default tenant admin if missing
+        admin_user = User(
+            tenant_id=tenant.id,
+            username=f"admin_{tenant.slug}",
+            email=tenant.contact_email or f"admin@{tenant.slug}.local",
+            password_hash=create_access_token(1, "TENANT_ADMIN", tenant.id, "temp"),
+            role="TENANT_ADMIN",
+            full_name=f"{tenant.name} Administrator",
+            is_active=True,
+        )
+        db.add(admin_user)
+        db.flush()
+
+    admin_user.last_login_at = get_ist_now()
+
+    token = create_access_token(
+        user_id=admin_user.id,
+        role="TENANT_ADMIN",
+        tenant_id=tenant.id,
+        username=admin_user.username,
+    )
+
+    # Record Audit Log
+    try:
+        audit = AuditLog(
+            tenant_id=tenant.id,
+            user_id=admin_user.id,
+            actor_name=admin_user.full_name,
+            actor_role="TENANT_ADMIN",
+            action_type="TOKEN_LOGIN",
+            target_type="USER",
+            target_id=str(admin_user.id),
+            description=f"Tenant Administrator '{admin_user.username}' logged in via perpetual tokenized link.",
+            ip_address=request.client.host if request.client else None,
+        )
+        db.add(audit)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie("access_token", token, httponly=True, max_age=86400 * 30, path="/")
+    response.set_cookie("active_role", "TENANT_ADMIN", httponly=False, max_age=86400 * 30, path="/")
+    response.set_cookie("active_tenant_id", str(tenant.id), httponly=False, max_age=86400 * 30, path="/")
+    return response
+
+
+@router.get("/onboard/{tenant_uuid}/{onboarding_token}", response_class=HTMLResponse)
+def page_employee_onboarding(
+    tenant_uuid: str,
+    onboarding_token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Public tokenized Employee Self-Onboarding Portal.
+    Allows new hires/students to register their profile and capture biometric face samples.
+    """
+    tenant = db.query(Tenant).filter(
+        (Tenant.uuid == tenant_uuid) | (Tenant.slug == tenant_uuid),
+        Tenant.onboarding_token == onboarding_token,
+        Tenant.is_deleted == False,
+    ).first()
+
+    if not tenant:
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "page_title": "Invalid Onboarding Link",
+                "error_message": "This employee onboarding link is invalid or has expired. Please contact your company administrator.",
+                "branding": get_branding_dict(db, 1),
+                "current_tenant": None,
+                "all_tenants": [],
+            },
+            status_code=403,
+        )
+
+    branding = get_branding_dict(db, tenant.id)
+    departments = db.query(Department).filter(Department.tenant_id == tenant.id).order_by(Department.name.asc()).all()
+    is_corporate = (tenant.tenant_type == "corporate")
+
+    return templates.TemplateResponse(
+        "onboard.html",
+        {
+            "request": request,
+            "page_title": f"Employee Onboarding - {tenant.name}",
+            "branding": branding,
+            "tenant": tenant.to_dict(),
+            "tenant_uuid": tenant_uuid,
+            "onboarding_token": onboarding_token,
+            "departments": [d.to_dict() for d in departments],
+            "is_corporate": is_corporate,
+        },
+    )
+
+
+@router.get("/check-in/{tenant_uuid}/{attendance_slug}", response_class=HTMLResponse)
+def page_permanent_self_attendance(
+    tenant_uuid: str,
+    attendance_slug: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Permanent tenant-specific self-attendance URL for daily employee check-ins.
+    Enforces GPS geofencing and frictionless face biometric recognition.
+    """
+    tenant = db.query(Tenant).filter(
+        (Tenant.uuid == tenant_uuid) | (Tenant.slug == tenant_uuid),
+        Tenant.attendance_slug == attendance_slug,
+        Tenant.is_deleted == False,
+    ).first()
+
+    if not tenant:
+        # Fallback check slug
+        tenant = resolve_tenant(db, tenant_uuid)
+
+    if not tenant:
+        return RedirectResponse(url="/login?error=invalid_checkin_url", status_code=303)
+
+    branding = get_branding_dict(db, tenant.id)
+    is_enabled = bool(branding.get("enable_self_attendance", False))
+    is_geo_set = branding.get("geo_latitude") is not None and branding.get("geo_longitude") is not None
+
+    return templates.TemplateResponse(
+        "self_attendance.html",
+        {
+            "request": request,
+            "page_title": f"Check-In - {branding.get('institution_name', tenant.name)}",
+            "branding": branding,
+            "current_tenant": tenant.to_dict(),
+            "tenant_slug": tenant.slug,
+            "tenant_uuid": tenant.uuid or tenant.slug,
+            "attendance_slug": tenant.attendance_slug,
             "is_self_attendance_enabled": is_enabled,
             "is_geofence_configured": is_geo_set,
         },

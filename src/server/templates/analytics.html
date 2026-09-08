@@ -6,14 +6,14 @@
     <div>
         <h3 style="font-size: 18px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
             <i class="fa-solid fa-chart-line" style="color: var(--accent-primary);"></i>
-            <span>Institutional Attendance Analytics & Defaulter Audit</span>
+            <span>{% if is_corporate %}Corporate Workforce Analytics & Attendance Audit{% else %}Institutional Attendance Analytics & Defaulter Audit{% endif %}</span>
         </h3>
         <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
-            Comprehensive attendance trends, department breakdowns, and automated compliance tracking.
+            {% if is_corporate %}Comprehensive workforce attendance trends, department breakdowns, and compliance audits.{% else %}Comprehensive attendance trends, department breakdowns, and automated compliance tracking.{% endif %}
         </p>
     </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="exportComplianceReport('xlsx')" class="btn btn-primary" title="Download Official Institutional Compliance Excel">
+        <button onclick="exportComplianceReport('xlsx')" class="btn btn-primary" title="Download Official Compliance Excel">
             <i class="fa-solid fa-file-excel"></i>
             <span>Compliance Excel (.xlsx)</span>
         </button>
@@ -32,23 +32,23 @@
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-info">
-            <span>Enrolled Students</span>
+            <span id="kpiLabelTotalMembers">{% if is_corporate %}Total Enrolled Employees{% else %}Enrolled Students{% endif %}</span>
             <h3 id="anaTotalStudents">--</h3>
             <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Active in Registry</div>
         </div>
         <div class="stat-icon purple">
-            <i class="fa-solid fa-user-graduate"></i>
+            <i class="fa-solid {% if is_corporate %}fa-users-gear{% else %}fa-user-graduate{% endif %}"></i>
         </div>
     </div>
 
     <div class="stat-card">
         <div class="stat-info">
-            <span>Faculty & Staff</span>
+            <span id="kpiLabelSecondaryStaff">{% if is_corporate %}Managers & Staff{% else %}Faculty & Staff{% endif %}</span>
             <h3 id="anaTotalStaff">--</h3>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Teachers & Admin</div>
+            <div id="kpiLabelSecondarySubtext" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">{% if is_corporate %}Management & Admins{% else %}Teachers & Admin{% endif %}</div>
         </div>
         <div class="stat-icon cyan">
-            <i class="fa-solid fa-chalkboard-user"></i>
+            <i class="fa-solid {% if is_corporate %}fa-user-tie{% else %}fa-chalkboard-user{% endif %}"></i>
         </div>
     </div>
 
@@ -65,7 +65,7 @@
 
     <div class="stat-card">
         <div class="stat-info">
-            <span>Defaulters Alert</span>
+            <span>{% if is_corporate %}Low Attendance Alert{% else %}Defaulters Alert{% endif %}</span>
             <h3 id="anaDefaultersCount" style="color: var(--accent-rose);">--</h3>
             <div id="anaThresholdLabel" style="font-size: 11px; color: var(--accent-rose); font-weight: 600; margin-top: 4px;">< 75% Attendance</div>
         </div>
@@ -82,7 +82,7 @@
         <div class="card-header">
             <h3>
                 <i class="fa-solid fa-chart-area" style="color: var(--accent-primary);"></i>
-                <span>Daily Attendance Trend</span>
+                <span>{% if is_corporate %}Daily Employee Attendance Trend{% else %}Daily Attendance Trend{% endif %}</span>
             </h3>
             <div style="display: flex; gap: 6px;">
                 <button id="btnTrend7" onclick="setTrendDays(7)" class="btn btn-primary" style="padding: 4px 10px; font-size: 11.5px;">7 Days</button>
@@ -118,10 +118,10 @@
         <div>
             <h3>
                 <i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-rose);"></i>
-                <span>Low Attendance Defaulters List</span>
+                <span id="defaulterTableTitle">{% if is_corporate %}Low Attendance Employees / Defaulters List{% else %}Low Attendance Defaulters List{% endif %}</span>
             </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Students whose overall attendance falls below the institutional minimum threshold.
+            <p id="defaulterTableSubtext" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                {% if is_corporate %}Employees whose overall attendance falls below the minimum required threshold.{% else %}Students whose overall attendance falls below the institutional minimum threshold.{% endif %}
             </p>
         </div>
 
@@ -145,11 +145,13 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th>Student Profile</th>
-                        <th>Roll Number</th>
+                        <th>{% if is_corporate %}Employee Profile{% else %}Student Profile{% endif %}</th>
+                        <th>{% if is_corporate %}Employee ID{% else %}Roll Number{% endif %}</th>
                         <th>Department</th>
+                        {% if not is_corporate %}
                         <th>Class / Semester</th>
-                        <th>Sessions Attended</th>
+                        {% endif %}
+                        <th>{% if is_corporate %}Days Present{% else %}Sessions Attended{% endif %}</th>
                         <th>Attendance Rate</th>
                         <th>Manual Overrides</th>
                         <th>Compliance Status</th>
@@ -158,7 +160,7 @@
                 </thead>
                 <tbody id="defaultersTableBody">
                     <tr>
-                        <td colspan="9" style="text-align: center; padding: 36px; color: var(--text-muted);">
+                        <td colspan="{% if is_corporate %}8{% else %}9{% endif %}" style="text-align: center; padding: 36px; color: var(--text-muted);">
                             <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading analytics data...
                         </td>
                     </tr>
@@ -185,14 +187,14 @@
         <form id="manualOverrideForm" onsubmit="submitManualOverride(event)">
             <div class="modal-body">
                 <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
-                    Force-marks student attendance with an authorized administrative audit tag.
+                    Force-marks {% if is_corporate %}employee{% else %}student{% endif %} attendance with an authorized administrative audit tag.
                 </p>
 
-                <!-- Student Selector -->
+                <!-- Member Selector -->
                 <div class="form-group">
-                    <label class="form-label">Select Student *</label>
+                    <label class="form-label">{% if is_corporate %}Select Employee *{% else %}Select Student *{% endif %}</label>
                     <select id="overrideStudentSelect" class="form-control" required>
-                        <option value="">-- Choose Student --</option>
+                        <option value="">-- Choose Member --</option>
                     </select>
                 </div>
 
@@ -209,7 +211,7 @@
                         <option value="Admin Manual Verification">Admin Manual Verification</option>
                         <option value="Medical Leave / Approved Exception">Medical Leave / Approved Exception</option>
                         <option value="Biometric Hardware Malfunction">Biometric Hardware Malfunction</option>
-                        <option value="Official Institutional Duty">Official Institutional Duty / Field Trip</option>
+                        <option value="Official Institutional Duty">Official Duty / Field Visit</option>
                         <option value="Custom">Other (Custom Reason)</option>
                     </select>
                 </div>
@@ -245,6 +247,7 @@ let currentThreshold = 75.0;
 let currentDays = 7;
 let trendChartInstance = null;
 let deptChartInstance = null;
+let isCorporateTenant = {% if is_corporate %}true{% else %}false{% endif %};
 
 document.addEventListener("DOMContentLoaded", () => {
     loadAnalyticsData();
@@ -262,20 +265,30 @@ async function loadAnalyticsData() {
         const data = await res.json();
 
         if (data.status === "success") {
+            if (data.is_corporate !== undefined) {
+                isCorporateTenant = Boolean(data.is_corporate);
+            }
+
             // 1. Render KPIs
-            document.getElementById("anaTotalStudents").innerText = data.headcount.students;
-            document.getElementById("anaTotalStaff").innerText = data.headcount.teachers + data.headcount.staff;
+            const primaryCount = data.headcount.employees !== undefined ? data.headcount.employees : data.headcount.students;
+            document.getElementById("anaTotalStudents").innerText = primaryCount;
+
+            const secondaryCount = isCorporateTenant 
+                ? ((data.headcount.managers || 0) + (data.headcount.staff || 0))
+                : ((data.headcount.teachers || 0) + (data.headcount.staff || 0));
+            document.getElementById("anaTotalStaff").innerText = secondaryCount;
+
             document.getElementById("anaTurnoutPct").innerText = `${data.today_turnout.turnout_pct}%`;
-            document.getElementById("anaTurnoutFraction").innerText = `${data.today_turnout.present_students} / ${data.today_turnout.total_students} Present Today`;
+            document.getElementById("anaTurnoutFraction").innerText = `${data.today_turnout.present_students || data.today_turnout.present_members || 0} / ${data.today_turnout.total_students || data.today_turnout.total_members || 0} Present Today`;
             document.getElementById("anaDefaultersCount").innerText = data.defaulter_count;
             document.getElementById("anaThresholdLabel").innerText = `< ${currentThreshold}% Attendance`;
 
             // 2. Render Charts
-            renderTrendChart(data.daily_trends);
+            renderTrendChart(data.daily_trends, isCorporateTenant);
             renderDeptChart(data.departments);
 
             // 3. Render Defaulters Table
-            renderDefaultersTable(data.defaulters, data.total_active_sessions);
+            renderDefaultersTable(data.defaulters, data.total_active_sessions, isCorporateTenant);
         }
     } catch (e) {
         console.error("Failed to load analytics:", e);
@@ -299,19 +312,19 @@ function applyNewThreshold() {
     }
 }
 
-function renderTrendChart(trends) {
+function renderTrendChart(trends, isCorp) {
     const ctx = document.getElementById("trendChartCanvas").getContext("2d");
     if (trendChartInstance) trendChartInstance.destroy();
 
-    const labels = trends.map(t => t.label);
-    const rates = trends.map(t => t.rate_pct);
+    const labels = trends.map(t => t.label || t.date);
+    const rates = trends.map(t => t.rate_pct !== undefined ? t.rate_pct : t.attendance_rate);
 
     trendChartInstance = new Chart(ctx, {
         type: "line",
         data: {
             labels: labels,
             datasets: [{
-                label: "Student Attendance (%)",
+                label: isCorp ? "Employee Attendance (%)" : "Student Attendance (%)",
                 data: rates,
                 borderColor: "#6366f1",
                 backgroundColor: "rgba(99, 102, 241, 0.12)",
@@ -353,7 +366,7 @@ function renderDeptChart(departments) {
     if (deptChartInstance) deptChartInstance.destroy();
 
     const labels = departments.map(d => d.department);
-    const rates = departments.map(d => d.rate_pct);
+    const rates = departments.map(d => d.rate_pct !== undefined ? d.rate_pct : d.turnout_percentage);
 
     deptChartInstance = new Chart(ctx, {
         type: "bar",
@@ -392,17 +405,19 @@ function renderDeptChart(departments) {
     });
 }
 
-function renderDefaultersTable(defaulters, totalSessions) {
+function renderDefaultersTable(defaulters, totalSessions, isCorp) {
     const tbody = document.getElementById("defaultersTableBody");
     if (!tbody) return;
+
+    const colSpanCount = isCorp ? 8 : 9;
 
     if (!defaulters || defaulters.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align: center; padding: 40px; color: var(--badge-emerald-text); background: var(--badge-emerald-bg);">
+                <td colspan="${colSpanCount}" style="text-align: center; padding: 40px; color: var(--badge-emerald-text); background: var(--badge-emerald-bg);">
                     <i class="fa-solid fa-circle-check" style="font-size: 28px; margin-bottom: 8px;"></i>
                     <h4 style="font-size: 15px; font-weight: 700;">Zero Low-Attendance Defaulters!</h4>
-                    <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">All active students currently meet or exceed the ${currentThreshold}% attendance minimum.</p>
+                    <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">All active ${isCorp ? 'employees' : 'students'} currently meet or exceed the ${currentThreshold}% attendance minimum.</p>
                 </td>
             </tr>
         `;
@@ -414,14 +429,14 @@ function renderDefaultersTable(defaulters, totalSessions) {
             <td>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
-                        <span>${d.name.charAt(0)}</span>
+                        <span>${d.name ? d.name.charAt(0) : 'U'}</span>
                     </div>
                     <strong style="color: var(--text-heading); font-size: 13.5px;">${d.name}</strong>
                 </div>
             </td>
-            <td><code>${d.roll_number}</code></td>
-            <td>${d.department}</td>
-            <td><span class="badge badge-node">${d.class_semester || 'General'}</span></td>
+            <td><code>${d.roll_number || d.employee_code || 'N/A'}</code></td>
+            <td>${d.department || 'General'}</td>
+            ${!isCorp ? `<td><span class="badge badge-node">${d.class_semester || 'General'}</span></td>` : ''}
             <td><strong>${d.attended_days}</strong> / ${d.total_days}</td>
             <td>
                 <div style="display: flex; align-items: center; gap: 8px;">

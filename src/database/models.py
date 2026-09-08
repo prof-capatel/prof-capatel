@@ -82,6 +82,7 @@ class Tenant(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     
     # SaaS Subscription & Quotas
+    tenant_type = Column(String(30), default="educational", nullable=False)     # educational, corporate
     subscription_plan = Column(String(30), default="STANDARD", nullable=False)   # FREE, STANDARD, ENTERPRISE
     subscription_status = Column(String(30), default="ACTIVE", nullable=False)   # ACTIVE, SUSPENDED, EXPIRED, DELETED
     max_face_encodings = Column(Integer, default=500, nullable=False)
@@ -90,6 +91,12 @@ class Tenant(Base):
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=get_ist_now)
+
+    # Tokenized Corporate & Direct Access Links
+    uuid = Column(String(36), unique=True, nullable=True, index=True)
+    admin_token = Column(String(64), unique=True, nullable=True, index=True)
+    onboarding_token = Column(String(64), unique=True, nullable=True, index=True)
+    attendance_slug = Column(String(64), unique=True, nullable=True, index=True)
 
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
@@ -107,10 +114,17 @@ class Tenant(Base):
     batch_uploads = relationship("StudentBatchUpload", back_populates="tenant", cascade="all, delete-orphan")
 
     def to_dict(self):
+        t_uuid = self.uuid or self.slug
+        admin_login_path = f"/auth/token-login/{t_uuid}/{self.admin_token}" if (t_uuid and self.admin_token) else None
+        onboarding_path = f"/onboard/{t_uuid}/{self.onboarding_token}" if (t_uuid and self.onboarding_token) else None
+        checkin_path = f"/check-in/{t_uuid}/{self.attendance_slug}" if (t_uuid and self.attendance_slug) else f"/self-attendance/{self.slug}"
+
         return {
             "id": self.id,
+            "uuid": self.uuid,
             "slug": self.slug,
             "name": self.name,
+            "tenant_type": self.tenant_type or "educational",
             "contact_email": self.contact_email,
             "is_active": self.is_active,
             "is_deleted": bool(self.is_deleted),
@@ -121,6 +135,12 @@ class Tenant(Base):
             "max_nodes": self.max_nodes or 10,
             "subscription_expires_at": self.subscription_expires_at.strftime("%Y-%m-%d") if self.subscription_expires_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "admin_token": self.admin_token,
+            "onboarding_token": self.onboarding_token,
+            "attendance_slug": self.attendance_slug,
+            "admin_login_url": admin_login_path,
+            "onboarding_url": onboarding_path,
+            "checkin_url": checkin_path,
             "enrolled_faces_count": len(self.face_encodings) if self.face_encodings else 0,
             "active_nodes_count": len(self.node_devices) if self.node_devices else 0,
             "students_count": len(self.students) if self.students else 0,
@@ -433,6 +453,7 @@ class Student(Base):
             "email": self.email,
             "phone_number": self.phone_number,
             "user_role": self.user_role or "student",
+            "role": self.user_role or "student",
             "class_semester": class_display,
             "class_id": self.class_id,
             "class_name": class_display,
@@ -586,12 +607,12 @@ class SystemBranding(Base):
     short_code = Column(String(30), default="FA-HUB", nullable=False)
     tagline = Column(String(255), default="Raspberry Pi Zero Edge Nodes & Central Face Recognition")
     logo_filename = Column(String(255), nullable=True)
-    primary_accent_color = Column(String(20), default="#6366f1")
+    primary_accent_color = Column(String(20), default="#c2410c")
     header_badge_text = Column(String(50), default="Thin-Client Hub")
     contact_email = Column(String(100), nullable=True)
     cooldown_minutes = Column(Integer, default=60, nullable=False)
-    enable_anti_spoofing = Column(Boolean, default=True, nullable=False)
-    liveness_mode = Column(String(20), default="BALANCED", nullable=False)
+    enable_anti_spoofing = Column(Boolean, default=False, nullable=False)
+    liveness_mode = Column(String(20), default="off", nullable=False)
     temporal_frames_required = Column(Integer, default=3, nullable=False)
     enable_audio_chime = Column(Boolean, default=True, nullable=False)
     enable_haptic_feedback = Column(Boolean, default=True, nullable=False)
@@ -615,12 +636,12 @@ class SystemBranding(Base):
             "tagline": self.tagline,
             "logo_filename": self.logo_filename,
             "logo_url": logo_url,
-            "primary_accent_color": self.primary_accent_color or "#6366f1",
+            "primary_accent_color": self.primary_accent_color or "#c2410c",
             "header_badge_text": self.header_badge_text or "Thin-Client Hub",
             "contact_email": self.contact_email,
             "cooldown_minutes": self.cooldown_minutes or 60,
-            "enable_anti_spoofing": bool(self.enable_anti_spoofing if self.enable_anti_spoofing is not None else True),
-            "liveness_mode": self.liveness_mode or "BALANCED",
+            "enable_anti_spoofing": bool(self.enable_anti_spoofing if self.enable_anti_spoofing is not None else False),
+            "liveness_mode": self.liveness_mode or "off",
             "temporal_frames_required": self.temporal_frames_required if self.temporal_frames_required is not None else 3,
             "enable_audio_chime": bool(self.enable_audio_chime),
             "enable_haptic_feedback": bool(self.enable_haptic_feedback),

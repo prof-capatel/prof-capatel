@@ -227,6 +227,15 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label" style="font-weight: 700;">Organization Type *</label>
+                    <select id="newTenantType" class="form-control" required>
+                        <option value="educational" selected>Educational (School / College / University)</option>
+                        <option value="corporate">Corporate (Company / Business Entity)</option>
+                    </select>
+                    <small style="color: var(--text-muted); font-size: 11.5px;">Corporate hides class/division subdivisions and streamlines hierarchy to departments only.</small>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label" style="font-weight: 700;">Contact Email</label>
                     <input type="email" id="newTenantEmail" class="form-control" placeholder="admin@stanford.edu">
                 </div>
@@ -312,6 +321,14 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Organization Type *</label>
+                    <select id="editTenantType" class="form-control" required>
+                        <option value="educational">Educational (School / College / University)</option>
+                        <option value="corporate">Corporate (Company / Business Entity)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Contact Email</label>
                     <input type="email" id="editTenantEmail" class="form-control">
                 </div>
@@ -367,6 +384,159 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 4: Reset Tenant Admin Password -->
+<div id="resetPasswordModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="max-width: 480px; width: 100%; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color);">
+            <h3 style="font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-key" style="color: var(--accent-amber);"></i>
+                <span>Reset Tenant Admin Password</span>
+            </h3>
+            <button type="button" onclick="closeResetPasswordModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 20px;">
+            <form id="resetPasswordForm" onsubmit="submitResetTenantPassword(event)">
+                <input type="hidden" id="resetTenantId">
+                
+                <div style="background: var(--bg-subtle); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px; font-size: 12.5px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span style="color: var(--text-muted);">Target Organization:</span>
+                        <span id="resetTenantName" style="font-weight: 700; color: var(--text-heading);">--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Tenant Admin Username:</span>
+                        <span id="resetAdminUsername" style="font-weight: 700; font-family: monospace; color: var(--accent-primary);">--</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700;">New Password *</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="resetNewPassword" class="form-control" placeholder="Enter new password (min 6 chars)" minlength="6" required style="font-family: monospace;">
+                        <button type="button" class="btn btn-secondary" onclick="generateRandomAdminPassword()" title="Generate Random Secure Password" style="white-space: nowrap; font-size: 12px; padding: 0 12px;">
+                            <i class="fa-solid fa-dice"></i> Generate
+                        </button>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 11px;">The new password will take effect immediately for this administrator.</small>
+                </div>
+
+                <div id="resetPasswordAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Cancel</button>
+                    <button type="submit" id="btnSubmitResetPassword" class="btn btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #d97706; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                        <i class="fa-solid fa-lock"></i> Set New Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 5: Tokenized Corporate & Direct Access Links -->
+<div id="tenantLinksModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="max-width: 620px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(16, 185, 129, 0.1), transparent);">
+            <div>
+                <h3 style="font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-link" style="color: var(--accent-emerald);"></i>
+                    <span>Tokenized Access URLs</span>
+                    <span id="linksTenantTypeBadge" class="badge badge-emerald" style="font-size: 10.5px;">Corporate</span>
+                </h3>
+                <p id="linksTenantSubtitle" style="font-size: 12px; color: var(--text-muted); margin: 3px 0 0 0;">Organization Access & Gateways</p>
+            </div>
+            <button type="button" onclick="closeTenantLinksModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 20px;">
+            <input type="hidden" id="currentLinksTenantId">
+
+            <!-- Link 1: Passwordless Admin Login -->
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-key" style="color: var(--accent-emerald);"></i>
+                        <span>1. Passwordless Tenant Admin Login URL</span>
+                    </span>
+                    <span class="badge badge-present" style="font-size: 10px;">Perpetual Token</span>
+                </div>
+                <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+                    Allows the tenant administrator to log in instantly without entering credentials.
+                </p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="linkAdminLoginInput" class="form-control" readonly style="font-family: monospace; font-size: 11.5px; background: var(--bg-card);">
+                    <button type="button" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px;" onclick="copyLinkInput('linkAdminLoginInput', this)">
+                        <i class="fa-solid fa-copy"></i> Copy
+                    </button>
+                    <a id="linkAdminLoginLaunch" href="#" target="_blank" class="btn btn-primary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px; text-decoration: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                    </a>
+                </div>
+            </div>
+
+            <!-- Link 2: Employee Self-Onboarding -->
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i>
+                        <span>2. Employee Self-Onboarding Portal URL</span>
+                    </span>
+                    <span class="badge badge-sky" style="font-size: 10px;">Shared Portal</span>
+                </div>
+                <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+                    Share with new hires for initial profile registration and biometric camera face capture.
+                </p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="linkOnboardingInput" class="form-control" readonly style="font-family: monospace; font-size: 11.5px; background: var(--bg-card);">
+                    <button type="button" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px;" onclick="copyLinkInput('linkOnboardingInput', this)">
+                        <i class="fa-solid fa-copy"></i> Copy
+                    </button>
+                    <a id="linkOnboardingLaunch" href="#" target="_blank" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px; text-decoration: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                    </a>
+                </div>
+            </div>
+
+            <!-- Link 3: Permanent Daily Check-In -->
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-cyan);"></i>
+                        <span>3. Permanent Daily Self-Attendance Check-In URL</span>
+                    </span>
+                    <span class="badge badge-emerald" style="font-size: 10px;">Daily Check-In</span>
+                </div>
+                <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+                    Shared with employees to bookmark on smartphones. Validates GPS geofence + live camera face match.
+                </p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="linkCheckinInput" class="form-control" readonly style="font-family: monospace; font-size: 11.5px; background: var(--bg-card);">
+                    <button type="button" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px;" onclick="copyLinkInput('linkCheckinInput', this)">
+                        <i class="fa-solid fa-copy"></i> Copy
+                    </button>
+                    <a id="linkCheckinLaunch" href="#" target="_blank" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px; text-decoration: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                    </a>
+                </div>
+            </div>
+
+            <div id="linksModalAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <button type="button" class="btn btn-secondary" style="font-size: 11.5px; color: var(--accent-rose);" onclick="triggerRegenerateTokens()">
+                    <i class="fa-solid fa-rotate"></i> Rotate Security Tokens
+                </button>
+                <button type="button" class="btn btn-primary" onclick="closeTenantLinksModal()" style="font-size: 12px; padding: 8px 18px;">
+                    Done
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -692,18 +862,26 @@
             const faceColor = facePct > 90 ? 'var(--accent-rose)' : (facePct > 75 ? 'var(--accent-amber)' : 'var(--accent-emerald)');
             const nodeColor = nodePct > 90 ? 'var(--accent-rose)' : (nodePct > 75 ? 'var(--accent-amber)' : 'var(--accent-cyan)');
 
+            const isCorporate = (t.tenant_type === 'corporate');
+            const typeBadgeHtml = isCorporate
+                ? `<span class="badge badge-emerald" style="font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-building"></i> Company</span>`
+                : `<span class="badge badge-sky" style="font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-graduation-cap"></i> School / College</span>`;
+
             const rowStyle = isDeleted ? 'background: rgba(244, 63, 94, 0.04); opacity: 0.75;' : (isSuspended ? 'background: rgba(245, 158, 11, 0.03);' : '');
 
             return `
                 <tr style="${rowStyle} border-bottom: 1px solid var(--border-subtle); transition: background 0.15s ease;">
                     <td style="padding: 14px 16px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: var(--accent-primary);">
+                            <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: ${isCorporate ? 'var(--accent-emerald)' : 'var(--accent-primary)'};">
                                 ${t.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <div style="font-weight: 700; color: var(--text-heading); font-size: 13.5px;">${t.name}</div>
-                                <div style="font-size: 11px; font-family: monospace; color: var(--text-muted); margin-top: 1px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-weight: 700; color: var(--text-heading); font-size: 13.5px;">${t.name}</span>
+                                    ${typeBadgeHtml}
+                                </div>
+                                <div style="font-size: 11px; font-family: monospace; color: var(--text-muted); margin-top: 2px;">
                                     ID #${t.id} &bull; <span style="color: var(--accent-primary); font-weight: 600;">${t.slug}</span>
                                 </div>
                             </div>
@@ -747,6 +925,9 @@
 
                     <td style="padding: 14px 16px; text-align: right;">
                         <div style="display: inline-flex; gap: 6px; align-items: center;">
+                            <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--accent-emerald);" onclick="openTenantLinksModal(${t.id})" title="View Tokenized Access Links">
+                                <i class="fa-solid fa-link"></i> Links
+                            </button>
                             ${isDeleted ? `
                                 <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--accent-emerald);" onclick="restoreSoftDeletedTenant(${t.id}, '${t.name}')" title="Restore Tenant to ACTIVE">
                                     <i class="fa-solid fa-rotate-left"></i> Restore
@@ -757,6 +938,9 @@
                             ` : `
                                 <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick='openEditTenantModal(${JSON.stringify(t)})' title="Edit Tenant Details">
                                     <i class="fa-solid fa-pen"></i> Edit
+                                </button>
+                                <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--accent-amber);" onclick='openResetPasswordModal(${t.id}, "${t.name.replace(/"/g, '&quot;')}", "${t.admin_username}")' title="Reset Tenant Admin Password">
+                                    <i class="fa-solid fa-key"></i> Password
                                 </button>
                                 <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: ${isSuspended ? 'var(--accent-emerald)' : 'var(--accent-amber)'};" onclick="toggleTenantStatus(${t.id}, '${isSuspended ? 'ACTIVE' : 'SUSPENDED'}', '${t.name}')" title="${isSuspended ? 'Reactivate Tenant' : 'Suspend Tenant (Read-Only Mode)'}">
                                     <i class="fa-solid ${isSuspended ? 'fa-play' : 'fa-pause'}"></i> ${isSuspended ? 'Activate' : 'Suspend'}
@@ -840,6 +1024,7 @@
         document.getElementById("createTenantModal").style.display = "flex";
         document.getElementById("createTenantAlert").style.display = "none";
         document.getElementById("createTenantForm").reset();
+        document.getElementById("newTenantType").value = "educational";
         if (globalPlansData.length > 0) {
             onPlanSelectionChanged(globalPlansData[0].plan_code);
         }
@@ -865,6 +1050,7 @@
         const payload = {
             name: document.getElementById("newTenantName").value.trim(),
             slug: document.getElementById("newTenantSlug").value.trim(),
+            tenant_type: document.getElementById("newTenantType").value,
             contact_email: document.getElementById("newTenantEmail").value.trim() || null,
             subscription_plan: document.getElementById("newTenantPlan").value,
             admin_full_name: document.getElementById("newAdminFullName").value.trim(),
@@ -883,6 +1069,8 @@
             if (res.ok) {
                 closeCreateTenantModal();
                 refreshAllSuperAdminData();
+                // Immediately display the generated tokenized URLs modal for the new tenant
+                openTenantLinksModalFromData(data);
             } else {
                 alertEl.style.display = "block";
                 alertEl.style.background = "rgba(239, 68, 68, 0.1)";
@@ -907,6 +1095,7 @@
         document.getElementById("editTenantId").value = tenant.id;
         document.getElementById("editTenantModalTitle").innerText = `Edit Tenant: ${tenant.name}`;
         document.getElementById("editTenantName").value = tenant.name;
+        document.getElementById("editTenantType").value = tenant.tenant_type || "educational";
         document.getElementById("editTenantEmail").value = tenant.contact_email || "";
         document.getElementById("editTenantPlan").value = tenant.subscription_plan || "STANDARD";
         document.getElementById("editTenantStatus").value = tenant.is_deleted ? "DELETED" : (tenant.subscription_status || "ACTIVE");
@@ -934,6 +1123,7 @@
 
         const payload = {
             name: document.getElementById("editTenantName").value.trim(),
+            tenant_type: document.getElementById("editTenantType").value,
             contact_email: document.getElementById("editTenantEmail").value.trim() || null,
             subscription_plan: document.getElementById("editTenantPlan").value,
             subscription_status: document.getElementById("editTenantStatus").value,
@@ -966,6 +1156,180 @@
             alertEl.innerText = "Network failure updating tenant.";
         } finally {
             btn.disabled = false;
+        }
+    }
+
+    // --- Modal: Reset Tenant Admin Password ---
+    function openResetPasswordModal(tenantId, tenantName, adminUsername) {
+        document.getElementById("resetTenantId").value = tenantId;
+        document.getElementById("resetTenantName").innerText = tenantName;
+        document.getElementById("resetAdminUsername").innerText = adminUsername;
+        document.getElementById("resetNewPassword").value = "";
+        document.getElementById("resetPasswordAlert").style.display = "none";
+        document.getElementById("resetPasswordModal").style.display = "flex";
+    }
+
+    function closeResetPasswordModal() {
+        document.getElementById("resetPasswordModal").style.display = "none";
+    }
+
+    function generateRandomAdminPassword() {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
+        let pass = "";
+        for (let i = 0; i < 12; i++) {
+            pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById("resetNewPassword").value = pass;
+    }
+
+    async function submitResetTenantPassword(e) {
+        e.preventDefault();
+        const tenantId = document.getElementById("resetTenantId").value;
+        const newPassword = document.getElementById("resetNewPassword").value.trim();
+        const alertEl = document.getElementById("resetPasswordAlert");
+        const btn = document.getElementById("btnSubmitResetPassword");
+
+        alertEl.style.display = "none";
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Resetting...`;
+
+        try {
+            const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}/admin-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ new_password: newPassword }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(`SUCCESS:\n\nPassword for tenant administrator '${data.admin_username}' has been updated to:\n${newPassword}`);
+                closeResetPasswordModal();
+                refreshAllSuperAdminData();
+            } else {
+                alertEl.style.display = "block";
+                alertEl.style.background = "rgba(239, 68, 68, 0.1)";
+                alertEl.style.border = "1px solid var(--accent-rose)";
+                alertEl.style.color = "var(--accent-rose)";
+                alertEl.innerText = data.detail || "Error resetting password.";
+            }
+        } catch (err) {
+            alertEl.style.display = "block";
+            alertEl.style.background = "rgba(239, 68, 68, 0.1)";
+            alertEl.style.border = "1px solid var(--accent-rose)";
+            alertEl.style.color = "var(--accent-rose)";
+            alertEl.innerText = "Network failure resetting password.";
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-lock"></i> Set New Password`;
+        }
+    }
+
+    // --- Modal: Tokenized Corporate & Direct Access Links ---
+    async function openTenantLinksModal(tenantId) {
+        document.getElementById("currentLinksTenantId").value = tenantId;
+        document.getElementById("linksModalAlert").style.display = "none";
+        
+        try {
+            const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}/links`);
+            const data = await res.json();
+            if (res.ok && data.links) {
+                const origin = window.location.origin;
+                const adminUrl = origin + data.links.admin_login_url;
+                const onboardUrl = origin + data.links.onboarding_url;
+                const checkinUrl = origin + data.links.checkin_url;
+
+                document.getElementById("linksTenantSubtitle").innerText = `${data.tenant_name} (${data.uuid || 'Standard'})`;
+                document.getElementById("linksTenantTypeBadge").innerText = (data.tenant_type === 'corporate') ? 'Corporate' : 'Educational';
+                document.getElementById("linksTenantTypeBadge").className = (data.tenant_type === 'corporate') ? 'badge badge-emerald' : 'badge badge-sky';
+
+                document.getElementById("linkAdminLoginInput").value = adminUrl;
+                document.getElementById("linkAdminLoginLaunch").href = adminUrl;
+
+                document.getElementById("linkOnboardingInput").value = onboardUrl;
+                document.getElementById("linkOnboardingLaunch").href = onboardUrl;
+
+                document.getElementById("linkCheckinInput").value = checkinUrl;
+                document.getElementById("linkCheckinLaunch").href = checkinUrl;
+
+                document.getElementById("tenantLinksModal").style.display = "flex";
+            } else {
+                alert("Error loading tenant links: " + (data.detail || "Unknown error"));
+            }
+        } catch (e) {
+            alert("Network error fetching access links.");
+        }
+    }
+
+    function openTenantLinksModalFromData(data) {
+        const origin = window.location.origin;
+        const tenant = data.tenant || {};
+        const links = data.links || {};
+
+        document.getElementById("currentLinksTenantId").value = tenant.id;
+        document.getElementById("linksModalAlert").style.display = "none";
+
+        document.getElementById("linksTenantSubtitle").innerText = `${tenant.name} (${tenant.uuid || 'Standard'})`;
+        document.getElementById("linksTenantTypeBadge").innerText = (tenant.tenant_type === 'corporate') ? 'Corporate' : 'Educational';
+        document.getElementById("linksTenantTypeBadge").className = (tenant.tenant_type === 'corporate') ? 'badge badge-emerald' : 'badge badge-sky';
+
+        const adminUrl = origin + (links.admin_login_url || tenant.admin_login_url || "");
+        const onboardUrl = origin + (links.onboarding_url || tenant.onboarding_url || "");
+        const checkinUrl = origin + (links.checkin_url || tenant.checkin_url || "");
+
+        document.getElementById("linkAdminLoginInput").value = adminUrl;
+        document.getElementById("linkAdminLoginLaunch").href = adminUrl;
+
+        document.getElementById("linkOnboardingInput").value = onboardUrl;
+        document.getElementById("linkOnboardingLaunch").href = onboardUrl;
+
+        document.getElementById("linkCheckinInput").value = checkinUrl;
+        document.getElementById("linkCheckinLaunch").href = checkinUrl;
+
+        document.getElementById("tenantLinksModal").style.display = "flex";
+    }
+
+    function closeTenantLinksModal() {
+        document.getElementById("tenantLinksModal").style.display = "none";
+    }
+
+    function copyLinkInput(inputId, btnEl) {
+        const input = document.getElementById(inputId);
+        input.select();
+        navigator.clipboard.writeText(input.value).then(() => {
+            const origHtml = btnEl.innerHTML;
+            btnEl.innerHTML = `<i class="fa-solid fa-check" style="color: var(--accent-emerald);"></i> Copied!`;
+            setTimeout(() => {
+                btnEl.innerHTML = origHtml;
+            }, 1800);
+        }).catch(() => {
+            alert("Copied to clipboard!");
+        });
+    }
+
+    async function triggerRegenerateTokens() {
+        const tenantId = document.getElementById("currentLinksTenantId").value;
+        if (!confirm("Are you sure you want to ROTATE the security tokens for this organization?\n\nAny previously shared admin or onboarding links will be invalidated immediately.")) {
+            return;
+        }
+
+        const alertEl = document.getElementById("linksModalAlert");
+        try {
+            const res = await fetch(`/api/v1/super-admin/tenants/${tenantId}/regenerate-tokens`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alertEl.style.display = "block";
+                alertEl.style.background = "rgba(16, 185, 129, 0.15)";
+                alertEl.style.border = "1px solid var(--accent-emerald)";
+                alertEl.style.color = "var(--accent-emerald)";
+                alertEl.innerText = data.message || "Security tokens rotated successfully.";
+                await openTenantLinksModal(tenantId);
+            } else {
+                alert("Error: " + (data.detail || "Could not rotate tokens."));
+            }
+        } catch (e) {
+            alert("Network error rotating tokens.");
         }
     }
 

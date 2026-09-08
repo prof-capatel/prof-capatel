@@ -27,7 +27,8 @@ class StudentCreate(BaseModel):
     division_id: Optional[int] = None
     academic_year_id: Optional[int] = None
     email: Optional[str] = None
-    user_role: Optional[str] = "student"
+    user_role: Optional[str] = None
+    role: Optional[str] = None
     class_semester: Optional[str] = "General"
 
 
@@ -40,7 +41,8 @@ class StudentUpdate(BaseModel):
     division_id: Optional[int] = None
     academic_year_id: Optional[int] = None
     email: Optional[str] = None
-    user_role: Optional[str] = "student"
+    user_role: Optional[str] = None
+    role: Optional[str] = None
     class_semester: Optional[str] = "General"
 
 
@@ -104,9 +106,12 @@ def register_student(
             detail=f"User with Roll/ID Number '{clean_roll}' already exists in this institution.",
         )
 
+    is_corporate = (getattr(current_tenant, "tenant_type", "educational") == "corporate")
+
     # Resolve Department
+    default_dept = "General" if is_corporate else "Computer Science"
     dept_id = payload.department_id
-    dept_name = (payload.department or "Computer Science").strip()
+    dept_name = (payload.department or default_dept).strip()
     if dept_id:
         dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.id == dept_id).first()
         if dept_obj:
@@ -118,7 +123,7 @@ def register_student(
 
     # Resolve Class
     cls_id = payload.class_id
-    cls_name = (payload.class_semester or "General").strip()
+    cls_name = (payload.class_semester or ("Corporate" if is_corporate else "General")).strip()
     if cls_id:
         cls_obj = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id, ClassModel.id == cls_id).first()
         if cls_obj:
@@ -126,20 +131,30 @@ def register_student(
             if not dept_id and cls_obj.department_id:
                 dept_id = cls_obj.department_id
                 dept_name = cls_obj.department
+    elif is_corporate:
+        cls_id = None
+        cls_name = "Corporate"
 
     # Resolve Division
-    div_id = payload.division_id
+    div_id = payload.division_id if not is_corporate else None
     if div_id:
         div_obj = db.query(Division).filter(Division.tenant_id == current_tenant.id, Division.id == div_id).first()
         if not div_obj:
             div_id = None
 
     # Resolve Academic Year
-    acad_id = payload.academic_year_id
-    if not acad_id:
+    acad_id = payload.academic_year_id if not is_corporate else None
+    if not acad_id and not is_corporate:
         active_year = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id, AcademicYear.is_current == True).first()
         if active_year:
             acad_id = active_year.id
+
+    # Resolve Default Role
+    default_role = "employee" if is_corporate else "student"
+    raw_role = payload.role or payload.user_role or default_role
+    chosen_role = raw_role.strip().lower()
+    if is_corporate and chosen_role == "student":
+        chosen_role = "employee"
 
     student = Student(
         tenant_id=current_tenant.id,
@@ -152,7 +167,7 @@ def register_student(
         division_id=div_id,
         academic_year_id=acad_id,
         email=payload.email.strip() if payload.email else None,
-        user_role=payload.user_role.strip().lower() if payload.user_role else "student",
+        user_role=chosen_role,
     )
     db.add(student)
     db.commit()
@@ -308,9 +323,12 @@ async def batch_upload_enrollment(
             detail=f"User with ID / Roll '{clean_roll}' already exists in this institution.",
         )
 
+    is_corporate = (getattr(current_tenant, "tenant_type", "educational") == "corporate")
+
     # Resolve Department
+    default_dept = "General" if is_corporate else "Computer Science"
     dept_id = department_id
-    dept_name = department.strip() if department else "Computer Science"
+    dept_name = (department or default_dept).strip()
     if dept_id:
         dept_obj = db.query(Department).filter(Department.tenant_id == current_tenant.id, Department.id == dept_id).first()
         if dept_obj:
@@ -322,7 +340,7 @@ async def batch_upload_enrollment(
 
     # Resolve Class
     cls_id = class_id
-    cls_name = class_semester.strip() if class_semester else "General"
+    cls_name = (class_semester or ("Corporate" if is_corporate else "General")).strip()
     if cls_id:
         cls_obj = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id, ClassModel.id == cls_id).first()
         if cls_obj:
@@ -330,20 +348,29 @@ async def batch_upload_enrollment(
             if not dept_id and cls_obj.department_id:
                 dept_id = cls_obj.department_id
                 dept_name = cls_obj.department
+    elif is_corporate:
+        cls_id = None
+        cls_name = "Corporate"
 
     # Resolve Division
-    div_id = division_id
+    div_id = division_id if not is_corporate else None
     if div_id:
         div_obj = db.query(Division).filter(Division.tenant_id == current_tenant.id, Division.id == div_id).first()
         if not div_obj:
             div_id = None
 
     # Resolve Academic Year
-    acad_id = academic_year_id
-    if not acad_id:
+    acad_id = academic_year_id if not is_corporate else None
+    if not acad_id and not is_corporate:
         active_year = db.query(AcademicYear).filter(AcademicYear.tenant_id == current_tenant.id, AcademicYear.is_current == True).first()
         if active_year:
             acad_id = active_year.id
+
+    # Resolve Role
+    default_role = "employee" if is_corporate else "student"
+    chosen_role = user_role.strip().lower() if user_role else default_role
+    if is_corporate and chosen_role == "student":
+        chosen_role = "employee"
 
     # Process all 3 photos
     photos = [
@@ -411,7 +438,7 @@ async def batch_upload_enrollment(
         division_id=div_id,
         academic_year_id=acad_id,
         email=email.strip() if email else None,
-        user_role=user_role.strip().lower() if user_role else "student",
+        user_role=chosen_role,
     )
     db.add(student)
     db.flush()
@@ -675,4 +702,231 @@ def delete_student_profile(
         "status": "success",
         "tenant_id": current_tenant.id,
         "message": f"Student '{name}' deleted successfully.",
+    }
+
+
+# ==============================================================================
+# --- Tokenized Public Self-Onboarding Endpoints (Corporate & Direct Links) ---
+# ==============================================================================
+
+class OnboardRegisterRequest(BaseModel):
+    tenant_uuid: str
+    onboarding_token: str
+    name: str
+    roll_number: str  # Employee ID / Roll Number
+    email: Optional[str] = None
+    department_id: Optional[int] = None
+    department: Optional[str] = None
+    role: Optional[str] = "employee"
+
+
+def resolve_onboarding_tenant(db: Session, tenant_uuid: str, onboarding_token: str) -> Tenant:
+    """Helper to validate tenant UUID and onboarding token for public onboarding."""
+    tenant = db.query(Tenant).filter(
+        (Tenant.uuid == tenant_uuid) | (Tenant.slug == tenant_uuid),
+        Tenant.onboarding_token == onboarding_token,
+        Tenant.is_deleted == False,
+    ).first()
+    if not tenant:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or expired employee onboarding link. Please request a valid onboarding URL from your administrator.",
+        )
+    check_tenant_operational_access(tenant)
+    return tenant
+
+
+@router.post("/onboard/register")
+def onboard_register_employee(
+    payload: OnboardRegisterRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Public self-registration endpoint for new employees using tokenized onboarding link.
+    Validates tenant UUID and onboarding token.
+    """
+    tenant = resolve_onboarding_tenant(db, payload.tenant_uuid.strip(), payload.onboarding_token.strip())
+    clean_roll = payload.roll_number.strip().upper()
+
+    existing = db.query(Student).filter(
+        Student.tenant_id == tenant.id,
+        Student.roll_number == clean_roll,
+    ).first()
+
+    is_corporate = (getattr(tenant, "tenant_type", "educational") == "corporate")
+
+    # Resolve Department
+    default_dept = "General" if is_corporate else "Computer Science"
+    dept_id = payload.department_id
+    dept_name = (payload.department or default_dept).strip()
+    if dept_id:
+        dept_obj = db.query(Department).filter(Department.tenant_id == tenant.id, Department.id == dept_id).first()
+        if dept_obj:
+            dept_name = dept_obj.name
+    else:
+        dept_obj = db.query(Department).filter(Department.tenant_id == tenant.id, Department.name == dept_name).first()
+        if dept_obj:
+            dept_id = dept_obj.id
+        else:
+            # Auto-create department if not existing
+            new_dept = Department(
+                tenant_id=tenant.id,
+                name=dept_name,
+                code=dept_name[:6].upper(),
+                description=f"{dept_name} Team",
+            )
+            db.add(new_dept)
+            db.flush()
+            dept_id = new_dept.id
+
+    chosen_role = (payload.role or ("employee" if is_corporate else "student")).strip().lower()
+
+    if existing:
+        # Update existing profile if registering sample again
+        existing.name = payload.name.strip()
+        existing.department_id = dept_id
+        existing.department = dept_name
+        existing.email = payload.email.strip() if payload.email else existing.email
+        existing.user_role = chosen_role
+        db.commit()
+        db.refresh(existing)
+        student = existing
+    else:
+        student = Student(
+            tenant_id=tenant.id,
+            roll_number=clean_roll,
+            name=payload.name.strip(),
+            department_id=dept_id,
+            department=dept_name,
+            class_id=None,
+            class_semester="Corporate" if is_corporate else "General",
+            division_id=None,
+            academic_year_id=None,
+            email=payload.email.strip() if payload.email else None,
+            user_role=chosen_role,
+        )
+        db.add(student)
+        db.commit()
+        db.refresh(student)
+
+    t_uuid = tenant.uuid or tenant.slug
+    checkin_url = f"/check-in/{t_uuid}/{tenant.attendance_slug}" if tenant.attendance_slug else f"/self-attendance/{tenant.slug}"
+
+    return {
+        "status": "success",
+        "tenant_id": tenant.id,
+        "tenant_name": tenant.name,
+        "message": f"Profile '{student.name}' registered successfully. Proceed to face capture.",
+        "student": student.to_dict(),
+        "checkin_url": checkin_url,
+    }
+
+
+@router.post("/onboard/capture-sample")
+async def onboard_capture_face_sample(
+    tenant_uuid: str = Form(...),
+    onboarding_token: str = Form(...),
+    student_id: int = Form(...),
+    sample_angle: str = Form("frontal"),
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Public face capture endpoint for new employee onboarding using tokenized onboarding link.
+    Validates face quality, extracts 128-d facial vectors, stores crop to disk, and updates engine cache.
+    """
+    tenant = resolve_onboarding_tenant(db, tenant_uuid.strip(), onboarding_token.strip())
+
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.tenant_id == tenant.id,
+    ).first()
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Employee profile not found.")
+
+    # Read image
+    contents = await image.read()
+    image_bgr = decode_image_bytes(contents)
+    if image_bgr is None:
+        raise HTTPException(status_code=400, detail="Invalid camera capture image.")
+
+    # Evaluate image quality
+    is_good_quality, quality_msg = evaluate_image_quality(image_bgr)
+    if not is_good_quality:
+        raise HTTPException(status_code=400, detail=f"Image quality check failed: {quality_msg}")
+
+    # Extract 128-d vector and face bounding box
+    vector, face_box, msg = FaceEngine.compute_single_face_vector(image_bgr)
+    if vector is None:
+        raise HTTPException(status_code=400, detail=msg or "No clear face detected. Look directly into the camera.")
+
+    # Crop reference face image
+    top, right, bottom, left = face_box
+    h, w = image_bgr.shape[:2]
+    pad_h = int((bottom - top) * 0.15)
+    pad_w = int((right - left) * 0.15)
+    crop = image_bgr[
+        max(0, top - pad_h): min(h, bottom + pad_h),
+        max(0, left - pad_w): min(w, right + pad_w),
+    ]
+
+    timestamp_str = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    clean_roll = student.roll_number.replace("/", "_").replace("\\", "_")
+    filename = f"t{tenant.id}_student_{clean_roll}_{sample_angle}_{timestamp_str}.jpg"
+    target_path = FACES_DIR / filename
+    cv2.imwrite(str(target_path), crop, [cv2.IMWRITE_JPEG_QUALITY, 92])
+
+    rel_path = f"faces/{filename}"
+
+    # Upsert face encoding record
+    existing_sample = (
+        db.query(FaceEncoding)
+        .filter(
+            FaceEncoding.tenant_id == tenant.id,
+            FaceEncoding.student_id == student.id,
+            FaceEncoding.sample_angle == sample_angle,
+        )
+        .first()
+    )
+    if existing_sample:
+        existing_sample.vector_json = FaceEncoding.from_numpy(
+            student_id=student.id,
+            vector=vector,
+            sample_angle=sample_angle,
+            photo_path=rel_path,
+            tenant_id=tenant.id,
+        ).vector_json
+        existing_sample.photo_path = rel_path
+    else:
+        encoding_record = FaceEncoding.from_numpy(
+            student_id=student.id,
+            vector=vector,
+            sample_angle=sample_angle,
+            photo_path=rel_path,
+            tenant_id=tenant.id,
+        )
+        db.add(encoding_record)
+
+    db.commit()
+
+    # Hot-reload in-memory vector cache for this tenant
+    face_engine.reload_cache(db, tenant_id=tenant.id)
+
+    total_samples = db.query(FaceEncoding).filter(
+        FaceEncoding.tenant_id == tenant.id,
+        FaceEncoding.student_id == student.id,
+    ).count()
+
+    t_uuid = tenant.uuid or tenant.slug
+    checkin_url = f"/check-in/{t_uuid}/{tenant.attendance_slug}" if tenant.attendance_slug else f"/self-attendance/{tenant.slug}"
+
+    return {
+        "status": "success",
+        "tenant_id": tenant.id,
+        "student_id": student.id,
+        "sample_angle": sample_angle,
+        "total_samples": total_samples,
+        "message": f"Biometric face sample ({sample_angle}) registered and indexed successfully.",
+        "checkin_url": checkin_url,
     }

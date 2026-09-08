@@ -17,5 +17,10 @@ data/faces/
 graphify-out/
 scratch/
 .DS_Store
-Thumbs.db
-
+# Flutter build artifacts
+.dart_tool/
+**/build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/

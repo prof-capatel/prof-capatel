@@ -1,4 +1,6 @@
 import logging
+import uuid
+import secrets
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from pydantic import BaseModel
@@ -59,6 +61,7 @@ class UpdateSubscriptionPlanRequest(BaseModel):
 class CreateTenantRequest(BaseModel):
     name: str
     slug: str
+    tenant_type: Optional[str] = "educational"  # educational (school/college) vs corporate (company)
     contact_email: Optional[str] = None
     subscription_plan: str = "STANDARD"  # FREE, STANDARD, ENTERPRISE, or custom
     max_face_encodings: Optional[int] = None
@@ -70,11 +73,17 @@ class CreateTenantRequest(BaseModel):
 
 class EditTenantDetailsRequest(BaseModel):
     name: Optional[str] = None
+    tenant_type: Optional[str] = None  # educational vs corporate
     contact_email: Optional[str] = None
     subscription_plan: Optional[str] = None
     subscription_status: Optional[str] = None  # ACTIVE, SUSPENDED, EXPIRED, DELETED
     max_face_encodings: Optional[int] = None
     max_nodes: Optional[int] = None
+
+
+class ResetAdminPasswordRequest(BaseModel):
+    new_password: str
+    admin_user_id: Optional[int] = None
 
 
 class UpdateTenantStatusRequest(BaseModel):
@@ -322,10 +331,21 @@ def create_tenant(
         max_faces = fallback["max_faces"]
         max_nodes = fallback["max_nodes"]
 
-    # 2. Create Tenant
+    # 2. Create Tenant with unique UUID and access tokens
+    t_type = (payload.tenant_type or "educational").strip().lower()
+    if t_type not in ["educational", "corporate"]:
+        t_type = "educational"
+
+    tenant_uuid = str(uuid.uuid4())
+    admin_token = secrets.token_urlsafe(32)
+    onboarding_token = secrets.token_urlsafe(32)
+    attendance_slug = secrets.token_urlsafe(24)
+
     new_tenant = Tenant(
+        uuid=tenant_uuid,
         slug=slug_clean,
         name=name_clean,
+        tenant_type=t_type,
         contact_email=payload.contact_email.strip() if payload.contact_email else None,
         is_active=True,
         is_deleted=False,
@@ -333,20 +353,26 @@ def create_tenant(
         subscription_status="ACTIVE",
         max_face_encodings=max_faces,
         max_nodes=max_nodes,
+        admin_token=admin_token,
+        onboarding_token=onboarding_token,
+        attendance_slug=attendance_slug,
     )
     db.add(new_tenant)
     db.flush()
 
-    # 3. Create System Branding for Tenant
+    # 3. Create System Branding for Tenant (Default: Warm Academic #c2410c, Anti-Spoofing OFF, Self-Attendance OFF)
+    is_corporate = (t_type == "corporate")
     branding = SystemBranding(
         tenant_id=new_tenant.id,
         institution_name=name_clean,
         short_code=slug_clean.upper()[:10],
         tagline=f"Face Attendance System - {name_clean}",
-        primary_accent_color="#6366f1",
-        header_badge_text="Campus Hub",
+        primary_accent_color="#c2410c",
+        header_badge_text="Enterprise Hub" if is_corporate else "Campus Hub",
         cooldown_minutes=60,
-        enable_anti_spoofing=True,
+        enable_anti_spoofing=False,
+        liveness_mode="off",
+        enable_self_attendance=False,
     )
     db.add(branding)
 
@@ -371,7 +397,7 @@ def create_tenant(
         action_type="TENANT_CREATED",
         target_type="TENANT",
         target_id=str(new_tenant.id),
-        description=f"Super Admin created tenant '{name_clean}' ({plan_clean} Tier: {max_faces} faces, {max_nodes} nodes).",
+        description=f"Super Admin created {t_type.upper()} tenant '{name_clean}' ({plan_clean} Tier: {max_faces} faces, {max_nodes} nodes).",
         ip_address=request.client.host if request.client else None,
     )
     db.add(audit)
@@ -379,9 +405,14 @@ def create_tenant(
 
     return {
         "status": "success",
-        "message": f"Tenant '{name_clean}' created successfully with {plan_clean} Tier quotas.",
+        "message": f"Tenant '{name_clean}' ({t_type.capitalize()}) created successfully with {plan_clean} Tier quotas.",
         "tenant": new_tenant.to_dict(),
         "admin_user": admin_user.to_dict(),
+        "links": {
+            "admin_login_url": f"/auth/token-login/{tenant_uuid}/{admin_token}",
+            "onboarding_url": f"/onboard/{tenant_uuid}/{onboarding_token}",
+            "checkin_url": f"/check-in/{tenant_uuid}/{attendance_slug}",
+        },
     }
 
 
@@ -394,7 +425,7 @@ def edit_tenant_details(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Edits comprehensive tenant parameters: name, contact email, plan, status, and quotas.
+    Edits comprehensive tenant parameters: name, tenant_type, contact email, plan, status, and quotas.
     """
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
@@ -406,6 +437,13 @@ def edit_tenant_details(
         old_name = tenant.name
         tenant.name = payload.name.strip()
         changes.append(f"Name: '{old_name}' -> '{tenant.name}'")
+
+    if payload.tenant_type is not None and payload.tenant_type.strip():
+        t_type_clean = payload.tenant_type.strip().lower()
+        if t_type_clean in ["educational", "corporate"] and t_type_clean != tenant.tenant_type:
+            old_type = tenant.tenant_type or "educational"
+            tenant.tenant_type = t_type_clean
+            changes.append(f"Type: {old_type} -> {t_type_clean}")
 
     if payload.contact_email is not None:
         tenant.contact_email = payload.contact_email.strip() if payload.contact_email.strip() else None
@@ -459,6 +497,64 @@ def edit_tenant_details(
         "status": "success",
         "message": f"Tenant #{tenant_id} ('{tenant.name}') details updated successfully.",
         "tenant": tenant.to_dict(),
+    }
+
+
+@router.post("/tenants/{tenant_id}/admin-password")
+def reset_tenant_admin_password(
+    tenant_id: int,
+    payload: ResetAdminPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Super Admin Password Reset / Set:
+    Manually resets or sets a new password for the Tenant Admin user of any tenant.
+    """
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail=f"Tenant #{tenant_id} not found.")
+
+    new_pass = payload.new_password.strip()
+    if not new_pass or len(new_pass) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long.")
+
+    # Find target tenant admin user
+    admin_query = db.query(User).filter(User.tenant_id == tenant_id, User.role == "TENANT_ADMIN")
+    if payload.admin_user_id:
+        admin_user = admin_query.filter(User.id == payload.admin_user_id).first()
+    else:
+        admin_user = admin_query.first()
+
+    if not admin_user:
+        # Fallback: check any user belonging to tenant
+        admin_user = db.query(User).filter(User.tenant_id == tenant_id).first()
+
+    if not admin_user:
+        raise HTTPException(status_code=404, detail=f"No administrative user found for Tenant '{tenant.name}'.")
+
+    admin_user.password_hash = hash_password(new_pass)
+
+    audit = AuditLog(
+        tenant_id=tenant.id,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="TENANT_ADMIN_PASSWORD_RESET",
+        target_type="USER",
+        target_id=str(admin_user.id),
+        description=f"Super Admin manually reset password for Tenant Admin '{admin_user.username}' (Tenant: '{tenant.name}').",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Password for Tenant Admin '{admin_user.username}' ({admin_user.full_name}) has been reset successfully.",
+        "admin_username": admin_user.username,
+        "tenant_id": tenant.id,
     }
 
 
@@ -691,4 +787,110 @@ def get_global_audit_logs(
         "status": "success",
         "total": len(logs),
         "logs": [l.to_dict() for l in logs],
+    }
+
+
+# --- 5. Tokenized Links & Access Keys Management ---
+@router.get("/tenants/{tenant_id}/links")
+def get_tenant_access_links(
+    tenant_id: int,
+    db: Session = Depends(get_db),
+):
+    """Retrieves tokenized URLs for Passwordless Admin Login, Employee Onboarding, and Check-In."""
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail=f"Tenant #{tenant_id} not found.")
+
+    # Ensure tokens exist
+    updated = False
+    if not tenant.uuid:
+        tenant.uuid = str(uuid.uuid4())
+        updated = True
+    if not tenant.admin_token:
+        tenant.admin_token = secrets.token_urlsafe(32)
+        updated = True
+    if not tenant.onboarding_token:
+        tenant.onboarding_token = secrets.token_urlsafe(32)
+        updated = True
+    if not tenant.attendance_slug:
+        tenant.attendance_slug = secrets.token_urlsafe(24)
+        updated = True
+    if updated:
+        db.commit()
+        db.refresh(tenant)
+
+    t_uuid = tenant.uuid or tenant.slug
+    return {
+        "status": "success",
+        "tenant_id": tenant.id,
+        "tenant_name": tenant.name,
+        "tenant_type": tenant.tenant_type,
+        "uuid": tenant.uuid,
+        "links": {
+            "admin_login_url": f"/auth/token-login/{t_uuid}/{tenant.admin_token}",
+            "onboarding_url": f"/onboard/{t_uuid}/{tenant.onboarding_token}",
+            "checkin_url": f"/check-in/{t_uuid}/{tenant.attendance_slug}",
+        },
+        "tokens": {
+            "admin_token": tenant.admin_token,
+            "onboarding_token": tenant.onboarding_token,
+            "attendance_slug": tenant.attendance_slug,
+        }
+    }
+
+
+@router.post("/tenants/{tenant_id}/regenerate-tokens")
+def regenerate_tenant_tokens(
+    tenant_id: int,
+    request: Request,
+    rotate_admin: bool = Query(True, description="Rotate admin login token"),
+    rotate_onboarding: bool = Query(True, description="Rotate employee onboarding token"),
+    rotate_checkin: bool = Query(False, description="Rotate attendance checkin slug"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Regenerates/rotates secure token keys for a tenant."""
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail=f"Tenant #{tenant_id} not found.")
+
+    rotated_items = []
+    if rotate_admin:
+        tenant.admin_token = secrets.token_urlsafe(32)
+        rotated_items.append("Admin Login Token")
+    if rotate_onboarding:
+        tenant.onboarding_token = secrets.token_urlsafe(32)
+        rotated_items.append("Onboarding Token")
+    if rotate_checkin:
+        tenant.attendance_slug = secrets.token_urlsafe(24)
+        rotated_items.append("Attendance Check-In Slug")
+
+    if not tenant.uuid:
+        tenant.uuid = str(uuid.uuid4())
+
+    audit = AuditLog(
+        tenant_id=tenant.id,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="TOKENS_ROTATED",
+        target_type="TENANT",
+        target_id=str(tenant.id),
+        description=f"Rotated tokens ({', '.join(rotated_items)}) for tenant '{tenant.name}'.",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(tenant)
+
+    t_uuid = tenant.uuid or tenant.slug
+    return {
+        "status": "success",
+        "message": f"Successfully regenerated {', '.join(rotated_items)} for '{tenant.name}'.",
+        "tenant_id": tenant.id,
+        "links": {
+            "admin_login_url": f"/auth/token-login/{t_uuid}/{tenant.admin_token}",
+            "onboarding_url": f"/onboard/{t_uuid}/{tenant.onboarding_token}",
+            "checkin_url": f"/check-in/{t_uuid}/{tenant.attendance_slug}",
+        },
     }

@@ -113,6 +113,7 @@ if __name__ == "__main__":
         "host": args.host,
         "port": args.port,
         "reload": True,
+        "reload_dirs": [str(BASE_DIR / "src")],
         "access_log": True,
     }
     if ssl_cert and ssl_key:

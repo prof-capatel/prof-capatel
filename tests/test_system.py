@@ -24,7 +24,7 @@ import cv2
 from fastapi.testclient import TestClient
 
 from src.database.session import init_db, get_db_context, engine
-from src.database.models import Student, FaceEncoding, AttendanceRecord, NodeDevice, Tenant, SystemBranding
+from src.database.models import Student, FaceEncoding, AttendanceRecord, NodeDevice, Tenant, SystemBranding, ClassModel
 from src.core.face_engine import FaceEngine, face_engine
 from src.core.attendance_manager import AttendanceManager, attendance_manager
 from src.server.app import app
@@ -869,11 +869,15 @@ class TestFaceAttendanceSystem(unittest.TestCase):
             student_id = student.id
             original_class_id = student.class_id or 1
             vectors_count = len(student.encodings)
+            target_cls = db.query(ClassModel).filter(ClassModel.tenant_id == 1, ClassModel.name == "SY Computer Science").first()
+            if not target_cls:
+                target_cls = db.query(ClassModel).filter(ClassModel.tenant_id == 1).first()
+            target_class_id = target_cls.id
 
-        # 2. Promote student to class 2 (SY Computer Science)
+        # 2. Promote student to class (SY Computer Science)
         res_promote = self.client.post("/api/v1/academic/students/promote", json={
             "student_ids": [student_id],
-            "target_class_id": 2,
+            "target_class_id": target_class_id,
             "target_division_id": None,
         })
         self.assertEqual(res_promote.status_code, 200)
@@ -882,7 +886,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         # 3. Verify student class is updated, previous class is recorded, and face vectors are intact
         with get_db_context() as db:
             updated_student = db.query(Student).filter(Student.id == student_id).first()
-            self.assertEqual(updated_student.class_id, 2)
+            self.assertEqual(updated_student.class_id, target_class_id)
             self.assertEqual(updated_student.previous_class_id, original_class_id)
             self.assertIsNotNone(updated_student.last_promoted_at)
             self.assertEqual(len(updated_student.encodings), vectors_count)

@@ -8,7 +8,7 @@ from src.database.session import get_db
 
 
 def resolve_tenant(db: Session, identifier: Optional[str]) -> Optional[Tenant]:
-    """Resolves Tenant object by integer ID or string slug."""
+    """Resolves Tenant object by integer ID, UUID string, or slug."""
     if not identifier:
         return None
 
@@ -16,7 +16,9 @@ def resolve_tenant(db: Session, identifier: Optional[str]) -> Optional[Tenant]:
     if identifier_str.isdigit():
         return db.query(Tenant).filter(Tenant.id == int(identifier_str)).first()
 
-    return db.query(Tenant).filter(Tenant.slug == identifier_str.lower()).first()
+    return db.query(Tenant).filter(
+        (Tenant.uuid == identifier_str) | (Tenant.slug == identifier_str.lower())
+    ).first()
 
 
 def get_current_tenant(

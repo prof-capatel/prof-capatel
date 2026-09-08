@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="academic">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
@@ -14,20 +14,20 @@
     <link rel="stylesheet" href="/static/css/dashboard.css">
     
     <!-- Dynamic Custom Accent Color if configured -->
-    {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#6366f1' %}
+    {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#c2410c' and branding.primary_accent_color != '#6366f1' %}
     <style>
-        :root, [data-theme="light"] {
+        :root, [data-theme="academic"], [data-theme="light"] {
             --accent-primary: {{ branding.primary_accent_color }};
-            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #4338ca 100%);
+            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #9a3412 100%);
         }
     </style>
     {% endif %}
 
-    <!-- Immediate Zero-Flicker Theme Initializer -->
+    <!-- Immediate Zero-Flicker Theme Initializer (Default: Warm Academic) -->
     <script>
         (function() {
             try {
-                const savedTheme = localStorage.getItem("app_theme") || "light";
+                const savedTheme = localStorage.getItem("app_theme") || "academic";
                 document.documentElement.setAttribute("data-theme", savedTheme);
             } catch (e) {}
         })();
@@ -76,8 +76,8 @@
             </li>
             <li>
                 <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}" onclick="closeMobileMenu()">
-                    <i class="fa-solid fa-user-graduate"></i>
-                    <span>Students Directory</span>
+                    <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-user-tie{% else %}fa-user-graduate{% endif %}"></i>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Directory{% else %}Students Directory{% endif %}</span>
                 </a>
             </li>
             <li>
@@ -121,14 +121,14 @@
             </li>
             <li>
                 <a href="/academic-management" class="nav-link {% if active_page == 'academic' %}active{% endif %}" onclick="closeMobileMenu()">
-                    <i class="fa-solid fa-sitemap" style="color: var(--accent-primary);"></i>
-                    <span>Academic & Classes</span>
+                    <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-diagram-project{% else %}fa-sitemap{% endif %}" style="color: var(--accent-primary);"></i>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Departments & Teams{% else %}Academic & Classes{% endif %}</span>
                 </a>
             </li>
             <li>
                 <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}" onclick="closeMobileMenu()">
-                    <i class="fa-solid fa-user-graduate"></i>
-                    <span>Students Directory</span>
+                    <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-user-tie{% else %}fa-user-graduate{% endif %}"></i>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Directory{% else %}Students Directory{% endif %}</span>
                 </a>
             </li>
             <li>
@@ -202,25 +202,21 @@
             </li>
             {% endif %}
 
-            <!-- Edge Nodes & Visual Demos (Available across all internal testers) -->
+            <!-- Edge Nodes & Mobile Node Links -->
             <li style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
-                <a href="/face-demo" class="nav-link {% if active_page == 'demo' %}active{% endif %}" onclick="closeMobileMenu()">
-                    <i class="fa-solid fa-eye" style="color: #f59e0b;"></i>
-                    <span>Visual Demo (No DB)</span>
-                </a>
-            </li>
-            <li>
                 <a href="/mobile-capture" target="_blank" class="nav-link {% if active_page == 'mobile' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-mobile-screen"></i>
                     <span>Mobile Capture Node</span>
                 </a>
             </li>
+            {% if branding and branding.enable_self_attendance %}
             <li>
                 <a href="/self-attendance" target="_blank" class="nav-link" onclick="closeMobileMenu()" style="color: #10b981;">
                     <i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i>
                     <span>Self-Attendance (GPS)</span>
                 </a>
             </li>
+            {% endif %}
         </ul>
 
         <div class="sidebar-footer">
