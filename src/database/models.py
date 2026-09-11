@@ -8,6 +8,7 @@ from sqlalchemy import (
     String,
     Float,
     DateTime,
+    Date,
     Boolean,
     ForeignKey,
     Text,
@@ -51,7 +52,7 @@ class User(Base):
     # Relationships
     tenant = relationship("Tenant", back_populates="users")
     teacher_assignments = relationship("TeacherClassAssignment", back_populates="teacher", cascade="all, delete-orphan")
-    student_profile = relationship("Student", back_populates="user", uselist=False)
+    student_profile = relationship("Student", back_populates="user", uselist=False, foreign_keys="[Student.user_id]")
 
     def to_dict(self):
         return {
@@ -112,6 +113,10 @@ class Tenant(Base):
     teacher_assignments = relationship("TeacherClassAssignment", back_populates="tenant", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="tenant", cascade="all, delete-orphan")
     batch_uploads = relationship("StudentBatchUpload", back_populates="tenant", cascade="all, delete-orphan")
+    leave_types = relationship("LeaveType", back_populates="tenant", cascade="all, delete-orphan")
+    leave_cadre_quotas = relationship("LeaveCadreQuota", back_populates="tenant", cascade="all, delete-orphan")
+    leave_balances = relationship("LeaveBalance", back_populates="tenant", cascade="all, delete-orphan")
+    leave_requests = relationship("LeaveRequest", back_populates="tenant", cascade="all, delete-orphan")
 
     def to_dict(self):
         t_uuid = self.uuid or self.slug
@@ -138,6 +143,9 @@ class Tenant(Base):
             "admin_token": self.admin_token,
             "onboarding_token": self.onboarding_token,
             "attendance_slug": self.attendance_slug,
+            "portal_url": f"/portal/{self.slug}",
+            "tenant_login_url": f"/portal/{self.slug}",
+            "tokenized_portal_url": f"/portal/{t_uuid}/{self.admin_token}" if (t_uuid and self.admin_token) else f"/portal/{self.slug}",
             "admin_login_url": admin_login_path,
             "onboarding_url": onboarding_path,
             "checkin_url": checkin_path,
@@ -398,12 +406,24 @@ class Student(Base):
     last_promoted_at = Column(DateTime, nullable=True)
     last_transferred_at = Column(DateTime, nullable=True)
 
+    # Corporate Compensation & Cadre Attributes
+    hourly_rate = Column(Float, nullable=True)
+    monthly_base_salary = Column(Float, nullable=True)
+    cadre_level = Column(String(50), nullable=True)
+
+    # Offboarding / Relieving Status & Audit
+    employment_status = Column(String(30), default="ACTIVE", nullable=False)  # ACTIVE, RELIEVED, TERMINATED, RESIGNED
+    relieved_at = Column(DateTime, nullable=True)
+    relieving_reason = Column(Text, nullable=True)
+    relieved_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
     created_at = Column(DateTime, default=get_ist_now)
     is_active = Column(Boolean, default=True)
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "roll_number", name="uq_tenant_student_roll"),
         Index("ix_student_tenant_active", "tenant_id", "is_active"),
+        Index("ix_student_tenant_status", "tenant_id", "employment_status"),
         Index("ix_student_class_div", "tenant_id", "class_id", "division_id"),
         Index("ix_student_batch", "tenant_id", "batch_upload_id"),
     )
@@ -418,6 +438,9 @@ class Student(Base):
     academic_year = relationship("AcademicYear", back_populates="students", foreign_keys=[academic_year_id])
     user = relationship("User", back_populates="student_profile", foreign_keys=[user_id])
     batch_upload = relationship("StudentBatchUpload", back_populates="students", foreign_keys=[batch_upload_id])
+    relieved_by_user = relationship("User", foreign_keys=[relieved_by_user_id])
+    leave_balances = relationship("LeaveBalance", back_populates="student", cascade="all, delete-orphan")
+    leave_requests = relationship("LeaveRequest", back_populates="student", cascade="all, delete-orphan")
 
     def to_dict(self):
         photos_list = []
@@ -468,6 +491,14 @@ class Student(Base):
             "previous_academic_year_id": self.previous_academic_year_id,
             "last_promoted_at": self.last_promoted_at.isoformat() if self.last_promoted_at else None,
             "last_transferred_at": self.last_transferred_at.isoformat() if self.last_transferred_at else None,
+            "hourly_rate": self.hourly_rate,
+            "monthly_base_salary": self.monthly_base_salary,
+            "cadre_level": self.cadre_level,
+            "employment_status": self.employment_status or ("ACTIVE" if self.is_active else "RELIEVED"),
+            "relieved_at": self.relieved_at.strftime("%Y-%m-%d %H:%M:%S") if self.relieved_at else None,
+            "relieving_reason": self.relieving_reason or "",
+            "relieved_by_user_id": self.relieved_by_user_id,
+            "relieved_by_name": self.relieved_by_user.full_name if self.relieved_by_user else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "is_active": self.is_active,
             "samples_count": len(self.encodings) if self.encodings else 0,
@@ -528,9 +559,17 @@ class AttendanceRecord(Base):
     geo_distance_meters = Column(Float, nullable=True)
     is_self_attendance = Column(Boolean, default=False, nullable=False)
 
+    # Corporate Check-In / Check-Out and Shift Tracking
+    punch_type = Column(String(20), default="CHECK_IN", nullable=False)  # CHECK_IN, CHECK_OUT, ATTENDANCE
+    check_in_time = Column(DateTime, nullable=True)
+    check_out_time = Column(DateTime, nullable=True)
+    work_duration_minutes = Column(Integer, nullable=True)
+    shift_status = Column(String(30), default="ON_TIME", nullable=False)  # ON_TIME, LATE_CHECKIN, EARLY_DEPARTURE, MISSED_CHECKOUT, COMPLETED, PRESENT
+
     __table_args__ = (
         Index("ix_attendance_tenant_ts", "tenant_id", "timestamp"),
         Index("ix_attendance_tenant_node", "tenant_id", "node_id"),
+        Index("ix_attendance_student_date", "tenant_id", "student_id", "timestamp"),
     )
 
     tenant = relationship("Tenant", back_populates="attendance_records")
@@ -539,6 +578,27 @@ class AttendanceRecord(Base):
     def to_dict(self):
         class_name = self.student.class_obj.name if (self.student and self.student.class_obj) else (self.student.class_semester if self.student else "General")
         div_name = self.student.division_obj.name if (self.student and self.student.division_obj) else "N/A"
+        
+        c_in = self.check_in_time or self.timestamp
+        c_in_str = c_in.strftime("%Y-%m-%d %H:%M:%S") if c_in else None
+        c_in_short = c_in.strftime("%I:%M %p") if c_in else "N/A"
+        
+        c_out_str = self.check_out_time.strftime("%Y-%m-%d %H:%M:%S") if self.check_out_time else None
+        c_out_short = self.check_out_time.strftime("%I:%M %p") if self.check_out_time else "--"
+
+        duration_formatted = "--"
+        if self.work_duration_minutes is not None:
+            hrs = self.work_duration_minutes // 60
+            mins = self.work_duration_minutes % 60
+            duration_formatted = f"{hrs}h {mins:02d}m" if hrs > 0 else f"{mins}m"
+        elif self.check_in_time and self.check_out_time:
+            secs = int((self.check_out_time - self.check_in_time).total_seconds())
+            if secs >= 0:
+                mins = secs // 60
+                hrs = mins // 60
+                rem_mins = mins % 60
+                duration_formatted = f"{hrs}h {rem_mins:02d}m" if hrs > 0 else f"{mins}m"
+
         return {
             "id": self.id,
             "tenant_id": self.tenant_id,
@@ -562,6 +622,14 @@ class AttendanceRecord(Base):
             "geo_longitude": self.geo_longitude,
             "geo_distance_meters": round(self.geo_distance_meters, 1) if self.geo_distance_meters is not None else None,
             "is_self_attendance": bool(self.is_self_attendance),
+            "punch_type": self.punch_type or "CHECK_IN",
+            "check_in_time": c_in_str,
+            "check_in_short": c_in_short,
+            "check_out_time": c_out_str,
+            "check_out_short": c_out_short,
+            "work_duration_minutes": self.work_duration_minutes,
+            "work_duration_formatted": duration_formatted,
+            "shift_status": self.shift_status or "ON_TIME",
         }
 
 
@@ -622,6 +690,22 @@ class SystemBranding(Base):
     geo_radius_meters = Column(Float, default=150.0, nullable=False)
     max_gps_accuracy_meters = Column(Float, default=50.0, nullable=False)
     self_attendance_face_threshold = Column(Float, default=0.52, nullable=False)
+    
+    # Corporate Shift Configuration (Default: 10:30 AM Check-In, 6:00 PM Check-Out, 15m Grace)
+    shift_check_in_time = Column(String(10), default="10:30", nullable=False)
+    shift_check_out_time = Column(String(10), default="18:00", nullable=False)
+    shift_grace_minutes = Column(Integer, default=15, nullable=False)
+    min_checkout_interval_minutes = Column(Integer, default=15, nullable=False)
+
+    # Corporate Payroll & Wage Configuration
+    payroll_structure = Column(String(30), default="HOURLY", nullable=False)  # HOURLY, MONTHLY_CADRE, HYBRID
+    default_hourly_rate = Column(Float, default=15.0, nullable=True)
+    standard_working_hours_per_day = Column(Float, default=8.0, nullable=True)
+    enable_overtime = Column(Boolean, default=True, nullable=False)
+    overtime_rate_multiplier = Column(Float, default=1.5, nullable=True)
+    missed_checkout_policy = Column(String(30), default="HALF_DAY", nullable=False)  # HALF_DAY, ZERO_HOURS, STANDARD_SHIFT
+    currency_symbol = Column(String(10), default="$", nullable=False)
+
     updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
 
     tenant = relationship("Tenant", back_populates="branding")
@@ -651,6 +735,17 @@ class SystemBranding(Base):
             "geo_radius_meters": float(self.geo_radius_meters if self.geo_radius_meters is not None else 150.0),
             "max_gps_accuracy_meters": float(self.max_gps_accuracy_meters if self.max_gps_accuracy_meters is not None else 50.0),
             "self_attendance_face_threshold": float(self.self_attendance_face_threshold if self.self_attendance_face_threshold is not None else 0.52),
+            "shift_check_in_time": self.shift_check_in_time or "10:30",
+            "shift_check_out_time": self.shift_check_out_time or "18:00",
+            "shift_grace_minutes": self.shift_grace_minutes if self.shift_grace_minutes is not None else 15,
+            "min_checkout_interval_minutes": self.min_checkout_interval_minutes if self.min_checkout_interval_minutes is not None else 15,
+            "payroll_structure": self.payroll_structure or "HOURLY",
+            "default_hourly_rate": float(self.default_hourly_rate if self.default_hourly_rate is not None else 15.0),
+            "standard_working_hours_per_day": float(self.standard_working_hours_per_day if self.standard_working_hours_per_day is not None else 8.0),
+            "enable_overtime": bool(self.enable_overtime if self.enable_overtime is not None else True),
+            "overtime_rate_multiplier": float(self.overtime_rate_multiplier if self.overtime_rate_multiplier is not None else 1.5),
+            "missed_checkout_policy": self.missed_checkout_policy or "HALF_DAY",
+            "currency_symbol": self.currency_symbol or "$",
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
         }
 
@@ -729,4 +824,191 @@ class SubscriptionPlan(Base):
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
         }
+
+
+class LeaveType(Base):
+    """
+    Leave Type master configuration per tenant (e.g. Casual Leave, Medical Leave, Earned Leave, Unpaid Leave).
+    """
+    __tablename__ = "leave_types"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)           # e.g., "Casual Leave"
+    code = Column(String(20), nullable=False)            # e.g., "CL"
+    description = Column(Text, nullable=True)
+    is_paid = Column(Boolean, default=True, nullable=False)
+    default_days_per_year = Column(Float, default=12.0, nullable=False)
+    accrual_frequency = Column(String(20), default="ANNUAL", nullable=False) # ANNUAL, MONTHLY
+    requires_document = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "code", name="uq_tenant_leave_code"),
+        Index("ix_leave_type_tenant_active", "tenant_id", "is_active"),
+    )
+
+    tenant = relationship("Tenant", back_populates="leave_types")
+    cadre_quotas = relationship("LeaveCadreQuota", back_populates="leave_type", cascade="all, delete-orphan")
+    balances = relationship("LeaveBalance", back_populates="leave_type", cascade="all, delete-orphan")
+    requests = relationship("LeaveRequest", back_populates="leave_type", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "code": self.code,
+            "description": self.description or "",
+            "is_paid": bool(self.is_paid),
+            "default_days_per_year": float(self.default_days_per_year if self.default_days_per_year is not None else 12.0),
+            "accrual_frequency": self.accrual_frequency or "ANNUAL",
+            "requires_document": bool(self.requires_document),
+            "is_active": bool(self.is_active),
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+            "cadre_quotas": [q.to_dict() for q in (self.cadre_quotas or [])],
+        }
+
+
+class LeaveCadreQuota(Base):
+    """
+    Cadre/Role-based quota override for a specific leave type within a tenant.
+    """
+    __tablename__ = "leave_cadre_quotas"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    leave_type_id = Column(Integer, ForeignKey("leave_types.id", ondelete="CASCADE"), nullable=False, index=True)
+    cadre_level = Column(String(50), nullable=False)     # e.g., "Executive", "Senior Manager", "Staff", "Intern"
+    allocated_days = Column(Float, default=12.0, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "leave_type_id", "cadre_level", name="uq_tenant_leave_cadre"),
+    )
+
+    tenant = relationship("Tenant", back_populates="leave_cadre_quotas")
+    leave_type = relationship("LeaveType", back_populates="cadre_quotas")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "leave_type_id": self.leave_type_id,
+            "leave_type_name": self.leave_type.name if self.leave_type else "",
+            "leave_type_code": self.leave_type.code if self.leave_type else "",
+            "cadre_level": self.cadre_level,
+            "allocated_days": float(self.allocated_days if self.allocated_days is not None else 0.0),
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class LeaveBalance(Base):
+    """
+    Real-time leave balance tracker per employee, leave type, and calendar year.
+    """
+    __tablename__ = "leave_balances"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    leave_type_id = Column(Integer, ForeignKey("leave_types.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)               # e.g. 2026
+    total_allocated = Column(Float, default=0.0, nullable=False)
+    used_days = Column(Float, default=0.0, nullable=False)
+    pending_days = Column(Float, default=0.0, nullable=False)
+    remaining_days = Column(Float, default=0.0, nullable=False)
+    updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "student_id", "leave_type_id", "year", name="uq_tenant_student_leave_year"),
+        Index("ix_leave_balance_student_year", "tenant_id", "student_id", "year"),
+    )
+
+    tenant = relationship("Tenant", back_populates="leave_balances")
+    student = relationship("Student", back_populates="leave_balances")
+    leave_type = relationship("LeaveType", back_populates="balances")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "student_id": self.student_id,
+            "student_name": self.student.name if self.student else "",
+            "roll_number": self.student.roll_number if self.student else "",
+            "department": self.student.department if self.student else "",
+            "cadre_level": self.student.cadre_level if self.student else "",
+            "leave_type_id": self.leave_type_id,
+            "leave_type_name": self.leave_type.name if self.leave_type else "",
+            "leave_type_code": self.leave_type.code if self.leave_type else "",
+            "is_paid": bool(self.leave_type.is_paid) if self.leave_type else True,
+            "year": self.year,
+            "total_allocated": float(self.total_allocated if self.total_allocated is not None else 0.0),
+            "used_days": float(self.used_days if self.used_days is not None else 0.0),
+            "pending_days": float(self.pending_days if self.pending_days is not None else 0.0),
+            "remaining_days": float(self.remaining_days if self.remaining_days is not None else 0.0),
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
+        }
+
+
+class LeaveRequest(Base):
+    """
+    Employee Leave Application and Admin Approval Request.
+    """
+    __tablename__ = "leave_requests"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    leave_type_id = Column(Integer, ForeignKey("leave_types.id", ondelete="CASCADE"), nullable=False, index=True)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    is_half_day = Column(Boolean, default=False, nullable=False)
+    half_day_period = Column(String(20), default="NONE", nullable=False) # NONE, FIRST_HALF, SECOND_HALF
+    total_days = Column(Float, default=1.0, nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(String(30), default="PENDING", nullable=False)       # PENDING, APPROVED, REJECTED, CANCELLED
+    reviewed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    admin_remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        Index("ix_leave_req_tenant_status", "tenant_id", "status"),
+        Index("ix_leave_req_student_dates", "tenant_id", "student_id", "start_date", "end_date"),
+    )
+
+    tenant = relationship("Tenant", back_populates="leave_requests")
+    student = relationship("Student", back_populates="leave_requests")
+    leave_type = relationship("LeaveType", back_populates="requests")
+    reviewed_by_user = relationship("User", foreign_keys=[reviewed_by_user_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "student_id": self.student_id,
+            "student_name": self.student.name if self.student else "",
+            "roll_number": self.student.roll_number if self.student else "",
+            "department": self.student.department if self.student else "",
+            "cadre_level": self.student.cadre_level if self.student else "",
+            "leave_type_id": self.leave_type_id,
+            "leave_type_name": self.leave_type.name if self.leave_type else "",
+            "leave_type_code": self.leave_type.code if self.leave_type else "",
+            "is_paid": bool(self.leave_type.is_paid) if self.leave_type else True,
+            "start_date": self.start_date.strftime("%Y-%m-%d") if self.start_date else None,
+            "end_date": self.end_date.strftime("%Y-%m-%d") if self.end_date else None,
+            "is_half_day": bool(self.is_half_day),
+            "half_day_period": self.half_day_period or "NONE",
+            "total_days": float(self.total_days if self.total_days is not None else 1.0),
+            "reason": self.reason or "",
+            "status": self.status or "PENDING",
+            "reviewed_by_user_id": self.reviewed_by_user_id,
+            "reviewer_name": self.reviewed_by_user.full_name if self.reviewed_by_user else (self.reviewed_by_user.username if self.reviewed_by_user else None),
+            "reviewed_at": self.reviewed_at.strftime("%Y-%m-%d %H:%M:%S") if self.reviewed_at else None,
+            "admin_remarks": self.admin_remarks or "",
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
 

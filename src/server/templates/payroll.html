@@ -1,0 +1,736 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Top Header & Action Bar -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+    <div>
+        <h3 style="font-size: 20px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-money-bill-wave" style="color: var(--accent-emerald);"></i>
+            <span>Corporate Payroll & Wage Management</span>
+        </h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+            Automated work-hour aggregation, overtime computation (> 8 hrs/day @ 1.5x), missed checkout adjustments, and 1-click payroll exports.
+        </p>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="openPayrollSettingsModal()" class="btn btn-secondary" title="Configure Hourly Multipliers & Shift Policies">
+            <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
+            <span>Payroll Settings</span>
+        </button>
+        <button onclick="exportPayroll('xlsx')" class="btn btn-primary" title="Download Formatted Payroll Spreadsheet">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Export Excel (.xlsx)</span>
+        </button>
+        <button onclick="exportPayroll('csv')" class="btn btn-secondary" title="Download Raw Payroll CSV">
+            <i class="fa-solid fa-file-csv" style="color: var(--accent-emerald);"></i>
+            <span>Export CSV</span>
+        </button>
+    </div>
+</div>
+
+<!-- Super Admin Mandatory Tenant Selector Banner -->
+{% if is_super_admin %}
+<div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.08)); padding: 14px 18px; border-radius: var(--radius-sm); border: 1.5px solid var(--accent-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 18px; color: var(--accent-primary);"><i class="fa-solid fa-crown"></i></span>
+        <div>
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Super Admin Multi-Tenant Payroll Inspector</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);">Select tenant organization to review its isolated workforce hours and payroll liabilities.</div>
+        </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-heading); white-space: nowrap;">Tenant Org:</label>
+        <select id="superAdminPayrollTenantSelect" class="form-control" style="font-weight: 700; min-width: 240px;" onchange="window.location.href='/payroll?tenant_id=' + this.value">
+            {% for t in all_tenants %}
+            <option value="{{ t.id }}" {% if t.id == selected_tenant_id %}selected{% endif %}>
+                {{ t.name }} (#{{ t.id }} - {{ t.slug }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Date-Range Selector & Multi-Parameter Filter Card -->
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-body" style="padding: 16px;">
+        <!-- Preset Date Range Pills -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Date Presets:</span>
+                <button type="button" class="btn btn-secondary preset-btn" data-preset="today" onclick="selectPayrollPreset('today')" style="padding: 6px 12px; font-size: 12px;">Today</button>
+                <button type="button" class="btn btn-secondary preset-btn" data-preset="week" onclick="selectPayrollPreset('week')" style="padding: 6px 12px; font-size: 12px;">This Week</button>
+                <button type="button" class="btn btn-primary preset-btn" data-preset="month" onclick="selectPayrollPreset('month')" style="padding: 6px 12px; font-size: 12px;">This Month</button>
+                <button type="button" class="btn btn-secondary preset-btn" data-preset="last30" onclick="selectPayrollPreset('last30')" style="padding: 6px 12px; font-size: 12px;">Last 30 Days</button>
+            </div>
+            <div id="payrollDateRangeDisplay" style="font-size: 12.5px; font-weight: 600; color: var(--accent-primary);">
+                <i class="fa-regular fa-calendar-days"></i> <span id="payrollRangeLabel">Loading period...</span>
+            </div>
+        </div>
+
+        <!-- Filter Inputs Grid -->
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+            <!-- Start Date -->
+            <div style="flex: 1; min-width: 140px;">
+                <label class="form-label" style="font-size: 11.5px;">From Date</label>
+                <input type="date" id="payrollStartDate" class="form-control" value="{{ first_of_month_str }}" onchange="onCustomDateChange()">
+            </div>
+
+            <!-- End Date -->
+            <div style="flex: 1; min-width: 140px;">
+                <label class="form-label" style="font-size: 11.5px;">To Date</label>
+                <input type="date" id="payrollEndDate" class="form-control" value="{{ today_str }}" onchange="onCustomDateChange()">
+            </div>
+
+            <!-- Department Filter -->
+            <div style="flex: 1.2; min-width: 160px;">
+                <label class="form-label" style="font-size: 11.5px;">Department / Team</label>
+                <select id="payrollDeptFilter" class="form-control" onchange="loadPayrollSummary()">
+                    <option value="">All Departments</option>
+                    {% for d in departments %}
+                    <option value="{{ d.id }}">{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Role Filter -->
+            <div style="flex: 1; min-width: 140px;">
+                <label class="form-label" style="font-size: 11.5px;">Designation / Role</label>
+                <select id="payrollRoleFilter" class="form-control" onchange="loadPayrollSummary()">
+                    <option value="">All Roles</option>
+                    <option value="employee">Employees</option>
+                    <option value="manager">Managers & Leads</option>
+                    <option value="admin_staff">HR & Admin Staff</option>
+                    <option value="contractor">Contractors / External</option>
+                    <option value="intern">Interns</option>
+                </select>
+            </div>
+
+            <!-- Search Employee Name/ID -->
+            <div style="flex: 1.5; min-width: 180px;">
+                <label class="form-label" style="font-size: 11.5px;">Search Employee</label>
+                <input type="text" id="payrollSearchInput" class="form-control" placeholder="Search by name, ID..." oninput="debouncePayrollSearch()">
+            </div>
+
+            <div>
+                <button type="button" onclick="loadPayrollSummary()" class="btn btn-primary" style="padding: 10px 18px;" title="Recalculate Payroll">
+                    <i class="fa-solid fa-arrows-rotate"></i> Recalculate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Summary Cards Grid -->
+<div class="stats-grid" style="margin-bottom: 20px;">
+    <!-- 1. Active Workforce -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Active Workforce</span>
+            <h3 id="kpiActiveWorkforce">--</h3>
+            <div id="kpiWorkforceSub" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">-- total enrolled</div>
+        </div>
+        <div class="stat-icon purple">
+            <i class="fa-solid fa-users-gear"></i>
+        </div>
+    </div>
+
+    <!-- 2. Total Billed Hours -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Total Billed Hours</span>
+            <h3 id="kpiTotalHours">-- hrs</h3>
+            <div id="kpiHoursBreakdown" style="font-size: 11px; color: var(--accent-primary); font-weight: 600; margin-top: 4px;">-- Standard • -- OT</div>
+        </div>
+        <div class="stat-icon cyan">
+            <i class="fa-solid fa-stopwatch"></i>
+        </div>
+    </div>
+
+    <!-- 3. Gross Payroll Outlay -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Gross Payroll Outlay</span>
+            <h3 id="kpiGrossOutlay" style="color: var(--accent-emerald);">--</h3>
+            <div id="kpiStructureDisplay" style="font-size: 11px; color: var(--accent-emerald); font-weight: 600; margin-top: 4px;">Hourly Model</div>
+        </div>
+        <div class="stat-icon emerald">
+            <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+    </div>
+
+    <!-- 4. Overtime Outlay -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Overtime Outlay</span>
+            <h3 id="kpiOvertimeOutlay" style="color: var(--accent-amber);">--</h3>
+            <div id="kpiOvertimeMultiplier" style="font-size: 11px; color: var(--accent-amber); font-weight: 600; margin-top: 4px;">1.5x Multiplier</div>
+        </div>
+        <div class="stat-icon amber">
+            <i class="fa-solid fa-bolt"></i>
+        </div>
+    </div>
+
+    <!-- 5. Average Hourly Payout -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Average Rate</span>
+            <h3 id="kpiAvgHourly">--</h3>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Per Billed Hour</div>
+        </div>
+        <div class="stat-icon rose">
+            <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Employee Earnings Table Card -->
+<div class="card">
+    <div class="card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between;">
+        <div>
+            <h3>
+                <i class="fa-solid fa-table-list" style="color: var(--accent-primary);"></i>
+                <span>Employee Earnings & Work-Hour Breakdown</span>
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Verified shift hours aggregated from biometric face recognition check-in/out logs.
+            </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="payrollTableCountBadge" class="badge badge-node" style="font-size: 12px;">0 Records</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="custom-table" id="payrollTable">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Code / ID</th>
+                        <th>Department</th>
+                        <th>Role / Cadre</th>
+                        <th>Days</th>
+                        <th>Std Hours</th>
+                        <th>OT Hours</th>
+                        <th>Total Hours</th>
+                        <th>Rate ($/hr)</th>
+                        <th>Gross Pay</th>
+                        <th>Shift Audit</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="payrollTableBody">
+                    <tr>
+                        <td colspan="12" style="text-align: center; padding: 36px; color: var(--text-muted);">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 20px; margin-right: 8px;"></i>
+                            Computing active shift hours and gross earnings...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL 1: INDIVIDUAL EMPLOYEE RATE ADJUSTMENT              -->
+<!-- ========================================================= -->
+<div id="editRateModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i>
+                    <span>Adjust Employee Wage Rate</span>
+                </h3>
+                <p id="editRateModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Update custom hourly rate or monthly salary</p>
+            </div>
+            <button class="modal-close" onclick="closeRateModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="editRateForm" onsubmit="submitRateUpdate(event)">
+            <div class="modal-body">
+                <input type="hidden" id="rateStudentId">
+
+                <div class="form-group">
+                    <label class="form-label">Employee Name</label>
+                    <input type="text" id="rateEmployeeName" class="form-control" readonly style="background: var(--bg-subtle);">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Custom Hourly Rate ($/hr)</label>
+                    <input type="number" step="0.25" min="0" id="rateHourlyInput" class="form-control" placeholder="Leave empty for organization default">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Applied for hourly wage computation.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Monthly Base Salary ($)</label>
+                    <input type="number" step="50" min="0" id="rateMonthlyInput" class="form-control" placeholder="e.g. 3500.00">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Applied for monthly cadre structure.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Cadre / Seniority Level</label>
+                    <select id="rateCadreInput" class="form-control">
+                        <option value="Executive Cadre">Executive Cadre</option>
+                        <option value="Senior Staff">Senior Staff</option>
+                        <option value="Associate Staff">Associate Staff</option>
+                        <option value="Junior / Intern">Junior / Intern</option>
+                        <option value="Contractor Cadre">Contractor Cadre</option>
+                    </select>
+                </div>
+
+                <div id="rateResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeRateModal()">Cancel</button>
+                <button type="submit" id="btnSaveRate" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Update Rate
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL 2: CORPORATE PAYROLL CONFIGURATION SETTINGS         -->
+<!-- ========================================================= -->
+<div id="payrollSettingsModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 540px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
+                    <span>Corporate Payroll Engine Settings</span>
+                </h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Institution-wide wage formula & overtime rules</p>
+            </div>
+            <button class="modal-close" onclick="closePayrollSettingsModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="payrollSettingsForm" onsubmit="submitPayrollSettings(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Payroll Wage Structure *</label>
+                    <select id="cfgPayrollStructure" class="form-control" required>
+                        <option value="HOURLY">Hourly Wage (Rate × Billed Shift Hours + OT)</option>
+                        <option value="MONTHLY_CADRE">Monthly Cadre Salary (Monthly Base / 22 Days + OT)</option>
+                        <option value="HYBRID">Hybrid (Base Retainer + Hourly Output)</option>
+                    </select>
+                </div>
+
+                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Default Hourly Rate ($/hr) *</label>
+                        <input type="number" step="0.5" min="0" id="cfgDefaultHourlyRate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Standard Daily Shift (Hrs) *</label>
+                        <input type="number" step="0.5" min="4" max="16" id="cfgStdDailyHours" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Enable Overtime Premium</label>
+                        <select id="cfgEnableOvertime" class="form-control">
+                            <option value="true">Enabled (Work > Standard Shift)</option>
+                            <option value="false">Disabled (Cap at Flat Rate)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">OT Rate Multiplier *</label>
+                        <input type="number" step="0.1" min="1.0" max="3.0" id="cfgOvertimeMultiplier" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Missed Checkout Automated Policy *</label>
+                    <select id="cfgMissedCheckoutPolicy" class="form-control" required>
+                        <option value="HALF_DAY">Half-Day Shift Credit (4.0 hrs credited with audit tag)</option>
+                        <option value="ZERO_HOURS">Zero Hours (0.0 hrs credited until manual admin override)</option>
+                        <option value="STANDARD_SHIFT">Full Shift Credit (8.0 hrs credited)</option>
+                    </select>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        Applied automatically if employee checks in without scanning out at shift end.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Currency Symbol</label>
+                    <input type="text" id="cfgCurrencySymbol" class="form-control" maxlength="5" placeholder="$">
+                </div>
+
+                <div id="payrollSettingsAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closePayrollSettingsModal()">Cancel</button>
+                <button type="submit" id="btnSavePayrollSettings" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Configuration
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentPayrollConfig = null;
+    let searchDebounceTimer = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadPayrollSummary();
+    });
+
+    function selectPayrollPreset(preset) {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const toIso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        let s = new Date(now);
+        let e = new Date(now);
+
+        if (preset === 'today') {
+            // today
+        } else if (preset === 'week') {
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            s = new Date(now.setDate(diff));
+            e = new Date();
+        } else if (preset === 'month') {
+            s = new Date(now.getFullYear(), now.getMonth(), 1);
+            e = new Date();
+        } else if (preset === 'last30') {
+            s = new Date(now.getTime() - (29 * 24 * 60 * 60 * 1000));
+            e = new Date();
+        }
+
+        document.getElementById("payrollStartDate").value = toIso(s);
+        document.getElementById("payrollEndDate").value = toIso(e);
+
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            if (btn.getAttribute('data-preset') === preset) {
+                btn.classList.add('btn-primary');
+                btn.classList.remove('btn-secondary');
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            }
+        });
+
+        loadPayrollSummary();
+    }
+
+    function onCustomDateChange() {
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+        });
+        loadPayrollSummary();
+    }
+
+    function debouncePayrollSearch() {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(loadPayrollSummary, 300);
+    }
+
+    async function loadPayrollSummary() {
+        const startDate = document.getElementById("payrollStartDate")?.value || "";
+        const endDate = document.getElementById("payrollEndDate")?.value || "";
+        const deptId = document.getElementById("payrollDeptFilter")?.value || "";
+        const role = document.getElementById("payrollRoleFilter")?.value || "";
+        const search = document.getElementById("payrollSearchInput")?.value || "";
+        const tableBody = document.getElementById("payrollTableBody");
+
+        if (!tableBody) return;
+        tableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 28px; color: var(--text-muted); font-weight: 500;"><i class="fa-solid fa-spinner fa-spin"></i> Computing active shift hours and gross earnings...</td></tr>`;
+
+        let url = `/api/v1/payroll/summary?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+        if (deptId) url += `&department_id=${encodeURIComponent(deptId)}`;
+        if (role) url += `&user_role=${encodeURIComponent(role)}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "Failed to load payroll.");
+
+            currentPayrollConfig = data.config;
+            renderPayrollKPIs(data);
+            renderPayrollTable(data.items, data.config);
+        } catch (e) {
+            tableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; color: var(--accent-rose); padding: 24px; font-weight: 600;">Failed to fetch payroll data: ${e.message}</td></tr>`;
+        }
+    }
+
+    function renderPayrollKPIs(data) {
+        const summary = data.summary;
+        const config = data.config;
+        const curr = summary.currency_symbol || "$";
+
+        document.getElementById("payrollRangeLabel").innerText = `${data.date_range.start_date} to ${data.date_range.end_date} (${data.date_range.days_count} Days)`;
+        document.getElementById("kpiActiveWorkforce").innerText = summary.active_workforce;
+        document.getElementById("kpiWorkforceSub").innerText = `${summary.total_employees} registered profiles`;
+        document.getElementById("kpiTotalHours").innerText = `${summary.total_billed_hours.toLocaleString()} hrs`;
+        document.getElementById("kpiGrossOutlay").innerText = `${curr}${summary.total_gross_outlay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById("kpiStructureDisplay").innerText = `${config.payroll_structure.replace('_', ' ')} Model`;
+        document.getElementById("kpiOvertimeOutlay").innerText = `${curr}${summary.total_overtime_outlay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById("kpiOvertimeMultiplier").innerText = `${config.overtime_rate_multiplier}x Multiplier (> ${config.standard_working_hours_per_day}h/day)`;
+        document.getElementById("kpiAvgHourly").innerText = `${curr}${summary.average_hourly_payout.toFixed(2)}/hr`;
+    }
+
+    function renderPayrollTable(items, config) {
+        const tableBody = document.getElementById("payrollTableBody");
+        const countBadge = document.getElementById("payrollTableCountBadge");
+        if (!tableBody) return;
+
+        if (countBadge) countBadge.innerText = `${items.length} Employees`;
+
+        if (!items || items.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 36px; color: var(--text-muted);">No employee payroll records found matching the active filters.</td></tr>`;
+            return;
+        }
+
+        const curr = config.currency_symbol || "$";
+
+        tableBody.innerHTML = items.map(emp => {
+            let roleBadge = '<span class="badge badge-present">Employee</span>';
+            if (emp.user_role === 'manager') roleBadge = '<span class="badge badge-sky"><i class="fa-solid fa-user-gear"></i> Manager</span>';
+            else if (emp.user_role === 'admin_staff') roleBadge = '<span class="badge badge-amber"><i class="fa-solid fa-user-shield"></i> Admin Staff</span>';
+            else if (emp.user_role === 'contractor') roleBadge = '<span class="badge badge-node">Contractor</span>';
+            else if (emp.user_role === 'intern') roleBadge = '<span class="badge badge-node">Intern</span>';
+
+            let auditBadges = '';
+            if (emp.missed_checkout_count > 0) {
+                auditBadges += `<span class="badge badge-rose" style="font-size: 11px; margin-right: 4px;" title="${emp.missed_checkout_count} missed checkout(s) credited under policy"><i class="fa-solid fa-triangle-exclamation"></i> ${emp.missed_checkout_count} Missed Out</span>`;
+            }
+            if (emp.late_checkin_count > 0) {
+                auditBadges += `<span class="badge badge-amber" style="font-size: 11px;" title="${emp.late_checkin_count} late check-in(s)"><i class="fa-solid fa-clock"></i> ${emp.late_checkin_count} Late</span>`;
+            }
+            if (!auditBadges) {
+                auditBadges = `<span class="badge badge-present" style="font-size: 11px;"><i class="fa-solid fa-check"></i> Compliant</span>`;
+            }
+
+            const otHighlight = emp.overtime_hours > 0 ? `<strong style="color: var(--accent-amber); font-family: monospace;">+${emp.overtime_hours} hrs</strong>` : `<span style="color: var(--text-muted);">0.0</span>`;
+
+            return `
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
+                                <span>${(emp.name || 'U').charAt(0)}</span>
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-heading); font-size: 13.5px;">${emp.name}</strong>
+                                <div style="font-size: 11px; color: var(--text-muted);">${emp.cadre_level || 'Standard Cadre'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><code>${emp.roll_number}</code></td>
+                    <td><span class="badge badge-indigo">${emp.department || 'General'}</span></td>
+                    <td>${roleBadge}</td>
+                    <td><strong style="color: var(--text-heading); font-family: monospace;">${emp.days_worked}</strong></td>
+                    <td><span style="font-family: monospace;">${emp.standard_hours} hrs</span></td>
+                    <td>${otHighlight}</td>
+                    <td><strong style="color: var(--accent-primary); font-family: monospace;">${emp.total_active_hours} hrs</strong></td>
+                    <td><strong style="color: var(--text-heading); font-family: monospace;">${curr}${emp.hourly_rate.toFixed(2)}</strong></td>
+                    <td>
+                        <strong style="color: var(--accent-emerald); font-size: 14px; font-family: monospace;">
+                            ${curr}${emp.gross_pay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </strong>
+                    </td>
+                    <td>${auditBadges}</td>
+                    <td>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button onclick="openRateModal(${emp.student_id}, '${emp.name.replace(/'/g, "\\'")}', ${emp.hourly_rate}, ${emp.monthly_base_salary || 'null'}, '${(emp.cadre_level || '').replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Adjust Rate">
+                                <i class="fa-solid fa-pen-to-square"></i> Rate
+                            </button>
+                            <a href="/logs?roll=${encodeURIComponent(emp.roll_number)}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="View Attendance Logs">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function exportPayroll(format) {
+        const startDate = document.getElementById("payrollStartDate")?.value || "";
+        const endDate = document.getElementById("payrollEndDate")?.value || "";
+        const deptId = document.getElementById("payrollDeptFilter")?.value || "";
+        const role = document.getElementById("payrollRoleFilter")?.value || "";
+        const search = document.getElementById("payrollSearchInput")?.value || "";
+
+        let url = `/api/v1/payroll/export?export_format=${format}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+        if (deptId) url += `&department_id=${encodeURIComponent(deptId)}`;
+        if (role) url += `&user_role=${encodeURIComponent(role)}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        window.location.href = url;
+    }
+
+    function openRateModal(studentId, name, hourlyRate, monthlySalary, cadre) {
+        const modal = document.getElementById("editRateModal");
+        if (!modal) return;
+
+        document.getElementById("rateStudentId").value = studentId;
+        document.getElementById("rateEmployeeName").value = name;
+        document.getElementById("rateHourlyInput").value = hourlyRate || "";
+        document.getElementById("rateMonthlyInput").value = monthlySalary || "";
+        if (cadre && document.getElementById("rateCadreInput")) {
+            document.getElementById("rateCadreInput").value = cadre;
+        }
+
+        const alertBox = document.getElementById("rateResultAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        modal.classList.add("active");
+    }
+
+    function closeRateModal() {
+        const modal = document.getElementById("editRateModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function submitRateUpdate(e) {
+        e.preventDefault();
+        const studentId = parseInt(document.getElementById("rateStudentId").value);
+        const hourly = document.getElementById("rateHourlyInput").value;
+        const monthly = document.getElementById("rateMonthlyInput").value;
+        const cadre = document.getElementById("rateCadreInput").value;
+
+        const saveBtn = document.getElementById("btnSaveRate");
+        const alertBox = document.getElementById("rateResultAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        try {
+            const res = await fetch("/api/v1/payroll/employee-rate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    hourly_rate: hourly ? parseFloat(hourly) : null,
+                    monthly_base_salary: monthly ? parseFloat(monthly) : null,
+                    cadre_level: cadre,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Employee rate updated successfully!';
+
+                setTimeout(() => {
+                    closeRateModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Rate';
+                    loadPayrollSummary();
+                }, 600);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Update failed.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Rate';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Rate';
+        }
+    }
+
+    function openPayrollSettingsModal() {
+        const modal = document.getElementById("payrollSettingsModal");
+        if (!modal) return;
+
+        if (currentPayrollConfig) {
+            document.getElementById("cfgPayrollStructure").value = currentPayrollConfig.payroll_structure || "HOURLY";
+            document.getElementById("cfgDefaultHourlyRate").value = currentPayrollConfig.default_hourly_rate || 15.0;
+            document.getElementById("cfgStdDailyHours").value = currentPayrollConfig.standard_working_hours_per_day || 8.0;
+            document.getElementById("cfgEnableOvertime").value = currentPayrollConfig.enable_overtime ? "true" : "false";
+            document.getElementById("cfgOvertimeMultiplier").value = currentPayrollConfig.overtime_rate_multiplier || 1.5;
+            document.getElementById("cfgMissedCheckoutPolicy").value = currentPayrollConfig.missed_checkout_policy || "HALF_DAY";
+            document.getElementById("cfgCurrencySymbol").value = currentPayrollConfig.currency_symbol || "$";
+        }
+
+        const alertBox = document.getElementById("payrollSettingsAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        modal.classList.add("active");
+    }
+
+    function closePayrollSettingsModal() {
+        const modal = document.getElementById("payrollSettingsModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function submitPayrollSettings(e) {
+        e.preventDefault();
+        const payload = {
+            payroll_structure: document.getElementById("cfgPayrollStructure").value,
+            default_hourly_rate: parseFloat(document.getElementById("cfgDefaultHourlyRate").value),
+            standard_working_hours_per_day: parseFloat(document.getElementById("cfgStdDailyHours").value),
+            enable_overtime: document.getElementById("cfgEnableOvertime").value === "true",
+            overtime_rate_multiplier: parseFloat(document.getElementById("cfgOvertimeMultiplier").value),
+            missed_checkout_policy: document.getElementById("cfgMissedCheckoutPolicy").value,
+            currency_symbol: document.getElementById("cfgCurrencySymbol").value.trim() || "$",
+        };
+
+        const saveBtn = document.getElementById("btnSavePayrollSettings");
+        const alertBox = document.getElementById("payrollSettingsAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        try {
+            const res = await fetch("/api/v1/payroll/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Configuration saved successfully!';
+
+                setTimeout(() => {
+                    closePayrollSettingsModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Configuration';
+                    loadPayrollSummary();
+                }, 600);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Failed to save settings.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Configuration';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Configuration';
+        }
+    }
+</script>
+{% endblock %}

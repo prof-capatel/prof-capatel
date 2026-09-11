@@ -28,24 +28,45 @@
         </div>
     </div>
     <div class="card-body">
-        <!-- Advanced Multi-Filter Toolbar -->
+        <!-- Advanced Multi-Filter Toolbar with Date Range Presets -->
         <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <!-- Quick Preset Date Pills -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Date Presets:</span>
+                    <button type="button" class="btn btn-primary preset-btn" data-preset="today" onclick="selectLogsPreset('today')" style="padding: 5px 12px; font-size: 11.5px;">Today</button>
+                    <button type="button" class="btn btn-secondary preset-btn" data-preset="week" onclick="selectLogsPreset('week')" style="padding: 5px 12px; font-size: 11.5px;">This Week</button>
+                    <button type="button" class="btn btn-secondary preset-btn" data-preset="month" onclick="selectLogsPreset('month')" style="padding: 5px 12px; font-size: 11.5px;">This Month</button>
+                    <button type="button" class="btn btn-secondary preset-btn" data-preset="last30" onclick="selectLogsPreset('last30')" style="padding: 5px 12px; font-size: 11.5px;">Last 30 Days</button>
+                </div>
+                <div id="logsRangeSummary" style="font-size: 12px; font-weight: 600; color: var(--accent-primary);">
+                    <i class="fa-regular fa-calendar"></i> <span id="logsDateLabel">{{ today_str }}</span>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
-                <!-- Date Filter -->
-                <div style="flex: 1; min-width: 150px;">
-                    <label class="form-label">Date Filter</label>
-                    <input type="date" id="filterDate" class="form-control" value="{{ today_str }}">
+                <!-- From Date -->
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label" style="font-size: 11.5px;">From Date</label>
+                    <input type="date" id="filterStartDate" class="form-control" value="{{ today_str }}" onchange="onCustomLogsDateChange()">
+                    <input type="hidden" id="filterDate" value="{{ today_str }}">
+                </div>
+
+                <!-- To Date -->
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label" style="font-size: 11.5px;">To Date</label>
+                    <input type="date" id="filterEndDate" class="form-control" value="{{ today_str }}" onchange="onCustomLogsDateChange()">
                 </div>
 
                 <!-- Search Roll / Name -->
                 <div style="flex: 1.2; min-width: 160px;">
-                    <label class="form-label">{% if is_corporate %}Search Code / Name{% else %}Search Roll / Name{% endif %}</label>
+                    <label class="form-label" style="font-size: 11.5px;">{% if is_corporate %}Search Code / Name{% else %}Search Roll / Name{% endif %}</label>
                     <input type="text" id="filterRoll" class="form-control" placeholder="{% if is_corporate %}e.g. EMP101 or Jane{% else %}e.g. CS2026 or Jane{% endif %}">
                 </div>
 
                 <!-- Department Filter -->
                 <div style="flex: 1; min-width: 150px;">
-                    <label class="form-label">Department</label>
+                    <label class="form-label" style="font-size: 11.5px;">Department</label>
                     <select id="filterDept" class="form-control">
                         <option value="">All Departments</option>
                         {% for dept in departments %}
@@ -56,7 +77,7 @@
 
                 <!-- User Role Filter -->
                 <div style="flex: 1; min-width: 140px;">
-                    <label class="form-label">User Role</label>
+                    <label class="form-label" style="font-size: 11.5px;">User Role</label>
                     <select id="filterRole" class="form-control">
                         <option value="">All Roles</option>
                         {% for role in tenant_roles %}
@@ -78,7 +99,7 @@
 
                 <!-- Source / Override Filter -->
                 <div style="flex: 1; min-width: 150px;">
-                    <label class="form-label">Log Source</label>
+                    <label class="form-label" style="font-size: 11.5px;">Log Source</label>
                     <select id="filterOverride" class="form-control">
                         <option value="">All Verification Sources</option>
                         <option value="false">Face Recognition Only</option>
@@ -99,15 +120,28 @@
             <table class="custom-table">
                 <thead>
                     <tr>
+                        {% if is_corporate %}
                         <th>Log ID</th>
-                        <th>Member Profile</th>
-                        <th>{% if is_corporate %}Employee Code / ID{% else %}Roll / ID Number{% endif %}</th>
+                        <th>Employee Profile</th>
+                        <th>Employee Code / ID</th>
                         <th>Role</th>
                         <th>Department</th>
-                        <th>{% if is_corporate %}Team / Designation / Class{% else %}Class / Semester{% endif %}</th>
+                        <th>Ingestion Node</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
+                        <th>Active Hours</th>
+                        <th>Shift Status</th>
+                        {% else %}
+                        <th>Log ID</th>
+                        <th>Member Profile</th>
+                        <th>Roll / ID Number</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Class / Semester</th>
                         <th>Ingestion Node</th>
                         <th>Timestamp</th>
                         <th>Verification Status</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody id="logsTableBody">
@@ -189,6 +223,8 @@
 
 {% block scripts %}
 <script>
+    window.IS_CORPORATE = {{ 'true' if is_corporate else 'false' }};
+
     document.addEventListener("DOMContentLoaded", () => {
         applyLogFilters();
         populateStudentDropdown();

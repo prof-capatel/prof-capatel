@@ -74,8 +74,16 @@
                     <span>Live Dashboard</span>
                 </a>
             </li>
+            {% if current_tenant and current_tenant.tenant_type != 'corporate' %}
             <li>
-                <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}" onclick="closeMobileMenu()">
+                <a href="/academic-management" class="nav-link {% if active_page in ['academic', 'departments', 'teams'] %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-sitemap" style="color: var(--accent-primary);"></i>
+                    <span>Academic & Classes</span>
+                </a>
+            </li>
+            {% endif %}
+            <li>
+                <a href="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}/employees{% else %}/students{% endif %}" class="nav-link {% if active_page in ['students', 'employees'] %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-user-tie{% else %}fa-user-graduate{% endif %}"></i>
                     <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Directory{% else %}Students Directory{% endif %}</span>
                 </a>
@@ -83,7 +91,7 @@
             <li>
                 <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-user-plus"></i>
-                    <span>Face Enrollment</span>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Register New Employee{% else %}Face Enrollment{% endif %}</span>
                 </a>
             </li>
             <li>
@@ -98,16 +106,37 @@
                     <span>Analytics & Reports</span>
                 </a>
             </li>
+            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+            <li>
+                <a href="/payroll" class="nav-link {% if active_page == 'payroll' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-money-bill-wave" style="color: #10b981;"></i>
+                    <span>Payroll & Wages</span>
+                </a>
+            </li>
+            <li>
+                <a href="/leave-management" class="nav-link {% if active_page == 'leave-management' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-calendar-days" style="color: #6366f1;"></i>
+                    <span>Leave Management</span>
+                </a>
+            </li>
+            {% else %}
+            <li>
+                <a href="/payroll" class="nav-link {% if active_page == 'payroll' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-money-bill-wave" style="color: #10b981;"></i>
+                    <span>Payroll & Wages</span>
+                </a>
+            </li>
             <li>
                 <a href="/nodes" class="nav-link {% if active_page == 'nodes' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-microchip"></i>
                     <span>Edge Nodes</span>
                 </a>
             </li>
+            {% endif %}
             <li>
                 <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-gear"></i>
-                    <span>Settings & Branding</span>
+                    <span>Settings & Themes</span>
                 </a>
             </li>
 
@@ -119,14 +148,16 @@
                     <span>Live Dashboard</span>
                 </a>
             </li>
+            {% if current_tenant and current_tenant.tenant_type != 'corporate' %}
             <li>
-                <a href="/academic-management" class="nav-link {% if active_page == 'academic' %}active{% endif %}" onclick="closeMobileMenu()">
-                    <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-diagram-project{% else %}fa-sitemap{% endif %}" style="color: var(--accent-primary);"></i>
-                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Departments & Teams{% else %}Academic & Classes{% endif %}</span>
+                <a href="/academic-management" class="nav-link {% if active_page in ['academic', 'departments', 'teams'] %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-sitemap" style="color: var(--accent-primary);"></i>
+                    <span>Academic & Classes</span>
                 </a>
             </li>
+            {% endif %}
             <li>
-                <a href="/students" class="nav-link {% if active_page == 'students' %}active{% endif %}" onclick="closeMobileMenu()">
+                <a href="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}/employees{% else %}/students{% endif %}" class="nav-link {% if active_page in ['students', 'employees'] %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-user-tie{% else %}fa-user-graduate{% endif %}"></i>
                     <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Directory{% else %}Students Directory{% endif %}</span>
                 </a>
@@ -134,7 +165,7 @@
             <li>
                 <a href="/enroll" class="nav-link {% if active_page == 'enroll' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-user-plus"></i>
-                    <span>Face Enrollment</span>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Register New Employee{% else %}Face Enrollment{% endif %}</span>
                 </a>
             </li>
             <li>
@@ -149,12 +180,27 @@
                     <span>Analytics & Reports</span>
                 </a>
             </li>
+            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+            <li>
+                <a href="/payroll" class="nav-link {% if active_page == 'payroll' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-money-bill-wave" style="color: #10b981;"></i>
+                    <span>Payroll & Wages</span>
+                </a>
+            </li>
+            <li>
+                <a href="/leave-management" class="nav-link {% if active_page == 'leave-management' %}active{% endif %}" onclick="closeMobileMenu()">
+                    <i class="fa-solid fa-calendar-days" style="color: #6366f1;"></i>
+                    <span>Leave Management</span>
+                </a>
+            </li>
+            {% else %}
             <li>
                 <a href="/nodes" class="nav-link {% if active_page == 'nodes' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-microchip"></i>
                     <span>Edge Nodes</span>
                 </a>
             </li>
+            {% endif %}
             <li>
                 <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-gear"></i>
@@ -202,7 +248,8 @@
             </li>
             {% endif %}
 
-            <!-- Edge Nodes & Mobile Node Links -->
+            {# Edge Nodes & Mobile Node Links (Hidden for Corporate Tenants) #}
+            {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
             <li style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
                 <a href="/mobile-capture" target="_blank" class="nav-link {% if active_page == 'mobile' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-mobile-screen"></i>
@@ -216,6 +263,7 @@
                     <span>Self-Attendance (GPS)</span>
                 </a>
             </li>
+            {% endif %}
             {% endif %}
         </ul>
 
@@ -301,7 +349,7 @@
                 {% if current_user and current_user.role in ['TENANT_ADMIN', 'SUPER_ADMIN', 'TEACHER'] %}
                 <a href="/enroll" class="btn btn-primary" style="padding: 7px 12px;">
                     <i class="fa-solid fa-plus"></i>
-                    <span>Enroll</span>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Register Employee{% else %}Enroll{% endif %}</span>
                 </a>
                 {% endif %}
             </div>
@@ -322,12 +370,25 @@
         }
 
         async function logoutUser() {
+            let redirectUrl = "/login";
             try {
-                await fetch("/api/v1/auth/logout", { method: "POST" });
+                const res = await fetch("/api/v1/auth/logout", { method: "POST" });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.redirect_url) {
+                        redirectUrl = data.redirect_url;
+                    }
+                }
             } catch (e) {}
+
             document.cookie = "access_token=; path=/; max-age=0";
             document.cookie = "active_role=; path=/; max-age=0";
-            window.location.href = "/login";
+            document.cookie = "active_tenant_id=; path=/; max-age=0";
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("user_role");
+            localStorage.removeItem("active_tenant_id");
+
+            window.location.href = redirectUrl;
         }
     </script>
     {% block scripts %}{% endblock %}

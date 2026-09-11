@@ -293,7 +293,8 @@ class TestTokenizedGatewaysAndMapPicker(unittest.TestCase):
         self.assertIn("AI Research Division", resp.text)
         self.assertIn("lead_architect", resp.text)
         self.assertIn("Employee Code / ID", resp.text)
-        self.assertIn("Team / Designation / Class", resp.text)
+        self.assertIn("Check-In", resp.text)
+        self.assertIn("Check-Out", resp.text)
 
         # 2. Test filtered attendance records & export
         rec_resp = self.client.get(
@@ -418,7 +419,7 @@ class TestTokenizedGatewaysAndMapPicker(unittest.TestCase):
         dash_resp = self.client.get("/", headers=headers)
         self.assertEqual(dash_resp.status_code, 200)
         self.assertIn("Total Enrolled Employees", dash_resp.text)
-        self.assertIn("Employees Present Today", dash_resp.text)
+        self.assertIn("Checked-In Today", dash_resp.text)
         self.assertNotIn("Enrolled Students", dash_resp.text)
 
         # 2. Stats API Endpoint

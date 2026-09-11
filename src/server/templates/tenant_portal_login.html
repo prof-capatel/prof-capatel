@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Sign In - {{ tenant.name }} Portal</title>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem("app_theme") || "light";
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+    <style>
+        .portal-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            background: rgba(99, 102, 241, 0.12);
+            color: var(--accent-primary);
+            margin-bottom: 8px;
+        }
+        .demo-pill-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        .demo-pill-btn:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-subtle);
+            transform: translateY(-1px);
+        }
+
+        /* Biometric Camera Viewport Styles */
+        .camera-viewport {
+            position: relative;
+            width: 100%;
+            height: 310px;
+            background: #0f172a;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--border-color);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .camera-viewport.success {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 24px rgba(16, 185, 129, 0.45) !important;
+        }
+        .camera-viewport.error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.35) !important;
+        }
+        .camera-viewport video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror view for natural interaction */
+        }
+        .face-guide-oval {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 180px;
+            height: 240px;
+            border: 2px dashed rgba(99, 102, 241, 0.65);
+            border-radius: 50% / 45%;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);
+            transition: all 0.3s ease;
+        }
+        .camera-viewport.success .face-guide-oval {
+            border-color: #10b981;
+            border-style: solid;
+            box-shadow: 0 0 0 9999px rgba(16, 185, 129, 0.15);
+        }
+        .laser-sweep {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #6366f1, #38bdf8, transparent);
+            box-shadow: 0 0 12px #38bdf8;
+            opacity: 0.85;
+            animation: sweepScan 2.4s infinite ease-in-out;
+            pointer-events: none;
+        }
+        @keyframes sweepScan {
+            0% { top: 15%; opacity: 0; }
+            15% { opacity: 1; }
+            85% { opacity: 1; }
+            100% { top: 85%; opacity: 0; }
+        }
+        .cam-controls-bar {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .cam-icon-btn {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(8px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+        .cam-icon-btn:hover {
+            background: rgba(99, 102, 241, 0.9);
+            transform: scale(1.06);
+        }
+    </style>
+</head>
+<body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body); padding: 20px;">
+
+    <div class="card" style="max-width: {% if is_corporate %}480px{% else %}460px{% endif %}; width: 100%; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-xl); border-radius: var(--radius-md);">
+        
+        <!-- Organization Header -->
+        <div class="card-header" style="text-align: center; flex-direction: column; padding: 26px 24px 16px; border-bottom: none;">
+            <div style="width: 58px; height: 58px; border-radius: 16px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; margin: 0 auto 12px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);">
+                {% if is_corporate %}
+                    <i class="fa-solid fa-building"></i>
+                {% else %}
+                    <i class="fa-solid fa-graduation-cap"></i>
+                {% endif %}
+            </div>
+
+            <span class="portal-badge">
+                <i class="fa-solid fa-shield-halved"></i> {{ 'Corporate Enterprise Portal' if is_corporate else 'Academic Campus Portal' }}
+            </span>
+            <h2 style="font-size: 21px; font-weight: 800; color: var(--text-heading); margin: 0;">{{ tenant.name }}</h2>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">{{ branding.tagline if (branding and branding.tagline) else 'Sign in to access your organization workspace' }}</p>
+        </div>
+
+        <div class="card-body" style="padding: 0 24px 24px;">
+
+            {% if is_corporate %}
+            <!-- ========================================================= -->
+            <!-- CORPORATE TENANT: PASSWORDLESS FACE AUTHENTICATION VIEW   -->
+            <!-- ========================================================= -->
+
+            <!-- Live Camera Viewport -->
+            <div class="camera-viewport" id="camViewport">
+                <video id="faceVideo" autoplay playsinline muted></video>
+                <canvas id="captureCanvas" style="display: none;"></canvas>
+                
+                <!-- Biometric Guide Overlay -->
+                <div class="face-guide-oval" id="faceOval"></div>
+                <div class="laser-sweep" id="laserSweep"></div>
+
+                <!-- Live Camera Controls Overlay -->
+                <div class="cam-controls-bar">
+                    <span id="camStatusTag" style="font-size: 10.5px; font-weight: 700; color: #38bdf8; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(6px); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.3);">
+                        <i class="fa-solid fa-circle-dot" style="color: #10b981; animation: pulse 1.5s infinite;"></i> Ready
+                    </span>
+                    <button type="button" class="cam-icon-btn" onclick="switchCameraFacing()" title="Flip Front / Rear Camera">
+                        <i class="fa-solid fa-camera-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Face Scan Status Notification Banner -->
+            <div id="faceScanStatus" style="margin-top: 14px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 12.5px; display: flex; align-items: center; gap: 10px; background: var(--bg-subtle); border: 1px solid var(--border-color); color: var(--text-primary);">
+                <i class="fa-solid fa-face-viewfinder" style="font-size: 18px; color: #6366f1;"></i>
+                <div style="flex: 1;">
+                    <strong id="statusTitle" style="display: block; font-size: 13px;">Align your face in the oval frame</strong>
+                    <span id="statusSubtitle" style="font-size: 11.5px; color: var(--text-muted);">Ensure clear lighting and look directly into the camera.</span>
+                </div>
+            </div>
+
+            <!-- Primary Scan Face Trigger Button -->
+            <div style="margin-top: 16px;">
+                <button type="button" id="btnScanFace" class="btn btn-primary" onclick="captureAndAuthenticate()" style="width: 100%; padding: 13px; font-size: 14px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fa-solid fa-expand"></i>
+                    <span>Scan Face to Sign In</span>
+                </button>
+            </div>
+
+            <!-- Discrete Fallback Toggle for Admin Password Login -->
+            <div style="margin-top: 20px; text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+                <button type="button" onclick="togglePasswordFallback()" id="btnTogglePassword" style="background: none; border: none; font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; transition: color 0.2s;">
+                    <i class="fa-solid fa-key"></i>
+                    <span>Switch to Password Sign In</span>
+                </button>
+            </div>
+
+            <!-- Collapsible Password Login Form (Fallback for Admins) -->
+            <div id="passwordFallbackCard" style="display: none; margin-top: 14px; background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 11.5px; font-weight: 700; color: var(--text-heading); text-transform: uppercase;">Admin Credential Sign In</span>
+                    <button type="button" onclick="togglePasswordFallback()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px;">&times; Close</button>
+                </div>
+
+                <form onsubmit="submitTenantLogin(event)">
+                    <input type="hidden" id="loginRole" value="TENANT_ADMIN">
+                    <input type="hidden" id="loginTenantId" value="{{ tenant.id }}">
+                    <input type="hidden" id="loginTenantSlug" value="{{ tenant.slug }}">
+
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label class="form-label" style="font-size: 11.5px;">Admin Username</label>
+                        <input type="text" id="loginUsername" class="form-control" placeholder="admin or {{ tenant.slug }}" required style="font-size: 12.5px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" style="font-size: 11.5px;">Password</label>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required style="font-size: 12.5px;">
+                    </div>
+
+                    <div id="loginAlert" style="display: none; margin-bottom: 12px; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 11.5px;"></div>
+
+                    <button type="submit" id="btnLogin" class="btn btn-secondary" style="width: 100%; padding: 10px; font-weight: 700; font-size: 12.5px;">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In with Credentials
+                    </button>
+                </form>
+            </div>
+
+            {% else %}
+            <!-- ========================================================= -->
+            <!-- EDUCATIONAL TENANT: MULTI-ROLE CREDENTIAL LOGIN VIEW      -->
+            <!-- ========================================================= -->
+
+            <!-- Quick-Login Profiles Scoped to this Tenant -->
+            {% if demo_users %}
+            <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Quick-Login Profiles
+                    </span>
+                    <span style="font-size: 10px; color: var(--text-muted); font-family: monospace;">{{ tenant.slug }}</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                    {% for du in demo_users %}
+                        <button type="button" class="demo-pill-btn" onclick="fillTenantLogin('{{ du.username }}', 'admin123', '{{ du.role }}')">
+                            <i class="fa-solid {{ du.icon }}" style="color: {{ du.color or 'var(--accent-primary)' }};"></i>
+                            <div>
+                                <div style="font-weight: 700;">{{ du.label }}</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);">{{ du.username }}</div>
+                            </div>
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Dedicated Tenant Login Form -->
+            <form onsubmit="submitTenantLogin(event)">
+                <input type="hidden" id="loginTenantId" value="{{ tenant.id }}">
+                <input type="hidden" id="loginTenantSlug" value="{{ tenant.slug }}">
+
+                <!-- Dynamic Role Selector Dropdown -->
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa-solid fa-id-badge" style="color: var(--accent-primary);"></i> Select Role</span>
+                        <span style="font-size: 10px; color: var(--text-muted);">Scoped for {{ tenant.name }}</span>
+                    </label>
+                    <select id="loginRole" class="form-control" onchange="onRoleChanged()" style="font-weight: 600;">
+                        {% for r in available_roles %}
+                            <option value="{{ r.key }}">{{ r.label }} ({{ r.badge }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Username Input -->
+                <div class="form-group">
+                    <label class="form-label" id="usernameLabel">Username or Roll Number</label>
+                    <div style="position: relative;">
+                        <input type="text" id="loginUsername" class="form-control" placeholder="Enter username" required style="padding-left: 36px;">
+                        <i class="fa-solid fa-user" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted); font-size: 13px;"></i>
+                    </div>
+                </div>
+
+                <!-- Password Input -->
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required style="padding-left: 36px;">
+                        <i class="fa-solid fa-lock" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted); font-size: 13px;"></i>
+                    </div>
+                </div>
+
+                <div id="loginAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+
+                <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 700;">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to {{ tenant.name }}
+                </button>
+            </form>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <script>
+        const tenantId = parseInt("{{ tenant.id }}");
+        const tenantSlug = "{{ tenant.slug }}";
+        const isCorporate = {{ 'true' if is_corporate else 'false' }};
+
+        let currentFacingMode = "user"; // Front camera by default
+        let videoStream = null;
+        let isAuthenticating = false;
+        let autoScanInterval = null;
+
+        // Initialize camera on corporate portals
+        document.addEventListener("DOMContentLoaded", () => {
+            if (isCorporate) {
+                startCamera();
+            } else {
+                onRoleChanged();
+            }
+        });
+
+        // ----------------------------------------------------------------------
+        // Audio Synthesizer: Realistic Shutter Click & Success Chime
+        // ----------------------------------------------------------------------
+        function playShutterAndChime() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+
+                // 1. Shutter Click (Camera mechanism sound)
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = "triangle";
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.09);
+
+                // 2. Success Two-Tone Chime (E5 -> B5 / 659Hz -> 987Hz)
+                const chimeOsc = ctx.createOscillator();
+                const chimeGain = ctx.createGain();
+                chimeOsc.type = "sine";
+                chimeOsc.frequency.setValueAtTime(659.25, now + 0.1);
+                chimeOsc.frequency.setValueAtTime(987.77, now + 0.22);
+                chimeGain.gain.setValueAtTime(0.0, now + 0.1);
+                chimeGain.gain.linearRampToValueAtTime(0.35, now + 0.14);
+                chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+                chimeOsc.connect(chimeGain);
+                chimeGain.connect(ctx.destination);
+                chimeOsc.start(now + 0.1);
+                chimeOsc.stop(now + 0.7);
+            } catch (e) {
+                console.debug("Audio synthesis notice:", e);
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Camera Engine
+        // ----------------------------------------------------------------------
+        async function startCamera() {
+            const video = document.getElementById("faceVideo");
+            const statusTag = document.getElementById("camStatusTag");
+            if (!video) return;
+
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: {
+                    facingMode: currentFacingMode,
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                },
+                audio: false,
+            };
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = videoStream;
+                if (statusTag) statusTag.innerHTML = '<i class="fa-solid fa-circle-dot" style="color: #10b981;"></i> Camera Live';
+            } catch (err) {
+                console.warn("Camera access failed with ideal constraints, trying basic fallback:", err);
+                try {
+                    videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    video.srcObject = videoStream;
+                    if (statusTag) statusTag.innerHTML = '<i class="fa-solid fa-circle-dot" style="color: #10b981;"></i> Camera Live';
+                } catch (fallbackErr) {
+                    if (statusTag) statusTag.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Camera Blocked';
+                    updateStatusUI("Camera permission required", "Please allow camera access in your browser or use password login below.", "error");
+                }
+            }
+        }
+
+        function switchCameraFacing() {
+            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+            startCamera();
+        }
+
+        function updateStatusUI(title, subtitle, state = "normal") {
+            const viewport = document.getElementById("camViewport");
+            const statusBox = document.getElementById("faceScanStatus");
+            const titleEl = document.getElementById("statusTitle");
+            const subEl = document.getElementById("statusSubtitle");
+
+            if (viewport) {
+                viewport.classList.remove("success", "error");
+                if (state === "success") viewport.classList.add("success");
+                else if (state === "error") viewport.classList.add("error");
+            }
+
+            if (titleEl) titleEl.innerText = title;
+            if (subEl) subEl.innerText = subtitle;
+
+            if (statusBox) {
+                if (state === "success") {
+                    statusBox.style.background = "var(--badge-emerald-bg)";
+                    statusBox.style.borderColor = "var(--accent-emerald)";
+                    statusBox.querySelector("i").className = "fa-solid fa-circle-check";
+                    statusBox.querySelector("i").style.color = "var(--accent-emerald)";
+                } else if (state === "error") {
+                    statusBox.style.background = "var(--badge-rose-bg)";
+                    statusBox.style.borderColor = "var(--accent-rose)";
+                    statusBox.querySelector("i").className = "fa-solid fa-circle-exclamation";
+                    statusBox.querySelector("i").style.color = "var(--accent-rose)";
+                } else {
+                    statusBox.style.background = "var(--bg-subtle)";
+                    statusBox.style.borderColor = "var(--border-color)";
+                    statusBox.querySelector("i").className = "fa-solid fa-face-viewfinder";
+                    statusBox.querySelector("i").style.color = "#6366f1";
+                }
+            }
+        }
+
+        async function captureAndAuthenticate() {
+            if (isAuthenticating) return;
+            const video = document.getElementById("faceVideo");
+            const canvas = document.getElementById("captureCanvas");
+            const btn = document.getElementById("btnScanFace");
+
+            if (!video || !video.srcObject || video.readyState < 2) {
+                updateStatusUI("Camera initializing...", "Please wait a moment for the video feed to start.", "normal");
+                return;
+            }
+
+            isAuthenticating = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Verifying Face...</span>';
+            }
+            updateStatusUI("Verifying face vector...", "Matching your embedding against organization profiles...", "normal");
+
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const photoBase64 = canvas.toDataURL("image/jpeg", 0.9);
+
+            try {
+                const res = await fetch("/api/v1/auth/tenant/face-login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        tenant_identifier: tenantSlug,
+                        photo_base64: photoBase64,
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.status === "success") {
+                    // Play realistic mechanical shutter + melodious chord
+                    playShutterAndChime();
+
+                    const roleLabel = (data.role === "TENANT_ADMIN") ? "Administrator" : "Employee";
+                    updateStatusUI(
+                        `Welcome back, ${data.user_name}!`,
+                        `Authenticated as ${roleLabel}. Redirecting to your dashboard...`,
+                        "success"
+                    );
+
+                    if (btn) {
+                        btn.style.background = "#10b981";
+                        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Authenticated!</span>';
+                    }
+
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || "/";
+                    }, 850);
+                } else {
+                    updateStatusUI(
+                        "Face Recognition Failed",
+                        data.detail || "Face not recognized. Please center your face in good light.",
+                        "error"
+                    );
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-expand"></i> <span>Retry Face Scan</span>';
+                    }
+                    isAuthenticating = false;
+                }
+            } catch (err) {
+                updateStatusUI(
+                    "Network Connection Error",
+                    "Could not connect to organization authentication service.",
+                    "error"
+                );
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-expand"></i> <span>Retry Face Scan</span>';
+                }
+                isAuthenticating = false;
+            }
+        }
+
+        function togglePasswordFallback() {
+            const card = document.getElementById("passwordFallbackCard");
+            const btn = document.getElementById("btnTogglePassword");
+            if (!card) return;
+
+            if (card.style.display === "none") {
+                card.style.display = "block";
+                btn.innerHTML = '<i class="fa-solid fa-camera"></i> <span>Switch to Face Scan</span>';
+                card.scrollIntoView({ behavior: "smooth" });
+            } else {
+                card.style.display = "none";
+                btn.innerHTML = '<i class="fa-solid fa-key"></i> <span>Switch to Password Sign In</span>';
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Academic / Password Authentication Form Handlers
+        // ----------------------------------------------------------------------
+        function onRoleChanged() {
+            const roleEl = document.getElementById("loginRole");
+            if (!roleEl) return;
+            const role = roleEl.value;
+            const uInput = document.getElementById("loginUsername");
+            const uLabel = document.getElementById("usernameLabel");
+
+            if (role === "TENANT_ADMIN") {
+                if (uLabel) uLabel.innerText = "Organization Admin Username";
+                if (uInput) uInput.placeholder = "e.g. admin or " + tenantSlug;
+            } else if (role === "TEACHER") {
+                if (uLabel) uLabel.innerText = "Faculty Username";
+                if (uInput) uInput.placeholder = "e.g. teacher1";
+            } else if (role === "EMPLOYEE") {
+                if (uLabel) uLabel.innerText = "Employee Code / ID";
+                if (uInput) uInput.placeholder = "e.g. EMP-101";
+            } else {
+                if (uLabel) uLabel.innerText = "Student Roll Number / Username";
+                if (uInput) uInput.placeholder = "e.g. student1";
+            }
+        }
+
+        function fillTenantLogin(u, p, role) {
+            const uInp = document.getElementById("loginUsername");
+            const pInp = document.getElementById("loginPassword");
+            const rInp = document.getElementById("loginRole");
+            if (uInp) uInp.value = u;
+            if (pInp) pInp.value = p;
+            if (rInp && role) {
+                rInp.value = role;
+                onRoleChanged();
+            }
+        }
+
+        async function submitTenantLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById("loginUsername")?.value.trim() || "";
+            const password = document.getElementById("loginPassword")?.value || "";
+            const role = document.getElementById("loginRole")?.value || "TENANT_ADMIN";
+            const alertBox = document.getElementById("loginAlert");
+            const btn = document.getElementById("btnLogin");
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
+            }
+
+            try {
+                const payload = {
+                    username: username,
+                    password: password,
+                    tenant_id: tenantId,
+                    tenant_identifier: tenantSlug,
+                    role: role,
+                };
+
+                const res = await fetch("/api/v1/auth/tenant/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (res.ok && data.user) {
+                    if (alertBox) {
+                        alertBox.style.display = "block";
+                        alertBox.style.background = "var(--badge-emerald-bg)";
+                        alertBox.style.color = "var(--badge-emerald-text)";
+                        alertBox.style.border = "1px solid var(--accent-emerald)";
+                        alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Authentication successful!");
+                    }
+
+                    if (data.access_token) {
+                        document.cookie = "access_token=" + data.access_token + "; path=/; max-age=86400";
+                        localStorage.setItem("access_token", data.access_token);
+                    }
+                    if (data.user.role) {
+                        document.cookie = "active_role=" + data.user.role + "; path=/; max-age=86400";
+                        localStorage.setItem("user_role", data.user.role);
+                    }
+                    document.cookie = "active_tenant_id=" + tenantId + "; path=/; max-age=86400";
+                    localStorage.setItem("active_tenant_id", tenantId.toString());
+
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || "/";
+                    }, 350);
+                } else {
+                    if (alertBox) {
+                        alertBox.style.display = "block";
+                        alertBox.style.background = "var(--badge-rose-bg)";
+                        alertBox.style.color = "var(--badge-rose-text)";
+                        alertBox.style.border = "1px solid var(--accent-rose)";
+                        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Invalid credentials.");
+                    }
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to {{ tenant.name }}';
+                    }
+                }
+            } catch (err) {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.style.border = "1px solid var(--accent-rose)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to organization server.';
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to {{ tenant.name }}';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

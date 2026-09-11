@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Super Admin Sign In - Global Control Plane</title>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <script>
+        (function() {
+            try {
+                // Ensure dark theme for super admin control plane aesthetic
+                document.documentElement.setAttribute("data-theme", "dark");
+            } catch (e) {}
+        })();
+    </script>
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            padding: 20px;
+            color: #f8fafc;
+        }
+        .super-admin-card {
+            max-width: 440px;
+            width: 100%;
+            background: #1e293b;
+            border: 1.5px solid rgba(245, 158, 11, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 158, 11, 0.15);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        .crown-icon-box {
+            width: 62px;
+            height: 62px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            margin: 0 auto 14px;
+            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="super-admin-card">
+        <!-- Card Header -->
+        <div style="text-align: center; padding: 32px 28px 20px;">
+            <div class="crown-icon-box">
+                <i class="fa-solid fa-crown"></i>
+            </div>
+            <span class="badge badge-amber" style="font-size: 11px; font-weight: 800; letter-spacing: 0.5px; padding: 5px 12px; margin-bottom: 8px; display: inline-block;">
+                <i class="fa-solid fa-shield-halved"></i> ROOT SECURITY CONTROL
+            </span>
+            <h2 style="font-size: 21px; font-weight: 800; color: #f8fafc; margin: 4px 0 0 0;">Super Admin Control Plane</h2>
+            <p style="font-size: 12.5px; color: #94a3b8; margin-top: 5px;">Platform-wide Multi-Tenant Orchestration & Security Gateway</p>
+        </div>
+
+        <div style="padding: 0 28px 28px;">
+
+            <!-- Fast 1-Click Fill Button for Demo -->
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px dashed rgba(245, 158, 11, 0.35); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11px; font-weight: 700; color: #fbbf24;">
+                    <i class="fa-solid fa-bolt"></i> Root Profile: <code>superadmin</code>
+                </span>
+                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-weight: 700;" onclick="fillSuperAdmin()">
+                    Auto Fill
+                </button>
+            </div>
+
+            <!-- Super Admin Login Form -->
+            <form onsubmit="submitSuperAdminLogin(event)">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="color: #cbd5e1; font-weight: 600;">Super Administrator Username</label>
+                    <div style="position: relative;">
+                        <input type="text" id="saUsername" class="form-control" placeholder="superadmin" required style="padding-left: 38px; background: #0f172a; border-color: #334155; color: #f8fafc;">
+                        <i class="fa-solid fa-user-gear" style="position: absolute; left: 13px; top: 12px; color: #f59e0b; font-size: 13px;"></i>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label" style="color: #cbd5e1; font-weight: 600;">Root Access Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="saPassword" class="form-control" placeholder="••••••••" required style="padding-left: 38px; background: #0f172a; border-color: #334155; color: #f8fafc;">
+                        <i class="fa-solid fa-lock" style="position: absolute; left: 13px; top: 12px; color: #f59e0b; font-size: 13px;"></i>
+                    </div>
+                </div>
+
+                <div id="saAlert" style="display: none; margin-bottom: 16px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+
+                <button type="submit" id="btnSaLogin" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 800; font-size: 14px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Control Plane
+                </button>
+            </form>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 22px; padding-top: 14px; border-top: 1px solid #334155; font-size: 12px;">
+                <a href="/login" style="color: #94a3b8; text-decoration: none; font-weight: 600;">
+                    &larr; Standard Login Gateway
+                </a>
+                <a href="/demo-login" style="color: #f59e0b; text-decoration: none; font-weight: 600;">
+                    <i class="fa-solid fa-flask"></i> Sandbox Portal &rarr;
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function fillSuperAdmin() {
+            document.getElementById("saUsername").value = "superadmin";
+            document.getElementById("saPassword").value = "admin123";
+        }
+
+        async function submitSuperAdminLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById("saUsername").value.trim();
+            const password = document.getElementById("saPassword").value;
+            const alertBox = document.getElementById("saAlert");
+            const btn = document.getElementById("btnSaLogin");
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+
+            try {
+                const res = await fetch("/api/v1/auth/super-admin/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password }),
+                });
+                const data = await res.json();
+
+                if (res.ok && data.user) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(16, 185, 129, 0.2)";
+                    alertBox.style.color = "#34d399";
+                    alertBox.style.border = "1px solid #10b981";
+                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Authenticated successfully!");
+
+                    if (data.access_token) {
+                        document.cookie = "access_token=" + data.access_token + "; path=/; max-age=86400";
+                        localStorage.setItem("access_token", data.access_token);
+                    }
+                    document.cookie = "active_role=SUPER_ADMIN; path=/; max-age=86400";
+                    localStorage.setItem("user_role", "SUPER_ADMIN");
+                    document.cookie = "active_tenant_id=; path=/; max-age=0";
+                    localStorage.removeItem("active_tenant_id");
+
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nextUrl = urlParams.get("next") || "/super-admin";
+
+                    setTimeout(() => {
+                        window.location.href = nextUrl;
+                    }, 350);
+                } else {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(239, 68, 68, 0.2)";
+                    alertBox.style.color = "#f87171";
+                    alertBox.style.border = "1px solid #ef4444";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Invalid Super Admin credentials.");
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Control Plane';
+                }
+            } catch (err) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "rgba(239, 68, 68, 0.2)";
+                alertBox.style.color = "#f87171";
+                alertBox.style.border = "1px solid #ef4444";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network connection error.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Control Plane';
+            }
+        }
+    </script>
+</body>
+</html>

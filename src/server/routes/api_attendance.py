@@ -107,16 +107,51 @@ def mark_manual_override(
     }
 
 
+def serialize_evaluated_record(rec: AttendanceRecord, is_corporate: bool, branding: Optional[SystemBranding], now: datetime) -> dict:
+    """Serializes attendance record with dynamic corporate shift evaluation and missed checkout detection."""
+    d = rec.to_dict()
+    if is_corporate:
+        # Dynamic missed checkout evaluation
+        if rec.check_in_time and not rec.check_out_time:
+            rec_date = rec.timestamp.date() if rec.timestamp else now.date()
+            shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
+            try:
+                out_parts = shift_out_str.split(":")
+                out_h, out_m = int(out_parts[0]), int(out_parts[1])
+                target_out = datetime.combine(rec_date, dt_time(hour=out_h, minute=out_m))
+                end_window = target_out + timedelta(minutes=30)
+            except Exception:
+                end_window = datetime.combine(rec_date, dt_time(hour=18, minute=30))
+
+            if rec_date < now.date() or now > end_window:
+                d["shift_status"] = "MISSED_CHECKOUT"
+                d["status_badge_label"] = "Missed Checkout"
+            else:
+                d["status_badge_label"] = "Active (Checked In)"
+        elif rec.check_out_time:
+            if d.get("shift_status") == "EARLY_DEPARTURE":
+                d["status_badge_label"] = "Early Departure"
+            else:
+                d["status_badge_label"] = "Completed Shift"
+        else:
+            d["status_badge_label"] = d.get("shift_status", "On Time")
+    else:
+        d["status_badge_label"] = "Present"
+    return d
+
+
 @router.get("/records")
 @router.get("/history")
 def get_attendance_records(
     date_str: Optional[str] = Query(None, description="Date filter YYYY-MM-DD"),
+    start_date: Optional[str] = Query(None, description="Start date filter YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="End date filter YYYY-MM-DD"),
     roll_number: Optional[str] = Query(None, description="Filter by student roll number"),
     department: Optional[str] = Query(None, description="Filter by department"),
     user_role: Optional[str] = Query(None, description="Filter by user role"),
     is_override: Optional[bool] = Query(None, description="Filter only manual overrides"),
     node_id: Optional[str] = Query(None, description="Filter by node ID"),
-    limit: int = Query(150, ge=1, le=1000),
+    limit: int = Query(300, ge=1, le=2000),
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
@@ -127,9 +162,25 @@ def get_attendance_records(
         .filter(AttendanceRecord.tenant_id == current_tenant.id)
     )
 
-    if date_str:
+    if start_date and end_date:
         try:
-            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            s_date = datetime.strptime(start_date.strip(), "%Y-%m-%d").date()
+            e_date = datetime.strptime(end_date.strip(), "%Y-%m-%d").date()
+            start_dt = datetime.combine(s_date, dt_time.min)
+            end_dt = datetime.combine(e_date, dt_time.max)
+            query = query.filter(AttendanceRecord.timestamp.between(start_dt, end_dt))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date or end_date format. Use YYYY-MM-DD.")
+    elif start_date:
+        try:
+            s_date = datetime.strptime(start_date.strip(), "%Y-%m-%d").date()
+            start_dt = datetime.combine(s_date, dt_time.min)
+            query = query.filter(AttendanceRecord.timestamp >= start_dt)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD.")
+    elif date_str:
+        try:
+            target_date = datetime.strptime(date_str.strip(), "%Y-%m-%d").date()
             start_dt = datetime.combine(target_date, dt_time.min)
             end_dt = datetime.combine(target_date, dt_time.max)
             query = query.filter(AttendanceRecord.timestamp.between(start_dt, end_dt))
@@ -153,10 +204,18 @@ def get_attendance_records(
 
     records = query.order_by(AttendanceRecord.timestamp.desc()).limit(limit).all()
 
+    tenant_type = (current_tenant.tenant_type or "educational").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+    branding = current_tenant.branding
+    now = get_ist_now()
+
+    serialized = [serialize_evaluated_record(r, is_corporate, branding, now) for r in records]
+
     return {
         "status": "success",
         "tenant_id": current_tenant.id,
-        "records": [r.to_dict() for r in records],
+        "is_corporate": is_corporate,
+        "records": serialized,
     }
 
 
@@ -169,9 +228,14 @@ def get_attendance_stats(
     today = get_ist_date()
     start_today = datetime.combine(today, dt_time.min)
     end_today = datetime.combine(today, dt_time.max)
+    now = get_ist_now()
 
     tenant_type = (current_tenant.tenant_type or "educational").lower()
     is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+    branding = current_tenant.branding
+
+    shift_in_str = branding.shift_check_in_time if branding and branding.shift_check_in_time else "10:30"
+    shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
 
     # For corporate tenants, track active corporate workforce (role != 'student' or all active)
     # For educational tenants, track active students (role == 'student')
@@ -197,16 +261,32 @@ def get_attendance_stats(
             )
             target_role_filter = True
 
-        present_today = (
-            db.query(distinct(AttendanceRecord.student_id))
-            .join(Student, AttendanceRecord.student_id == Student.id)
+        today_records = (
+            db.query(AttendanceRecord)
             .filter(
                 AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.timestamp.between(start_today, end_today),
-                target_role_filter,
             )
-            .count()
+            .all()
         )
+
+        checked_in_today = len(set(r.student_id for r in today_records if r.student_id))
+        checked_out_today = len(set(r.student_id for r in today_records if r.student_id and r.check_out_time))
+        
+        # Missed checkout calculation
+        try:
+            out_parts = shift_out_str.split(":")
+            out_h, out_m = int(out_parts[0]), int(out_parts[1])
+            target_out = datetime.combine(today, dt_time(hour=out_h, minute=out_m))
+            is_past_shift = now > (target_out + timedelta(minutes=30))
+        except Exception:
+            is_past_shift = False
+
+        missed_checkout_today = 0
+        if is_past_shift:
+            missed_checkout_today = sum(1 for r in today_records if r.check_in_time and not r.check_out_time)
+
+        present_today = checked_in_today
         member_label = "Employees"
     else:
         total_members = (
@@ -228,6 +308,9 @@ def get_attendance_stats(
             )
             .count()
         )
+        checked_in_today = present_today
+        checked_out_today = 0
+        missed_checkout_today = 0
         member_label = "Students"
 
     # Total registered profiles across all roles in this tenant
@@ -268,6 +351,12 @@ def get_attendance_stats(
         "total_members": total_members,
         "total_all_users": total_all_users,
         "present_today": present_today,
+        "checked_in_today": checked_in_today,
+        "checked_out_today": checked_out_today,
+        "missed_checkout_today": missed_checkout_today,
+        "shift_check_in_time": shift_in_str,
+        "shift_check_out_time": shift_out_str,
+        "shift_hours_display": f"{shift_in_str} - {shift_out_str}",
         "attendance_percentage": attendance_pct,
         "total_today_logs": total_today_logs,
         "active_nodes": active_nodes,
@@ -626,6 +715,8 @@ def export_compliance_report(
 @router.get("/export")
 def export_attendance_report(
     date_str: Optional[str] = Query(None, description="Filter date YYYY-MM-DD"),
+    start_date: Optional[str] = Query(None, description="Start date filter YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="End date filter YYYY-MM-DD"),
     roll_number: Optional[str] = Query(None, description="Filter by roll/employee number"),
     department: Optional[str] = Query(None, description="Filter by department"),
     user_role: Optional[str] = Query(None, description="Filter by user role"),
@@ -635,28 +726,37 @@ def export_attendance_report(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Exports raw attendance history into downloadable CSV or Excel spreadsheet scoped to tenant."""
+    tenant_type = (current_tenant.tenant_type or "educational").lower()
+    is_corporate = tenant_type in ["corporate", "company", "enterprise"]
+    branding = current_tenant.branding
+    now = get_ist_now()
+
     query = (
-        db.query(
-            AttendanceRecord.id,
-            Student.roll_number,
-            Student.name,
-            Student.department,
-            Student.user_role,
-            AttendanceRecord.node_id,
-            AttendanceRecord.timestamp,
-            AttendanceRecord.confidence_distance,
-            AttendanceRecord.status,
-            AttendanceRecord.is_manual_override,
-            AttendanceRecord.override_reason,
-        )
+        db.query(AttendanceRecord)
         .join(Student, AttendanceRecord.student_id == Student.id, isouter=True)
         .filter(AttendanceRecord.tenant_id == current_tenant.id)
         .order_by(AttendanceRecord.timestamp.desc())
     )
 
-    if date_str:
+    if start_date and end_date:
         try:
-            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            s_date = datetime.strptime(start_date.strip(), "%Y-%m-%d").date()
+            e_date = datetime.strptime(end_date.strip(), "%Y-%m-%d").date()
+            start_dt = datetime.combine(s_date, dt_time.min)
+            end_dt = datetime.combine(e_date, dt_time.max)
+            query = query.filter(AttendanceRecord.timestamp.between(start_dt, end_dt))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date or end_date format. Use YYYY-MM-DD.")
+    elif start_date:
+        try:
+            s_date = datetime.strptime(start_date.strip(), "%Y-%m-%d").date()
+            start_dt = datetime.combine(s_date, dt_time.min)
+            query = query.filter(AttendanceRecord.timestamp >= start_dt)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD.")
+    elif date_str:
+        try:
+            target_date = datetime.strptime(date_str.strip(), "%Y-%m-%d").date()
             start_dt = datetime.combine(target_date, dt_time.min)
             end_dt = datetime.combine(target_date, dt_time.max)
             query = query.filter(AttendanceRecord.timestamp.between(start_dt, end_dt))
@@ -678,26 +778,45 @@ def export_attendance_report(
     results = query.all()
 
     data = []
-    for row in results:
-        data.append({
-            "Log ID": row[0],
-            "Roll Number": row[1] or "N/A",
-            "Name": row[2] or "Unknown",
-            "Department": row[3] or "N/A",
-            "Role": (row[4] or "student").capitalize(),
-            "Node Ingestion": row[5],
-            "Timestamp (IST)": row[6].strftime("%Y-%m-%d %H:%M:%S") if row[6] else "",
-            "Confidence Distance": round(row[7], 4) if row[7] is not None else "",
-            "Status": row[8],
-            "Manual Override": "Yes" if row[9] else "No",
-            "Override Reason": row[10] or "",
-        })
+    for r in results:
+        eval_dict = serialize_evaluated_record(r, is_corporate, branding, now)
+        s = r.student
+
+        if is_corporate:
+            data.append({
+                "Log ID": r.id,
+                "Employee Code / ID": s.roll_number if s else "N/A",
+                "Full Name": s.name if s else "Unknown",
+                "Department": s.department if s else "N/A",
+                "Designation / Role": (s.user_role if s and s.user_role else "employee").capitalize(),
+                "Attendance Date": r.timestamp.strftime("%Y-%m-%d") if r.timestamp else "",
+                "Check-In Time": eval_dict.get("check_in_short", "--"),
+                "Check-Out Time": eval_dict.get("check_out_short", "--"),
+                "Total Active Hours": eval_dict.get("work_duration_formatted", "--"),
+                "Shift Status": eval_dict.get("status_badge_label", eval_dict.get("shift_status", "On Time")),
+                "Ingestion Node": r.node_id,
+                "Manual Override": "Yes" if r.is_manual_override else "No",
+                "Override Reason": r.override_reason or "",
+            })
+        else:
+            data.append({
+                "Log ID": r.id,
+                "Roll Number": s.roll_number if s else "N/A",
+                "Name": s.name if s else "Unknown",
+                "Department": s.department if s else "N/A",
+                "Role": (s.user_role if s and s.user_role else "student").capitalize(),
+                "Node Ingestion": r.node_id,
+                "Timestamp (IST)": r.timestamp.strftime("%Y-%m-%d %H:%M:%S") if r.timestamp else "",
+                "Confidence Distance": round(r.confidence_distance, 4) if r.confidence_distance is not None else "",
+                "Status": r.status,
+                "Manual Override": "Yes" if r.is_manual_override else "No",
+                "Override Reason": r.override_reason or "",
+            })
 
     df = pd.DataFrame(data)
     date_label = date_str or get_ist_date().strftime("%Y%m%d")
 
     # Fetch institution branding
-    branding = current_tenant.branding
     inst_name = branding.institution_name if branding else current_tenant.name
     short_code = branding.short_code if branding else current_tenant.slug.upper()
 

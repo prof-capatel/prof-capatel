@@ -100,6 +100,161 @@
                     </div>
                 </div>
 
+                <!-- Configurable Corporate Work Shift & Daily Check-In / Check-Out Settings -->
+                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-briefcase" style="color: var(--accent-primary);"></i> Standard Company Work Shift & Punch Rules
+                            </label>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">
+                                Dual-punch biometric tracking: 1st scan = Check-In, 2nd scan = Check-Out with automated work hours & late/early calculation.
+                            </span>
+                        </div>
+                        <span class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
+                            <i class="fa-solid fa-clock"></i> Corporate Engine
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px;">
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                                <i class="fa-solid fa-arrow-right-to-bracket" style="color: var(--accent-emerald);"></i> Standard Shift Check-In (Morning)
+                            </label>
+                            <input type="time" id="brandShiftCheckIn" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }}">
+                            <span style="font-size: 11px; color: var(--text-muted);">Default: 10:30 AM</span>
+                        </div>
+
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                                <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-rose);"></i> Standard Shift Check-Out (Evening)
+                            </label>
+                            <input type="time" id="brandShiftCheckOut" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="{{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}">
+                            <span style="font-size: 11px; color: var(--text-muted);">Default: 06:00 PM (18:00)</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px;">
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Late Arrival & Early Exit Grace Period</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="brandShiftGrace" class="form-control" min="0" max="120" style="font-weight: 700;" value="{{ branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not none else 15 }}">
+                                <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">Minutes (e.g. ±15m)</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Minimum Checkout Double-Tap Buffer</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="brandMinCheckoutInterval" class="form-control" min="0" max="360" style="font-weight: 700;" value="{{ branding.min_checkout_interval_minutes if branding and branding.min_checkout_interval_minutes is not none else 15 }}">
+                                <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">Minutes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurable Corporate Payroll & Wage Formula Engine -->
+                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-money-bill-wave" style="color: var(--accent-emerald);"></i> Corporate Payroll, Wages & Overtime Multipliers
+                            </label>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">
+                                Wage aggregation formulas, daily shift overtime calculation (> 8.0 hrs/day @ 1.5x), and missed checkout credit policies.
+                            </span>
+                        </div>
+                        <span class="badge badge-emerald" style="font-size: 11px; font-weight: 700;">
+                            <i class="fa-solid fa-sack-dollar"></i> Payroll Engine
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px;">
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Payroll Structure</label>
+                            <select id="brandPayrollStructure" class="form-control" style="font-weight: 600;">
+                                <option value="HOURLY" {% if not branding or branding.payroll_structure == 'HOURLY' %}selected{% endif %}>Hourly Wage (Hours Worked + OT)</option>
+                                <option value="MONTHLY_CADRE" {% if branding and branding.payroll_structure == 'MONTHLY_CADRE' %}selected{% endif %}>Monthly Cadre Structure (Monthly Base / 22 Days + OT)</option>
+                                <option value="HYBRID" {% if branding and branding.payroll_structure == 'HYBRID' %}selected{% endif %}>Hybrid (Base Retainer + Hourly)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Default Hourly Rate ($/hr)</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" step="0.5" min="0" id="brandDefaultHourlyRate" class="form-control" style="font-weight: 700;" value="{{ branding.default_hourly_rate if branding and branding.default_hourly_rate is not none else 15.0 }}">
+                                <span style="font-size: 11.5px; color: var(--text-muted);">$/hr</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 12px;">
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Standard Shift Length</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" step="0.5" min="1" max="24" id="brandStdDailyHours" class="form-control" style="font-weight: 700;" value="{{ branding.standard_working_hours_per_day if branding and branding.standard_working_hours_per_day is not none else 8.0 }}">
+                                <span style="font-size: 11.5px; color: var(--text-muted);">Hrs/day</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Enable Overtime</label>
+                            <select id="brandEnableOvertime" class="form-control" style="font-weight: 600;">
+                                <option value="true" {% if not branding or branding.enable_overtime %}selected{% endif %}>Enabled (> Standard Shift)</option>
+                                <option value="false" {% if branding and not branding.enable_overtime %}selected{% endif %}>Disabled (Flat Payout)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">OT Rate Multiplier</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" step="0.1" min="1.0" max="5.0" id="brandOvertimeMultiplier" class="form-control" style="font-weight: 700;" value="{{ branding.overtime_rate_multiplier if branding and branding.overtime_rate_multiplier is not none else 1.5 }}">
+                                <span style="font-size: 11.5px; color: var(--text-muted);">x</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-top: 12px;">
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Missed Checkout Shift Policy</label>
+                            <select id="brandMissedCheckoutPolicy" class="form-control" style="font-weight: 600;">
+                                <option value="HALF_DAY" {% if not branding or branding.missed_checkout_policy == 'HALF_DAY' %}selected{% endif %}>Half-Day Credit (4.0 hrs credit + audit flag)</option>
+                                <option value="ZERO_HOURS" {% if branding and branding.missed_checkout_policy == 'ZERO_HOURS' %}selected{% endif %}>Zero Hours (0.0 hrs credit until manual admin override)</option>
+                                <option value="STANDARD_SHIFT" {% if branding and branding.missed_checkout_policy == 'STANDARD_SHIFT' %}selected{% endif %}>Full Shift Credit (8.0 hrs credit)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Currency Symbol</label>
+                            <input type="text" id="brandCurrencySymbol" class="form-control" style="font-weight: 700;" maxlength="5" value="{{ branding.currency_symbol if branding and branding.currency_symbol else '$' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Corporate Leave Master & Cadre Quota Policies Section -->
+                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-calendar-days" style="color: #6366f1;"></i> Leave Master, Quotas & Role-Based Balances
+                            </label>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">
+                                Annual leave categories (Casual, Sick, Earned, Unpaid), default quotas, cadre overrides, and review approval workflows.
+                            </span>
+                        </div>
+                        <span class="badge badge-indigo" style="font-size: 11px; font-weight: 700;">
+                            <i class="fa-solid fa-user-check"></i> Leave Policy
+                        </span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 14px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 10px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="font-size: 13px; color: var(--text-heading); display: block;">Leave Categories & Cadre Matrix</strong>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">Manage default quotas and role-specific allocations in the central Leave Management portal.</span>
+                        </div>
+                        <a href="/leave-management" class="btn btn-primary" style="font-size: 12px; background: #6366f1; display: flex; align-items: center; gap: 6px; padding: 8px 16px;">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            <span>Open Leave Master Portal</span>
+                        </a>
+                    </div>
+                </div>
+
                 <!-- Configurable Anti-Spoofing & Liveness Security -->
                 <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
@@ -597,6 +752,80 @@
                 </button>
                 <div id="prefsSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; text-align: center;"></div>
             </form>
+        </div>
+    </div>
+
+    <!-- Section: Departments & Teams Management (Consolidated) -->
+    <div id="departmentsSection" class="card" style="margin-bottom: 28px;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-diagram-project" style="color: var(--accent-primary);"></i>
+                    <span>Departments & Teams Management</span>
+                </h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Organize staff and workforce into operational units, teams, and departments.
+                </p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openAddDepartmentModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-plus"></i> Add Department / Team
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive" style="overflow-x: auto;">
+                <table class="table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
+                            <th style="padding: 10px 12px;">Department Name</th>
+                            <th style="padding: 10px 12px;">Code / Key</th>
+                            <th style="padding: 10px 12px;">Employees / Staff</th>
+                            <th style="padding: 10px 12px;">Description</th>
+                            <th style="padding: 10px 12px; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="departmentsTableBody">
+                        {% if departments %}
+                            {% for dept in departments %}
+                            <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="deptRow-{{ dept.id }}">
+                                <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
+                                    <i class="fa-solid fa-building" style="color: var(--accent-primary); margin-right: 8px;"></i>
+                                    {{ dept.name }}
+                                </td>
+                                <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                                    {{ dept.code or dept.name[:4]|upper }}
+                                </td>
+                                <td style="padding: 12px;">
+                                    <span class="badge badge-sky" style="font-size: 11px;">
+                                        <i class="fa-solid fa-users"></i> {{ dept.employee_count or 0 }} Members
+                                    </span>
+                                </td>
+                                <td style="padding: 12px; color: var(--text-muted); font-size: 12px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    {{ dept.description or '—' }}
+                                </td>
+                                <td style="padding: 12px; text-align: right;">
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditDeptModal({{ dept|tojson|safe }})' title="Edit Department">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteDepartment({{ dept.id }}, '{{ dept.name }}')" title="Delete Department">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr id="emptyDeptsRow">
+                                <td colspan="5" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                                    <i class="fa-solid fa-diagram-project" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                    <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No departments created yet.</p>
+                                    <span style="font-size: 12px;">Click "Add Department / Team" above to create your organizational hierarchy.</span>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -1149,6 +1378,19 @@ async function saveBrandingDetails(e) {
     const gpsAccuracy = parseFloat(document.getElementById("brandGpsAccuracy").value) || 50.0;
     const faceThreshold = parseFloat(document.getElementById("brandFaceThreshold").value) || 0.52;
 
+    const shiftCheckIn = document.getElementById("brandShiftCheckIn") ? document.getElementById("brandShiftCheckIn").value.trim() : "10:30";
+    const shiftCheckOut = document.getElementById("brandShiftCheckOut") ? document.getElementById("brandShiftCheckOut").value.trim() : "18:00";
+    const shiftGrace = document.getElementById("brandShiftGrace") ? parseInt(document.getElementById("brandShiftGrace").value) || 15 : 15;
+    const minCheckoutInterval = document.getElementById("brandMinCheckoutInterval") ? parseInt(document.getElementById("brandMinCheckoutInterval").value) || 15 : 15;
+
+    const payrollStructure = document.getElementById("brandPayrollStructure") ? document.getElementById("brandPayrollStructure").value : "HOURLY";
+    const defaultHourlyRate = document.getElementById("brandDefaultHourlyRate") ? parseFloat(document.getElementById("brandDefaultHourlyRate").value) || 15.0 : 15.0;
+    const stdDailyHours = document.getElementById("brandStdDailyHours") ? parseFloat(document.getElementById("brandStdDailyHours").value) || 8.0 : 8.0;
+    const enableOvertime = document.getElementById("brandEnableOvertime") ? (document.getElementById("brandEnableOvertime").value === "true") : true;
+    const overtimeMultiplier = document.getElementById("brandOvertimeMultiplier") ? parseFloat(document.getElementById("brandOvertimeMultiplier").value) || 1.5 : 1.5;
+    const missedCheckoutPolicy = document.getElementById("brandMissedCheckoutPolicy") ? document.getElementById("brandMissedCheckoutPolicy").value : "HALF_DAY";
+    const currencySymbol = document.getElementById("brandCurrencySymbol") ? document.getElementById("brandCurrencySymbol").value.trim() : "$";
+
     const saveBtn = document.getElementById("btnSaveBranding");
     const alertBox = document.getElementById("brandingSaveAlert");
 
@@ -1178,6 +1420,17 @@ async function saveBrandingDetails(e) {
                 geo_radius_meters: geoRadius,
                 max_gps_accuracy_meters: gpsAccuracy,
                 self_attendance_face_threshold: faceThreshold,
+                shift_check_in_time: shiftCheckIn,
+                shift_check_out_time: shiftCheckOut,
+                shift_grace_minutes: shiftGrace,
+                min_checkout_interval_minutes: minCheckoutInterval,
+                payroll_structure: payrollStructure,
+                default_hourly_rate: defaultHourlyRate,
+                standard_working_hours_per_day: stdDailyHours,
+                enable_overtime: enableOvertime,
+                overtime_rate_multiplier: overtimeMultiplier,
+                missed_checkout_policy: missedCheckoutPolicy,
+                currency_symbol: currencySymbol,
             }),
         });
         const data = await res.json();
@@ -1315,5 +1568,139 @@ function saveSystemPreferences(e) {
         }, 3000);
     }
 }
+
+// --- Consolidated Departments Modal & CRUD Functions ---
+function openAddDepartmentModal() {
+    document.getElementById("modalDeptId").value = "";
+    document.getElementById("modalDeptName").value = "";
+    document.getElementById("modalDeptCode").value = "";
+    document.getElementById("modalDeptDesc").value = "";
+    document.getElementById("deptModalTitle").innerHTML = '<i class="fa-solid fa-building" style="color: var(--accent-primary);"></i> <span>Add Department / Team</span>';
+    document.getElementById("deptModalAlert").style.display = "none";
+    document.getElementById("deptModal").style.display = "flex";
+}
+
+function openEditDeptModal(dept) {
+    if (!dept) return;
+    document.getElementById("modalDeptId").value = dept.id;
+    document.getElementById("modalDeptName").value = dept.name || "";
+    document.getElementById("modalDeptCode").value = dept.code || "";
+    document.getElementById("modalDeptDesc").value = dept.description || "";
+    document.getElementById("deptModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Department: ' + dept.name + '</span>';
+    document.getElementById("deptModalAlert").style.display = "none";
+    document.getElementById("deptModal").style.display = "flex";
+}
+
+function closeDeptModal() {
+    document.getElementById("deptModal").style.display = "none";
+}
+
+async function saveDepartmentModal(e) {
+    e.preventDefault();
+    const deptId = document.getElementById("modalDeptId").value;
+    const name = document.getElementById("modalDeptName").value.trim();
+    const code = document.getElementById("modalDeptCode").value.trim();
+    const description = document.getElementById("modalDeptDesc").value.trim();
+    const alertBox = document.getElementById("deptModalAlert");
+
+    if (!name) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "rgba(239, 68, 68, 0.1)";
+        alertBox.style.color = "#f87171";
+        alertBox.innerText = "Department name is required.";
+        return;
+    }
+
+    const isEdit = !!deptId;
+    const url = isEdit ? `/api/v1/academic/departments/${deptId}` : "/api/v1/academic/departments";
+    const method = isEdit ? "PUT" : "POST";
+
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, code, description })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.innerText = data.message || "Department saved successfully!";
+            setTimeout(() => {
+                closeDeptModal();
+                window.location.reload();
+            }, 600);
+        } else {
+            alertBox.style.display = "block";
+            alertBox.style.background = "rgba(239, 68, 68, 0.1)";
+            alertBox.style.color = "#f87171";
+            alertBox.innerText = data.detail || "Failed to save department.";
+        }
+    } catch (err) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "rgba(239, 68, 68, 0.1)";
+        alertBox.style.color = "#f87171";
+        alertBox.innerText = "Network error: " + err.message;
+    }
+}
+
+async function deleteDepartment(deptId, deptName) {
+    if (!confirm(`Are you sure you want to delete department "${deptName}"?`)) return;
+    try {
+        const res = await fetch(`/api/v1/academic/departments/${deptId}`, {
+            method: "DELETE"
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const row = document.getElementById(`deptRow-${deptId}`);
+            if (row) row.remove();
+            window.location.reload();
+        } else {
+            alert(data.detail || "Failed to delete department.");
+        }
+    } catch (e) {
+        alert("Network error while deleting department.");
+    }
+}
 </script>
+
+<!-- Department Modal (Create / Edit) -->
+<div id="deptModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+            <h3 id="deptModalTitle" style="font-size: 15px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <i class="fa-solid fa-building" style="color: var(--accent-primary);"></i>
+                <span>Add Department</span>
+            </h3>
+            <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeDeptModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 18px;">
+            <form id="deptModalForm" onsubmit="saveDepartmentModal(event)">
+                <input type="hidden" id="modalDeptId" value="">
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Department / Team Name *</label>
+                    <input type="text" id="modalDeptName" class="form-control" placeholder="e.g. Sales, Operations, Engineering" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Department Code / Key</label>
+                    <input type="text" id="modalDeptCode" class="form-control" placeholder="e.g. SALES, OPS, ENG">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Description / Responsibilities</label>
+                    <textarea id="modalDeptDesc" class="form-control" rows="3" placeholder="Overview of team roles or functions..."></textarea>
+                </div>
+                <div id="deptModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeptModal()">Cancel</button>
+                    <button type="submit" id="btnSaveDeptModal" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> Save Department
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

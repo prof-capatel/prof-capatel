@@ -10,10 +10,11 @@ from sqlalchemy import or_
 from src.config import FACES_DIR
 from src.core.camera_utils import decode_image_bytes, evaluate_image_quality
 from src.core.face_engine import face_engine, FaceEngine
-from src.database.models import Student, FaceEncoding, Tenant, Department, ClassModel, Division, AcademicYear
+from src.database.models import Student, FaceEncoding, Tenant, Department, ClassModel, Division, AcademicYear, AuditLog, User
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
-from src.server.rbac_middleware import check_tenant_operational_access
+from src.server.rbac_middleware import check_tenant_operational_access, get_current_user_optional
+from src.utils.timezone import get_ist_now
 
 router = APIRouter(prefix="/api/v1/enroll", tags=["Student Enrollment"])
 
@@ -30,6 +31,9 @@ class StudentCreate(BaseModel):
     user_role: Optional[str] = None
     role: Optional[str] = None
     class_semester: Optional[str] = "General"
+    hourly_rate: Optional[float] = None
+    monthly_base_salary: Optional[float] = None
+    cadre_level: Optional[str] = None
 
 
 class StudentUpdate(BaseModel):
@@ -44,6 +48,27 @@ class StudentUpdate(BaseModel):
     user_role: Optional[str] = None
     role: Optional[str] = None
     class_semester: Optional[str] = "General"
+    hourly_rate: Optional[float] = None
+    monthly_base_salary: Optional[float] = None
+    cadre_level: Optional[str] = None
+
+
+class StudentDepartmentTransferPayload(BaseModel):
+    department_id: int
+    class_id: Optional[int] = None
+    division_id: Optional[int] = None
+
+
+class StudentRelievePayload(BaseModel):
+    reason: Optional[str] = None
+    relieving_reason: Optional[str] = None
+    employment_status: Optional[str] = "RELIEVED"  # RELIEVED, TERMINATED, RESIGNED
+    relieved_at: Optional[str] = None
+
+
+class StudentReinstatePayload(BaseModel):
+    reason: Optional[str] = "Reinstated to active employee roster"
+    reinstating_reason: Optional[str] = None
 
 
 @router.get("/students")
@@ -51,13 +76,28 @@ def list_enrolled_students(
     department_id: Optional[int] = None,
     class_id: Optional[int] = None,
     division_id: Optional[int] = None,
+    academic_year_id: Optional[int] = None,
+    user_role: Optional[str] = None,
     role: Optional[str] = None,
+    status: Optional[str] = None,  # active, relieved, all
     search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Lists all enrolled students for current tenant with optional cascading filters."""
+    """
+    Lists enrolled students/employees with role, division, and status filtering.
+    """
     query = db.query(Student).filter(Student.tenant_id == current_tenant.id)
+
+    # Status Filtering
+    if status:
+        st_clean = status.strip().lower()
+        if st_clean == "active":
+            query = query.filter(Student.is_active == True)
+        elif st_clean in ["relieved", "inactive"]:
+            query = query.filter(or_(Student.is_active == False, Student.employment_status.in_(["RELIEVED", "TERMINATED", "RESIGNED"])))
+        elif st_clean != "all":
+            query = query.filter(Student.employment_status == status.strip().upper())
 
     if department_id:
         query = query.filter(Student.department_id == department_id)
@@ -65,8 +105,10 @@ def list_enrolled_students(
         query = query.filter(Student.class_id == class_id)
     if division_id:
         query = query.filter(Student.division_id == division_id)
-    if role:
-        query = query.filter(Student.user_role == role.strip().lower())
+    
+    target_role = user_role or role
+    if target_role:
+        query = query.filter(Student.user_role == target_role.strip().lower())
     if search:
         search_clean = f"%{search.strip()}%"
         query = query.filter(
@@ -168,6 +210,9 @@ def register_student(
         academic_year_id=acad_id,
         email=payload.email.strip() if payload.email else None,
         user_role=chosen_role,
+        hourly_rate=payload.hourly_rate,
+        monthly_base_salary=payload.monthly_base_salary,
+        cadre_level=payload.cadre_level,
     )
     db.add(student)
     db.commit()
@@ -298,6 +343,9 @@ async def batch_upload_enrollment(
     email: Optional[str] = Form(None),
     user_role: str = Form("student"),
     class_semester: Optional[str] = Form("General"),
+    hourly_rate: Optional[float] = Form(None),
+    monthly_base_salary: Optional[float] = Form(None),
+    cadre_level: Optional[str] = Form(None),
     photo_front: UploadFile = File(...),
     photo_left: UploadFile = File(...),
     photo_right: UploadFile = File(...),
@@ -439,6 +487,9 @@ async def batch_upload_enrollment(
         academic_year_id=acad_id,
         email=email.strip() if email else None,
         user_role=chosen_role,
+        hourly_rate=hourly_rate,
+        monthly_base_salary=monthly_base_salary,
+        cadre_level=cadre_level,
     )
     db.add(student)
     db.flush()
@@ -535,6 +586,12 @@ def update_student_profile(
         student.academic_year_id = payload.academic_year_id
     student.email = payload.email.strip() if payload.email else None
     student.user_role = payload.user_role.strip().lower() if payload.user_role else "student"
+    if payload.hourly_rate is not None:
+        student.hourly_rate = payload.hourly_rate
+    if payload.monthly_base_salary is not None:
+        student.monthly_base_salary = payload.monthly_base_salary
+    if payload.cadre_level is not None:
+        student.cadre_level = payload.cadre_level
 
     db.commit()
     db.refresh(student)
@@ -547,6 +604,191 @@ def update_student_profile(
         "tenant_id": current_tenant.id,
         "message": f"Profile '{student.name}' updated successfully.",
         "student": student.to_dict(),
+    }
+
+
+@router.post("/student/{student_id}/transfer-department")
+def transfer_student_department(
+    student_id: int,
+    payload: StudentDepartmentTransferPayload,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Transfers an employee/student to a new Department/Section with audit history tracking."""
+    check_tenant_operational_access(current_tenant)
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.tenant_id == current_tenant.id,
+    ).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Employee/Student not found.")
+
+    target_dept = db.query(Department).filter(
+        Department.tenant_id == current_tenant.id,
+        Department.id == payload.department_id,
+    ).first()
+    if not target_dept:
+        raise HTTPException(status_code=404, detail="Target department not found.")
+
+    # Save previous state for audit & rollback
+    now_ist = get_ist_now()
+    student.previous_department_id = student.department_id
+    student.previous_class_id = student.class_id
+    student.previous_division_id = student.division_id
+    student.previous_academic_year_id = student.academic_year_id
+    student.last_transferred_at = now_ist
+
+    student.department_id = target_dept.id
+    student.department = target_dept.name
+
+    if payload.class_id:
+        target_class = db.query(ClassModel).filter(
+            ClassModel.tenant_id == current_tenant.id,
+            ClassModel.id == payload.class_id,
+        ).first()
+        if target_class:
+            student.class_id = target_class.id
+            student.class_semester = target_class.name
+    if payload.division_id:
+        student.division_id = payload.division_id
+
+    db.commit()
+    db.refresh(student)
+
+    # Reload face cache
+    face_engine.reload_cache(db, tenant_id=current_tenant.id)
+
+    return {
+        "status": "success",
+        "message": f"Successfully transferred '{student.name}' to {target_dept.name}.",
+        "student": student.to_dict(),
+    }
+
+
+@router.post("/student/{student_id}/relieve")
+@router.post("/students/{student_id}/relieve")
+def relieve_student(
+    student_id: int,
+    payload: StudentRelievePayload,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Relieves an active employee while preserving all historical attendance, punches, and payroll data.
+    Sets is_active = False and updates employment_status to RELIEVED.
+    """
+    check_tenant_operational_access(current_tenant)
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.tenant_id == current_tenant.id,
+    ).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Employee not found in this organization.")
+
+    exit_reason = (payload.relieving_reason or payload.reason or "").strip()
+    if not exit_reason:
+        exit_reason = "Relieved from active service"
+
+    rel_status = (payload.employment_status or "RELIEVED").strip().upper()
+    now_ist = get_ist_now()
+
+    # Parse custom relieved_at timestamp if provided
+    rel_time = now_ist
+    if payload.relieved_at:
+        try:
+            clean_ts = payload.relieved_at.replace("T", " ")
+            if len(clean_ts) == 10:  # YYYY-MM-DD
+                clean_ts += " 18:00:00"
+            elif len(clean_ts) == 16:
+                clean_ts += ":00"
+            rel_time = datetime.strptime(clean_ts, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            rel_time = now_ist
+
+    student.is_active = False
+    student.employment_status = rel_status
+    student.relieved_at = rel_time
+    student.relieving_reason = exit_reason
+    student.relieved_by_user_id = current_user.id if current_user else None
+
+    # Log Audit Trail Entry
+    audit = AuditLog(
+        tenant_id=current_tenant.id,
+        user_id=current_user.id if current_user else None,
+        actor_name=current_user.full_name if current_user else "Admin",
+        actor_role=current_user.role if current_user else "TENANT_ADMIN",
+        action_type="EMPLOYEE_RELIEVED",
+        target_type="EMPLOYEE",
+        target_id=str(student.id),
+        description=f"Relieved employee '{student.name}' ({student.roll_number}). Reason: {student.relieving_reason}",
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(student)
+
+    # Hot-reload in-memory vector cache so relieved employee's face is deactivated from active camera nodes
+    face_engine.reload_cache(db, tenant_id=current_tenant.id)
+
+    return {
+        "status": "success",
+        "tenant_id": current_tenant.id,
+        "message": f"Employee '{student.name}' ({student.roll_number}) has been relieved. Historical logs & payroll remain strictly preserved.",
+        "student": student.to_dict(),
+        "employee": student.to_dict(),
+    }
+
+
+@router.post("/student/{student_id}/reinstate")
+@router.post("/students/{student_id}/reinstate")
+def reinstate_student(
+    student_id: int,
+    payload: StudentReinstatePayload,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Reinstates a previously relieved employee back to active service.
+    """
+    check_tenant_operational_access(current_tenant)
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.tenant_id == current_tenant.id,
+    ).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Employee not found in this organization.")
+
+    student.is_active = True
+    student.employment_status = "ACTIVE"
+    student.relieved_at = None
+    student.relieving_reason = None
+    student.relieved_by_user_id = None
+
+    # Log Audit Trail Entry
+    audit = AuditLog(
+        tenant_id=current_tenant.id,
+        user_id=current_user.id if current_user else None,
+        actor_name=current_user.full_name if current_user else "Admin",
+        actor_role=current_user.role if current_user else "TENANT_ADMIN",
+        action_type="EMPLOYEE_REINSTATED",
+        target_type="EMPLOYEE",
+        target_id=str(student.id),
+        description=f"Reinstated employee '{student.name}' ({student.roll_number}) back to active service. Remarks: {payload.reason}",
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(student)
+
+    # Hot-reload vector cache so employee can punch in again
+    face_engine.reload_cache(db, tenant_id=current_tenant.id)
+
+    return {
+        "status": "success",
+        "tenant_id": current_tenant.id,
+        "message": f"Employee '{student.name}' ({student.roll_number}) has been reinstated to active roster.",
+        "student": student.to_dict(),
+        "employee": student.to_dict(),
     }
 
 

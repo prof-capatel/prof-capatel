@@ -141,8 +141,8 @@
                     <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald); font-size: 26px; margin-bottom: 6px;"></i>
                     <h5 style="color: var(--badge-emerald-text); font-size: 15px; font-weight: 700;">Enrollment Completed!</h5>
                     <p style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 14px;">3-angle embeddings cached into recognition engine.</p>
-                    <a href="/students" class="btn btn-primary" style="padding: 7px 18px; font-size: 12.5px;">
-                        <i class="fa-solid fa-users"></i> View in Student Directory
+                    <a href="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}/employees{% else %}/students{% endif %}" class="btn btn-primary" style="padding: 7px 18px; font-size: 12.5px;">
+                        <i class="fa-solid fa-users"></i> {% if current_tenant and current_tenant.tenant_type == 'corporate' %}View in Employee Directory{% else %}View in Student Directory{% endif %}
                     </a>
                 </div>
             </div>
@@ -151,12 +151,15 @@
 
     <!-- Live Webcam Capture Feed -->
     <div class="card">
-        <div class="card-header">
-            <h3>
+        <div class="card-header" style="flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-video" style="color: var(--accent-cyan);"></i>
                 <span>Live Enrollment View</span>
-            </h3>
-            <div style="display: flex; gap: 8px; align-items: center;">
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <select id="cameraSourceSelect" class="form-control" style="max-width: 170px; font-size: 11px; padding: 4px 8px; height: 30px; display: none;" onchange="onCameraSourceChanged(this.value)">
+                    <option value="">Default Front Camera</option>
+                </select>
                 <span id="camStatusBadge" class="badge badge-node">Camera Idle</span>
                 <button id="btnToggleCam" onclick="toggleWebcam()" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;">
                     <i class="fa-solid fa-power-off"></i> Start Camera
@@ -164,18 +167,36 @@
             </div>
         </div>
         <div class="card-body">
-            <div class="camera-box">
-                <video id="webcamVideo" autoplay playsinline muted></video>
+            <div class="camera-box" style="position: relative;">
+                <video id="webcamVideo" autoplay playsinline webkit-playsinline muted style="width: 100%; border-radius: var(--radius-sm); background: #000;"></video>
                 <canvas id="captureCanvas" style="display: none;"></canvas>
+            </div>
+
+            <!-- Native Camera Shutter Input Fallback (Mobile / Insecure Origin) -->
+            <input type="file" id="mobileNativeCaptureInput" accept="image/*" capture="user" style="display: none;" onchange="handleNativeCapturedFile(this)">
+
+            <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+                <button type="button" id="btnNativeCameraFallback" class="btn btn-secondary" onclick="triggerNativeMobileCapture()" style="flex: 1; font-size: 12px; display: none; align-items: center; justify-content: center; gap: 6px;">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Take Photo via Mobile Camera</span>
+                </button>
             </div>
 
             <div id="camFeedback" style="margin-top: 14px; padding: 12px 16px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px;">
                 <i class="fa-solid fa-circle-info" style="color: var(--accent-cyan);"></i>
-                <span>Click "Start Camera" or register profile to begin face capture.</span>
+                <span id="camFeedbackText">Click "Start Camera" or register profile to begin face capture.</span>
+            </div>
+
+            <!-- Mobile Troubleshooting Tips -->
+            <div id="mobileCamTroubleshooting" style="display: none; margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); font-size: 11.5px; color: var(--text-secondary);">
+                <strong style="color: var(--accent-rose); display: block; margin-bottom: 4px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Mobile Camera Troubleshooting:
+                </strong>
+                If camera streaming is blocked by your browser, ensure you grant camera permissions or use the <strong>Take Photo via Mobile Camera</strong> button above.
             </div>
 
             <!-- Alternative CLI helper notice -->
-            <div style="margin-top: 16px; padding: 14px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary);">
+            <div style="margin-top: 14px; padding: 12px 14px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-sm); font-size: 11.5px; color: var(--text-secondary);">
                 <span style="color: var(--accent-primary); font-weight: 700;"><i class="fa-solid fa-shield-halved"></i> Camera Lock Management:</span>
                 The browser will automatically release the webcam hardware once all 3 samples are captured.
             </div>
@@ -337,6 +358,7 @@
 {% block scripts %}
 <script>
 // Master Data Caches
+const isCorporateTenant = {{ 'true' if (current_tenant and current_tenant.tenant_type == 'corporate') else 'false' }};
 const ENROLL_DEPARTMENTS = {{ departments | tojson | safe }};
 const ENROLL_CLASSES = {{ classes | tojson | safe }};
 const ENROLL_DIVISIONS = {{ divisions | tojson | safe }};
@@ -432,28 +454,112 @@ function switchEnrollMode(mode) {
 }
 
 // ==========================================================
-// Webcam Stream & Enrollment Logic
+// Webcam Stream & Enrollment Logic (Mobile-Optimized)
 // ==========================================================
 let currentStudentId = null;
 let videoStream = null;
+let selectedCameraDeviceId = null;
+let currentActiveAngle = "frontal";
 
-async function startWebcam() {
-    if (videoStream) return;
-    const video = document.getElementById("webcamVideo");
+async function populateCameraDevices() {
+    const selector = document.getElementById("cameraSourceSelect");
+    if (!selector || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+
     try {
-        videoStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 }
-        });
-        video.srcObject = videoStream;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === "videoinput");
+        
+        if (videoDevices.length > 1) {
+            selector.style.display = "inline-block";
+            selector.innerHTML = "";
+            videoDevices.forEach((dev, idx) => {
+                const opt = document.createElement("option");
+                opt.value = dev.deviceId;
+                opt.text = dev.label || `Camera ${idx + 1} (${idx === 0 ? 'Front' : 'Back'})`;
+                selector.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.warn("[*] Camera device enumeration note:", e);
+    }
+}
+
+async function startWebcam(deviceId = null) {
+    if (videoStream) stopWebcam();
+    const video = document.getElementById("webcamVideo");
+    const feedbackText = document.getElementById("camFeedbackText");
+    const troubleshooting = document.getElementById("mobileCamTroubleshooting");
+    const nativeBtn = document.getElementById("btnNativeCameraFallback");
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        document.getElementById("camStatusBadge").innerText = "WebRTC Unavailable";
+        document.getElementById("camStatusBadge").className = "badge badge-unknown";
+        if (feedbackText) feedbackText.innerHTML = `<span style="color:var(--accent-amber);"><i class="fa-solid fa-triangle-exclamation"></i> Live video streaming requires HTTPS or supported mobile browser.</span>`;
+        if (troubleshooting) troubleshooting.style.display = "block";
+        if (nativeBtn) nativeBtn.style.display = "inline-flex";
+        return;
+    }
+
+    // Constraint Fallback Ladder (Ideal -> FacingMode -> Unconstrained)
+    const constraintLadder = [];
+    if (deviceId) {
+        constraintLadder.push({ video: { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 480 } } });
+        constraintLadder.push({ video: { deviceId: { exact: deviceId } } });
+    }
+    constraintLadder.push({
+        video: {
+            facingMode: { ideal: "user" },
+            width: { ideal: 640, max: 1280 },
+            height: { ideal: 480, max: 720 }
+        }
+    });
+    constraintLadder.push({ video: { facingMode: "user" } });
+    constraintLadder.push({ video: true });
+
+    let stream = null;
+    let lastError = null;
+
+    for (const constraints of constraintLadder) {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (stream) break;
+        } catch (err) {
+            lastError = err;
+        }
+    }
+
+    if (stream) {
+        videoStream = stream;
+        video.srcObject = stream;
+        video.setAttribute("playsinline", "true");
+        video.setAttribute("webkit-playsinline", "true");
+        video.muted = true;
+        try {
+            await video.play();
+        } catch (playErr) {
+            console.warn("[*] Video play notice:", playErr);
+        }
+
         document.getElementById("camStatusBadge").innerText = "Streaming";
         document.getElementById("camStatusBadge").className = "badge badge-present";
         document.getElementById("btnToggleCam").innerHTML = '<i class="fa-solid fa-stop"></i> Release Camera';
         document.getElementById("btnToggleCam").className = "btn btn-danger";
-    } catch (e) {
+        if (troubleshooting) troubleshooting.style.display = "none";
+        if (nativeBtn) nativeBtn.style.display = "none";
+        if (feedbackText) feedbackText.innerHTML = `<span style="color:var(--badge-emerald-text);"><i class="fa-solid fa-camera"></i> Camera active. Align face inside frame.</span>`;
+        await populateCameraDevices();
+    } else {
         document.getElementById("camStatusBadge").innerText = "Access Denied / Busy";
         document.getElementById("camStatusBadge").className = "badge badge-unknown";
-        document.getElementById("camFeedback").innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Camera is in use by another app or permission denied.</span>`;
+        if (feedbackText) feedbackText.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Camera unavailable: ${lastError ? (lastError.message || lastError.name) : 'Permission denied'}.</span>`;
+        if (troubleshooting) troubleshooting.style.display = "block";
+        if (nativeBtn) nativeBtn.style.display = "inline-flex";
     }
+}
+
+function onCameraSourceChanged(deviceId) {
+    selectedCameraDeviceId = deviceId;
+    startWebcam(deviceId);
 }
 
 function stopWebcam() {
@@ -478,7 +584,24 @@ function stopWebcam() {
 
 function toggleWebcam() {
     if (videoStream) stopWebcam();
-    else startWebcam();
+    else startWebcam(selectedCameraDeviceId);
+}
+
+// Mobile Native Shutter Fallback
+function triggerNativeMobileCapture() {
+    if (!currentStudentId) {
+        alert("Please register the member profile first.");
+        return;
+    }
+    const input = document.getElementById("mobileNativeCaptureInput");
+    if (input) input.click();
+}
+
+async function handleNativeCapturedFile(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    await uploadSampleBlob(file, currentActiveAngle);
+    input.value = "";
 }
 
 window.addEventListener("beforeunload", stopWebcam);
@@ -496,12 +619,12 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
     const deptName = deptOption ? (deptOption.dataset.name || deptOption.text) : "Computer Science";
 
     const classSelect = document.getElementById("enrollClassSelect");
-    const classId = classSelect.value ? parseInt(classSelect.value) : null;
-    const classOption = classSelect.options[classSelect.selectedIndex];
+    const classId = classSelect ? (classSelect.value ? parseInt(classSelect.value) : null) : null;
+    const classOption = classSelect ? classSelect.options[classSelect.selectedIndex] : null;
     const className = classOption ? (classOption.dataset.name || classOption.text) : "";
 
     const divSelect = document.getElementById("enrollDivSelect");
-    const divId = divSelect.value ? parseInt(divSelect.value) : null;
+    const divId = divSelect ? (divSelect.value ? parseInt(divSelect.value) : null) : null;
 
     const email = document.getElementById("email").value.trim();
 
@@ -533,8 +656,8 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
             document.getElementById("btnRegisterProfile").disabled = true;
             document.getElementById("btnRegisterProfile").innerHTML = '<i class="fa-solid fa-check"></i> Profile Registered';
             document.getElementById("enrollProgressSection").style.display = "block";
-            document.getElementById("camFeedback").innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-check"></i> Registered ${name}. Now starting camera for 3 angle samples...</span>`;
-            await startWebcam();
+            document.getElementById("camFeedbackText").innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-check"></i> Registered ${name}. Initializing camera...</span>`;
+            await startWebcam(selectedCameraDeviceId);
         } else {
             alert(`Error: ${data.detail || 'Could not register student.'}`);
         }
@@ -548,12 +671,19 @@ async function captureSample(angle) {
         alert("Please register the member profile first.");
         return;
     }
+    currentActiveAngle = angle;
+
     if (!videoStream) {
-        await startWebcam();
-        await new Promise(r => setTimeout(r, 500));
+        await startWebcam(selectedCameraDeviceId);
+        await new Promise(r => setTimeout(r, 400));
     }
 
     const video = document.getElementById("webcamVideo");
+    if (!videoStream || video.videoWidth === 0) {
+        triggerNativeMobileCapture();
+        return;
+    }
+
     const canvas = document.getElementById("captureCanvas");
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
@@ -562,48 +692,56 @@ async function captureSample(angle) {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(async (blob) => {
-        const formData = new FormData();
-        formData.append("student_id", currentStudentId);
-        formData.append("sample_angle", angle);
-        formData.append("image", blob, `sample_${angle}.jpg`);
-
-        const feedbackEl = document.getElementById("camFeedback");
-        feedbackEl.innerHTML = `<span style="color:var(--accent-primary); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Extracting 128-d vector...</span>`;
-
-        try {
-            const res = await fetch("/api/v1/enroll/capture-sample", {
-                method: "POST",
-                body: formData,
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                feedbackEl.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
-                if (angle === 'frontal') {
-                    document.getElementById("btnCapFrontal").disabled = true;
-                    document.getElementById("btnCapFrontal").className = "btn btn-primary";
-                    document.getElementById("btnCapFrontal").innerText = "✓ Done";
-                    document.getElementById("btnCapLeft").disabled = false;
-                } else if (angle === 'left') {
-                    document.getElementById("btnCapLeft").disabled = true;
-                    document.getElementById("btnCapLeft").className = "btn btn-primary";
-                    document.getElementById("btnCapLeft").innerText = "✓ Done";
-                    document.getElementById("btnCapRight").disabled = false;
-                } else if (angle === 'right') {
-                    document.getElementById("btnCapRight").disabled = true;
-                    document.getElementById("btnCapRight").className = "btn btn-primary";
-                    document.getElementById("btnCapRight").innerText = "✓ Done";
-                    document.getElementById("enrollmentCompleteBox").style.display = "block";
-                    stopWebcam();
-                    feedbackEl.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-circle-check"></i> Enrollment finished! Camera released.</span>`;
-                }
-            } else {
-                feedbackEl.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${data.detail}</span>`;
-            }
-        } catch (err) {
-            feedbackEl.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Upload failed. Try again.</span>`;
+        if (blob) {
+            await uploadSampleBlob(blob, angle);
         }
-    }, "image/jpeg", 0.9);
+    }, "image/jpeg", 0.92);
+}
+
+async function uploadSampleBlob(blobOrFile, angle) {
+    const formData = new FormData();
+    formData.append("student_id", currentStudentId);
+    formData.append("sample_angle", angle);
+    formData.append("image", blobOrFile, `sample_${angle}.jpg`);
+
+    const feedbackEl = document.getElementById("camFeedbackText");
+    feedbackEl.innerHTML = `<span style="color:var(--accent-primary); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Extracting face embedding for ${angle} pose...</span>`;
+
+    try {
+        const res = await fetch("/api/v1/enroll/capture-sample", {
+            method: "POST",
+            body: formData,
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            feedbackEl.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
+            if (angle === 'frontal') {
+                document.getElementById("btnCapFrontal").disabled = true;
+                document.getElementById("btnCapFrontal").className = "btn btn-primary";
+                document.getElementById("btnCapFrontal").innerText = "✓ Done";
+                document.getElementById("btnCapLeft").disabled = false;
+                currentActiveAngle = "left";
+            } else if (angle === 'left') {
+                document.getElementById("btnCapLeft").disabled = true;
+                document.getElementById("btnCapLeft").className = "btn btn-primary";
+                document.getElementById("btnCapLeft").innerText = "✓ Done";
+                document.getElementById("btnCapRight").disabled = false;
+                currentActiveAngle = "right";
+            } else if (angle === 'right') {
+                document.getElementById("btnCapRight").disabled = true;
+                document.getElementById("btnCapRight").className = "btn btn-primary";
+                document.getElementById("btnCapRight").innerText = "✓ Done";
+                document.getElementById("enrollmentCompleteBox").style.display = "block";
+                stopWebcam();
+                feedbackEl.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-circle-check"></i> Enrollment finished! Camera released.</span>`;
+            }
+        } else {
+            feedbackEl.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${data.detail}</span>`;
+        }
+    } catch (err) {
+        feedbackEl.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Upload failed. Try again.</span>`;
+    }
 }
 
 // ==========================================================
@@ -765,8 +903,8 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
                 <div style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px;">
                     Profile <strong>${data.student.name}</strong> (${data.student.roll_number}) enrolled with 3 vectors cached in RAM.
                 </div>
-                <a href="/students" class="btn btn-primary" style="padding: 7px 16px; font-size: 12.5px;">
-                    <i class="fa-solid fa-users"></i> View in Student Directory
+                <a href="${isCorporateTenant ? '/employees' : '/students'}" class="btn btn-primary" style="padding: 7px 16px; font-size: 12.5px;">
+                    <i class="fa-solid fa-users"></i> View in Directory
                 </a>
             `;
             submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Enrolled Successfully';

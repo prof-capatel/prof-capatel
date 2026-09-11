@@ -409,6 +409,9 @@ def create_tenant(
         "tenant": new_tenant.to_dict(),
         "admin_user": admin_user.to_dict(),
         "links": {
+            "portal_url": f"/portal/{new_tenant.slug}",
+            "tenant_login_url": f"/portal/{new_tenant.slug}",
+            "tokenized_portal_url": f"/portal/{tenant_uuid}/{admin_token}",
             "admin_login_url": f"/auth/token-login/{tenant_uuid}/{admin_token}",
             "onboarding_url": f"/onboard/{tenant_uuid}/{onboarding_token}",
             "checkin_url": f"/check-in/{tenant_uuid}/{attendance_slug}",
@@ -827,6 +830,9 @@ def get_tenant_access_links(
         "tenant_type": tenant.tenant_type,
         "uuid": tenant.uuid,
         "links": {
+            "portal_url": f"/portal/{tenant.slug}",
+            "tenant_login_url": f"/portal/{tenant.slug}",
+            "tokenized_portal_url": f"/portal/{t_uuid}/{tenant.admin_token}",
             "admin_login_url": f"/auth/token-login/{t_uuid}/{tenant.admin_token}",
             "onboarding_url": f"/onboard/{t_uuid}/{tenant.onboarding_token}",
             "checkin_url": f"/check-in/{t_uuid}/{tenant.attendance_slug}",
@@ -889,6 +895,9 @@ def regenerate_tenant_tokens(
         "message": f"Successfully regenerated {', '.join(rotated_items)} for '{tenant.name}'.",
         "tenant_id": tenant.id,
         "links": {
+            "portal_url": f"/portal/{tenant.slug}",
+            "tenant_login_url": f"/portal/{tenant.slug}",
+            "tokenized_portal_url": f"/portal/{t_uuid}/{tenant.admin_token}",
             "admin_login_url": f"/auth/token-login/{t_uuid}/{tenant.admin_token}",
             "onboarding_url": f"/onboard/{t_uuid}/{tenant.onboarding_token}",
             "checkin_url": f"/check-in/{t_uuid}/{tenant.attendance_slug}",

@@ -1,6 +1,28 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Live Dashboard Action Toolbar -->
+<div class="dash-action-banner" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(16, 185, 129, 0.08)); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 18px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; box-shadow: var(--shadow-sm);">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: var(--accent-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">
+            <i class="fa-solid fa-camera"></i>
+        </div>
+        <div>
+            <h3 style="font-size: 17px; font-weight: 800; color: var(--text-heading); margin: 0; display: flex; align-items: center; gap: 8px;">
+                <span>Live Biometric Attendance Scanner</span>
+                <span class="badge badge-present" style="font-size: 11px;"><span class="pulse-dot"></span> READY</span>
+            </h3>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 4px 0 0 0;">
+                Launch instant face-recognition scanning directly from this terminal using any connected webcam or mobile camera.
+            </p>
+        </div>
+    </div>
+    <button type="button" id="btnStartCapture" class="btn btn-primary" onclick="openLiveCaptureModal()" style="font-size: 14px; font-weight: 700; padding: 10px 22px; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);">
+        <i class="fa-solid fa-camera-retro" style="font-size: 16px;"></i>
+        <span>Start Attendance Capture</span>
+    </button>
+</div>
+
 <!-- Stats Cards Row -->
 <div class="stats-grid">
     <div class="stat-card">
@@ -15,7 +37,7 @@
 
     <div class="stat-card">
         <div class="stat-info">
-            <span>{% if is_corporate %}Employees Present Today{% else %}Present Today{% endif %}</span>
+            <span>{% if is_corporate %}Checked-In Today{% else %}Present Today{% endif %}</span>
             <h3 id="statPresentCount">0</h3>
         </div>
         <div class="stat-icon emerald">
@@ -23,6 +45,27 @@
         </div>
     </div>
 
+    {% if is_corporate %}
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Checked-Out Today</span>
+            <h3 id="statCheckedOutCount">0</h3>
+        </div>
+        <div class="stat-icon cyan">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <span>Standard Shift Hours</span>
+            <h3 id="statShiftHours" style="font-size: 15px; font-weight: 800;">{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }} - {{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}</h3>
+        </div>
+        <div class="stat-icon amber">
+            <i class="fa-solid fa-briefcase"></i>
+        </div>
+    </div>
+    {% else %}
     <div class="stat-card">
         <div class="stat-info">
             <span>Cooldown Window</span>
@@ -42,6 +85,7 @@
             <i class="fa-solid fa-network-wired"></i>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <!-- Main Section: Live Feed & Active Nodes (Fluid Responsive Grid) -->
@@ -88,20 +132,20 @@
                 {% else %}
                     <div id="emptyFeedState" style="text-align: center; padding: 48px 20px; color: var(--text-muted); background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px dashed var(--border-color);">
                         <i class="fa-solid fa-video" style="font-size: 32px; margin-bottom: 12px; color: var(--accent-primary); opacity: 0.8;"></i>
-                        <p style="font-weight: 600; color: var(--text-heading);">Awaiting edge node frame transmissions...</p>
-                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Start the simulated Pi Zero node via <code>python run_node.py</code></p>
+                        <p style="font-weight: 600; color: var(--text-heading);">Awaiting face recognition events...</p>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Click <strong>Start Attendance Capture</strong> above to mark attendance with your camera.</p>
                     </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Edge Nodes Status Panel -->
+    <!-- Biometric Terminal & Quick Access Gateways Panel -->
     <div class="card">
         <div class="card-header">
             <h3>
-                <i class="fa-solid fa-microchip" style="color: var(--accent-cyan);"></i>
-                <span>Connected Nodes</span>
+                <i class="fa-solid {% if is_corporate %}fa-shield-halved{% else %}fa-microchip{% endif %}" style="color: var(--accent-cyan);"></i>
+                <span>{% if is_corporate %}Biometric Terminal Gateway{% else %}Connected Nodes{% endif %}</span>
             </h3>
         </div>
         <div class="card-body">
@@ -125,12 +169,12 @@
                 {% else %}
                     <div style="padding: 16px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <strong style="font-size: 13.5px; color: var(--text-heading);">NODE-CLASSROOM-101</strong>
-                            <span class="badge badge-node">DEFAULT NODE</span>
+                            <strong style="font-size: 13.5px; color: var(--text-heading);">CENTRAL-DASHBOARD-CAMERA</strong>
+                            <span class="badge badge-present">ACTIVE TERMINAL</span>
                         </div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Room 101 - Main Entrance</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">Live Biometric Ingestion Ready</div>
                         <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
-                            Listening on <code>/api/v1/nodes/frame</code>
+                            Ingesting on <code>/api/v1/nodes/frame</code>
                         </div>
                     </div>
                 {% endif %}
@@ -141,24 +185,19 @@
                         <span style="font-size: 13px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
                             <i class="fa-solid fa-link" style="color: var(--accent-primary);"></i> Quick Access Gateways
                         </span>
-                        {% if branding and branding.enable_self_attendance %}
-                            <span class="badge badge-present" style="font-size: 10px;">GEOFENCE ACTIVE</span>
-                        {% else %}
-                            <span class="badge badge-unknown" style="font-size: 10px;">SETUP IN SETTINGS</span>
-                        {% endif %}
                     </div>
 
                     <!-- Permanent Self-Attendance Check-In URL -->
                     <div style="margin-bottom: 10px;">
                         <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: flex; justify-content: space-between;">
-                            <span><i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> Daily Check-In URL:</span>
+                            <span><i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> Dedicated Face Portal URL:</span>
                         </div>
                         <div style="display: flex; gap: 6px;">
-                            <input type="text" id="dashCheckinUrl" readonly class="form-input" style="font-size: 11px; padding: 6px 8px; font-family: monospace; background: var(--bg-subtle);" value="{{ current_tenant.checkin_url or '/check-in/' ~ current_tenant.slug ~ '/corporate-checkin' }}">
-                            <button type="button" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" onclick="copyDashLink('dashCheckinUrl', this)" title="Copy Check-In Link">
+                            <input type="text" id="dashPortalUrl" readonly class="form-input" style="font-size: 11px; padding: 6px 8px; font-family: monospace; background: var(--bg-subtle);" value="/portal/{{ current_tenant.slug }}">
+                            <button type="button" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" onclick="copyDashLink('dashPortalUrl', this)" title="Copy Portal Link">
                                 <i class="fa-regular fa-copy"></i>
                             </button>
-                            <a id="dashCheckinOpen" href="{{ current_tenant.checkin_url or '/self-attendance/' ~ current_tenant.slug }}" target="_blank" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" title="Launch Check-In Portal">
+                            <a id="dashPortalOpen" href="/portal/{{ current_tenant.slug }}" target="_blank" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" title="Launch Biometric Portal">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                         </div>
@@ -180,13 +219,85 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-                <!-- Quick Simulator Launch Guide -->
-                <div style="margin-top: 8px; padding: 16px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-sm); font-size: 12px;">
-                    <div style="font-weight: 700; color: var(--accent-primary); margin-bottom: 6px;">
-                        <i class="fa-solid fa-terminal"></i> Node Simulation Command
+<!-- Live Biometric Attendance Capture Modal -->
+<div id="liveCaptureModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); z-index: 99999; backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 680px; max-height: 92vh; overflow-y: auto; background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column;">
+        
+        <!-- Modal Header -->
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color); background: var(--bg-subtle);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--accent-gradient); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                    <i class="fa-solid fa-camera"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 800; color: var(--text-heading); margin: 0;">Live Biometric Attendance Capture</h3>
+                    <span style="font-size: 11px; color: var(--text-muted);">Real-Time Central Biometric Punch Engine</span>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="closeLiveCaptureModal()" style="padding: 6px 10px; font-size: 13px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body: Video Viewport -->
+        <div class="card-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+            
+            <div id="cameraViewportContainer" style="position: relative; width: 100%; height: 380px; background: #000; border-radius: var(--radius-md); overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-color);">
+                
+                <!-- Video Element -->
+                <video id="captureVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                
+                <!-- Overlay Canvas for Face Bounding Boxes -->
+                <canvas id="captureCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+                
+                <!-- Standby / Requesting Cam Overlay -->
+                <div id="captureStandbyOverlay" style="position: absolute; inset: 0; background: rgba(11, 15, 25, 0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 20px; z-index: 10;">
+                    <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(99, 102, 241, 0.2); border: 2px solid var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 14px;">
+                        <i class="fa-solid fa-video" style="color: var(--accent-primary);"></i>
                     </div>
-                    <code style="background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; display: block; color: var(--accent-primary); font-weight: 600; border: 1px solid var(--badge-indigo-border); word-break: break-all;">python run_node.py</code>
+                    <h4 id="captureStandbyTitle" style="font-size: 15px; font-weight: 700; margin: 0 0 6px 0;">Initializing Camera Stream...</h4>
+                    <p id="captureStandbyDesc" style="font-size: 12px; color: #94a3b8; max-width: 320px; margin: 0;">Please allow camera permissions in your browser to start biometric attendance recognition.</p>
+                </div>
+
+                <!-- Recognition Result Toast (Floating HUD Banner) -->
+                <div id="captureMatchToast" style="display: none; position: absolute; bottom: 16px; left: 16px; right: 16px; background: rgba(16, 185, 129, 0.95); backdrop-filter: blur(8px); color: white; padding: 12px 16px; border-radius: var(--radius-sm); border: 1.5px solid #34d399; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 20;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: white; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800;">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <div>
+                                <h4 id="toastMatchName" style="font-size: 14px; font-weight: 800; margin: 0; line-height: 1.2;">Employee Name</h4>
+                                <span id="toastMatchDetails" style="font-size: 11.5px; opacity: 0.9;">Roll: 101 • Checked In</span>
+                            </div>
+                        </div>
+                        <span id="toastMatchConfidence" class="badge" style="background: rgba(0,0,0,0.3); color: white; font-weight: 700; font-size: 11px;">99% MATCH</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Toolbar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <select id="captureCameraSelect" class="form-control" style="font-size: 12px; padding: 6px 10px; max-width: 220px;" onchange="switchCaptureCamera(this.value)">
+                        <option value="">Default Camera</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary" onclick="toggleContinuousStream()" id="btnStreamMode" style="font-size: 12px; padding: 6px 12px;">
+                        <i class="fa-solid fa-play" style="color: var(--accent-emerald);"></i> <span id="btnStreamModeText">Stream: Active</span>
+                    </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="captureManualSingleShot()" style="font-size: 12px; padding: 6px 14px;">
+                        <i class="fa-solid fa-camera"></i> Single Shot
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="closeLiveCaptureModal()" style="font-size: 12px; padding: 6px 16px;">
+                        Done
+                    </button>
                 </div>
             </div>
         </div>
@@ -201,8 +312,10 @@
             const res = await fetch('/api/v1/attendance/stats');
             const data = await res.json();
             if (data) {
-                if (data.present_today !== undefined) document.getElementById('statPresentCount').innerText = data.present_today;
-                if (data.total_students !== undefined) document.getElementById('statTotalStudents').innerText = data.total_students;
+                if (data.present_today !== undefined && document.getElementById('statPresentCount')) document.getElementById('statPresentCount').innerText = data.present_today;
+                if (data.total_students !== undefined && document.getElementById('statTotalStudents')) document.getElementById('statTotalStudents').innerText = data.total_students;
+                if (data.checked_out_today !== undefined && document.getElementById('statCheckedOutCount')) document.getElementById('statCheckedOutCount').innerText = data.checked_out_today;
+                if (data.shift_hours_display && document.getElementById('statShiftHours')) document.getElementById('statShiftHours').innerText = data.shift_hours_display;
             }
         } catch (e) {}
 
@@ -238,12 +351,268 @@
 
     // Format input fields with origin on load
     document.addEventListener('DOMContentLoaded', () => {
-        ['dashCheckinUrl', 'dashOnboardUrl'].forEach(id => {
+        ['dashPortalUrl', 'dashOnboardUrl'].forEach(id => {
             const el = document.getElementById(id);
             if (el && el.value.startsWith('/')) {
                 el.value = window.location.origin + el.value;
             }
         });
     });
+
+    // ==========================================================
+    // Live Dashboard Biometric Attendance Capture Engine
+    // ==========================================================
+    let captureMediaStream = null;
+    let captureIntervalTimer = null;
+    let isCaptureIngesting = false;
+    let isStreamActive = true;
+    let captureToastTimer = null;
+
+    function playSuccessChime() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+            
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.35);
+        } catch (e) {}
+    }
+
+    async function openLiveCaptureModal() {
+        const modal = document.getElementById("liveCaptureModal");
+        if (!modal) return;
+        modal.style.display = "flex";
+        await initCaptureCamera();
+        startFrameCaptureLoop();
+    }
+
+    function closeLiveCaptureModal() {
+        const modal = document.getElementById("liveCaptureModal");
+        if (modal) modal.style.display = "none";
+        stopFrameCaptureLoop();
+        if (captureMediaStream) {
+            captureMediaStream.getTracks().forEach(t => t.stop());
+            captureMediaStream = null;
+        }
+        const canvas = document.getElementById("captureCanvas");
+        if (canvas) {
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    async function initCaptureCamera(deviceId = null) {
+        const standbyOverlay = document.getElementById("captureStandbyOverlay");
+        const standbyTitle = document.getElementById("captureStandbyTitle");
+        const standbyDesc = document.getElementById("captureStandbyDesc");
+        const video = document.getElementById("captureVideo");
+
+        if (captureMediaStream) {
+            captureMediaStream.getTracks().forEach(t => t.stop());
+            captureMediaStream = null;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            if (standbyTitle) standbyTitle.innerText = "Camera Access Blocked";
+            if (standbyDesc) standbyDesc.innerText = "Browser does not support camera API or HTTPS/localhost is required.";
+            return;
+        }
+
+        try {
+            const constraints = {
+                video: deviceId ? { deviceId: { exact: deviceId } } : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+                audio: false
+            };
+            captureMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = captureMediaStream;
+            await video.play();
+
+            if (standbyOverlay) standbyOverlay.style.display = "none";
+            await enumerateCaptureDevices();
+        } catch (err) {
+            console.error("Camera access failed:", err);
+            if (standbyOverlay) standbyOverlay.style.display = "flex";
+            if (standbyTitle) standbyTitle.innerText = "Camera Access Denied";
+            if (standbyDesc) standbyDesc.innerText = "Please allow webcam permissions in your browser to start capture.";
+        }
+    }
+
+    async function enumerateCaptureDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(d => d.kind === "videoinput");
+            const select = document.getElementById("captureCameraSelect");
+            if (!select) return;
+
+            select.innerHTML = "";
+            videoDevices.forEach((dev, idx) => {
+                const opt = document.createElement("option");
+                opt.value = dev.deviceId;
+                opt.text = dev.label || `Camera ${idx + 1}`;
+                select.appendChild(opt);
+            });
+        } catch (e) {}
+    }
+
+    function switchCaptureCamera(devId) {
+        if (devId) initCaptureCamera(devId);
+    }
+
+    function startFrameCaptureLoop() {
+        if (captureIntervalTimer) clearInterval(captureIntervalTimer);
+        isStreamActive = true;
+        const btnText = document.getElementById("btnStreamModeText");
+        if (btnText) btnText.innerText = "Stream: Active";
+
+        // Capture at ~2.5 FPS (every 400ms)
+        captureIntervalTimer = setInterval(() => {
+            if (isStreamActive) captureAndIngestFrame(false);
+        }, 400);
+    }
+
+    function stopFrameCaptureLoop() {
+        if (captureIntervalTimer) {
+            clearInterval(captureIntervalTimer);
+            captureIntervalTimer = null;
+        }
+    }
+
+    function toggleContinuousStream() {
+        isStreamActive = !isStreamActive;
+        const btnText = document.getElementById("btnStreamModeText");
+        if (btnText) {
+            btnText.innerText = isStreamActive ? "Stream: Active" : "Stream: Paused";
+        }
+    }
+
+    function captureManualSingleShot() {
+        captureAndIngestFrame(true);
+    }
+
+    async function captureAndIngestFrame(isSingleShot = false) {
+        if (!captureMediaStream || isCaptureIngesting) return;
+        const video = document.getElementById("captureVideo");
+        const canvas = document.getElementById("captureCanvas");
+        if (!video || !canvas || video.videoWidth === 0) return;
+
+        isCaptureIngesting = true;
+
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        }
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = Math.min(640, video.videoWidth);
+        tempCanvas.height = Math.round(tempCanvas.width * (video.videoHeight / video.videoWidth));
+        const ctx = tempCanvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+        tempCanvas.toBlob(async (blob) => {
+            if (!blob) {
+                isCaptureIngesting = false;
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("frame", blob, "dash_frame.jpg");
+            formData.append("node_id", "DASHBOARD-CAMERA");
+            formData.append("location", "Live Terminal");
+            if (isSingleShot) formData.append("is_single_shot", "true");
+
+            try {
+                const res = await fetch("/api/v1/nodes/frame", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    renderCaptureDetections(data.detections || [], canvas);
+                }
+            } catch (err) {
+                console.warn("Frame transmission error:", err);
+            } finally {
+                isCaptureIngesting = false;
+            }
+        }, "image/jpeg", 0.75);
+    }
+
+    function renderCaptureDetections(detections, canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!detections || detections.length === 0) return;
+
+        detections.forEach(det => {
+            const isMatch = det.is_match;
+            const name = det.name || "Unknown";
+            const roll = det.roll_number || "";
+            const conf = Math.round((1.0 - Math.min(1.0, det.distance || 0.6)) * 100);
+
+            if (det.box) {
+                const [top, right, bottom, left] = det.box;
+                const scaleX = canvas.width / (det.frame_width || 640);
+                const scaleY = canvas.height / (det.frame_height || 480);
+
+                const x = left * scaleX;
+                const y = top * scaleY;
+                const w = (right - left) * scaleX;
+                const h = (bottom - top) * scaleY;
+
+                // Mirrored canvas coordinates
+                const mirroredX = canvas.width - (x + w);
+
+                ctx.strokeStyle = isMatch ? "#10b981" : "#f59e0b";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(mirroredX, y, w, h, 8);
+                ctx.stroke();
+
+                // Draw Label Pill
+                ctx.fillStyle = isMatch ? "rgba(16, 185, 129, 0.9)" : "rgba(245, 158, 11, 0.9)";
+                ctx.fillRect(mirroredX, Math.max(0, y - 24), Math.max(100, w), 24);
+
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 12px sans-serif";
+                ctx.fillText(`${name} (${conf}%)`, mirroredX + 6, Math.max(16, y - 7));
+            }
+
+            if (isMatch) {
+                showCaptureToast(name, roll, conf, det.punch_type || "Attendance Recorded");
+                playSuccessChime();
+            }
+        });
+    }
+
+    function showCaptureToast(name, roll, conf, punchType) {
+        const toast = document.getElementById("captureMatchToast");
+        const nameEl = document.getElementById("toastMatchName");
+        const detailsEl = document.getElementById("toastMatchDetails");
+        const confEl = document.getElementById("toastMatchConfidence");
+
+        if (!toast) return;
+
+        if (nameEl) nameEl.innerText = name;
+        if (detailsEl) detailsEl.innerText = `ID: ${roll || 'Enrolled'} • ${punchType}`;
+        if (confEl) confEl.innerText = `${conf}% MATCH`;
+
+        toast.style.display = "block";
+
+        if (captureToastTimer) clearTimeout(captureToastTimer);
+        captureToastTimer = setTimeout(() => {
+            toast.style.display = "none";
+        }, 3200);
+    }
 </script>
 {% endblock %}

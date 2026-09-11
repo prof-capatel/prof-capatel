@@ -37,6 +37,17 @@ class BrandingUpdateRequest(BaseModel):
     geo_radius_meters: Optional[float] = 150.0
     max_gps_accuracy_meters: Optional[float] = 50.0
     self_attendance_face_threshold: Optional[float] = 0.52
+    shift_check_in_time: Optional[str] = "10:30"
+    shift_check_out_time: Optional[str] = "18:00"
+    shift_grace_minutes: Optional[int] = 15
+    min_checkout_interval_minutes: Optional[int] = 15
+    payroll_structure: Optional[str] = "HOURLY"
+    default_hourly_rate: Optional[float] = 15.0
+    standard_working_hours_per_day: Optional[float] = 8.0
+    enable_overtime: Optional[bool] = True
+    overtime_rate_multiplier: Optional[float] = 1.5
+    missed_checkout_policy: Optional[str] = "HALF_DAY"
+    currency_symbol: Optional[str] = "$"
 
 
 def get_or_create_tenant_branding(db: Session, tenant_id: int, tenant_name: str = "FaceAttendance Campus") -> SystemBranding:
@@ -141,6 +152,39 @@ def update_branding(
 
     if payload.self_attendance_face_threshold is not None:
         branding.self_attendance_face_threshold = max(0.30, min(0.70, float(payload.self_attendance_face_threshold)))
+
+    if payload.shift_check_in_time is not None:
+        branding.shift_check_in_time = payload.shift_check_in_time.strip()
+
+    if payload.shift_check_out_time is not None:
+        branding.shift_check_out_time = payload.shift_check_out_time.strip()
+
+    if payload.shift_grace_minutes is not None:
+        branding.shift_grace_minutes = max(0, min(120, int(payload.shift_grace_minutes)))
+
+    if payload.min_checkout_interval_minutes is not None:
+        branding.min_checkout_interval_minutes = max(0, min(360, int(payload.min_checkout_interval_minutes)))
+
+    if payload.payroll_structure is not None:
+        branding.payroll_structure = payload.payroll_structure.strip().upper()
+
+    if payload.default_hourly_rate is not None:
+        branding.default_hourly_rate = max(0.0, float(payload.default_hourly_rate))
+
+    if payload.standard_working_hours_per_day is not None:
+        branding.standard_working_hours_per_day = max(1.0, min(24.0, float(payload.standard_working_hours_per_day)))
+
+    if payload.enable_overtime is not None:
+        branding.enable_overtime = bool(payload.enable_overtime)
+
+    if payload.overtime_rate_multiplier is not None:
+        branding.overtime_rate_multiplier = max(1.0, min(5.0, float(payload.overtime_rate_multiplier)))
+
+    if payload.missed_checkout_policy is not None:
+        branding.missed_checkout_policy = payload.missed_checkout_policy.strip().upper()
+
+    if payload.currency_symbol is not None:
+        branding.currency_symbol = payload.currency_symbol.strip()
 
     # Also sync Tenant name
     current_tenant.name = branding.institution_name

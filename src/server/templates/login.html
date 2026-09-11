@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <title>Sign In - {{ branding.institution_name if branding else 'FaceAttendance' }}</title>
+    <title>{{ page_title or 'Sign In - Face Recognition Attendance System' }}</title>
     <!-- Plus Jakarta Sans & Inter Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,49 +21,169 @@
             } catch (e) {}
         })();
     </script>
+    <style>
+        .role-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            background: rgba(194, 65, 12, 0.12);
+            color: var(--accent-primary);
+            margin-bottom: 8px;
+        }
+        .demo-pill-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        .demo-pill-btn:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-subtle);
+            transform: translateY(-1px);
+        }
+    </style>
 </head>
 <body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body); padding: 20px;">
 
-    <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-xl); border-radius: var(--radius-md);">
+    <div class="card" style="max-width: 460px; width: 100%; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-xl); border-radius: var(--radius-md);">
+        
+        <!-- Header Section -->
         <div class="card-header" style="text-align: center; flex-direction: column; padding: 28px 24px 16px; border-bottom: none;">
-            <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; margin: 0 auto 14px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
-                <i class="fa-solid fa-graduation-cap"></i>
+            <div style="width: 58px; height: 58px; border-radius: 16px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; margin: 0 auto 12px; box-shadow: 0 4px 14px rgba(194, 65, 12, 0.35);">
+                {% if is_tenant_scoped and is_corporate %}
+                    <i class="fa-solid fa-building"></i>
+                {% elif is_tenant_scoped %}
+                    <i class="fa-solid fa-graduation-cap"></i>
+                {% else %}
+                    <i class="fa-solid fa-fingerprint"></i>
+                {% endif %}
             </div>
-            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-heading);">{{ branding.institution_name if branding else 'FaceAttendance' }}</h2>
-            <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Sign in to access your Enterprise SaaS role workspace</p>
+
+            {% if is_tenant_scoped and tenant %}
+                <span class="role-badge-pill">
+                    <i class="fa-solid fa-shield-halved"></i> {{ 'Corporate Enterprise Portal' if is_corporate else 'Academic Campus Portal' }}
+                </span>
+                <h2 style="font-size: 21px; font-weight: 800; color: var(--text-heading); margin: 0;">{{ tenant.name }}</h2>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">{{ branding.tagline if (branding and branding.tagline) else 'Sign in to access your organization workspace' }}</p>
+            {% else %}
+                <span class="role-badge-pill">
+                    <i class="fa-solid fa-globe"></i> Enterprise Platform Gateway
+                </span>
+                <h2 style="font-size: 20px; font-weight: 800; color: var(--text-heading); margin: 0;">Face Recognition - Attendance System</h2>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Multi-Tenant Biometric Attendance & Identity Control Hub</p>
+            {% endif %}
         </div>
 
         <div class="card-body" style="padding: 0 24px 24px;">
-            <!-- Fast 1-Click Role Fill Buttons for Demo -->
-            <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
-                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; display: block; margin-bottom: 8px;">
-                    <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Quick-Login Demo Profiles
-                </span>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('superadmin', 'admin123')">
-                        <i class="fa-solid fa-crown" style="color: #f59e0b;"></i> Super Admin
-                    </button>
-                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('admin', 'admin123')">
-                        <i class="fa-solid fa-user-shield" style="color: var(--accent-primary);"></i> Tenant Admin
-                    </button>
-                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('teacher1', 'teacher123')">
-                        <i class="fa-solid fa-chalkboard-user" style="color: var(--accent-emerald);"></i> Teacher
-                    </button>
-                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px;" onclick="fillLogin('student1', 'student123')">
-                        <i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i> Student
-                    </button>
+
+            {% if error_banner %}
+            <div style="margin-bottom: 16px; padding: 12px; border-radius: var(--radius-sm); background: var(--badge-rose-bg); color: var(--badge-rose-text); font-size: 12.5px; border: 1px solid var(--accent-rose);">
+                <i class="fa-solid fa-circle-exclamation"></i> {{ error_banner }}
+            </div>
+            {% endif %}
+
+            <!-- Quick-Login Profiles (Scored per Tenant or Global) -->
+            <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> {{ 'Tenant Quick Profiles' if is_tenant_scoped else 'Quick-Login Demo Profiles' }}
+                    </span>
+                    <a href="/demo-login" style="font-size: 11px; color: var(--accent-primary); text-decoration: none; font-weight: 700;">
+                        <i class="fa-solid fa-flask"></i> Demo Sandbox
+                    </a>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" id="quickProfilesGrid">
+                    {% if is_tenant_scoped and demo_users %}
+                        {% for du in demo_users %}
+                            <button type="button" class="demo-pill-btn" onclick="fillTenantLogin('{{ du.username }}', 'admin123', '{{ du.role }}')">
+                                <i class="fa-solid {{ du.icon }}" style="color: {{ du.color or 'var(--accent-primary)' }};"></i>
+                                <div>
+                                    <div style="font-weight: 700;">{{ du.label }}</div>
+                                    <div style="font-size: 9.5px; color: var(--text-muted);">{{ du.username }}</div>
+                                </div>
+                            </button>
+                        {% endfor %}
+                    {% else %}
+                        <button type="button" class="demo-pill-btn" onclick="fillLogin('superadmin', 'admin123', 'SUPER_ADMIN', '')">
+                            <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
+                            <div>
+                                <div style="font-weight: 700;">Super Admin</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);">superadmin</div>
+                            </div>
+                        </button>
+                        <button type="button" class="demo-pill-btn" onclick="fillLogin('admin', 'admin123', 'TENANT_ADMIN', '1')">
+                            <i class="fa-solid fa-user-shield" style="color: var(--accent-primary);"></i>
+                            <div>
+                                <div style="font-weight: 700;">Tenant Admin</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);">admin</div>
+                            </div>
+                        </button>
+                        <button type="button" class="demo-pill-btn" onclick="fillLogin('teacher1', 'teacher123', 'TEACHER', '1')">
+                            <i class="fa-solid fa-chalkboard-user" style="color: var(--accent-emerald);"></i>
+                            <div>
+                                <div style="font-weight: 700;">Teacher</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);">teacher1</div>
+                            </div>
+                        </button>
+                        <button type="button" class="demo-pill-btn" onclick="fillLogin('student1', 'student123', 'STUDENT', '1')">
+                            <i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i>
+                            <div>
+                                <div style="font-weight: 700;">Student</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);">student1</div>
+                            </div>
+                        </button>
+                    {% endif %}
                 </div>
             </div>
 
+            <!-- Login Form -->
             <form onsubmit="submitLogin(event)">
+                
+                <!-- Dynamic Role Selector Dropdown -->
                 <div class="form-group">
-                    <label class="form-label">Username</label>
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa-solid fa-id-badge" style="color: var(--accent-primary);"></i> Select Role</span>
+                        <span id="roleBadgeHelp" style="font-size: 10px; color: var(--text-muted);">Filtered for {{ tenant.name if is_tenant_scoped else 'All Roles' }}</span>
+                    </label>
+                    <select id="loginRole" class="form-control" onchange="onRoleChanged()" style="font-weight: 600;">
+                        {% if is_tenant_scoped %}
+                            {% for r in available_roles %}
+                                <option value="{{ r.key }}">{{ r.label }} ({{ r.badge }})</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="SUPER_ADMIN">👑 Super Administrator (Platform Owner)</option>
+                            <option value="TENANT_ADMIN" selected>🛡️ Tenant Administrator (Organization Admin)</option>
+                            <option value="TEACHER">🧑‍🏫 Teacher / Faculty (Academic Staff)</option>
+                            <option value="STUDENT">🎓 Student / Employee (End User)</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <!-- Username Input -->
+                <div class="form-group">
+                    <label class="form-label" id="usernameLabel">Username or ID</label>
                     <div style="position: relative;">
-                        <input type="text" id="loginUsername" class="form-control" placeholder="e.g. admin or teacher1" required style="padding-left: 36px;">
+                        <input type="text" id="loginUsername" class="form-control" placeholder="e.g. admin or username" required style="padding-left: 36px;">
                         <i class="fa-solid fa-user" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted); font-size: 13px;"></i>
                     </div>
                 </div>
 
+                <!-- Password Input -->
                 <div class="form-group">
                     <label class="form-label">Password</label>
                     <div style="position: relative;">
@@ -72,46 +192,133 @@
                     </div>
                 </div>
 
+                <!-- Hidden / Contextual Tenant ID -->
+                <input type="hidden" id="loginTenantId" value="{{ tenant.id if is_tenant_scoped and tenant else '' }}">
+
                 <div id="loginAlert" style="display: none; margin-bottom: 14px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
 
-                <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 700;">
+                <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 700; box-shadow: 0 4px 14px rgba(194, 65, 12, 0.35);">
                     <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Portal
                 </button>
             </form>
 
-            <div style="text-align: center; margin-top: 18px;">
-                <a href="/" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 600;">
-                    &larr; Back to Campus Overview
-                </a>
+            <!-- Bottom Navigation Links -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 8px;">
+                {% if is_tenant_scoped %}
+                    <a href="/login" style="font-size: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600;">
+                        &larr; Global Platform Login
+                    </a>
+                    <a href="/portal/{{ tenant.slug if tenant else '' }}" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fa-solid fa-camera"></i> Face Scan Sign In &rarr;
+                    </a>
+                {% else %}
+                    <a href="/" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 600;">
+                        &larr; Campus Overview
+                    </a>
+                    <a href="/demo-login" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 600;">
+                        <i class="fa-solid fa-crown"></i> Super Admin Sandbox &rarr;
+                    </a>
+                {% endif %}
             </div>
+
+            {% if all_tenants and not is_tenant_scoped %}
+            <div style="margin-top: 14px; text-align: center;">
+                <details style="font-size: 11.5px; color: var(--text-muted); cursor: pointer;">
+                    <summary style="font-weight: 600; color: var(--text-muted);">
+                        <i class="fa-solid fa-building"></i> Direct Tenant Login Portals ({{ all_tenants|length }})
+                    </summary>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px;">
+                        {% for t in all_tenants %}
+                            <a href="/login/{{ t.slug }}" class="badge badge-sky" style="text-decoration: none; font-size: 10.5px; padding: 4px 8px;">
+                                {{ t.name }} (/login/{{ t.slug }})
+                            </a>
+                        {% endfor %}
+                    </div>
+                </details>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 
     <script>
-        function fillLogin(u, p) {
+        const isTenantScoped = {{ 'true' if is_tenant_scoped else 'false' }};
+        const tenantId = "{{ tenant.id if (is_tenant_scoped and tenant) else '' }}";
+
+        function onRoleChanged() {
+            const role = document.getElementById("loginRole").value;
+            const uInput = document.getElementById("loginUsername");
+            const uLabel = document.getElementById("usernameLabel");
+
+            if (role === "SUPER_ADMIN") {
+                uLabel.innerText = "Super Admin Username";
+                uInput.placeholder = "e.g. superadmin";
+            } else if (role === "TENANT_ADMIN") {
+                uLabel.innerText = "Organization Admin Username";
+                uInput.placeholder = "e.g. admin or ssec";
+            } else if (role === "TEACHER") {
+                uLabel.innerText = "Faculty Username";
+                uInput.placeholder = "e.g. teacher1";
+            } else if (role === "EMPLOYEE") {
+                uLabel.innerText = "Employee Code / ID";
+                uInput.placeholder = "e.g. EMP-101 or roll number";
+            } else {
+                uLabel.innerText = "Student Roll Number / Username";
+                uInput.placeholder = "e.g. student1";
+            }
+        }
+
+        function fillLogin(u, p, role, tid) {
             document.getElementById("loginUsername").value = u;
             document.getElementById("loginPassword").value = p;
+            if (role) {
+                document.getElementById("loginRole").value = role;
+                onRoleChanged();
+            }
+            if (tid) {
+                document.getElementById("loginTenantId").value = tid;
+            }
+        }
+
+        function fillTenantLogin(u, p, role) {
+            document.getElementById("loginUsername").value = u;
+            document.getElementById("loginPassword").value = p;
+            if (role) {
+                document.getElementById("loginRole").value = role;
+                onRoleChanged();
+            }
         }
 
         async function submitLogin(e) {
             e.preventDefault();
             const username = document.getElementById("loginUsername").value.trim();
             const password = document.getElementById("loginPassword").value;
+            const role = document.getElementById("loginRole").value;
             const alertBox = document.getElementById("loginAlert");
             const btn = document.getElementById("btnLogin");
+
+            let effectiveTenantId = document.getElementById("loginTenantId").value;
+            if (!effectiveTenantId && role !== "SUPER_ADMIN") {
+                effectiveTenantId = localStorage.getItem("active_tenant_id") || "1";
+            }
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
 
             try {
+                const payload = {
+                    username: username,
+                    password: password,
+                    role: role,
+                };
+                if (role !== "SUPER_ADMIN" && effectiveTenantId) {
+                    payload.tenant_id = parseInt(effectiveTenantId);
+                }
+
                 const res = await fetch("/api/v1/auth/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password,
-                        tenant_id: parseInt(localStorage.getItem("active_tenant_id") || "1"),
-                    }),
+                    body: JSON.stringify(payload),
                 });
                 const data = await res.json();
 
@@ -119,7 +326,8 @@
                     alertBox.style.display = "block";
                     alertBox.style.background = "var(--badge-emerald-bg)";
                     alertBox.style.color = "var(--badge-emerald-text)";
-                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+                    alertBox.style.border = "1px solid var(--accent-emerald)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Authentication successful!");
 
                     // Store authentication tokens and cookies
                     if (data.access_token) {
@@ -138,22 +346,23 @@
                         localStorage.setItem("active_tenant_id", data.user.tenant_id);
                     }
 
-                    // Redirect according to role
+                    // Dynamic redirect according to user role
                     setTimeout(() => {
                         if (data.user.role === "SUPER_ADMIN") {
                             window.location.href = "/super-admin";
                         } else if (data.user.role === "TEACHER") {
                             window.location.href = "/teacher-portal";
-                        } else if (data.user.role === "STUDENT") {
+                        } else if (data.user.role === "STUDENT" || data.user.role === "EMPLOYEE") {
                             window.location.href = "/logs";
                         } else {
                             window.location.href = "/";
                         }
-                    }, 400);
+                    }, 350);
                 } else {
                     alertBox.style.display = "block";
                     alertBox.style.background = "var(--badge-rose-bg)";
                     alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.style.border = "1px solid var(--accent-rose)";
                     alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Invalid credentials.");
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Portal';
@@ -162,7 +371,8 @@
                 alertBox.style.display = "block";
                 alertBox.style.background = "var(--badge-rose-bg)";
                 alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+                alertBox.style.border = "1px solid var(--accent-rose)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to authentication server.';
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Portal';
             }

@@ -181,7 +181,73 @@ function initFilters() {
     }
 }
 
+function selectLogsPreset(preset) {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const toIso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    let s = new Date(now);
+    let e = new Date(now);
+
+    if (preset === 'today') {
+        // today
+    } else if (preset === 'week') {
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        s = new Date(now.setDate(diff));
+        e = new Date();
+    } else if (preset === 'month') {
+        s = new Date(now.getFullYear(), now.getMonth(), 1);
+        e = new Date();
+    } else if (preset === 'last30') {
+        s = new Date(now.getTime() - (29 * 24 * 60 * 60 * 1000));
+        e = new Date();
+    }
+
+    const sStr = toIso(s);
+    const eStr = toIso(e);
+
+    if (document.getElementById("filterStartDate")) document.getElementById("filterStartDate").value = sStr;
+    if (document.getElementById("filterEndDate")) document.getElementById("filterEndDate").value = eStr;
+    if (document.getElementById("filterDate")) document.getElementById("filterDate").value = sStr;
+
+    const dateLabel = document.getElementById("logsDateLabel");
+    if (dateLabel) {
+        dateLabel.innerText = sStr === eStr ? sStr : `${sStr} to ${eStr}`;
+    }
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        if (btn.getAttribute('data-preset') === preset) {
+            btn.classList.add('btn-primary');
+            btn.classList.remove('btn-secondary');
+        } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+        }
+    });
+
+    applyLogFilters();
+}
+
+function onCustomLogsDateChange() {
+    const sStr = document.getElementById("filterStartDate")?.value || "";
+    const eStr = document.getElementById("filterEndDate")?.value || "";
+    const dateLabel = document.getElementById("logsDateLabel");
+    if (dateLabel) {
+        dateLabel.innerText = sStr === eStr ? sStr : `${sStr} to ${eStr}`;
+    }
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+    });
+
+    applyLogFilters();
+}
+
 async function applyLogFilters() {
+    const startDate = document.getElementById("filterStartDate")?.value;
+    const endDate = document.getElementById("filterEndDate")?.value;
     const dateInput = document.getElementById("filterDate")?.value;
     const rollInput = document.getElementById("filterRoll")?.value;
     const deptInput = document.getElementById("filterDept")?.value;
@@ -191,10 +257,18 @@ async function applyLogFilters() {
 
     if (!tableBody) return;
 
-    tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted); font-weight: 500;"><i class="fa-solid fa-spinner fa-spin"></i> Loading attendance audit records...</td></tr>';
+    const colSpan = window.IS_CORPORATE ? 10 : 9;
+    tableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 24px; color: var(--text-muted); font-weight: 500;"><i class="fa-solid fa-spinner fa-spin"></i> Loading attendance audit records...</td></tr>`;
 
-    let url = `/api/v1/attendance/records?limit=150`;
-    if (dateInput) url += `&date_str=${encodeURIComponent(dateInput)}`;
+    let url = `/api/v1/attendance/records?limit=300`;
+    if (startDate && endDate) {
+        url += `&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+    } else if (startDate) {
+        url += `&start_date=${encodeURIComponent(startDate)}`;
+    } else if (dateInput) {
+        url += `&date_str=${encodeURIComponent(dateInput)}`;
+    }
+
     if (rollInput) url += `&roll_number=${encodeURIComponent(rollInput)}`;
     if (deptInput) url += `&department=${encodeURIComponent(deptInput)}`;
     if (roleInput) url += `&user_role=${encodeURIComponent(roleInput)}`;
@@ -205,7 +279,7 @@ async function applyLogFilters() {
         const data = await res.json();
         renderLogsTable(data.records);
     } catch (e) {
-        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: var(--accent-rose); padding: 24px; font-weight: 600;">Failed to fetch logs from server.</td></tr>';
+        tableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color: var(--accent-rose); padding: 24px; font-weight: 600;">Failed to fetch logs from server.</td></tr>`;
     }
 }
 
@@ -213,8 +287,11 @@ function renderLogsTable(records) {
     const tableBody = document.getElementById("logsTableBody");
     if (!tableBody) return;
 
+    const isCorp = window.IS_CORPORATE || false;
+    const colSpan = isCorp ? 10 : 9;
+
     if (!records || records.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 36px; color: var(--text-muted);">No attendance records found matching filters.</td></tr>';
+        tableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 36px; color: var(--text-muted);">No attendance records found matching filters.</td></tr>`;
         return;
     }
 
@@ -244,6 +321,54 @@ function renderLogsTable(records) {
             nodeBadge = `<span class="badge badge-emerald" title="GPS Geofenced Check-in"><i class="fa-solid fa-mobile-screen"></i> ${r.geo_distance_meters !== null ? r.geo_distance_meters + 'm from Campus' : 'Self-Mobile'}</span>`;
         }
 
+        if (isCorp) {
+            // Corporate check-in/out presentation
+            let inTime = r.check_in_short || (r.check_in_time ? r.check_in_time.slice(11, 16) : '--:--');
+            let outTime = r.check_out_short || (r.check_out_time ? r.check_out_time.slice(11, 16) : '<span style="color: var(--text-muted);">--:--</span>');
+            
+            let durationHtml = '<span style="color: var(--text-muted);">--</span>';
+            if (r.work_duration_formatted) {
+                durationHtml = `<strong style="color: var(--accent-primary);"><i class="fa-solid fa-stopwatch" style="margin-right: 4px; font-size: 11px;"></i>${r.work_duration_formatted}</strong>`;
+            } else if (r.check_in_time && !r.check_out_time && r.shift_status !== 'MISSED_CHECKOUT') {
+                durationHtml = `<span class="badge badge-amber" style="font-size: 11px;"><i class="fa-solid fa-person-walking"></i> In Progress</span>`;
+            }
+
+            let statusBadge = `<span class="badge badge-present"><i class="fa-solid fa-check"></i> On Time</span>`;
+            if (r.shift_status === 'LATE_CHECKIN' || r.shift_status === 'LATE') {
+                statusBadge = `<span class="badge badge-amber"><i class="fa-solid fa-clock"></i> Late Check-In</span>`;
+            } else if (r.shift_status === 'EARLY_DEPARTURE') {
+                statusBadge = `<span class="badge badge-amber"><i class="fa-solid fa-arrow-right-from-bracket"></i> Early Departure</span>`;
+            } else if (r.shift_status === 'COMPLETED') {
+                statusBadge = `<span class="badge badge-present"><i class="fa-solid fa-circle-check"></i> Completed</span>`;
+            } else if (r.shift_status === 'MISSED_CHECKOUT') {
+                statusBadge = `<span class="badge badge-rose" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);"><i class="fa-solid fa-triangle-exclamation"></i> Missed Checkout</span>`;
+            } else if (r.shift_status) {
+                statusBadge = `<span class="badge badge-node">${r.shift_status}</span>`;
+            }
+
+            return `
+                <tr>
+                    <td>#${r.id}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
+                                ${r.snapshot_path ? `<img src="/data/${r.snapshot_path}" alt="Face">` : `<span>${(r.student_name || 'U').charAt(0)}</span>`}
+                            </div>
+                            <strong style="color: var(--text-heading);">${r.student_name || 'Unknown'}</strong>
+                        </div>
+                    </td>
+                    <td><code>${r.roll_number || 'N/A'}</code></td>
+                    <td>${roleBadge}</td>
+                    <td>${r.department || 'N/A'}</td>
+                    <td>${nodeBadge}</td>
+                    <td><strong style="color: var(--text-heading); font-family: monospace;">${inTime}</strong></td>
+                    <td><strong style="color: var(--text-heading); font-family: monospace;">${outTime}</strong></td>
+                    <td>${durationHtml}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        }
+
         return `
             <tr>
                 <td>#${r.id}</td>
@@ -268,13 +393,21 @@ function renderLogsTable(records) {
 }
 
 function exportData(format) {
+    const startDate = document.getElementById("filterStartDate")?.value || "";
+    const endDate = document.getElementById("filterEndDate")?.value || "";
     const dateInput = document.getElementById("filterDate")?.value || "";
     const rollInput = document.getElementById("filterRoll")?.value || "";
     const deptInput = document.getElementById("filterDept")?.value || "";
     const roleInput = document.getElementById("filterRole")?.value || "";
     const overrideInput = document.getElementById("filterOverride")?.value || "";
     let url = `/api/v1/attendance/export?export_format=${format}`;
-    if (dateInput) url += `&date_str=${encodeURIComponent(dateInput)}`;
+    if (startDate && endDate) {
+        url += `&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+    } else if (startDate) {
+        url += `&start_date=${encodeURIComponent(startDate)}`;
+    } else if (dateInput) {
+        url += `&date_str=${encodeURIComponent(dateInput)}`;
+    }
     if (rollInput) url += `&roll_number=${encodeURIComponent(rollInput)}`;
     if (deptInput) url += `&department=${encodeURIComponent(deptInput)}`;
     if (roleInput) url += `&user_role=${encodeURIComponent(roleInput)}`;
@@ -336,6 +469,24 @@ function onDirClassFilterChanged() {
     applyDirectoryFilters();
 }
 
+window.currentDirectoryStatusFilter = "active";
+
+function setEmployeeStatusFilter(statusVal) {
+    window.currentDirectoryStatusFilter = statusVal;
+    
+    // Update active pill UI
+    document.querySelectorAll(".status-pill-btn").forEach(btn => btn.classList.remove("active"));
+    if (statusVal === "active") {
+        document.getElementById("pillStatusActive")?.classList.add("active");
+    } else if (statusVal === "relieved") {
+        document.getElementById("pillStatusRelieved")?.classList.add("active");
+    } else {
+        document.getElementById("pillStatusAll")?.classList.add("active");
+    }
+
+    applyDirectoryFilters();
+}
+
 function applyDirectoryFilters() {
     const searchVal = (document.getElementById("dirSearchInput")?.value || "").toLowerCase().trim();
     const deptFilterEl = document.getElementById("dirDeptFilter");
@@ -345,6 +496,7 @@ function applyDirectoryFilters() {
     const classIdVal = document.getElementById("dirClassFilter")?.value || "";
     const divIdVal = document.getElementById("dirDivFilter")?.value || "";
     const roleVal = document.getElementById("dirRoleFilter")?.value || "";
+    const statusVal = window.currentDirectoryStatusFilter || "active";
 
     const rows = document.querySelectorAll(".student-row");
     let visibleCount = 0;
@@ -357,14 +509,16 @@ function applyDirectoryFilters() {
         const rowClassId = row.getAttribute("data-class-id") || "";
         const rowDivId = row.getAttribute("data-div-id") || "";
         const rowRole = row.getAttribute("data-role") || "student";
+        const rowStatus = row.getAttribute("data-status") || "active";
 
         let matchSearch = !searchVal || name.includes(searchVal) || roll.includes(searchVal);
         let matchDept = !deptIdVal || rowDeptId === deptIdVal || (rowDept && rowDept === deptTextVal);
         let matchClass = !classIdVal || rowClassId === classIdVal;
         let matchDiv = !divIdVal || rowDivId === divIdVal;
         let matchRole = !roleVal || rowRole === roleVal;
+        let matchStatus = (statusVal === "all") || (rowStatus === statusVal);
 
-        if (matchSearch && matchDept && matchClass && matchDiv && matchRole) {
+        if (matchSearch && matchDept && matchClass && matchDiv && matchRole && matchStatus) {
             row.style.display = "";
             visibleCount++;
         } else {
@@ -395,7 +549,121 @@ function resetDirectoryFilters() {
         divSelect.value = "";
     }
 
-    applyDirectoryFilters();
+    setEmployeeStatusFilter("active");
+}
+
+function openRelieveModal(studentId, studentName, rollNumber) {
+    const modal = document.getElementById("relieveEmployeeModal");
+    if (!modal) return;
+
+    document.getElementById("relieveStudentId").value = studentId;
+    document.getElementById("relieveStudentName").value = `${studentName} (${rollNumber})`;
+    
+    // Set default date to today
+    const todayStr = new Date().toISOString().split("T")[0];
+    const dateInput = document.getElementById("relieveDateInput");
+    if (dateInput) dateInput.value = todayStr;
+
+    const reasonInput = document.getElementById("relieveReasonInput");
+    if (reasonInput) reasonInput.value = "";
+
+    const alertBox = document.getElementById("relieveResultAlert");
+    if (alertBox) alertBox.style.display = "none";
+
+    modal.classList.add("active");
+}
+
+function closeRelieveModal() {
+    const modal = document.getElementById("relieveEmployeeModal");
+    if (modal) modal.classList.remove("active");
+}
+
+async function submitRelieveEmployee(e) {
+    e.preventDefault();
+    const studentId = document.getElementById("relieveStudentId").value;
+    const statusVal = document.getElementById("relieveExitStatus")?.value || "RELIEVED";
+    const dateVal = document.getElementById("relieveDateInput")?.value || "";
+    const reasonVal = document.getElementById("relieveReasonInput")?.value || "";
+
+    const btn = document.getElementById("btnConfirmRelieve");
+    const alertBox = document.getElementById("relieveResultAlert");
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Relieving...';
+    }
+
+    try {
+        const res = await fetch(`/api/v1/enroll/student/${studentId}/relieve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                reason: reasonVal,
+                employment_status: statusVal,
+                relieved_at: dateVal,
+            }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Employee successfully relieved.");
+            }
+            setTimeout(() => {
+                closeRelieveModal();
+                window.location.reload();
+            }, 750);
+        } else {
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Failed to relieve employee.");
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-user-slash"></i> Confirm Relieving';
+            }
+        }
+    } catch (err) {
+        if (alertBox) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-user-slash"></i> Confirm Relieving';
+        }
+    }
+}
+
+async function reinstateEmployee(studentId, studentName) {
+    if (!confirm(`Are you sure you want to reinstate "${studentName}" back to active employee status?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/v1/enroll/student/${studentId}/reinstate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: "Reinstated from Tenant Admin Directory" }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            alert(data.message || `"${studentName}" has been reinstated successfully!`);
+            window.location.reload();
+        } else {
+            alert(data.detail || "Failed to reinstate employee.");
+        }
+    } catch (err) {
+        alert("Network error while reinstating employee.");
+    }
 }
 
 /**
@@ -498,7 +766,7 @@ function onEditClassSelectChanged() {
     }
 }
 
-function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId) {
+function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, cadreLevel) {
     const modal = document.getElementById("editStudentModal");
     if (!modal) return;
 
@@ -508,6 +776,16 @@ function openEditModal(id, name, roll, dept, email, role, classSem, deptId, clas
     document.getElementById("editEmail").value = email || "";
     if (document.getElementById("editUserRole")) {
         document.getElementById("editUserRole").value = role || "student";
+    }
+
+    if (document.getElementById("editHourlyRate")) {
+        document.getElementById("editHourlyRate").value = (hourlyRate !== undefined && hourlyRate !== null) ? hourlyRate : "";
+    }
+    if (document.getElementById("editMonthlyBaseSalary")) {
+        document.getElementById("editMonthlyBaseSalary").value = (monthlySalary !== undefined && monthlySalary !== null) ? monthlySalary : "";
+    }
+    if (document.getElementById("editCadreLevel")) {
+        document.getElementById("editCadreLevel").value = cadreLevel || "";
     }
 
     const deptSelect = document.getElementById("editDepartmentSelect");
@@ -603,6 +881,10 @@ async function submitStudentEdit(e) {
     const divSelect = document.getElementById("editDivisionSelect");
     const divId = divSelect?.value ? parseInt(divSelect.value) : null;
 
+    const hourlyRateInput = document.getElementById("editHourlyRate")?.value;
+    const monthlySalaryInput = document.getElementById("editMonthlyBaseSalary")?.value;
+    const cadreInput = document.getElementById("editCadreLevel")?.value;
+
     const saveBtn = document.getElementById("btnSaveEdit");
     const alertBox = document.getElementById("editResultAlert");
 
@@ -623,6 +905,9 @@ async function submitStudentEdit(e) {
                 division_id: divId,
                 email: email || null,
                 user_role: role,
+                hourly_rate: hourlyRateInput ? parseFloat(hourlyRateInput) : null,
+                monthly_base_salary: monthlySalaryInput ? parseFloat(monthlySalaryInput) : null,
+                cadre_level: cadreInput || null,
             }),
         });
         const data = await res.json();

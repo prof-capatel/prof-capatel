@@ -40,7 +40,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <label style="font-size: 12px; font-weight: 700; color: var(--text-heading); white-space: nowrap;">Tenant Org:</label>
-                <select id="superAdminTenantSelect" class="form-control" style="font-weight: 700; min-width: 240px;" onchange="window.location.href='/students?tenant_id=' + this.value">
+                <select id="superAdminTenantSelect" class="form-control" style="font-weight: 700; min-width: 240px;" onchange="window.location.href=({% if current_tenant and current_tenant.tenant_type == 'corporate' %}'/employees?tenant_id='{% else %}'/students?tenant_id='{% endif %}) + this.value">
                     {% for t in all_tenants %}
                     <option value="{{ t.id }}" {% if t.id == selected_tenant_id %}selected{% endif %}>
                         {{ t.name }} (#{{ t.id }} - {{ t.slug }})
@@ -121,10 +121,21 @@
                 </div>
             </div>
 
-            <!-- Filter Results Status Bar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-muted);">
+            <!-- Filter Results Status Bar with Status Pills -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-muted); flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-weight: 600; color: var(--text-primary);">Status:</span>
+                    <button type="button" class="btn btn-secondary status-pill-btn active" id="pillStatusActive" onclick="setEmployeeStatusFilter('active')" style="padding: 3px 10px; font-size: 11.5px; border-radius: 20px;">
+                        <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Active Only
+                    </button>
+                    <button type="button" class="btn btn-secondary status-pill-btn" id="pillStatusRelieved" onclick="setEmployeeStatusFilter('relieved')" style="padding: 3px 10px; font-size: 11.5px; border-radius: 20px;">
+                        <i class="fa-solid fa-user-slash" style="color: #94a3b8;"></i> Relieved / Inactive
+                    </button>
+                    <button type="button" class="btn btn-secondary status-pill-btn" id="pillStatusAll" onclick="setEmployeeStatusFilter('all')" style="padding: 3px 10px; font-size: 11.5px; border-radius: 20px;">
+                        All Records
+                    </button>
+                </div>
                 <span id="dirFilterCountLabel">Showing {{ students|length }} of {{ students|length }} profiles</span>
-                <span id="dirActiveFilterTags"></span>
             </div>
         </div>
 
@@ -158,15 +169,16 @@
                             data-class="{{ s.class_name|lower if s.class_name else (s.class_semester|lower if s.class_semester else '') }}"
                             data-div-id="{{ s.division_id or '' }}"
                             data-div="{{ s.division_name|lower if s.division_name else '' }}"
-                            data-role="{{ s.user_role }}">
+                            data-role="{{ s.user_role }}"
+                            data-status="{{ 'active' if s.is_active else 'relieved' }}">
                             <td>#{{ s.id }}</td>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div class="feed-avatar" style="width: 38px; height: 38px; font-size: 14px;">
+                                    <div class="feed-avatar" style="width: 38px; height: 38px; font-size: 14px; {% if not s.is_active %}opacity: 0.6; filter: grayscale(1);{% endif %}">
                                         <span>{{ s.name[0] }}</span>
                                     </div>
                                     <div>
-                                        <strong id="stdNameLabel{{ s.id }}" style="color: var(--text-heading); font-size: 14px;">{{ s.name }}</strong>
+                                        <strong id="stdNameLabel{{ s.id }}" style="color: var(--text-heading); font-size: 14px; {% if not s.is_active %}text-decoration: line-through; opacity: 0.75;{% endif %}">{{ s.name }}</strong>
                                         <div id="stdEmailLabel{{ s.id }}" style="font-size: 12px; color: var(--text-muted);">{{ s.email or 'No email registered' }}</div>
                                     </div>
                                 </div>
@@ -179,24 +191,23 @@
                                     <span class="badge badge-sky" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-gear"></i> Manager</span>
                                 {% elif s.user_role == 'admin_staff' %}
                                     <span class="badge badge-amber" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-shield"></i> Admin Staff</span>
-                                {% elif s.user_role == 'employee' %}
-                                    <span class="badge badge-present" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-briefcase"></i> Employee</span>
-                                {% elif s.user_role in ['other', 'contractor'] %}
-                                    <span class="badge badge-node" id="stdRoleBadge{{ s.id }}">{{ s.user_role|capitalize }}</span>
                                 {% else %}
-                                    <span class="badge badge-present" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user-graduate"></i> Student</span>
+                                    <span class="badge badge-present" id="stdRoleBadge{{ s.id }}"><i class="fa-solid fa-user"></i> {% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee{% else %}Student{% endif %}</span>
                                 {% endif %}
                             </td>
-                            <td id="stdDeptLabel{{ s.id }}">
-                                <span class="badge badge-indigo">{{ s.department }}</span>
+                            <td>
+                                <span id="stdDeptLabel{{ s.id }}" style="font-weight: 600; color: var(--text-heading);">{{ s.department }}</span>
                             </td>
                             {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
-                            <td id="stdClassLabel{{ s.id }}">
-                                <span class="badge badge-node">{{ s.class_name or s.class_semester or 'General' }}{% if s.division_name and s.division_name != 'N/A' %} &bull; {{ s.division_name }}{% endif %}</span>
+                            <td>
+                                <span id="stdClassLabel{{ s.id }}">{{ s.class_name or s.class_semester or 'General' }}</span>
+                                {% if s.division_name and s.division_name != 'N/A' %}
+                                <span class="badge badge-node" style="font-size: 11px; margin-left: 4px;">{{ s.division_name }}</span>
+                                {% endif %}
                             </td>
                             {% endif %}
                             <td>
-                                <div class="photo-thumb-strip">
+                                <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
                                     {% if s.photos and s.photos|length > 0 %}
                                         {% for p in s.photos %}
                                             <div class="photo-thumb-item" onclick="openLightbox('{{ p.url }}', '{{ s.name }} ({{ p.angle|capitalize }})')" title="{{ p.angle|capitalize }} sample - Click to expand">
@@ -209,25 +220,40 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge {% if s.samples_count >= 3 %}badge-present{% else %}badge-node{% endif %}">
-                                    <i class="fa-solid fa-camera"></i> {{ s.samples_count }} Enrolled
-                                </span>
+                                {% if s.is_active %}
+                                    <span class="badge badge-present" title="Active Employee">
+                                        <i class="fa-solid fa-circle-check"></i> Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge" style="background: rgba(148, 163, 184, 0.2); color: #64748b; border: 1px solid #cbd5e1;" title="Relieved on {{ s.relieved_at or 'N/A' }}. Reason: {{ s.relieving_reason or 'None specified' }}">
+                                        <i class="fa-solid fa-user-slash"></i> Relieved
+                                    </span>
+                                {% endif %}
                             </td>
                             <td>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                    {% if s.is_active %}
                                     <button onclick="openManualOverrideForStudent({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-emerald);" title="Force Mark Attendance Override">
                                         <i class="fa-solid fa-user-check"></i>
                                     </button>
-                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}', '{{ s.department }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
+                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}', '{{ s.department|replace("'", "\\'") }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }}, {{ s.hourly_rate or 'null' }}, {{ s.monthly_base_salary or 'null' }}, '{{ s.cadre_level or '' }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </button>
-                                    <a href="/academic-management" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="Transfer Student (Academic Management)">
+                                    <button onclick="openTransferDepartmentModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Transfer Department / Team{% else %}Transfer Department / Class{% endif %}">
                                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                                    </a>
-                                    <button onclick="openRetakeModal({{ s.id }}, '{{ s.name }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
+                                    </button>
+                                    <button onclick="openRetakeModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
                                         <i class="fa-solid fa-camera-rotate"></i>
                                     </button>
-                                    <button onclick="deleteStudent({{ s.id }}, '{{ s.name }}')" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Delete Profile">
+                                    <button onclick="openRelieveModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: #ef4444;" title="Relieve Employee (Preserve History)">
+                                        <i class="fa-solid fa-user-slash"></i> Relieve
+                                    </button>
+                                    {% else %}
+                                    <button onclick="reinstateEmployee({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: #10b981;" title="Reinstate Employee to Active Service">
+                                        <i class="fa-solid fa-rotate-left"></i> Reinstate
+                                    </button>
+                                    {% endif %}
+                                    <button onclick="deleteStudent({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Purge Record">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </div>
@@ -336,6 +362,34 @@
                 <div class="form-group">
                     <label class="form-label">Email Address (Optional)</label>
                     <input type="email" id="editEmail" class="form-control">
+                </div>
+
+                <!-- Wage & Compensation Settings (Corporate / Institutional) -->
+                <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 10px;">
+                    <div style="font-size: 11.5px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">
+                        <i class="fa-solid fa-money-bill-wave" style="color: var(--accent-emerald);"></i> Compensation & Wage Profile
+                    </div>
+                    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11px;">Hourly Rate ($/hr)</label>
+                            <input type="number" step="0.25" min="0" id="editHourlyRate" class="form-control" placeholder="Org Default">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11px;">Monthly Base Salary ($)</label>
+                            <input type="number" step="50" min="0" id="editMonthlyBaseSalary" class="form-control" placeholder="e.g. 3500">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 8px; margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">Cadre / Seniority Level</label>
+                        <select id="editCadreLevel" class="form-control">
+                            <option value="">Standard Cadre</option>
+                            <option value="Executive Cadre">Executive Cadre</option>
+                            <option value="Senior Staff">Senior Staff</option>
+                            <option value="Associate Staff">Associate Staff</option>
+                            <option value="Junior / Intern">Junior / Intern</option>
+                            <option value="Contractor Cadre">Contractor Cadre</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div id="editResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
@@ -540,6 +594,143 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================================= -->
+<!-- MODAL 5: DEPARTMENT / TEAM TRANSFER MODAL                 -->
+<!-- ========================================================= -->
+<div id="transferEmployeeModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-arrow-right-arrow-left" style="color: var(--accent-indigo);"></i>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Transfer Department / Team{% else %}Transfer Department / Class{% endif %}</span>
+                </h3>
+                <p id="transferModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Reassign employee or student to a new department with full audit history.
+                </p>
+            </div>
+            <button class="modal-close" onclick="closeTransferDepartmentModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="transferEmployeeForm" onsubmit="submitDepartmentTransfer(event)">
+            <div class="modal-body">
+                <input type="hidden" id="transferStudentId">
+
+                <div class="form-group">
+                    <label class="form-label">Member Name</label>
+                    <input type="text" id="transferStudentName" class="form-control" readonly style="background: var(--bg-subtle);">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Target Department / Team *</label>
+                    <select id="transferTargetDept" class="form-control" required onchange="onTransferDeptChanged()">
+                        <option value="">-- Choose New Department --</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
+                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label class="form-label">Target Class</label>
+                        <select id="transferTargetClass" class="form-control" onchange="onTransferClassChanged()">
+                            <option value="">Keep / General</option>
+                            {% for c in classes %}
+                            <option value="{{ c.id }}" data-dept-id="{{ c.department_id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Target Division</label>
+                        <select id="transferTargetDiv" class="form-control">
+                            <option value="">Unassigned</option>
+                            {% for dv in divisions %}
+                            <option value="{{ dv.id }}" data-class-id="{{ dv.class_id }}">{{ dv.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 10px; font-size: 11.5px; color: var(--text-muted);">
+                    <i class="fa-solid fa-shield-halved" style="color: var(--accent-indigo); margin-right: 4px;"></i>
+                    Biometric face vector encodings and past attendance records are completely preserved across transfers.
+                </div>
+
+                <div id="transferResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeTransferDepartmentModal()">Cancel</button>
+                <button type="submit" id="btnConfirmTransfer" class="btn btn-primary" style="background: var(--accent-indigo);">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL 6: RELIEVE EMPLOYEE (OFFBOARDING WITH AUDIT)         -->
+<!-- ========================================================= -->
+<div id="relieveEmployeeModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>
+                <i class="fa-solid fa-user-slash" style="color: #ef4444;"></i>
+                <span>Relieve Employee (Offboarding)</span>
+            </h3>
+            <button class="modal-close" onclick="closeRelieveModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="relieveEmployeeForm" onsubmit="submitRelieveEmployee(event)">
+            <div class="modal-body">
+                <input type="hidden" id="relieveStudentId">
+
+                <div class="form-group">
+                    <label class="form-label">Employee</label>
+                    <input type="text" id="relieveStudentName" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 700;">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Exit Classification *</label>
+                    <select id="relieveExitStatus" class="form-control" required>
+                        <option value="RELIEVED">Relieved / Completed Notice</option>
+                        <option value="RESIGNED">Voluntary Resignation</option>
+                        <option value="TERMINATED">End of Contract / Terminated</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Relieving / Last Working Date *</label>
+                    <input type="date" id="relieveDateInput" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Relieving Reason & Exit Notes *</label>
+                    <textarea id="relieveReasonInput" class="form-control" rows="3" placeholder="Specify exit justification, hand-off completion, or resignation reference..." required></textarea>
+                </div>
+
+                <div style="background: rgba(239, 68, 68, 0.08); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(239, 68, 68, 0.2); font-size: 11.5px; color: var(--text-primary);">
+                    <i class="fa-solid fa-shield-halved" style="color: #ef4444; margin-right: 4px;"></i>
+                    <strong>Audit Preservation Guarantee:</strong> Historical attendance records, past punch clock sessions, face vectors, and wage archives remain strictly preserved in the database.
+                </div>
+
+                <div id="relieveResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeRelieveModal()">Cancel</button>
+                <button type="submit" id="btnConfirmRelieve" class="btn btn-danger" style="background: #ef4444;">
+                    <i class="fa-solid fa-user-slash"></i> Confirm Relieving
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -547,5 +738,111 @@
     window.allTenantClasses = {{ classes | tojson | safe }};
     window.allTenantDivisions = {{ divisions | tojson | safe }};
     window.allTenantDepartments = {{ departments | tojson | safe }};
+
+    function openTransferDepartmentModal(id, name, deptId, classId, divId) {
+        const modal = document.getElementById("transferEmployeeModal");
+        if (!modal) return;
+
+        document.getElementById("transferStudentId").value = id;
+        document.getElementById("transferStudentName").value = name;
+        
+        const deptSelect = document.getElementById("transferTargetDept");
+        if (deptSelect) deptSelect.value = deptId || "";
+
+        const classSelect = document.getElementById("transferTargetClass");
+        if (classSelect) classSelect.value = classId || "";
+
+        const divSelect = document.getElementById("transferTargetDiv");
+        if (divSelect) divSelect.value = divId || "";
+
+        const alertBox = document.getElementById("transferResultAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        modal.classList.add("active");
+    }
+
+    function closeTransferDepartmentModal() {
+        const modal = document.getElementById("transferEmployeeModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    function onTransferDeptChanged() {
+        const deptId = document.getElementById("transferTargetDept")?.value;
+        const classSelect = document.getElementById("transferTargetClass");
+        if (classSelect) {
+            Array.from(classSelect.options).forEach((opt, idx) => {
+                if (idx === 0) return;
+                const dId = opt.getAttribute("data-dept-id");
+                opt.style.display = (!deptId || !dId || dId === deptId) ? "" : "none";
+            });
+        }
+    }
+
+    function onTransferClassChanged() {
+        const classId = document.getElementById("transferTargetClass")?.value;
+        const divSelect = document.getElementById("transferTargetDiv");
+        if (divSelect) {
+            Array.from(divSelect.options).forEach((opt, idx) => {
+                if (idx === 0) return;
+                const cId = opt.getAttribute("data-class-id");
+                opt.style.display = (!classId || !cId || cId === classId) ? "" : "none";
+            });
+        }
+    }
+
+    async function submitDepartmentTransfer(e) {
+        e.preventDefault();
+        const studentId = document.getElementById("transferStudentId").value;
+        const deptId = document.getElementById("transferTargetDept").value;
+        const classId = document.getElementById("transferTargetClass")?.value || null;
+        const divId = document.getElementById("transferTargetDiv")?.value || null;
+
+        const saveBtn = document.getElementById("btnSaveTransfer");
+        const alertBox = document.getElementById("transferResultAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Transferring...';
+
+        try {
+            const res = await fetch(`/api/v1/enroll/student/${studentId}/transfer-department`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    department_id: parseInt(deptId),
+                    class_id: classId ? parseInt(classId) : null,
+                    division_id: divId ? parseInt(divId) : null,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Transferred successfully!");
+
+                setTimeout(() => {
+                    closeTransferDepartmentModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+                    window.location.reload();
+                }, 700);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Transfer failed.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+        }
+    }
 </script>
 {% endblock %}

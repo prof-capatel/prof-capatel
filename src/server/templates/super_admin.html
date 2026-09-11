@@ -458,12 +458,35 @@
         <div class="card-body" style="padding: 20px;">
             <input type="hidden" id="currentLinksTenantId">
 
+            <!-- Link 0: Tenant Unique Portal Login URL -->
+            <div style="background: var(--bg-subtle); border: 1.5px solid var(--accent-primary); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-right-to-bracket" style="color: var(--accent-primary);"></i>
+                        <span>1. Organization Unique Portal Login URL</span>
+                    </span>
+                    <span class="badge badge-indigo" style="font-size: 10px;">Unique Tenant URL</span>
+                </div>
+                <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+                    Shared with organization administrators & staff for standard credential login with dynamic role selection.
+                </p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="linkTenantLoginInput" class="form-control" readonly style="font-family: monospace; font-size: 11.5px; background: var(--bg-card);">
+                    <button type="button" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px;" onclick="copyLinkInput('linkTenantLoginInput', this)">
+                        <i class="fa-solid fa-copy"></i> Copy
+                    </button>
+                    <a id="linkTenantLoginLaunch" href="#" target="_blank" class="btn btn-primary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px; text-decoration: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                    </a>
+                </div>
+            </div>
+
             <!-- Link 1: Passwordless Admin Login -->
             <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
                         <i class="fa-solid fa-key" style="color: var(--accent-emerald);"></i>
-                        <span>1. Passwordless Tenant Admin Login URL</span>
+                        <span>2. Passwordless 1-Click Admin Login URL</span>
                     </span>
                     <span class="badge badge-present" style="font-size: 10px;">Perpetual Token</span>
                 </div>
@@ -475,7 +498,7 @@
                     <button type="button" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px;" onclick="copyLinkInput('linkAdminLoginInput', this)">
                         <i class="fa-solid fa-copy"></i> Copy
                     </button>
-                    <a id="linkAdminLoginLaunch" href="#" target="_blank" class="btn btn-primary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px; text-decoration: none;">
+                    <a id="linkAdminLoginLaunch" href="#" target="_blank" class="btn btn-secondary" style="white-space: nowrap; font-size: 11.5px; padding: 0 12px; text-decoration: none;">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
                     </a>
                 </div>
@@ -486,12 +509,12 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
                         <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i>
-                        <span>2. Employee Self-Onboarding Portal URL</span>
+                        <span>3. Employee / Student Self-Onboarding Portal URL</span>
                     </span>
                     <span class="badge badge-sky" style="font-size: 10px;">Shared Portal</span>
                 </div>
                 <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
-                    Share with new hires for initial profile registration and biometric camera face capture.
+                    Share with new hires or students for initial profile registration and biometric camera face capture.
                 </p>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="linkOnboardingInput" class="form-control" readonly style="font-family: monospace; font-size: 11.5px; background: var(--bg-card);">
@@ -509,7 +532,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
                         <i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-cyan);"></i>
-                        <span>3. Permanent Daily Self-Attendance Check-In URL</span>
+                        <span>4. Permanent Daily Self-Attendance Check-In URL</span>
                     </span>
                     <span class="badge badge-emerald" style="font-size: 10px;">Daily Check-In</span>
                 </div>
@@ -1234,6 +1257,7 @@
             const data = await res.json();
             if (res.ok && data.links) {
                 const origin = window.location.origin;
+                const tenantLoginUrl = origin + (data.links.portal_url || data.links.tenant_login_url || `/portal/${data.tenant_name}`);
                 const adminUrl = origin + data.links.admin_login_url;
                 const onboardUrl = origin + data.links.onboarding_url;
                 const checkinUrl = origin + data.links.checkin_url;
@@ -1241,6 +1265,9 @@
                 document.getElementById("linksTenantSubtitle").innerText = `${data.tenant_name} (${data.uuid || 'Standard'})`;
                 document.getElementById("linksTenantTypeBadge").innerText = (data.tenant_type === 'corporate') ? 'Corporate' : 'Educational';
                 document.getElementById("linksTenantTypeBadge").className = (data.tenant_type === 'corporate') ? 'badge badge-emerald' : 'badge badge-sky';
+
+                document.getElementById("linkTenantLoginInput").value = tenantLoginUrl;
+                document.getElementById("linkTenantLoginLaunch").href = tenantLoginUrl;
 
                 document.getElementById("linkAdminLoginInput").value = adminUrl;
                 document.getElementById("linkAdminLoginLaunch").href = adminUrl;
@@ -1272,9 +1299,13 @@
         document.getElementById("linksTenantTypeBadge").innerText = (tenant.tenant_type === 'corporate') ? 'Corporate' : 'Educational';
         document.getElementById("linksTenantTypeBadge").className = (tenant.tenant_type === 'corporate') ? 'badge badge-emerald' : 'badge badge-sky';
 
+        const tenantLoginUrl = origin + (links.portal_url || links.tenant_login_url || tenant.portal_url || tenant.tenant_login_url || `/portal/${tenant.slug || tenant.id}`);
         const adminUrl = origin + (links.admin_login_url || tenant.admin_login_url || "");
         const onboardUrl = origin + (links.onboarding_url || tenant.onboarding_url || "");
         const checkinUrl = origin + (links.checkin_url || tenant.checkin_url || "");
+
+        document.getElementById("linkTenantLoginInput").value = tenantLoginUrl;
+        document.getElementById("linkTenantLoginLaunch").href = tenantLoginUrl;
 
         document.getElementById("linkAdminLoginInput").value = adminUrl;
         document.getElementById("linkAdminLoginLaunch").href = adminUrl;

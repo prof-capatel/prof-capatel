@@ -204,7 +204,7 @@
             top: 70px;
             left: 16px;
             right: 16px;
-            background: rgba(6, 78, 59, 0.92);
+            background: rgba(6, 78, 59, 0.94);
             backdrop-filter: blur(16px);
             border: 1.5px solid #10b981;
             border-radius: 16px;
@@ -225,19 +225,39 @@
             opacity: 1;
         }
 
+        /* Check-In Emerald Theme */
+        .attendance-success-toast.toast-checkin {
+            background: rgba(6, 78, 59, 0.95);
+            border-color: #10b981;
+            box-shadow: 0 12px 36px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Check-Out Radiant Indigo/Cyan Theme */
+        .attendance-success-toast.toast-checkout {
+            background: rgba(30, 27, 75, 0.95);
+            border-color: #818cf8;
+            box-shadow: 0 12px 36px rgba(99, 102, 241, 0.45);
+        }
+
         .toast-avatar {
-            width: 44px;
-            height: 44px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
             background: #10b981;
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 19px;
             font-weight: 800;
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        .toast-avatar.avatar-checkout {
+            background: linear-gradient(135deg, #6366f1 0%, #38bdf8 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .toast-content {
@@ -256,6 +276,10 @@
             gap: 6px;
         }
 
+        .toast-title.title-checkout {
+            color: #a5b4fc;
+        }
+
         .toast-name {
             font-size: 15px;
             font-weight: 700;
@@ -272,6 +296,10 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .toast-meta.meta-checkout {
+            color: #c7d2fe;
         }
 
         /* Mobile Controls Bottom Panel */
@@ -968,7 +996,7 @@
             ctx.closePath();
         }
 
-        function playAttendanceChime() {
+        function playAttendanceChime(punchType = "CHECK_IN") {
             if (!ENABLE_AUDIO_CHIME) return;
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -976,29 +1004,64 @@
                 const ctx = new AudioContext();
                 const now = ctx.currentTime;
                 
-                // Tone 1: 587.33 Hz (D5)
-                const osc1 = ctx.createOscillator();
-                const gain1 = ctx.createGain();
-                osc1.type = "sine";
-                osc1.frequency.setValueAtTime(587.33, now);
-                gain1.gain.setValueAtTime(0.25, now);
-                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-                osc1.connect(gain1);
-                gain1.connect(ctx.destination);
-                osc1.start(now);
-                osc1.stop(now + 0.22);
+                if (punchType === "CHECK_OUT") {
+                    // Check-Out 3-Tone Completion Chime (A5 -> E5 -> C5)
+                    const osc1 = ctx.createOscillator();
+                    const gain1 = ctx.createGain();
+                    osc1.type = "sine";
+                    osc1.frequency.setValueAtTime(880.00, now);
+                    gain1.gain.setValueAtTime(0.28, now);
+                    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                    osc1.connect(gain1);
+                    gain1.connect(ctx.destination);
+                    osc1.start(now);
+                    osc1.stop(now + 0.18);
 
-                // Tone 2: 880.00 Hz (A5)
-                const osc2 = ctx.createOscillator();
-                const gain2 = ctx.createGain();
-                osc2.type = "sine";
-                osc2.frequency.setValueAtTime(880.00, now + 0.10);
-                gain2.gain.setValueAtTime(0.32, now + 0.10);
-                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
-                osc2.connect(gain2);
-                gain2.connect(ctx.destination);
-                osc2.start(now + 0.10);
-                osc2.stop(now + 0.42);
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = "sine";
+                    osc2.frequency.setValueAtTime(659.25, now + 0.10);
+                    gain2.gain.setValueAtTime(0.30, now + 0.10);
+                    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.start(now + 0.10);
+                    osc2.stop(now + 0.30);
+
+                    const osc3 = ctx.createOscillator();
+                    const gain3 = ctx.createGain();
+                    osc3.type = "sine";
+                    osc3.frequency.setValueAtTime(523.25, now + 0.22);
+                    gain3.gain.setValueAtTime(0.35, now + 0.22);
+                    gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.50);
+                    osc3.connect(gain3);
+                    gain3.connect(ctx.destination);
+                    osc3.start(now + 0.22);
+                    osc3.stop(now + 0.50);
+                } else {
+                    // Check-In / Attendance 2-Tone Rising Chime (D5 -> A5)
+                    const osc1 = ctx.createOscillator();
+                    const gain1 = ctx.createGain();
+                    osc1.type = "sine";
+                    osc1.frequency.setValueAtTime(587.33, now);
+                    gain1.gain.setValueAtTime(0.25, now);
+                    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                    osc1.connect(gain1);
+                    gain1.connect(ctx.destination);
+                    osc1.start(now);
+                    osc1.stop(now + 0.22);
+
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = "sine";
+                    osc2.frequency.setValueAtTime(880.00, now + 0.10);
+                    gain2.gain.setValueAtTime(0.32, now + 0.10);
+                    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.start(now + 0.10);
+                    osc2.stop(now + 0.42);
+                }
             } catch (e) {
                 console.warn("[*] Audio context note:", e);
             }
@@ -1009,10 +1072,15 @@
             void cameraContainer.offsetWidth;
             cameraContainer.classList.add("flash-success");
 
-            playAttendanceChime();
+            const punchType = student.punch_type || (student.log_data && student.log_data.punch_type) || "CHECK_IN";
+            playAttendanceChime(punchType);
 
             if (ENABLE_HAPTIC && navigator.vibrate) {
-                navigator.vibrate([120, 50, 120]);
+                if (punchType === "CHECK_OUT") {
+                    navigator.vibrate([80, 40, 80, 40, 160]);
+                } else {
+                    navigator.vibrate([120, 50, 120]);
+                }
             }
 
             if (student) {
@@ -1020,15 +1088,51 @@
                 const roll = student.roll_number || "N/A";
                 const conf = student.confidence_pct || 0;
                 
-                document.getElementById("toastAvatar").innerText = name.charAt(0).toUpperCase();
-                document.getElementById("toastStudentName").innerText = name;
-                document.getElementById("toastMeta").innerText = `Roll: ${roll} • ${conf}% Match Verified`;
+                const avatarEl = document.getElementById("toastAvatar");
+                const titleEl = successToast.querySelector(".toast-title");
+                const nameEl = document.getElementById("toastStudentName");
+                const metaEl = document.getElementById("toastMeta");
 
-                successToast.classList.add("active");
+                nameEl.innerText = name;
+
+                if (punchType === "CHECK_OUT") {
+                    successToast.className = "attendance-success-toast toast-checkout active";
+                    if (avatarEl) {
+                        avatarEl.className = "toast-avatar avatar-checkout";
+                        avatarEl.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
+                    }
+                    if (titleEl) {
+                        titleEl.className = "toast-title title-checkout";
+                        titleEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Shift Check-Out Recorded!';
+                    }
+                    if (metaEl) {
+                        metaEl.className = "toast-meta meta-checkout";
+                        const durStr = student.work_duration_formatted || (student.work_duration_minutes ? (student.work_duration_minutes + ' mins') : 'Completed');
+                        const statusStr = student.shift_status || 'COMPLETED';
+                        metaEl.innerText = `Session: ${durStr} • Status: ${statusStr} • Roll: ${roll}`;
+                    }
+                } else {
+                    successToast.className = "attendance-success-toast toast-checkin active";
+                    if (avatarEl) {
+                        avatarEl.className = "toast-avatar";
+                        avatarEl.innerText = name.charAt(0).toUpperCase();
+                    }
+                    if (titleEl) {
+                        titleEl.className = "toast-title";
+                        titleEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${punchType === 'CHECK_IN' ? 'Shift Check-In Recorded!' : 'Attendance Committed!'}`;
+                    }
+                    if (metaEl) {
+                        metaEl.className = "toast-meta";
+                        const inTime = student.check_in_short || 'Now';
+                        const statusStr = student.shift_status || 'ON_TIME';
+                        metaEl.innerText = `In: ${inTime} • Status: ${statusStr} • Roll: ${roll} (${conf}% Match)`;
+                    }
+                }
+
                 if (toastTimeout) clearTimeout(toastTimeout);
                 toastTimeout = setTimeout(() => {
                     successToast.classList.remove("active");
-                }, 3500);
+                }, 3800);
             }
         }
 
@@ -1057,9 +1161,8 @@
                 if (detections.length === 1) {
                     const primary = detections[0];
                     if (primary.is_match) {
-                        document.getElementById("detName").innerText = primary.name || "Enrolled Student";
+                        document.getElementById("detName").innerText = primary.name || "Enrolled Profile";
                         let subText = `Roll: ${primary.roll_number || 'N/A'} • Dept: ${primary.department || 'General'}`;
-                        document.getElementById("detSub").innerText = subText;
                         
                         const initial = (primary.name && primary.name !== "Unknown") ? primary.name.charAt(0).toUpperCase() : "✓";
                         const avatar = document.getElementById("detAvatar");
@@ -1075,21 +1178,37 @@
                                 badge.innerText = "SPOOF BLOCKED";
                                 badge.className = "badge badge-unknown";
                             } else if (primary.attendance_logged) {
-                                badge.innerText = "✓ ATTENDANCE LOGGED";
-                                badge.className = "badge badge-present";
+                                if (primary.punch_type === "CHECK_OUT") {
+                                    const dur = primary.work_duration_formatted || (primary.work_duration_minutes ? primary.work_duration_minutes + 'm' : 'DONE');
+                                    badge.innerText = `✓ CHECKED OUT (${dur})`;
+                                    badge.className = "badge badge-sky";
+                                    subText = `Check-Out recorded • Session: ${primary.work_duration_formatted || dur} • Dept: ${primary.department || 'General'}`;
+                                } else if (primary.punch_type === "CHECK_IN") {
+                                    const inStatus = primary.shift_status || 'ON_TIME';
+                                    badge.innerText = `✓ CHECKED IN (${inStatus})`;
+                                    badge.className = "badge badge-present";
+                                    subText = `Check-In recorded at ${primary.check_in_short || 'Now'} • Dept: ${primary.department || 'General'}`;
+                                } else {
+                                    badge.innerText = "✓ ATTENDANCE LOGGED";
+                                    badge.className = "badge badge-present";
+                                }
                             } else if (primary.cooldown_active) {
                                 badge.innerText = `✓ COOLDOWN (${primary.cooldown_remaining_minutes}m)`;
                                 badge.className = "badge badge-sky";
+                                if (primary.message) {
+                                    subText = primary.message;
+                                }
                             } else {
                                 badge.innerText = `${primary.confidence_pct || 0}% MATCH`;
                                 badge.className = "badge badge-node";
                             }
                         }
+                        document.getElementById("detSub").innerText = subText;
                     } else {
                         document.getElementById("detName").innerText = "Unregistered Face";
                         const closestInfo = primary.closest_candidate_name 
                             ? `Closest Vector: '${primary.closest_candidate_name}' (Roll: ${primary.closest_candidate_roll || 'N/A'}, Dist: ${primary.distance} > Thresh: ${primary.threshold || 0.55})`
-                            : `No student vectors registered under Tenant #${currentTenantId} (Dist: ${primary.distance})`;
+                            : `No employee/student vectors registered under Tenant #${currentTenantId} (Dist: ${primary.distance})`;
                         document.getElementById("detSub").innerText = closestInfo;
                         const avatar = document.getElementById("detAvatar");
                         if (avatar) avatar.innerHTML = '<i class="fa-solid fa-user-xmark" style="color: #94a3b8;"></i>';
@@ -1158,8 +1277,17 @@
 
                     if (isMatch) {
                         if (attendLogged) {
-                            strokeColor = "#10b981";
-                            labelText = `✓ ${r.name} [LOGGED]`;
+                            if (r.punch_type === "CHECK_OUT") {
+                                strokeColor = "#818cf8";
+                                const dur = r.work_duration_formatted || (r.work_duration_minutes ? r.work_duration_minutes + 'm' : 'DONE');
+                                labelText = `✓ ${r.name} [CHECK-OUT: ${dur}]`;
+                            } else if (r.punch_type === "CHECK_IN") {
+                                strokeColor = "#10b981";
+                                labelText = `✓ ${r.name} [CHECK-IN: ${r.shift_status || 'ON_TIME'}]`;
+                            } else {
+                                strokeColor = "#10b981";
+                                labelText = `✓ ${r.name} [LOGGED]`;
+                            }
                             hasNewAttendanceLogged = true;
                             loggedStudent = r;
                         } else if (cooldownActive) {

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Super Admin Demo Sandbox - Face Recognition Attendance System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem("app_theme") || "light";
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+    <style>
+        .sandbox-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+        .sandbox-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: all 0.2s ease;
+        }
+        .sandbox-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent-primary);
+        }
+        .role-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+            text-align: left;
+            width: 100%;
+        }
+        .role-btn:hover {
+            background: var(--bg-card);
+            border-color: var(--accent-primary);
+            transform: translateX(3px);
+            color: var(--accent-primary);
+        }
+    </style>
+</head>
+<body style="min-height: 100vh; background: var(--bg-body); display: flex; flex-direction: column;">
+
+    <!-- Top Sandbox Navigation -->
+    <header class="sandbox-header">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; box-shadow: 0 4px 12px rgba(194, 65, 12, 0.35);">
+                <i class="fa-solid fa-crown"></i>
+            </div>
+            <div>
+                <h1 style="font-size: 18px; font-weight: 800; color: var(--text-heading); margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <span>Face Recognition - Attendance System</span>
+                    <span class="badge badge-amber" style="font-size: 10.5px; font-weight: 700;">Super Admin Sandbox</span>
+                </h1>
+                <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">
+                    Instant 1-Click Multi-Tier Role Switching & Tenant Portal Simulator
+                </p>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <a href="/login" class="btn btn-secondary" style="font-size: 12px; font-weight: 600;">
+                <i class="fa-solid fa-arrow-left"></i> Standard Login
+            </a>
+            <a href="/super-admin" class="btn btn-primary" style="font-size: 12px; font-weight: 700;">
+                <i class="fa-solid fa-gauge-high"></i> Control Plane
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Sandbox Container -->
+    <main style="max-width: 1200px; width: 100%; margin: 0 auto; padding: 28px 20px; display: flex; flex-direction: column; gap: 24px;">
+
+        <!-- Alert Notification Box -->
+        <div id="sandboxAlert" style="display: none; padding: 14px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;"></div>
+
+        <!-- Section 1: Global Platform Super Admin Sandbox -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(194, 65, 12, 0.04)); border: 1.5px solid rgba(245, 158, 11, 0.4); box-shadow: var(--shadow-md);">
+            <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 20px 24px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h3 style="font-size: 17px; font-weight: 800; color: var(--text-heading); margin: 0;">Global Platform Super Administrator</h3>
+                            <span class="badge badge-amber" style="font-size: 10px; font-weight: 800;">ROOT ACCESS</span>
+                        </div>
+                        <p style="font-size: 12.5px; color: var(--text-muted); margin: 4px 0 0 0;">
+                            Global multi-tenant orchestration, subscription plan controls, quota adjustments, and audit trail analytics.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="button" class="btn btn-primary" onclick="oneClickLogin('superadmin', 'admin123', null, 'SUPER_ADMIN')" style="padding: 10px 18px; font-weight: 700; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                        <i class="fa-solid fa-bolt"></i> 1-Click Login (superadmin)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Active Organizations & Tenants Role Simulator -->
+        <div>
+            <div style="margin-bottom: 14px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: var(--text-heading); margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-cubes-stacked" style="color: var(--accent-primary);"></i>
+                    <span>SaaS Tenant Organizations & Role Portals ({{ tenant_cards|length }})</span>
+                </h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 2px 0 0 0;">
+                    Click any role profile below to immediately authenticate and preview the application from that specific user tier.
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px;">
+                {% for item in tenant_cards %}
+                <div class="sandbox-card">
+                    <!-- Tenant Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 10px; background: {{ 'rgba(16, 185, 129, 0.15)' if item.is_corporate else 'rgba(99, 102, 241, 0.15)' }}; color: {{ 'var(--accent-emerald)' if item.is_corporate else 'var(--accent-primary)' }}; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                                <i class="fa-solid {{ 'fa-building' if item.is_corporate else 'fa-graduation-cap' }}"></i>
+                            </div>
+                            <div>
+                                <h4 style="font-size: 15px; font-weight: 700; margin: 0; color: var(--text-heading);">{{ item.tenant.name }}</h4>
+                                <div style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+                                    <span class="badge {{ 'badge-emerald' if item.is_corporate else 'badge-sky' }}" style="font-size: 9.5px;">
+                                        {{ 'Corporate' if item.is_corporate else 'Educational' }}
+                                    </span>
+                                    <span style="font-family: monospace; font-size: 11px; color: var(--text-muted);">{{ item.tenant.slug }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <a href="{{ item.login_url }}" target="_blank" class="badge badge-indigo" style="text-decoration: none; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Open Unique Tenant Login Portal">
+                            <span>Portal</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 9px;"></i>
+                        </a>
+                    </div>
+
+                    <!-- Unique URL Info Bar -->
+                    <div style="background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                        <span style="color: var(--text-muted); font-family: monospace;">{{ item.login_url }}</span>
+                        <button type="button" class="btn btn-secondary" style="font-size: 10px; padding: 3px 7px;" onclick="copyTenantLoginUrl('{{ item.login_url }}', this)">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+
+                    <!-- Role Personas -->
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
+                            Available Role Personas:
+                        </span>
+
+                        {% if item.users %}
+                            {% for u in item.users %}
+                                <button type="button" class="role-btn" onclick="oneClickLogin('{{ u.username }}', 'admin123', {{ item.tenant.id }}, '{{ u.role }}')">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <i class="fa-solid {{ u.icon }}" style="font-size: 14px; color: var(--accent-primary);"></i>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 12px;">{{ u.role_name }}</div>
+                                            <div style="font-size: 10.5px; color: var(--text-muted);">{{ u.full_name }} ({{ u.username }})</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ u.badge_class }}" style="font-size: 10px;">
+                                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Login
+                                    </span>
+                                </button>
+                            {% endfor %}
+                        {% else %}
+                            <div style="font-size: 12px; color: var(--text-muted); padding: 8px; text-align: center;">
+                                No test users populated in this tenant.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        function copyTenantLoginUrl(relativeUrl, btnEl) {
+            const fullUrl = window.location.origin + relativeUrl;
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                const orig = btnEl.innerHTML;
+                btnEl.innerHTML = `<i class="fa-solid fa-check" style="color: var(--accent-emerald);"></i> Copied!`;
+                setTimeout(() => { btnEl.innerHTML = orig; }, 1800);
+            }).catch(() => {
+                alert("URL copied to clipboard: " + fullUrl);
+            });
+        }
+
+        async function oneClickLogin(username, password, tenantId, role) {
+            const alertBox = document.getElementById("sandboxAlert");
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-indigo-bg)";
+            alertBox.style.color = "var(--accent-primary)";
+            alertBox.style.border = "1px solid var(--accent-primary)";
+            alertBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Authenticating as <b>${username}</b> (${role})...`;
+
+            try {
+                const payload = {
+                    username: username,
+                    password: password,
+                    role: role,
+                };
+                if (tenantId) {
+                    payload.tenant_id = tenantId;
+                }
+
+                const res = await fetch("/api/v1/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (res.ok && data.user) {
+                    alertBox.style.background = "var(--badge-emerald-bg)";
+                    alertBox.style.color = "var(--badge-emerald-text)";
+                    alertBox.style.border = "1px solid var(--accent-emerald)";
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Authenticated successfully as <b>${data.user.full_name || username}</b>! Redirecting...`;
+
+                    if (data.access_token) {
+                        document.cookie = "access_token=" + data.access_token + "; path=/; max-age=86400";
+                        localStorage.setItem("access_token", data.access_token);
+                    }
+                    if (data.user.role) {
+                        document.cookie = "active_role=" + data.user.role + "; path=/; max-age=86400";
+                        localStorage.setItem("user_role", data.user.role);
+                    }
+                    if (data.user.role === "SUPER_ADMIN") {
+                        document.cookie = "active_tenant_id=; path=/; max-age=0";
+                        localStorage.removeItem("active_tenant_id");
+                    } else if (data.user.tenant_id) {
+                        document.cookie = "active_tenant_id=" + data.user.tenant_id + "; path=/; max-age=86400";
+                        localStorage.setItem("active_tenant_id", data.user.tenant_id);
+                    }
+
+                    setTimeout(() => {
+                        if (data.user.role === "SUPER_ADMIN") {
+                            window.location.href = "/super-admin";
+                        } else if (data.user.role === "TEACHER") {
+                            window.location.href = "/teacher-portal";
+                        } else if (data.user.role === "STUDENT" || data.user.role === "EMPLOYEE") {
+                            window.location.href = "/logs";
+                        } else {
+                            window.location.href = "/";
+                        }
+                    }, 400);
+                } else {
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.style.border = "1px solid var(--accent-rose)";
+                    alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Login error: ${data.detail || "Authentication failed."}`;
+                }
+            } catch (e) {
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.style.border = "1px solid var(--accent-rose)";
+                alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Network error during authentication.`;
+            }
+        }
+    </script>
+</body>
+</html>

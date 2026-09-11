@@ -28,6 +28,10 @@ from src.database.models import (
     TeacherClassAssignment,
     Student,
     SubscriptionPlan,
+    LeaveType,
+    LeaveCadreQuota,
+    LeaveBalance,
+    LeaveRequest,
 )
 from src.utils.auth_utils import hash_password
 
@@ -121,12 +125,72 @@ def seed_default_subscription_plans(db: Session):
     db.flush()
 
 
+def seed_default_leave_types(db: Session, tenant_id: int):
+    """Seeds default leave master categories (CL, SL, EL, LWP) for a tenant if none exist."""
+    existing = db.query(LeaveType).filter(LeaveType.tenant_id == tenant_id).first()
+    if not existing:
+        defaults = [
+            {
+                "name": "Casual Leave",
+                "code": "CL",
+                "description": "Short-term personal emergency or casual leave.",
+                "is_paid": True,
+                "default_days_per_year": 12.0,
+                "accrual_frequency": "ANNUAL",
+                "requires_document": False,
+            },
+            {
+                "name": "Medical / Sick Leave",
+                "code": "SL",
+                "description": "Medical recuperation and sick leave.",
+                "is_paid": True,
+                "default_days_per_year": 10.0,
+                "accrual_frequency": "ANNUAL",
+                "requires_document": False,
+            },
+            {
+                "name": "Earned / Annual Leave",
+                "code": "EL",
+                "description": "Annual earned vacation leave.",
+                "is_paid": True,
+                "default_days_per_year": 15.0,
+                "accrual_frequency": "ANNUAL",
+                "requires_document": False,
+            },
+            {
+                "name": "Leave Without Pay",
+                "code": "LWP",
+                "description": "Unpaid extended leave.",
+                "is_paid": False,
+                "default_days_per_year": 0.0,
+                "accrual_frequency": "ANNUAL",
+                "requires_document": False,
+            },
+        ]
+        for item in defaults:
+            lt = LeaveType(
+                tenant_id=tenant_id,
+                name=item["name"],
+                code=item["code"],
+                description=item["description"],
+                is_paid=item["is_paid"],
+                default_days_per_year=item["default_days_per_year"],
+                accrual_frequency=item["accrual_frequency"],
+                requires_document=item["requires_document"],
+                is_active=True,
+            )
+            db.add(lt)
+        db.flush()
+        logger.info(f"Seeded default LeaveTypes for Tenant #{tenant_id}.")
+
+
 def seed_default_tenant_and_branding():
     """Seeds default tenant, branding, RBAC users, and academic structure if database is fresh."""
     with SessionLocal() as db:
         try:
             # 0. Subscription Plans
             seed_default_subscription_plans(db)
+            seed_default_leave_types(db, DEFAULT_TENANT_ID)
 
             # 1. Default Tenant
             default_tenant = db.query(Tenant).filter(Tenant.id == DEFAULT_TENANT_ID).first()
@@ -652,6 +716,126 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE students ADD COLUMN phone_number VARCHAR(50) NULL"))
                 logger.info("Migrated students table: added phone_number column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'hourly_rate'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN hourly_rate FLOAT NULL"))
+                logger.info("Migrated students table: added hourly_rate column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'monthly_base_salary'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN monthly_base_salary FLOAT NULL"))
+                logger.info("Migrated students table: added monthly_base_salary column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'cadre_level'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN cadre_level VARCHAR(50) NULL"))
+                logger.info("Migrated students table: added cadre_level column.")
+
+            # 5. System Branding shift timings & payroll columns
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'shift_check_in_time'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN shift_check_in_time VARCHAR(10) DEFAULT '10:30' NOT NULL"))
+                logger.info("Migrated system_branding table: added shift_check_in_time column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'shift_check_out_time'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN shift_check_out_time VARCHAR(10) DEFAULT '18:00' NOT NULL"))
+                logger.info("Migrated system_branding table: added shift_check_out_time column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'shift_grace_minutes'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN shift_grace_minutes INT DEFAULT 15 NOT NULL"))
+                logger.info("Migrated system_branding table: added shift_grace_minutes column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'min_checkout_interval_minutes'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN min_checkout_interval_minutes INT DEFAULT 15 NOT NULL"))
+                logger.info("Migrated system_branding table: added min_checkout_interval_minutes column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'payroll_structure'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN payroll_structure VARCHAR(30) DEFAULT 'HOURLY' NOT NULL"))
+                logger.info("Migrated system_branding table: added payroll_structure column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'default_hourly_rate'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN default_hourly_rate FLOAT DEFAULT 15.0 NULL"))
+                logger.info("Migrated system_branding table: added default_hourly_rate column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'standard_working_hours_per_day'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN standard_working_hours_per_day FLOAT DEFAULT 8.0 NULL"))
+                logger.info("Migrated system_branding table: added standard_working_hours_per_day column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'enable_overtime'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN enable_overtime BOOLEAN DEFAULT TRUE NOT NULL"))
+                logger.info("Migrated system_branding table: added enable_overtime column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'overtime_rate_multiplier'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN overtime_rate_multiplier FLOAT DEFAULT 1.5 NULL"))
+                logger.info("Migrated system_branding table: added overtime_rate_multiplier column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'missed_checkout_policy'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN missed_checkout_policy VARCHAR(30) DEFAULT 'HALF_DAY' NOT NULL"))
+                logger.info("Migrated system_branding table: added missed_checkout_policy column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'currency_symbol'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN currency_symbol VARCHAR(10) DEFAULT '$' NOT NULL"))
+                logger.info("Migrated system_branding table: added currency_symbol column.")
+
+            # 6. Attendance Records checkin / checkout and shift tracking columns
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'punch_type'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN punch_type VARCHAR(20) DEFAULT 'CHECK_IN' NOT NULL"))
+                logger.info("Migrated attendance_records table: added punch_type column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'check_in_time'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN check_in_time DATETIME NULL"))
+                conn.execute(text("UPDATE attendance_records SET check_in_time = timestamp WHERE check_in_time IS NULL"))
+                logger.info("Migrated attendance_records table: added check_in_time column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'check_out_time'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN check_out_time DATETIME NULL"))
+                logger.info("Migrated attendance_records table: added check_out_time column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'work_duration_minutes'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN work_duration_minutes INT NULL"))
+                logger.info("Migrated attendance_records table: added work_duration_minutes column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'shift_status'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN shift_status VARCHAR(30) DEFAULT 'ON_TIME' NOT NULL"))
+                logger.info("Migrated attendance_records table: added shift_status column.")
+
+            # 7. Students offboarding & relieving columns
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'employment_status'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN employment_status VARCHAR(30) DEFAULT 'ACTIVE' NOT NULL"))
+                conn.execute(text("CREATE INDEX ix_student_tenant_status ON students(tenant_id, employment_status)"))
+                logger.info("Migrated students table: added employment_status column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'relieved_at'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN relieved_at DATETIME NULL"))
+                logger.info("Migrated students table: added relieved_at column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'relieving_reason'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN relieving_reason TEXT NULL"))
+                logger.info("Migrated students table: added relieving_reason column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'relieved_by_user_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN relieved_by_user_id INT NULL"))
+                logger.info("Migrated students table: added relieved_by_user_id column.")
 
     except Exception as e:
         logger.warning(f"Schema migration note: {e}")

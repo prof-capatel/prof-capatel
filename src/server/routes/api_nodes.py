@@ -111,6 +111,14 @@ async def ingest_node_frame(
         cooldown_remaining_secs = 0
         log_record = None
 
+        punch_type = "ATTENDANCE"
+        shift_status = "PRESENT"
+        work_duration_mins = None
+        work_duration_formatted = "--"
+        check_in_short = "--"
+        check_out_short = "--"
+        status_message = None
+
         if is_match and student_id is not None:
             if is_live and temporal_confirmed:
                 mark_res = attendance_manager.mark_attendance(
@@ -128,6 +136,13 @@ async def ingest_node_frame(
                     cooldown_remaining_mins = mark_res.get("cooldown_remaining_minutes", 0)
                     cooldown_remaining_secs = mark_res.get("cooldown_remaining_seconds", 0)
                     log_record = mark_res.get("record") or mark_res.get("log_data")
+                    punch_type = mark_res.get("punch_type", "CHECK_IN" if (target_tenant and target_tenant.tenant_type == "corporate") else "ATTENDANCE")
+                    shift_status = mark_res.get("shift_status", "ON_TIME")
+                    work_duration_mins = mark_res.get("work_duration_minutes")
+                    work_duration_formatted = mark_res.get("work_duration_formatted", "--")
+                    check_in_short = mark_res.get("check_in_short", "--")
+                    check_out_short = mark_res.get("check_out_short", "--")
+                    status_message = mark_res.get("message")
             else:
                 # Spoof detected - log security warning
                 attendance_manager.record_spoof_event(
@@ -161,6 +176,13 @@ async def ingest_node_frame(
             "cooldown_active": cooldown_active,
             "cooldown_remaining_minutes": cooldown_remaining_mins,
             "cooldown_remaining_seconds": cooldown_remaining_secs,
+            "punch_type": punch_type,
+            "shift_status": shift_status,
+            "work_duration_minutes": work_duration_mins,
+            "work_duration_formatted": work_duration_formatted,
+            "check_in_short": check_in_short,
+            "check_out_short": check_out_short,
+            "message": status_message,
             "log_data": log_record,
             "box": face_box,
         })
