@@ -24,3 +24,9 @@ scratch/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
+
+# Database backups and dumps
+database/backups/
+*.sql
+
+
