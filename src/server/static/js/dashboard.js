@@ -90,6 +90,21 @@ function handleNewAttendanceEvent(data) {
 
     liveFeed.prepend(item);
 
+    // Trigger HUD recognition flash overlay if active on dashboard
+    if (typeof window.showCaptureToast === "function") {
+        try {
+            window.showCaptureToast(
+                data.student_name || "Employee",
+                data.roll_number || "",
+                data.match_confidence_pct || 99,
+                data.punch_type || "Checked In",
+                data.department || ""
+            );
+        } catch (err) {
+            console.debug("HUD toast trigger notice:", err);
+        }
+    }
+
     setTimeout(() => {
         item.classList.remove("highlight");
     }, 4000);
