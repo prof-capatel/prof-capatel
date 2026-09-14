@@ -426,7 +426,7 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         self.assertIn("Executive Midnight Dark", res.text)
         self.assertIn("Warm Academic", res.text)
         self.assertIn("Institutional Attendance Parameters", res.text)
-        self.assertIn("btnQuickThemeToggle", res.text)
+        self.assertIn("appThemeSelect", res.text)
         print("[PASS] Test 16: Multi-Theme Engine & Settings Menu View verified.")
 
     def test_17_institutional_branding(self):

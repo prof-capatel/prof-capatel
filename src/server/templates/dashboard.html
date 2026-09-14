@@ -127,158 +127,111 @@
         </div>
     </div>
 
-    <!-- Right Column: Biometric Terminal Gateway & Gateways Hub -->
-    <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column;">
-        <div class="card-header" style="padding: 14px 20px; background: var(--bg-subtle); border-bottom: 1px solid var(--border-color);">
-            <h3 style="font-size: 14px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid {% if is_corporate %}fa-shield-halved{% else %}fa-microchip{% endif %}" style="color: var(--accent-cyan);"></i>
-                <span>{% if is_corporate %}Biometric Terminal Gateway{% else %}Connected Nodes{% endif %}</span>
-            </h3>
-            <span class="badge badge-present" style="font-size: 10.5px;">
-                <span class="pulse-dot"></span> LIVE INGESTION READY
-            </span>
-        </div>
-        <div class="card-body" style="padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; flex: 1;">
-            
-            <!-- Terminal & Active Node Status Block -->
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                {% if nodes %}
-                    {% for node in nodes %}
-                    <div class="node-status-card" style="padding: 12px 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <strong style="font-size: 13px; color: var(--text-heading);">{{ node.node_id }}</strong>
-                            <span class="badge {% if node.is_online %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 10px;">
-                                {{ "ONLINE" if node.is_online else "OFFLINE" }}
-                            </span>
-                        </div>
-                        <div style="font-size: 11.5px; color: var(--text-secondary);">{{ node.location }}</div>
-                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; display: flex; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
-                            <span>Heartbeat: {{ node.last_heartbeat }}</span>
-                            <span>Rate: {{ node.fps }} FPS</span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div style="padding: 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <strong style="font-size: 13px; color: var(--text-heading);">CENTRAL-DASHBOARD-CAMERA</strong>
-                            <span class="badge badge-present" style="font-size: 10px;">ACTIVE TERMINAL</span>
-                        </div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Integrated 1:1 Biometric Face Detection & Recognition Ingestion</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
-                            Ingesting on <code>/api/v1/nodes/frame</code> (Zero Hardware Thin-Client Mode)
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-
-            <!-- Direct Access & Corporate Gateways Card -->
-            <div style="padding: 14px 16px; background: var(--bg-surface); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-link" style="color: var(--accent-primary);"></i> Quick Access Gateways
-                    </span>
+    <!-- Right Column: 2x2 Prominent Hero Metrics Grid -->
+    <div class="hero-metrics-grid">
+        <!-- Card 1: Checked In / Present Today -->
+        <div class="stat-card hero-stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="stat-info">
+                    <span>{% if is_corporate %}Checked-In Today{% else %}Present Today{% endif %}</span>
+                    <h3 id="statPresentCount">0</h3>
                 </div>
-
-                <!-- Dedicated Face Portal URL -->
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: flex; justify-content: space-between;">
-                        <span><i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> Dedicated Face Portal URL:</span>
-                    </div>
-                    <div style="display: flex; gap: 6px;">
-                        <input type="text" id="dashPortalUrl" readonly class="form-input" style="font-size: 11px; padding: 5px 8px; font-family: monospace; background: var(--bg-subtle);" value="/portal/{{ current_tenant.slug }}">
-                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" onclick="copyDashLink('dashPortalUrl', this)" title="Copy Portal Link">
-                            <i class="fa-regular fa-copy"></i>
-                        </button>
-                        <a id="dashPortalOpen" href="/portal/{{ current_tenant.slug }}" target="_blank" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" title="Launch Biometric Portal">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Employee Self-Onboarding Link -->
-                <div>
-                    <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">
-                        <i class="fa-solid fa-user-plus" style="color: #6366f1;"></i> Self-Onboarding Link:
-                    </div>
-                    <div style="display: flex; gap: 6px;">
-                        <input type="text" id="dashOnboardUrl" readonly class="form-input" style="font-size: 11px; padding: 5px 8px; font-family: monospace; background: var(--bg-subtle);" value="{{ current_tenant.onboarding_url or '/onboard/' ~ (current_tenant.uuid or current_tenant.slug) ~ '/' ~ (current_tenant.onboarding_token or 'register') }}">
-                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" onclick="copyDashLink('dashOnboardUrl', this)" title="Copy Onboarding Link">
-                            <i class="fa-regular fa-copy"></i>
-                        </button>
-                        <a id="dashOnboardOpen" href="{{ current_tenant.onboarding_url or '#' }}" target="_blank" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" title="Launch Onboarding Portal">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                        </a>
-                    </div>
+                <div class="stat-icon emerald">
+                    <i class="fa-solid fa-user-check"></i>
                 </div>
             </div>
+            <div style="font-size: 11px; color: var(--accent-emerald); display: flex; align-items: center; gap: 5px; font-weight: 600; margin-top: 8px;">
+                <span class="pulse-dot" style="width: 6px; height: 6px;"></span>
+                <span>Live Real-Time Sync</span>
+            </div>
         </div>
-    </div>
-</div>
 
-<!-- Stats Cards Row -->
-<div class="stats-grid" style="margin-bottom: 24px;">
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>{% if is_corporate %}Total Enrolled Employees{% else %}Enrolled Students{% endif %}</span>
-            <h3 id="statTotalStudents">{{ total_students }}</h3>
+        <!-- Card 2: Checked Out / Absent Today -->
+        {% if is_corporate %}
+        <div class="stat-card hero-stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="stat-info">
+                    <span>Checked-Out Today</span>
+                    <h3 id="statCheckedOutCount">0</h3>
+                </div>
+                <div class="stat-icon cyan">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: var(--accent-cyan); display: flex; align-items: center; gap: 5px; font-weight: 600; margin-top: 8px;">
+                <i class="fa-solid fa-person-walking-arrow-right" style="font-size: 10px;"></i>
+                <span>Active Departures</span>
+            </div>
         </div>
-        <div class="stat-icon purple">
-            <i class="fa-solid {% if is_corporate %}fa-users-gear{% else %}fa-users{% endif %}"></i>
+        {% else %}
+        <div class="stat-card hero-stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="stat-info">
+                    <span>Absent Today</span>
+                    <h3 id="statAbsentCount">0</h3>
+                </div>
+                <div class="stat-icon rose">
+                    <i class="fa-solid fa-user-xmark"></i>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; margin-top: 8px;">
+                <span>Daily Attendance</span>
+            </div>
         </div>
-    </div>
+        {% endif %}
 
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>{% if is_corporate %}Checked-In Today{% else %}Present Today{% endif %}</span>
-            <h3 id="statPresentCount">0</h3>
+        <!-- Card 3: Total Enrolled Employees / Students -->
+        <div class="stat-card hero-stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="stat-info">
+                    <span>{% if is_corporate %}Total Enrolled Employees{% else %}Enrolled Students{% endif %}</span>
+                    <h3 id="statTotalStudents">{{ total_students }}</h3>
+                </div>
+                <div class="stat-icon purple">
+                    <i class="fa-solid {% if is_corporate %}fa-users-gear{% else %}fa-users{% endif %}"></i>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: var(--accent-primary); display: flex; align-items: center; gap: 5px; font-weight: 600; margin-top: 8px;">
+                <i class="fa-solid fa-id-badge" style="font-size: 10px;"></i>
+                <span>Registered Roster</span>
+            </div>
         </div>
-        <div class="stat-icon emerald">
-            <i class="fa-solid fa-user-check"></i>
-        </div>
-    </div>
 
-    {% if is_corporate %}
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Checked-Out Today</span>
-            <h3 id="statCheckedOutCount">0</h3>
+        <!-- Card 4: Standard Shift Hours / Cooldown Window -->
+        {% if is_corporate %}
+        <div class="stat-card hero-stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="stat-info" style="overflow: hidden; padding-right: 6px;">
+                    <span>Standard Shift Hours</span>
+                    <h3 id="statShiftHours" style="font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px;">{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }} - {{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}</h3>
+                </div>
+                <div class="stat-icon amber" style="flex-shrink: 0;">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: var(--accent-amber); display: flex; align-items: center; gap: 5px; font-weight: 600; margin-top: 8px;">
+                <i class="fa-solid fa-clock" style="font-size: 10px;"></i>
+                <span>Scheduled Shift Window</span>
+            </div>
         </div>
-        <div class="stat-icon cyan">
-            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        {% else %}
+        <div class="stat-card hero-stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="stat-info">
+                    <span>Cooldown Window</span>
+                    <h3 id="statCooldownWindow" style="font-size: 24px; font-weight: 800;">{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Mins</h3>
+                </div>
+                <div class="stat-icon amber">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: var(--accent-amber); display: flex; align-items: center; gap: 5px; font-weight: 600; margin-top: 8px;">
+                <i class="fa-solid fa-shield-halved" style="font-size: 10px;"></i>
+                <span>Deduplication Window</span>
+            </div>
         </div>
+        {% endif %}
     </div>
-
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Standard Shift Hours</span>
-            <h3 id="statShiftHours" style="font-size: 15px; font-weight: 800;">{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }} - {{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}</h3>
-        </div>
-        <div class="stat-icon amber">
-            <i class="fa-solid fa-briefcase"></i>
-        </div>
-    </div>
-    {% else %}
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Cooldown Window</span>
-            <h3 id="statCooldownWindow">{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Mins</h3>
-        </div>
-        <div class="stat-icon cyan">
-            <i class="fa-solid fa-hourglass-half"></i>
-        </div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Active Edge Nodes</span>
-            <h3>{{ nodes|length if nodes else 1 }}</h3>
-        </div>
-        <div class="stat-icon amber">
-            <i class="fa-solid fa-network-wired"></i>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Main Section: Full-Width Live Recognition Feed (Real-Time via SSE) -->
@@ -327,6 +280,101 @@
                     <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Click <strong>Start Attendance Capture</strong> on the camera feed card above to mark attendance.</p>
                 </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- BOTTOM SECTION: Biometric Terminal Gateway & System Hub (Full-Width Responsive Hub) -->
+<div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); margin-bottom: 24px;">
+    <div class="card-header" style="padding: 14px 20px; background: var(--bg-subtle); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 14px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid {% if is_corporate %}fa-shield-halved{% else %}fa-microchip{% endif %}" style="color: var(--accent-cyan);"></i>
+            <span>{% if is_corporate %}Biometric Terminal Gateway & System Hub{% else %}Connected Ingestion Nodes & System Hub{% endif %}</span>
+        </h3>
+        <span class="badge badge-present" style="font-size: 10.5px;">
+            <span class="pulse-dot"></span> LIVE INGESTION READY
+        </span>
+    </div>
+    <div class="card-body" style="padding: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: stretch;">
+            
+            <!-- Left Column: Terminal & Active Node Status Block -->
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+                    <i class="fa-solid fa-server" style="color: var(--accent-primary);"></i> Active Ingestion Nodes
+                </div>
+                {% if nodes %}
+                    {% for node in nodes %}
+                    <div class="node-status-card" style="padding: 12px 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <strong style="font-size: 13px; color: var(--text-heading);">{{ node.node_id }}</strong>
+                            <span class="badge {% if node.is_online %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 10px;">
+                                {{ "ONLINE" if node.is_online else "OFFLINE" }}
+                            </span>
+                        </div>
+                        <div style="font-size: 11.5px; color: var(--text-secondary);">{{ node.location }}</div>
+                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; display: flex; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
+                            <span>Heartbeat: {{ node.last_heartbeat }}</span>
+                            <span>Rate: {{ node.fps }} FPS</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <strong style="font-size: 13px; color: var(--text-heading);">CENTRAL-DASHBOARD-CAMERA</strong>
+                            <span class="badge badge-present" style="font-size: 10px;">ACTIVE TERMINAL</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">Integrated 1:1 Biometric Face Detection & Recognition Ingestion</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
+                            Ingesting on <code>/api/v1/nodes/frame</code> (Zero Hardware Thin-Client Mode)
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Column: Direct Access & Corporate Gateways Card -->
+            <div style="padding: 16px 18px; background: var(--bg-surface, var(--bg-subtle)); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-link" style="color: var(--accent-primary);"></i> Quick Access Gateways & Portals
+                        </span>
+                    </div>
+
+                    <!-- Dedicated Face Portal URL -->
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: flex; justify-content: space-between;">
+                            <span><i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> Dedicated Face Portal URL:</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="dashPortalUrl" readonly class="form-input" style="font-size: 11px; padding: 5px 8px; font-family: monospace; background: var(--bg-card);" value="/portal/{{ current_tenant.slug }}">
+                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" onclick="copyDashLink('dashPortalUrl', this)" title="Copy Portal Link">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                            <a id="dashPortalOpen" href="/portal/{{ current_tenant.slug }}" target="_blank" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" title="Launch Biometric Portal">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Employee Self-Onboarding Link -->
+                    <div>
+                        <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">
+                            <i class="fa-solid fa-user-plus" style="color: #6366f1;"></i> Self-Onboarding Registration Link:
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="dashOnboardUrl" readonly class="form-input" style="font-size: 11px; padding: 5px 8px; font-family: monospace; background: var(--bg-card);" value="{{ current_tenant.onboarding_url or '/onboard/' ~ (current_tenant.uuid or current_tenant.slug) ~ '/' ~ (current_tenant.onboarding_token or 'register') }}">
+                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" onclick="copyDashLink('dashOnboardUrl', this)" title="Copy Onboarding Link">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                            <a id="dashOnboardOpen" href="{{ current_tenant.onboarding_url or '#' }}" target="_blank" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" title="Launch Onboarding Portal">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
