@@ -410,6 +410,7 @@ class Student(Base):
     hourly_rate = Column(Float, nullable=True)
     monthly_base_salary = Column(Float, nullable=True)
     cadre_level = Column(String(50), nullable=True)
+    date_of_joining = Column(Date, nullable=True)
 
     # Offboarding / Relieving Status & Audit
     employment_status = Column(String(30), default="ACTIVE", nullable=False)  # ACTIVE, RELIEVED, TERMINATED, RESIGNED
@@ -494,6 +495,7 @@ class Student(Base):
             "hourly_rate": self.hourly_rate,
             "monthly_base_salary": self.monthly_base_salary,
             "cadre_level": self.cadre_level,
+            "date_of_joining": self.date_of_joining.strftime("%Y-%m-%d") if self.date_of_joining else None,
             "employment_status": self.employment_status or ("ACTIVE" if self.is_active else "RELIEVED"),
             "relieved_at": self.relieved_at.strftime("%Y-%m-%d %H:%M:%S") if self.relieved_at else None,
             "relieving_reason": self.relieving_reason or "",
@@ -575,6 +577,21 @@ class AttendanceRecord(Base):
     tenant = relationship("Tenant", back_populates="attendance_records")
     student = relationship("Student", back_populates="attendance_records")
 
+    @property
+    def work_duration_formatted(self) -> str:
+        if self.work_duration_minutes is not None:
+            hrs = int(self.work_duration_minutes // 60)
+            mins = int(self.work_duration_minutes % 60)
+            return f"{hrs}h {mins:02d}m" if hrs > 0 else f"{mins}m"
+        elif self.check_in_time and self.check_out_time:
+            secs = int((self.check_out_time - self.check_in_time).total_seconds())
+            if secs >= 0:
+                mins = secs // 60
+                hrs = mins // 60
+                rem_mins = mins % 60
+                return f"{hrs}h {rem_mins:02d}m" if hrs > 0 else f"{mins}m"
+        return "--"
+
     def to_dict(self):
         class_name = self.student.class_obj.name if (self.student and self.student.class_obj) else (self.student.class_semester if self.student else "General")
         div_name = self.student.division_obj.name if (self.student and self.student.division_obj) else "N/A"
@@ -586,18 +603,7 @@ class AttendanceRecord(Base):
         c_out_str = self.check_out_time.strftime("%Y-%m-%d %H:%M:%S") if self.check_out_time else None
         c_out_short = self.check_out_time.strftime("%I:%M %p") if self.check_out_time else "--"
 
-        duration_formatted = "--"
-        if self.work_duration_minutes is not None:
-            hrs = self.work_duration_minutes // 60
-            mins = self.work_duration_minutes % 60
-            duration_formatted = f"{hrs}h {mins:02d}m" if hrs > 0 else f"{mins}m"
-        elif self.check_in_time and self.check_out_time:
-            secs = int((self.check_out_time - self.check_in_time).total_seconds())
-            if secs >= 0:
-                mins = secs // 60
-                hrs = mins // 60
-                rem_mins = mins % 60
-                duration_formatted = f"{hrs}h {rem_mins:02d}m" if hrs > 0 else f"{mins}m"
+        duration_formatted = self.work_duration_formatted
 
         return {
             "id": self.id,

@@ -90,6 +90,11 @@
                 {% endif %}
 
                 <div class="form-group">
+                    <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Date of Joining (DOJ) *{% else %}Date of Admission / Joining{% endif %}</label>
+                    <input type="date" id="dateOfJoining" class="form-control" {% if current_tenant and current_tenant.tenant_type == 'corporate' %}required{% endif %}>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Email Address (Optional)</label>
                     <input type="email" id="email" class="form-control" placeholder="e.g. jane.doe@university.edu">
                 </div>
@@ -282,6 +287,11 @@
                     {% endif %}
 
                     <div class="form-group">
+                        <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Date of Joining (DOJ) *{% else %}Date of Admission / Joining{% endif %}</label>
+                        <input type="date" id="batchDateOfJoining" class="form-control" {% if current_tenant and current_tenant.tenant_type == 'corporate' %}required{% endif %}>
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Email Address (Optional)</label>
                         <input type="email" id="batchEmail" class="form-control" placeholder="e.g. alex.morgan@university.edu">
                     </div>
@@ -452,6 +462,15 @@ function switchEnrollMode(mode) {
         stopWebcam();
     }
 }
+
+// Auto-fill today's date for Date of Joining
+document.addEventListener("DOMContentLoaded", () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const doj1 = document.getElementById("dateOfJoining");
+    const doj2 = document.getElementById("batchDateOfJoining");
+    if (doj1 && !doj1.value) doj1.value = todayStr;
+    if (doj2 && !doj2.value) doj2.value = todayStr;
+});
 
 // ==========================================================
 // Webcam Stream & Enrollment Logic (Mobile-Optimized)
@@ -627,6 +646,7 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
     const divId = divSelect ? (divSelect.value ? parseInt(divSelect.value) : null) : null;
 
     const email = document.getElementById("email").value.trim();
+    const dateOfJoining = document.getElementById("dateOfJoining")?.value || null;
 
     if (userRole === "student" && !classId) {
         alert("Please select a valid Class/Semester for the student.");
@@ -647,6 +667,7 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
                 division_id: divId,
                 email: email || null,
                 user_role: userRole,
+                date_of_joining: dateOfJoining || null,
             })
         });
         const data = await res.json();
@@ -852,6 +873,7 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     const divId = divSelect.value ? parseInt(divSelect.value) : null;
 
     const email = document.getElementById("batchEmail").value.trim();
+    const batchDoj = document.getElementById("batchDateOfJoining")?.value || null;
 
     if (userRole === "student" && !classId) {
         alert("Please select a valid Class/Semester for the student.");
@@ -879,6 +901,7 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     if (className) formData.append("class_semester", className);
     if (divId) formData.append("division_id", divId);
     if (email) formData.append("email", email);
+    if (batchDoj) formData.append("date_of_joining", batchDoj);
 
     // Send exactly 3 distinct named files for API compatibility
     formData.append("photo_front", batchFiles[0]);

@@ -193,8 +193,21 @@
                 <!-- Member Selector -->
                 <div class="form-group">
                     <label class="form-label">{% if is_corporate %}Select Employee *{% else %}Select Student *{% endif %}</label>
-                    <select id="overrideStudentSelect" class="form-control" required>
+                    <select id="overrideStudentSelect" class="form-control" required onchange="onOverrideStudentChanged()">
                         <option value="">-- Choose Member --</option>
+                    </select>
+                </div>
+
+                <!-- Live Status Banner for Selected Member -->
+                <div id="overrideStudentStatusBanner" style="display: none; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12px; margin-bottom: 14px; align-items: center; gap: 8px;"></div>
+
+                <!-- Action Type Selector (Corporate Smart Toggle) -->
+                <div class="form-group" id="overrideActionGroup">
+                    <label class="form-label">Punch Action *</label>
+                    <select id="overridePunchType" class="form-control" onchange="onOverridePunchTypeChanged()">
+                        <option value="AUTO">Auto (Smart Detect: Check-Out if checked in, else Check-In)</option>
+                        <option value="CHECK_IN">Force Check-In (Present Entry)</option>
+                        <option value="CHECK_OUT">Force Check-Out (Shift Departure)</option>
                     </select>
                 </div>
 

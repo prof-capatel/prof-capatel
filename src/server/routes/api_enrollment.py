@@ -34,6 +34,7 @@ class StudentCreate(BaseModel):
     hourly_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
     cadre_level: Optional[str] = None
+    date_of_joining: Optional[str] = None
 
 
 class StudentUpdate(BaseModel):
@@ -51,6 +52,7 @@ class StudentUpdate(BaseModel):
     hourly_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
     cadre_level: Optional[str] = None
+    date_of_joining: Optional[str] = None
 
 
 class StudentDepartmentTransferPayload(BaseModel):
@@ -198,6 +200,16 @@ def register_student(
     if is_corporate and chosen_role == "student":
         chosen_role = "employee"
 
+    # Resolve Date of Joining
+    doj_val = None
+    if payload.date_of_joining:
+        try:
+            doj_val = datetime.strptime(payload.date_of_joining.strip()[:10], "%Y-%m-%d").date()
+        except Exception:
+            pass
+    if not doj_val and is_corporate:
+        doj_val = get_ist_now().date()
+
     student = Student(
         tenant_id=current_tenant.id,
         roll_number=clean_roll,
@@ -213,6 +225,7 @@ def register_student(
         hourly_rate=payload.hourly_rate,
         monthly_base_salary=payload.monthly_base_salary,
         cadre_level=payload.cadre_level,
+        date_of_joining=doj_val,
     )
     db.add(student)
     db.commit()
@@ -346,6 +359,7 @@ async def batch_upload_enrollment(
     hourly_rate: Optional[float] = Form(None),
     monthly_base_salary: Optional[float] = Form(None),
     cadre_level: Optional[str] = Form(None),
+    date_of_joining: Optional[str] = Form(None),
     photo_front: UploadFile = File(...),
     photo_left: UploadFile = File(...),
     photo_right: UploadFile = File(...),
@@ -474,6 +488,16 @@ async def batch_upload_enrollment(
             "rel_path": f"faces/{filename}",
         })
 
+    # Resolve Date of Joining
+    doj_val = None
+    if date_of_joining:
+        try:
+            doj_val = datetime.strptime(date_of_joining.strip()[:10], "%Y-%m-%d").date()
+        except Exception:
+            pass
+    if not doj_val and is_corporate:
+        doj_val = get_ist_now().date()
+
     # Save Student
     student = Student(
         tenant_id=current_tenant.id,
@@ -490,6 +514,7 @@ async def batch_upload_enrollment(
         hourly_rate=hourly_rate,
         monthly_base_salary=monthly_base_salary,
         cadre_level=cadre_level,
+        date_of_joining=doj_val,
     )
     db.add(student)
     db.flush()
@@ -592,6 +617,14 @@ def update_student_profile(
         student.monthly_base_salary = payload.monthly_base_salary
     if payload.cadre_level is not None:
         student.cadre_level = payload.cadre_level
+    if payload.date_of_joining is not None:
+        if payload.date_of_joining.strip():
+            try:
+                student.date_of_joining = datetime.strptime(payload.date_of_joining.strip()[:10], "%Y-%m-%d").date()
+            except Exception:
+                pass
+        else:
+            student.date_of_joining = None
 
     db.commit()
     db.refresh(student)

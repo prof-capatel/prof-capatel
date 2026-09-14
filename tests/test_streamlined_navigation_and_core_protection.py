@@ -1,4 +1,11 @@
+import os
+import sys
+from pathlib import Path
 import unittest
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -159,7 +166,7 @@ class TestStreamlinedNavigationAndCoreProtection(unittest.TestCase):
         self.assertIn('id="deptModal"', html)
 
     def test_live_dashboard_attendance_capture_modal_and_button(self):
-        """Verify live dashboard includes the Start Attendance Capture button and modal."""
+        """Verify live dashboard includes the Start Attendance Capture button and inline camera card."""
         cookies = {
             "access_token": self.corp_token,
             "active_tenant_id": str(self.corp_tenant.id),
@@ -169,7 +176,7 @@ class TestStreamlinedNavigationAndCoreProtection(unittest.TestCase):
         html = res.text
 
         self.assertIn("Start Attendance Capture", html)
-        self.assertIn('id="liveCaptureModal"', html)
+        self.assertIn('id="inlineCameraCard"', html)
         self.assertIn('id="captureVideo"', html)
         self.assertIn('id="captureCanvas"', html)
         self.assertIn('id="captureMatchToast"', html)

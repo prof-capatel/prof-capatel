@@ -27,10 +27,68 @@ router = APIRouter(prefix="/api/v1/attendance", tags=["Attendance Management"])
 
 class ManualOverrideRequest(BaseModel):
     student_id: int
+    punch_type: Optional[str] = "AUTO"  # AUTO, CHECK_IN, CHECK_OUT
     timestamp: Optional[str] = None  # Format: "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DDTHH:MM"
     reason: str = "Admin Manual Verification"
     override_by: Optional[str] = "Admin"
     node_id: Optional[str] = "MANUAL-OVERRIDE"
+
+
+@router.get("/employee-status/{student_id}")
+def get_employee_attendance_status(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Returns today's active punch status (CHECKED_IN, CHECKED_OUT, NOT_PUNCHED) for smart modal rendering."""
+    check_tenant_operational_access(current_tenant)
+    now = get_ist_now()
+    today = now.date()
+    start_today = datetime.combine(today, datetime.min.time())
+    end_today = datetime.combine(today, datetime.max.time())
+
+    student = db.query(Student).filter(Student.id == student_id, Student.tenant_id == current_tenant.id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student / Employee profile not found in this institution.")
+
+    latest_rec = (
+        db.query(AttendanceRecord)
+        .filter(
+            AttendanceRecord.tenant_id == current_tenant.id,
+            AttendanceRecord.student_id == student.id,
+            AttendanceRecord.timestamp.between(start_today, end_today),
+        )
+        .order_by(AttendanceRecord.timestamp.desc())
+        .first()
+    )
+
+    if not latest_rec:
+        status = "NOT_CHECKED_IN"
+        next_action = "CHECK_IN"
+        check_in_time = None
+        check_out_time = None
+    elif latest_rec.check_in_time and not latest_rec.check_out_time:
+        status = "CHECKED_IN"
+        next_action = "CHECK_OUT"
+        check_in_time = latest_rec.check_in_time.strftime("%I:%M %p")
+        check_out_time = None
+    else:
+        status = "CHECKED_OUT"
+        next_action = "CHECK_IN"
+        check_in_time = latest_rec.check_in_time.strftime("%I:%M %p") if latest_rec.check_in_time else None
+        check_out_time = latest_rec.check_out_time.strftime("%I:%M %p") if latest_rec.check_out_time else None
+
+    return {
+        "student_id": student.id,
+        "name": student.name,
+        "roll_number": student.roll_number,
+        "department": student.department,
+        "status": status,
+        "next_action": next_action,
+        "check_in_time": check_in_time,
+        "check_out_time": check_out_time,
+        "record": latest_rec.to_dict() if latest_rec else None,
+    }
 
 
 @router.post("/manual-override")
@@ -40,8 +98,8 @@ def mark_manual_override(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """
-    Biometric Fallback / Manual Override:
-    Force-marks a student present with an explicit audit tag, timestamp, and justification reason scoped to tenant.
+    Biometric Fallback / Smart Manual Override:
+    Force-marks a student/employee present or checks them out with an explicit audit tag, timestamp, and justification reason.
     """
     check_tenant_operational_access(current_tenant)
     student = db.query(Student).filter(
@@ -66,20 +124,115 @@ def mark_manual_override(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid timestamp format. Use YYYY-MM-DD HH:MM:SS.")
 
-    record = AttendanceRecord(
-        tenant_id=current_tenant.id,
-        student_id=student.id,
-        node_id=payload.node_id or "MANUAL-OVERRIDE",
-        timestamp=log_time,
-        confidence_distance=0.0,
-        status="PRESENT",
-        is_manual_override=True,
-        override_reason=payload.reason.strip(),
-        override_by=payload.override_by.strip() if payload.override_by else "Admin",
+    is_corporate = (getattr(current_tenant, "tenant_type", "educational") == "corporate")
+    branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == current_tenant.id).first()
+
+    today = log_time.date()
+    start_today = datetime.combine(today, datetime.min.time())
+    end_today = datetime.combine(today, datetime.max.time())
+
+    requested_punch = (payload.punch_type or "AUTO").upper().strip()
+
+    # Find today's latest record for this student
+    latest_today_rec = (
+        db.query(AttendanceRecord)
+        .filter(
+            AttendanceRecord.tenant_id == current_tenant.id,
+            AttendanceRecord.student_id == student.id,
+            AttendanceRecord.timestamp.between(start_today, end_today),
+        )
+        .order_by(AttendanceRecord.timestamp.desc())
+        .first()
     )
-    db.add(record)
-    db.commit()
-    db.refresh(record)
+
+    should_checkout = False
+    if requested_punch == "CHECK_OUT":
+        should_checkout = True
+    elif requested_punch == "AUTO":
+        if is_corporate and latest_today_rec and latest_today_rec.check_in_time and not latest_today_rec.check_out_time:
+            should_checkout = True
+
+    if should_checkout and is_corporate:
+        # CHECKOUT FLOW
+        if latest_today_rec and not latest_today_rec.check_out_time:
+            record = latest_today_rec
+            record.check_out_time = log_time
+            record.punch_type = "CHECK_OUT"
+            record.is_manual_override = True
+            record.override_reason = payload.reason.strip()
+            record.override_by = payload.override_by.strip() if payload.override_by else "Admin"
+
+            # Compute work duration
+            if record.check_in_time:
+                duration_mins = max(0.0, round((log_time - record.check_in_time).total_seconds() / 60.0, 1))
+                record.work_duration_minutes = duration_mins
+            
+            # Evaluate shift completion against target checkout time
+            shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
+            try:
+                out_h, out_m = map(int, shift_out_str.split(":"))
+                target_out = datetime.combine(today, datetime.min.time()).replace(hour=out_h, minute=out_m)
+                record.shift_status = "EARLY_DEPARTURE" if log_time < target_out else "COMPLETED"
+            except Exception:
+                record.shift_status = "COMPLETED"
+
+            db.commit()
+            db.refresh(record)
+            msg = f"Manual Check-Out recorded for '{student.name}' ({student.roll_number}). Duration: {record.work_duration_formatted}."
+        else:
+            # Create standalone checkout record if no active check-in found
+            record = AttendanceRecord(
+                tenant_id=current_tenant.id,
+                student_id=student.id,
+                node_id=payload.node_id or "MANUAL-OVERRIDE",
+                timestamp=log_time,
+                confidence_distance=0.0,
+                status="PRESENT",
+                punch_type="CHECK_OUT",
+                check_in_time=None,
+                check_out_time=log_time,
+                shift_status="COMPLETED",
+                is_manual_override=True,
+                override_reason=payload.reason.strip(),
+                override_by=payload.override_by.strip() if payload.override_by else "Admin",
+            )
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            msg = f"Manual Check-Out recorded for '{student.name}' ({student.roll_number})."
+    else:
+        # CHECK-IN FLOW
+        shift_status = "ON_TIME"
+        if is_corporate:
+            shift_in_str = branding.shift_check_in_time if branding and branding.shift_check_in_time else "10:30"
+            grace_mins = branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not None else 15
+            try:
+                in_h, in_m = map(int, shift_in_str.split(":"))
+                target_in = datetime.combine(today, datetime.min.time()).replace(hour=in_h, minute=in_m)
+                late_threshold = target_in + timedelta(minutes=grace_mins)
+                shift_status = "LATE_CHECKIN" if log_time > late_threshold else "ON_TIME"
+            except Exception:
+                shift_status = "ON_TIME"
+
+        record = AttendanceRecord(
+            tenant_id=current_tenant.id,
+            student_id=student.id,
+            node_id=payload.node_id or "MANUAL-OVERRIDE",
+            timestamp=log_time,
+            confidence_distance=0.0,
+            status="PRESENT",
+            punch_type="CHECK_IN" if is_corporate else "ATTENDANCE",
+            check_in_time=log_time if is_corporate else None,
+            check_out_time=None,
+            shift_status=shift_status,
+            is_manual_override=True,
+            override_reason=payload.reason.strip(),
+            override_by=payload.override_by.strip() if payload.override_by else "Admin",
+        )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+        msg = f"Manual Check-In recorded for '{student.name}' ({student.roll_number})."
 
     # Broadcast event via SSE to live dashboard feeds
     attendance_manager.publish({
@@ -93,6 +246,7 @@ def mark_manual_override(
         "node_id": record.node_id,
         "timestamp": record.timestamp.strftime("%Y-%m-%d %H:%M:%S") if record.timestamp else "",
         "status": "PRESENT",
+        "punch_type": record.punch_type or "CHECK_IN",
         "is_manual_override": True,
         "override_reason": record.override_reason,
         "override_by": record.override_by,
@@ -102,7 +256,8 @@ def mark_manual_override(
     return {
         "status": "success",
         "tenant_id": current_tenant.id,
-        "message": f"Manual override recorded for '{student.name}' ({student.roll_number}).",
+        "message": msg,
+        "punch_type": record.punch_type or "CHECK_IN",
         "record": record.to_dict(),
     }
 

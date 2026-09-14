@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # Base Paths
-BASE_DIR = Path(r"D:\Attendance System")
+BASE_DIR = Path(os.getenv("ATTENDANCE_BASE_DIR", str(Path(__file__).resolve().parent.parent)))
 DATABASE_DIR = BASE_DIR / "database"
 DATA_DIR = BASE_DIR / "data"
 FACES_DIR = DATA_DIR / "faces"
@@ -14,6 +14,8 @@ BRANDING_DIR = DATA_DIR / "branding"
 for directory in [DATABASE_DIR, DATA_DIR, FACES_DIR, SNAPSHOTS_DIR, EXPORTS_DIR, BRANDING_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
+from urllib.parse import quote_plus
+
 # Database Configuration (MySQL SaaS Architecture)
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", 3306))
@@ -22,7 +24,9 @@ MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
 MYSQL_DB = os.getenv("MYSQL_DB", "face_system")
 
 # SQLAlchemy Connection String pointing to local MySQL on port 3306
-DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}?charset=utf8mb4"
+_ENCODED_USER = quote_plus(MYSQL_USER)
+_ENCODED_PASSWORD = quote_plus(MYSQL_PASSWORD)
+DATABASE_URL = f"mysql+pymysql://{_ENCODED_USER}:{_ENCODED_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}?charset=utf8mb4"
 # SQLite database path preserved for rollback and migration imports
 SQLITE_DB_PATH = DATABASE_DIR / "attendance.db"
 DEFAULT_TENANT_ID = 1

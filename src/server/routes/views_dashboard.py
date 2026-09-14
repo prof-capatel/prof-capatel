@@ -128,7 +128,7 @@ def page_dashboard(
         "dashboard.html",
         {
             "request": request,
-            "page_title": "Live Overview",
+            "page_title": "Dashboard",
             "active_page": "dashboard",
             "total_students": total_students,
             "is_corporate": is_corporate,

@@ -781,7 +781,7 @@ function onEditClassSelectChanged() {
     }
 }
 
-function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, cadreLevel) {
+function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, cadreLevel, doj) {
     const modal = document.getElementById("editStudentModal");
     if (!modal) return;
 
@@ -791,6 +791,10 @@ function openEditModal(id, name, roll, dept, email, role, classSem, deptId, clas
     document.getElementById("editEmail").value = email || "";
     if (document.getElementById("editUserRole")) {
         document.getElementById("editUserRole").value = role || "student";
+    }
+
+    if (document.getElementById("editDateOfJoining")) {
+        document.getElementById("editDateOfJoining").value = doj || "";
     }
 
     if (document.getElementById("editHourlyRate")) {
@@ -899,6 +903,7 @@ async function submitStudentEdit(e) {
     const hourlyRateInput = document.getElementById("editHourlyRate")?.value;
     const monthlySalaryInput = document.getElementById("editMonthlyBaseSalary")?.value;
     const cadreInput = document.getElementById("editCadreLevel")?.value;
+    const dojInput = document.getElementById("editDateOfJoining")?.value;
 
     const saveBtn = document.getElementById("btnSaveEdit");
     const alertBox = document.getElementById("editResultAlert");
@@ -923,6 +928,7 @@ async function submitStudentEdit(e) {
                 hourly_rate: hourlyRateInput ? parseFloat(hourlyRateInput) : null,
                 monthly_base_salary: monthlySalaryInput ? parseFloat(monthlySalaryInput) : null,
                 cadre_level: cadreInput || null,
+                date_of_joining: dojInput !== undefined ? dojInput : null,
             }),
         });
         const data = await res.json();
@@ -1220,6 +1226,8 @@ async function captureRetakeSample(angle) {
 /* ==========================================================
    Universal Manual Override Modal Handlers
    ========================================================== */
+let currentOverrideEmployeeStatus = null;
+
 async function populateStudentDropdown() {
     try {
         const res = await fetch("/api/v1/enroll/students");
@@ -1227,8 +1235,10 @@ async function populateStudentDropdown() {
         const select = document.getElementById("overrideStudentSelect");
         if (!select || !data.students) return;
 
+        const currentVal = select.value;
         select.innerHTML = '<option value="">-- Choose Member --</option>' +
             data.students.map(s => `<option value="${s.id}">${s.name} (${s.roll_number} - ${s.department}) [${s.user_role || 'student'}]</option>`).join("");
+        if (currentVal) select.value = currentVal;
     } catch (e) {}
 }
 
@@ -1237,6 +1247,18 @@ function openManualOverrideModal() {
     if (modal) modal.classList.add("active");
     const alertBox = document.getElementById("overrideResultAlert");
     if (alertBox) alertBox.style.display = "none";
+    const statusBanner = document.getElementById("overrideStudentStatusBanner");
+    if (statusBanner) statusBanner.style.display = "none";
+    
+    // Set default datetime to now in local input format
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const tsInput = document.getElementById("overrideTimestamp");
+    if (tsInput && !tsInput.value) {
+        tsInput.value = now.toISOString().slice(0, 16);
+    }
+    
+    updateOverrideButtonState("AUTO");
     populateStudentDropdown();
 }
 
@@ -1244,13 +1266,103 @@ function openManualOverrideForStudent(studentId) {
     openManualOverrideModal();
     setTimeout(() => {
         const select = document.getElementById("overrideStudentSelect");
-        if (select) select.value = studentId;
-    }, 100);
+        if (select) {
+            select.value = studentId;
+            onOverrideStudentChanged();
+        }
+    }, 150);
 }
 
 function closeManualOverrideModal() {
     const modal = document.getElementById("manualOverrideModal");
     if (modal) modal.classList.remove("active");
+}
+
+async function onOverrideStudentChanged() {
+    const select = document.getElementById("overrideStudentSelect");
+    const statusBanner = document.getElementById("overrideStudentStatusBanner");
+    const punchTypeSelect = document.getElementById("overridePunchType");
+    const studentId = select ? parseInt(select.value) : null;
+
+    if (!studentId) {
+        if (statusBanner) statusBanner.style.display = "none";
+        currentOverrideEmployeeStatus = null;
+        updateOverrideButtonState(punchTypeSelect ? punchTypeSelect.value : "AUTO");
+        return;
+    }
+
+    if (statusBanner) {
+        statusBanner.style.display = "flex";
+        statusBanner.style.background = "var(--bg-subtle)";
+        statusBanner.style.color = "var(--text-muted)";
+        statusBanner.style.border = "1px solid var(--border-color)";
+        statusBanner.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking active punch status for today...';
+    }
+
+    try {
+        const res = await fetch(`/api/v1/attendance/employee-status/${studentId}`);
+        const data = await res.json();
+        if (res.ok && data.status) {
+            currentOverrideEmployeeStatus = data;
+            if (statusBanner) {
+                if (data.status === "CHECKED_IN") {
+                    statusBanner.style.background = "rgba(59, 130, 246, 0.1)";
+                    statusBanner.style.color = "#2563eb";
+                    statusBanner.style.border = "1px solid rgba(59, 130, 246, 0.3)";
+                    const inTime = data.check_in_time ? new Date(data.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "Active";
+                    statusBanner.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#2563eb;"></i> <span><strong>Currently Checked In:</strong> In-time: <code>${inTime}</code>. Next Action: <strong>CHECK-OUT</strong>.</span>`;
+                } else if (data.status === "CHECKED_OUT") {
+                    statusBanner.style.background = "rgba(16, 185, 129, 0.1)";
+                    statusBanner.style.color = "#059669";
+                    statusBanner.style.border = "1px solid rgba(16, 185, 129, 0.3)";
+                    const outTime = data.check_out_time ? new Date(data.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Completed";
+                    statusBanner.innerHTML = `<i class="fa-solid fa-flag-checkered" style="color:#059669;"></i> <span><strong>Shift Completed:</strong> Out-time: <code>${outTime}</code>.</span>`;
+                } else {
+                    statusBanner.style.background = "rgba(245, 158, 11, 0.1)";
+                    statusBanner.style.color = "#d97706";
+                    statusBanner.style.border = "1px solid rgba(245, 158, 11, 0.3)";
+                    statusBanner.innerHTML = `<i class="fa-solid fa-clock" style="color:#d97706;"></i> <span><strong>Not Punched Today:</strong> Next Action: <strong>CHECK-IN</strong>.</span>`;
+                }
+            }
+        }
+    } catch (e) {
+        if (statusBanner) statusBanner.style.display = "none";
+    }
+
+    const currentPunch = punchTypeSelect ? punchTypeSelect.value : "AUTO";
+    updateOverrideButtonState(currentPunch);
+}
+
+function onOverridePunchTypeChanged() {
+    const punchTypeSelect = document.getElementById("overridePunchType");
+    const punchType = punchTypeSelect ? punchTypeSelect.value : "AUTO";
+    updateOverrideButtonState(punchType);
+}
+
+function updateOverrideButtonState(punchType) {
+    const saveBtn = document.getElementById("btnSaveOverride");
+    if (!saveBtn) return;
+
+    let effectiveAction = punchType;
+    if (punchType === "AUTO") {
+        if (currentOverrideEmployeeStatus && currentOverrideEmployeeStatus.status === "CHECKED_IN") {
+            effectiveAction = "CHECK_OUT";
+        } else {
+            effectiveAction = "CHECK_IN";
+        }
+    }
+
+    if (effectiveAction === "CHECK_OUT") {
+        saveBtn.className = "btn btn-primary";
+        saveBtn.style.background = "#2563eb";
+        saveBtn.style.borderColor = "#2563eb";
+        saveBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Force Mark Check-Out';
+    } else {
+        saveBtn.className = "btn btn-primary";
+        saveBtn.style.background = "";
+        saveBtn.style.borderColor = "";
+        saveBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Force Mark Check-In';
+    }
 }
 
 function applyReasonPreset() {
@@ -1268,6 +1380,7 @@ function applyReasonPreset() {
 async function submitManualOverride(e) {
     e.preventDefault();
     const studentId = parseInt(document.getElementById("overrideStudentSelect").value);
+    const punchType = document.getElementById("overridePunchType")?.value || "AUTO";
     const timestamp = document.getElementById("overrideTimestamp").value;
     const reason = document.getElementById("overrideReasonInput").value.trim();
     const overrideBy = document.getElementById("overrideByInput").value.trim();
@@ -1289,6 +1402,7 @@ async function submitManualOverride(e) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 student_id: studentId,
+                punch_type: punchType,
                 timestamp: timestamp || null,
                 reason: reason,
                 override_by: overrideBy || "Admin",
@@ -1306,9 +1420,12 @@ async function submitManualOverride(e) {
             setTimeout(() => {
                 closeManualOverrideModal();
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+                updateOverrideButtonState(punchType);
                 if (typeof loadAnalyticsData === "function") loadAnalyticsData();
                 if (typeof applyLogFilters === "function") applyLogFilters();
+                if (window.location.pathname.includes('/students') || window.location.pathname.includes('/employees')) {
+                    window.location.reload();
+                }
             }, 900);
         } else {
             alertBox.style.display = "block";
@@ -1317,7 +1434,7 @@ async function submitManualOverride(e) {
             alertBox.style.border = "1px solid var(--badge-rose-border)";
             alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Failed to record override.'}`;
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+            updateOverrideButtonState(punchType);
         }
     } catch (err) {
         alertBox.style.display = "block";
@@ -1326,7 +1443,7 @@ async function submitManualOverride(e) {
         alertBox.style.border = "1px solid var(--badge-rose-border)";
         alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.';
         saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Force Mark Present';
+        updateOverrideButtonState(punchType);
     }
 }
 
@@ -1372,46 +1489,69 @@ function initThemeSwitcher() {
 }
 
 function setAppTheme(themeName) {
-    if (!["light", "dark", "academic"].includes(themeName)) {
-        themeName = "light";
+    let normalized = themeName;
+    if (normalized === "academic") normalized = "warm";
+    if (!["light", "dark", "warm"].includes(normalized)) {
+        normalized = "light";
     }
-    document.documentElement.setAttribute("data-theme", themeName);
+    document.documentElement.setAttribute("data-theme", normalized);
     try {
-        localStorage.setItem("app_theme", themeName);
+        localStorage.setItem("app_theme", normalized);
     } catch (e) {}
 
-    updateThemeSelectionCards(themeName);
-    updateQuickThemeButton(themeName);
+    updateThemeSelectionCards(normalized);
+    updateThemeDropdown(normalized);
 }
 
 function cycleAppTheme() {
     const currentTheme = document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
     let nextTheme = "light";
     if (currentTheme === "light") nextTheme = "dark";
-    else if (currentTheme === "dark") nextTheme = "academic";
+    else if (currentTheme === "dark") nextTheme = "warm";
     else nextTheme = "light";
 
     setAppTheme(nextTheme);
 }
 
+function updateThemeDropdown(theme) {
+    let current = theme || document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
+    if (current === "academic") current = "warm";
+    const select = document.getElementById("appThemeSelect");
+    const icon = document.getElementById("themeIconIndicator");
+    if (select) select.value = current;
+    if (icon) {
+        if (current === "dark") {
+            icon.className = "fa-solid fa-moon";
+            icon.style.color = "#38bdf8";
+        } else if (current === "warm") {
+            icon.className = "fa-solid fa-fire-flame-curved";
+            icon.style.color = "#ea580c";
+        } else {
+            icon.className = "fa-solid fa-sun";
+            icon.style.color = "#f59e0b";
+        }
+    }
+}
+
 function updateThemeSelectionCards(theme) {
-    const current = theme || document.documentElement.getAttribute("data-theme") || "light";
+    let current = theme || document.documentElement.getAttribute("data-theme") || "light";
+    if (current === "academic") current = "warm";
     const cardLight = document.getElementById("themeCardLight");
     const cardDark = document.getElementById("themeCardDark");
-    const cardAcad = document.getElementById("themeCardAcademic");
+    const cardWarm = document.getElementById("themeCardWarm") || document.getElementById("themeCardAcademic");
     const badge = document.getElementById("activeThemeBadge");
 
     if (cardLight) cardLight.classList.toggle("active", current === "light");
     if (cardDark) cardDark.classList.toggle("active", current === "dark");
-    if (cardAcad) cardAcad.classList.toggle("active", current === "academic");
+    if (cardWarm) cardWarm.classList.toggle("active", current === "warm");
 
     if (badge) {
         if (current === "dark") {
             badge.className = "badge badge-sky";
             badge.innerHTML = '<i class="fa-solid fa-moon"></i> Active: Midnight Dark';
-        } else if (current === "academic") {
+        } else if (current === "warm") {
             badge.className = "badge badge-amber";
-            badge.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Active: Warm Academic';
+            badge.innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i> Active: Warm';
         } else {
             badge.className = "badge badge-present";
             badge.innerHTML = '<i class="fa-solid fa-sun"></i> Active: Clean Light';
@@ -1419,21 +1559,7 @@ function updateThemeSelectionCards(theme) {
     }
 }
 
-function updateQuickThemeButton(theme) {
-    const current = theme || document.documentElement.getAttribute("data-theme") || "light";
-    const btn = document.getElementById("btnQuickThemeToggle");
-    const label = document.getElementById("quickThemeLabel");
-    if (!btn || !label) return;
-
-    if (current === "dark") {
-        label.innerText = "Dark";
-        btn.querySelector("i").className = "fa-solid fa-moon";
-    } else if (current === "academic") {
-        label.innerText = "Academic";
-        btn.querySelector("i").className = "fa-solid fa-graduation-cap";
-    } else {
-        label.innerText = "Light";
-        btn.querySelector("i").className = "fa-solid fa-sun";
-    }
-}
+document.addEventListener("DOMContentLoaded", () => {
+    updateThemeDropdown();
+});
 

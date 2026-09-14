@@ -125,9 +125,10 @@
 }
 
 /* ----------------------------------------------------------
-   THEME 3: Warm Academic (Scholarly Campus & Editorial Parchment)
+   THEME 3: Warm (Scholarly Campus & Editorial Parchment)
    ---------------------------------------------------------- */
-[data-theme="academic"] {
+[data-theme="academic"],
+[data-theme="warm"] {
   /* Surfaces & Backgrounds */
   --bg-primary: #faf7f2;
   --bg-secondary: #ffffff;
