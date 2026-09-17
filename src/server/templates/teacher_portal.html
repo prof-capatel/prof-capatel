@@ -41,7 +41,7 @@
                     </button>
                     <button class="btn btn-primary" onclick="openTeacherOverrideModal()">
                         <i class="fa-solid fa-user-check"></i>
-                        <span>Manual Override</span>
+                        <span>Manual check in/out</span>
                     </button>
                 </div>
             </div>
@@ -211,13 +211,13 @@
 }
 </style>
 
-<!-- Modal: Manual Override -->
+<!-- Modal: Manual check in/out -->
 <div id="teacherOverrideModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
     <div class="card" style="max-width: 480px; width: 100%; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-color);">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h3 style="font-size: 15.5px;">
                 <i class="fa-solid fa-user-check" style="color: var(--accent-emerald);"></i>
-                <span>Authorized Manual Biometric Override</span>
+                <span>Authorized Manual Check In/Out</span>
             </h3>
             <button type="button" onclick="closeTeacherOverrideModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
                 <i class="fa-solid fa-xmark"></i>
@@ -337,7 +337,7 @@
                             </td>
                             <td>
                                 ${r.is_manual_override ?
-                                    `<span class="badge badge-amber" style="font-size: 10px;" title="${r.override_reason}">Manual Override</span>` :
+                                    `<span class="badge badge-amber" style="font-size: 10px;" title="${r.override_reason}">Manual check in/out</span>` :
                                     (isPresent ? `<span class="badge badge-sky" style="font-size: 10px;">Face Vector</span>` : `<span style="color: var(--text-muted); font-size: 11px;">Pending</span>`)}
                             </td>
                         </tr>
@@ -359,7 +359,7 @@
         let csvContent = "Roll Number,Student Name,Class,Division,Status,Checkin Time,Device Node,Method\n";
 
         currentRosterData.forEach(r => {
-            csvContent += `"${r.roll_number}","${r.name}","${r.class_name}","${r.division_name}","${r.status}","${r.checkin_time || ''}","${r.node_id || ''}","${r.is_manual_override ? 'Manual Override' : 'Biometric'}"\n`;
+            csvContent += `"${r.roll_number}","${r.name}","${r.class_name}","${r.division_name}","${r.status}","${r.checkin_time || ''}","${r.node_id || ''}","${r.is_manual_override ? 'Manual Check In/Out' : 'Biometric'}"\n`;
         });
 
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });

@@ -2,16 +2,7 @@
 
 {% block content %}
 <!-- Top Header & Action Bar -->
-<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
-    <div>
-        <h3 style="font-size: 20px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-money-bill-wave" style="color: var(--accent-emerald);"></i>
-            <span>Corporate Payroll & Wage Management</span>
-        </h3>
-        <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
-            Automated work-hour aggregation, overtime computation (> 8 hrs/day @ 1.5x), missed checkout adjustments, and 1-click payroll exports.
-        </p>
-    </div>
+<div style="display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <button onclick="openPayrollSettingsModal()" class="btn btn-secondary" title="Configure Hourly Multipliers & Shift Policies">
             <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
@@ -213,7 +204,7 @@
                         <th>Std Hours</th>
                         <th>OT Hours</th>
                         <th>Total Hours</th>
-                        <th>Rate ($/hr)</th>
+                        <th>Rate (₹/hr)</th>
                         <th>Gross Pay</th>
                         <th>Shift Audit</th>
                         <th>Actions</th>
@@ -259,14 +250,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Custom Hourly Rate ($/hr)</label>
+                    <label class="form-label">Custom Hourly Rate (₹/hr)</label>
                     <input type="number" step="0.25" min="0" id="rateHourlyInput" class="form-control" placeholder="Leave empty for organization default">
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Applied for hourly wage computation.</div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Monthly Base Salary ($)</label>
-                    <input type="number" step="50" min="0" id="rateMonthlyInput" class="form-control" placeholder="e.g. 3500.00">
+                    <label class="form-label">Monthly Base Salary (₹)</label>
+                    <input type="number" step="50" min="0" id="rateMonthlyInput" class="form-control" placeholder="e.g. 45000.00">
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Applied for monthly cadre structure.</div>
                 </div>
 
@@ -323,7 +314,7 @@
 
                 <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group">
-                        <label class="form-label">Default Hourly Rate ($/hr) *</label>
+                        <label class="form-label">Default Hourly Rate (₹/hr) *</label>
                         <input type="number" step="0.5" min="0" id="cfgDefaultHourlyRate" class="form-control" required>
                     </div>
                     <div class="form-group">
@@ -360,7 +351,7 @@
 
                 <div class="form-group">
                     <label class="form-label">Currency Symbol</label>
-                    <input type="text" id="cfgCurrencySymbol" class="form-control" maxlength="5" placeholder="$">
+                    <input type="text" id="cfgCurrencySymbol" class="form-control" maxlength="5" placeholder="₹">
                 </div>
 
                 <div id="payrollSettingsAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
@@ -469,7 +460,7 @@
     function renderPayrollKPIs(data) {
         const summary = data.summary;
         const config = data.config;
-        const curr = summary.currency_symbol || "$";
+        const curr = summary.currency_symbol || "₹";
 
         document.getElementById("payrollRangeLabel").innerText = `${data.date_range.start_date} to ${data.date_range.end_date} (${data.date_range.days_count} Days)`;
         document.getElementById("kpiActiveWorkforce").innerText = summary.active_workforce;
@@ -494,7 +485,7 @@
             return;
         }
 
-        const curr = config.currency_symbol || "$";
+        const curr = config.currency_symbol || "₹";
 
         tableBody.innerHTML = items.map(emp => {
             let roleBadge = '<span class="badge badge-present">Employee</span>';
@@ -663,7 +654,7 @@
             document.getElementById("cfgEnableOvertime").value = currentPayrollConfig.enable_overtime ? "true" : "false";
             document.getElementById("cfgOvertimeMultiplier").value = currentPayrollConfig.overtime_rate_multiplier || 1.5;
             document.getElementById("cfgMissedCheckoutPolicy").value = currentPayrollConfig.missed_checkout_policy || "HALF_DAY";
-            document.getElementById("cfgCurrencySymbol").value = currentPayrollConfig.currency_symbol || "$";
+            document.getElementById("cfgCurrencySymbol").value = currentPayrollConfig.currency_symbol || "₹";
         }
 
         const alertBox = document.getElementById("payrollSettingsAlert");
@@ -686,7 +677,7 @@
             enable_overtime: document.getElementById("cfgEnableOvertime").value === "true",
             overtime_rate_multiplier: parseFloat(document.getElementById("cfgOvertimeMultiplier").value),
             missed_checkout_policy: document.getElementById("cfgMissedCheckoutPolicy").value,
-            currency_symbol: document.getElementById("cfgCurrencySymbol").value.trim() || "$",
+            currency_symbol: document.getElementById("cfgCurrencySymbol").value.trim() || "₹",
         };
 
         const saveBtn = document.getElementById("btnSavePayrollSettings");

@@ -11,9 +11,6 @@
         <i class="fa-solid fa-gear" style="color: var(--accent-primary);"></i>
         <span>System Settings & Institutional Branding</span>
     </h3>
-    <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-        Customize your institution profile, white-label visual identity, system themes, and hardware streaming parameters.
-    </p>
 </div>
 
 <!-- Section 1: Institutional White-Labeling & Branding -->
@@ -39,27 +36,27 @@
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
                     <div class="form-group">
                         <label class="form-label">Institution / Organization Name *</label>
-                        <input type="text" id="brandInstName" class="form-control" value="{{ branding.institution_name if branding else 'FaceAttendance Campus' }}" placeholder="e.g. Stanford University / Tech Corp" required oninput="updateBrandingLivePreview()">
+                        <input type="text" id="brandInstName" class="form-control" value="{{ branding.institution_name if branding else 'FaceAttendance Campus' }}" placeholder="e.g. Tata Consultancy Services / Infosys Ltd" required oninput="updateBrandingLivePreview()">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Acronym / Code *</label>
-                        <input type="text" id="brandShortCode" class="form-control" value="{{ branding.short_code if branding else 'FA-HUB' }}" placeholder="e.g. STAN-EDU" required oninput="updateBrandingLivePreview()">
+                        <input type="text" id="brandShortCode" class="form-control" value="{{ branding.short_code if branding else 'FA-HUB' }}" placeholder="e.g. TCS-MUM" required oninput="updateBrandingLivePreview()">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Portal Tagline / Subtitle</label>
-                    <input type="text" id="brandTagline" class="form-control" value="{{ branding.tagline if branding else 'Raspberry Pi Zero Edge Nodes & Central Face Recognition' }}" placeholder="e.g. Department of Computer Science & Engineering" oninput="updateBrandingLivePreview()">
+                    <input type="text" id="brandTagline" class="form-control" value="{{ branding.tagline if branding else 'Raspberry Pi Zero Edge Nodes & Central Face Recognition' }}" placeholder="e.g. Corporate Delivery Unit & Cloud Infrastructure" oninput="updateBrandingLivePreview()">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                     <div class="form-group">
                         <label class="form-label">Header Badge Label</label>
-                        <input type="text" id="brandBadgeText" class="form-control" value="{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}" placeholder="e.g. Main Campus Hub" oninput="updateBrandingLivePreview()">
+                        <input type="text" id="brandBadgeText" class="form-control" value="{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}" placeholder="e.g. Bengaluru Corporate Office" oninput="updateBrandingLivePreview()">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Contact / Admin Email</label>
-                        <input type="email" id="brandContactEmail" class="form-control" value="{{ branding.contact_email if branding and branding.contact_email else '' }}" placeholder="admin@institution.edu">
+                        <input type="email" id="brandContactEmail" class="form-control" value="{{ branding.contact_email if branding and branding.contact_email else '' }}" placeholder="admin@company.co.in">
                     </div>
                 </div>
 
@@ -179,10 +176,10 @@
                             </select>
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Default Hourly Rate ($/hr)</label>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Default Hourly Rate (₹/hr)</label>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <input type="number" step="0.5" min="0" id="brandDefaultHourlyRate" class="form-control" style="font-weight: 700;" value="{{ branding.default_hourly_rate if branding and branding.default_hourly_rate is not none else 15.0 }}">
-                                <span style="font-size: 11.5px; color: var(--text-muted);">$/hr</span>
+                                <span style="font-size: 11.5px; color: var(--text-muted);">₹/hr</span>
                             </div>
                         </div>
                     </div>
@@ -222,7 +219,7 @@
                         </div>
                         <div>
                             <label class="form-label" style="font-size: 12px; font-weight: 600;">Currency Symbol</label>
-                            <input type="text" id="brandCurrencySymbol" class="form-control" style="font-weight: 700;" maxlength="5" value="{{ branding.currency_symbol if branding and branding.currency_symbol else '$' }}">
+                            <input type="text" id="brandCurrencySymbol" class="form-control" style="font-weight: 700;" maxlength="5" value="{{ branding.currency_symbol if branding and branding.currency_symbol else '₹' }}">
                         </div>
                     </div>
                 </div>
@@ -695,6 +692,46 @@
                     <span class="theme-swatch" style="background: #15803d;" title="Accent: Forest Pine"></span>
                 </div>
             </div>
+
+            <!-- Theme 4: Professional Slate (Corporate Human-Crafted) -->
+            <div id="themeCardSlate" class="theme-card" onclick="setAppTheme('slate')">
+                <div>
+                    <div class="theme-card-header">
+                        <h4>
+                            <i class="fa-solid fa-briefcase" style="color: #1e40af;"></i>
+                            <span>Professional Slate</span>
+                        </h4>
+                        <div class="theme-card-check">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+
+                    <!-- Mini Mockup Box -->
+                    <div class="theme-preview-box slate-preview">
+                        <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                        <div class="theme-preview-body">
+                            <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                            <div class="theme-preview-content" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                <div style="height: 6px; width: 60%; background: #1e40af; border-radius: 3px;"></div>
+                                <div style="height: 4px; width: 90%; background: #cbd5e1; border-radius: 2px;"></div>
+                                <div style="height: 4px; width: 40%; background: #059669; border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                        Hand-crafted corporate slate foundation, executive steel navy accents, and refined enterprise whitespace.
+                    </p>
+                </div>
+
+                <div class="theme-swatches-row">
+                    <span class="theme-swatch" style="background: #f8fafc;" title="Background: Slate-50"></span>
+                    <span class="theme-swatch" style="background: #ffffff;" title="Card: Pure White"></span>
+                    <span class="theme-swatch" style="background: #1e40af;" title="Accent: Steel Navy"></span>
+                    <span class="theme-swatch" style="background: #2563eb;" title="Accent: Royal Blue"></span>
+                    <span class="theme-swatch" style="background: #059669;" title="Accent: Forest Emerald"></span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -752,6 +789,109 @@
                 </button>
                 <div id="prefsSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; text-align: center;"></div>
             </form>
+        </div>
+    </div>
+
+    <!-- Section: Work Shifts & Multi-Shift Timings Management -->
+    <div id="shiftsSection" class="card" style="margin-bottom: 28px;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-clock" style="color: var(--accent-primary);"></i>
+                    <span>Work Shifts & Timings Master</span>
+                </h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Configure multiple distinct working shifts, define grace windows, break times, and designate default shifts.
+                </p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openAddShiftModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-plus"></i> Add Work Shift
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive" style="overflow-x: auto;">
+                <table class="table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
+                            <th style="padding: 10px 12px;">Shift Name</th>
+                            <th style="padding: 10px 12px;">Code</th>
+                            <th style="padding: 10px 12px;">Work Hours</th>
+                            <th style="padding: 10px 12px;">Duration</th>
+                            <th style="padding: 10px 12px;">Grace Window</th>
+                            <th style="padding: 10px 12px;">Break</th>
+                            <th style="padding: 10px 12px;">Employees</th>
+                            <th style="padding: 10px 12px; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shiftsTableBody">
+                        {% if work_shifts %}
+                            {% for s in work_shifts %}
+                            <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="shiftRow-{{ s.id }}">
+                                <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="fa-solid fa-business-time" style="color: var(--accent-primary);"></i>
+                                        <span>{{ s.name }}</span>
+                                        {% if s.is_default %}
+                                        <span class="badge badge-emerald" style="font-size: 10px; font-weight: 700; padding: 2px 6px;">
+                                            <i class="fa-solid fa-star"></i> Default
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                                    {{ s.code or '—' }}
+                                </td>
+                                <td style="padding: 12px; font-weight: 600; color: var(--text-heading);">
+                                    <span style="color: var(--accent-emerald);">{{ s.start_time_formatted or s.start_time }}</span>
+                                    <span style="color: var(--text-muted); margin: 0 4px;">→</span>
+                                    <span style="color: var(--accent-rose);">{{ s.end_time_formatted or s.end_time }}</span>
+                                    {% if s.is_night_shift %}
+                                    <span class="badge badge-indigo" style="font-size: 10px; margin-left: 6px;">Night (+1d)</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px; font-weight: 600;">
+                                    {{ s.total_shift_hours }} hrs
+                                </td>
+                                <td style="padding: 12px; color: var(--text-secondary);">
+                                    ±{{ s.grace_period_minutes }} mins
+                                </td>
+                                <td style="padding: 12px; color: var(--text-muted);">
+                                    {{ s.break_duration_minutes }} mins
+                                </td>
+                                <td style="padding: 12px;">
+                                    <span class="badge badge-sky" style="font-size: 11px;">
+                                        <i class="fa-solid fa-users"></i> {{ s.assigned_employees_count or 0 }} Assigned
+                                    </span>
+                                </td>
+                                <td style="padding: 12px; text-align: right;">
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        {% if not s.is_default %}
+                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" onclick="setDefaultShift({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" title="Set as Default Shift">
+                                            <i class="fa-solid fa-star" style="color: #f59e0b;"></i> Make Default
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditShiftModal({{ s|tojson|safe }})' title="Edit Shift">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteShift({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" title="Delete Shift">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr id="emptyShiftsRow">
+                                <td colspan="8" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                                    <i class="fa-solid fa-clock" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                    <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No custom shifts created yet.</p>
+                                    <span style="font-size: 12px;">Click "Add Work Shift" above to configure morning, evening, or night shifts.</span>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -1663,7 +1803,225 @@ async function deleteDepartment(deptId, deptName) {
         alert("Network error while deleting department.");
     }
 }
+
+// ----------------------------------------------------
+// WORK SHIFT MANAGEMENT MODAL & CRUD
+// ----------------------------------------------------
+function openAddShiftModal() {
+    document.getElementById("shiftModalTitle").innerHTML = '<i class="fa-solid fa-clock" style="color: var(--accent-primary);"></i> <span>Add Work Shift</span>';
+    document.getElementById("modalShiftId").value = "";
+    document.getElementById("modalShiftName").value = "";
+    document.getElementById("modalShiftCode").value = "";
+    document.getElementById("modalShiftStartTime").value = "09:00";
+    document.getElementById("modalShiftEndTime").value = "17:30";
+    document.getElementById("modalShiftGrace").value = "15";
+    document.getElementById("modalShiftBreak").value = "0";
+    document.getElementById("modalShiftHalfDay").value = "4.0";
+    document.getElementById("modalShiftIsDefault").checked = false;
+    document.getElementById("shiftModalAlert").style.display = "none";
+    document.getElementById("shiftModal").style.display = "flex";
+}
+
+function openEditShiftModal(shift) {
+    document.getElementById("shiftModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Work Shift</span>';
+    document.getElementById("modalShiftId").value = shift.id;
+    document.getElementById("modalShiftName").value = shift.name || "";
+    document.getElementById("modalShiftCode").value = shift.code || "";
+    document.getElementById("modalShiftStartTime").value = shift.start_time || "10:30";
+    document.getElementById("modalShiftEndTime").value = shift.end_time || "18:00";
+    document.getElementById("modalShiftGrace").value = shift.grace_period_minutes != null ? shift.grace_period_minutes : 15;
+    document.getElementById("modalShiftBreak").value = shift.break_duration_minutes != null ? shift.break_duration_minutes : 0;
+    document.getElementById("modalShiftHalfDay").value = shift.half_day_hours != null ? shift.half_day_hours : 4.0;
+    document.getElementById("modalShiftIsDefault").checked = !!shift.is_default;
+    document.getElementById("shiftModalAlert").style.display = "none";
+    document.getElementById("shiftModal").style.display = "flex";
+}
+
+function closeShiftModal() {
+    document.getElementById("shiftModal").style.display = "none";
+}
+
+async function saveShiftModal(event) {
+    event.preventDefault();
+    const shiftId = document.getElementById("modalShiftId").value;
+    const name = document.getElementById("modalShiftName").value.trim();
+    const code = document.getElementById("modalShiftCode").value.trim();
+    const start_time = document.getElementById("modalShiftStartTime").value.trim();
+    const end_time = document.getElementById("modalShiftEndTime").value.trim();
+    const grace_period_minutes = parseInt(document.getElementById("modalShiftGrace").value) || 15;
+    const break_duration_minutes = parseInt(document.getElementById("modalShiftBreak").value) || 0;
+    const half_day_hours = parseFloat(document.getElementById("modalShiftHalfDay").value) || 4.0;
+    const is_default = document.getElementById("modalShiftIsDefault").checked;
+    const alertBox = document.getElementById("shiftModalAlert");
+
+    if (!name || !start_time || !end_time) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "rgba(239, 68, 68, 0.1)";
+        alertBox.style.color = "#f87171";
+        alertBox.innerText = "Shift Name, Start Time, and End Time are required.";
+        return;
+    }
+
+    const isEdit = !!shiftId;
+    const url = isEdit ? `/api/v1/shifts/${shiftId}` : "/api/v1/shifts";
+    const method = isEdit ? "PUT" : "POST";
+
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name,
+                code,
+                start_time,
+                end_time,
+                grace_period_minutes,
+                break_duration_minutes,
+                half_day_hours,
+                is_default
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.innerText = data.message || "Shift saved successfully!";
+            setTimeout(() => {
+                closeShiftModal();
+                window.location.reload();
+            }, 500);
+        } else {
+            alertBox.style.display = "block";
+            alertBox.style.background = "rgba(239, 68, 68, 0.1)";
+            alertBox.style.color = "#f87171";
+            alertBox.innerText = data.detail || "Failed to save shift.";
+        }
+    } catch (err) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "rgba(239, 68, 68, 0.1)";
+        alertBox.style.color = "#f87171";
+        alertBox.innerText = "Network error: " + err.message;
+    }
+}
+
+async function setDefaultShift(shiftId, shiftName) {
+    try {
+        const res = await fetch(`/api/v1/shifts/${shiftId}/set-default`, {
+            method: "POST"
+        });
+        const data = await res.json();
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert(data.detail || "Failed to set default shift.");
+        }
+    } catch (e) {
+        alert("Network error while updating default shift.");
+    }
+}
+
+async function deleteShift(shiftId, shiftName) {
+    if (!confirm(`Are you sure you want to delete shift "${shiftName}"?`)) return;
+    try {
+        const res = await fetch(`/api/v1/shifts/${shiftId}`, {
+            method: "DELETE"
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const row = document.getElementById(`shiftRow-${shiftId}`);
+            if (row) row.remove();
+            window.location.reload();
+        } else {
+            alert(data.detail || "Failed to delete shift.");
+        }
+    } catch (e) {
+        alert("Network error while deleting shift.");
+    }
+}
 </script>
+
+<!-- Work Shift Modal (Create / Edit) -->
+<div id="shiftModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 520px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+            <h3 id="shiftModalTitle" style="font-size: 15px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <i class="fa-solid fa-clock" style="color: var(--accent-primary);"></i>
+                <span>Add Work Shift</span>
+            </h3>
+            <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeShiftModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 18px;">
+            <form id="shiftModalForm" onsubmit="saveShiftModal(event)">
+                <input type="hidden" id="modalShiftId" value="">
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Shift Name *</label>
+                        <input type="text" id="modalShiftName" class="form-control" placeholder="e.g. General Day Shift, Rotational Night Shift" required>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Shift Code</label>
+                        <input type="text" id="modalShiftCode" class="form-control" placeholder="e.g. GEN-DAY, ROT-NGT">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                            <i class="fa-solid fa-arrow-right-to-bracket" style="color: var(--accent-emerald);"></i> Shift Start Time *
+                        </label>
+                        <input type="time" id="modalShiftStartTime" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="09:00" required>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                            <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-rose);"></i> Shift End Time *
+                        </label>
+                        <input type="time" id="modalShiftEndTime" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="17:30" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Grace Period</label>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="number" id="modalShiftGrace" class="form-control" min="0" max="120" value="15" style="font-weight: 700;">
+                            <span style="font-size: 11px; color: var(--text-muted);">m</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Break Duration</label>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="number" id="modalShiftBreak" class="form-control" min="0" max="240" value="0" style="font-weight: 700;">
+                            <span style="font-size: 11px; color: var(--text-muted);">m</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Half-Day (hrs)</label>
+                        <input type="number" step="0.5" id="modalShiftHalfDay" class="form-control" min="1" max="12" value="4.0" style="font-weight: 700;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px; padding: 10px 12px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="modalShiftIsDefault" style="width: 16px; height: 16px; cursor: pointer;">
+                    <label for="modalShiftIsDefault" style="font-size: 12px; font-weight: 600; color: var(--text-heading); cursor: pointer; margin: 0;">
+                        Set as Default Shift for New Employees & Legacy Records
+                    </label>
+                </div>
+
+                <div id="shiftModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeShiftModal()">Cancel</button>
+                    <button type="submit" id="btnSaveShiftModal" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> Save Shift
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Department Modal (Create / Edit) -->
 <div id="deptModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
@@ -1682,7 +2040,7 @@ async function deleteDepartment(deptId, deptName) {
                 <input type="hidden" id="modalDeptId" value="">
                 <div class="form-group" style="margin-bottom: 14px;">
                     <label class="form-label" style="font-size: 12px; font-weight: 600;">Department / Team Name *</label>
-                    <input type="text" id="modalDeptName" class="form-control" placeholder="e.g. Sales, Operations, Engineering" required>
+                    <input type="text" id="modalDeptName" class="form-control" placeholder="e.g. Enterprise Sales, Operations, AI & Software Engineering" required>
                 </div>
                 <div class="form-group" style="margin-bottom: 14px;">
                     <label class="form-label" style="font-size: 12px; font-weight: 600;">Department Code / Key</label>
@@ -1690,7 +2048,7 @@ async function deleteDepartment(deptId, deptName) {
                 </div>
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label class="form-label" style="font-size: 12px; font-weight: 600;">Description / Responsibilities</label>
-                    <textarea id="modalDeptDesc" class="form-control" rows="3" placeholder="Overview of team roles or functions..."></textarea>
+                    <textarea id="modalDeptDesc" class="form-control" rows="3" placeholder="Overview of team roles, deliverables, or functions..."></textarea>
                 </div>
                 <div id="deptModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">

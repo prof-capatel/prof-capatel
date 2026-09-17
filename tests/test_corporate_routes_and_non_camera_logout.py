@@ -60,7 +60,7 @@ class TestCorporateRoutesAndNonCameraLogout(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         html = res.text
         self.assertIn("Employee Directory", html)
-        self.assertIn("Corporate Directory & Employee Management", html)
+        self.assertIn("Search Name or Employee ID", html)
 
     def test_02_departments_and_teams_routes_accessibility(self):
         """Test GET /departments and GET /teams redirect corporate tenant to /settings#departmentsSection."""

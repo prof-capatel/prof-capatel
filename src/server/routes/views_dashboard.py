@@ -22,6 +22,7 @@ from src.database.models import (
     LeaveType,
     LeaveRequest,
     LeaveBalance,
+    WorkShift,
 )
 from src.database.session import get_db, seed_default_leave_types
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
@@ -143,6 +144,51 @@ def page_dashboard(
     )
 
 
+def get_tenant_roles_list(db: Session, tenant: Tenant) -> List[dict]:
+    """Helper to retrieve tenant-scoped allowed roles, supporting dynamic custom roles defined by tenant admin."""
+    tenant_type = (tenant.tenant_type or "educational").lower()
+    is_corp = tenant_type in ["corporate", "company", "enterprise"]
+
+    if is_corp:
+        base_roles = [
+            {"value": "employee", "label": "Employee / Staff Member"},
+            {"value": "manager", "label": "Manager / Team Lead"},
+            {"value": "admin_staff", "label": "Administrative Staff"},
+            {"value": "contractor", "label": "Contractor / External"},
+            {"value": "intern", "label": "Intern / Trainee"},
+        ]
+    else:
+        base_roles = [
+            {"value": "student", "label": "Student"},
+            {"value": "teacher", "label": "Teacher / Faculty"},
+            {"value": "admin_staff", "label": "Administrative Staff"},
+            {"value": "other", "label": "Other Institutional Member"},
+        ]
+
+    # Query distinct user roles stored for this tenant (supports custom tenant-defined roles)
+    db_roles = [
+        r[0] for r in db.query(Student.user_role)
+        .filter(Student.tenant_id == tenant.id, Student.user_role.isnot(None), Student.user_role != "")
+        .distinct()
+        .all()
+        if r[0]
+    ]
+
+    seen = {r["value"] for r in base_roles}
+    combined = list(base_roles)
+    for role in db_roles:
+        if is_corp and role in ["student", "teacher"]:
+            continue
+        if role not in seen:
+            combined.append({
+                "value": role,
+                "label": role.replace("_", " ").replace("-", " ").title(),
+            })
+            seen.add(role)
+
+    return combined
+
+
 @router.get("/students", response_class=HTMLResponse)
 @router.get("/employees", response_class=HTMLResponse)
 def page_students(
@@ -173,6 +219,8 @@ def page_students(
     divisions = db.query(Division).filter(Division.tenant_id == selected_tenant.id).order_by(Division.name.asc()).all()
     branding = get_branding_dict(db, selected_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    tenant_roles = get_tenant_roles_list(db, selected_tenant)
+    work_shifts = db.query(WorkShift).filter(WorkShift.tenant_id == selected_tenant.id).order_by(WorkShift.is_default.desc(), WorkShift.name.asc()).all()
 
     active_page_tag = "employees" if (is_corporate or request.url.path.startswith("/employees")) else "students"
     page_title = "Employee Directory" if is_corporate else "Student Directory"
@@ -187,12 +235,15 @@ def page_students(
             "departments": [d.to_dict() for d in departments],
             "classes": [c.to_dict() for c in classes],
             "divisions": [dv.to_dict() for dv in divisions],
+            "work_shifts": [ws.to_dict() for ws in work_shifts],
             "branding": branding,
             "current_tenant": selected_tenant.to_dict(),
             "all_tenants": all_tenants,
             "current_user": current_user.to_dict() if current_user else None,
             "is_super_admin": is_super_admin,
             "selected_tenant_id": selected_tenant.id,
+            "tenant_roles": tenant_roles,
+            "is_corporate": is_corporate,
         },
     )
 
@@ -205,25 +256,33 @@ def page_enroll(
 ):
     """Interactive Browser & Guided Face Enrollment."""
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
+    is_corporate = bool(current_tenant and current_tenant.tenant_type == "corporate")
     departments = db.query(Department).filter(Department.tenant_id == current_tenant.id).order_by(Department.name.asc()).all()
     classes = db.query(ClassModel).filter(ClassModel.tenant_id == current_tenant.id).order_by(ClassModel.name.asc()).all()
     divisions = db.query(Division).filter(Division.tenant_id == current_tenant.id).order_by(Division.name.asc()).all()
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
+    tenant_roles = get_tenant_roles_list(db, current_tenant)
+    work_shifts = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.is_active == True).order_by(WorkShift.is_default.desc(), WorkShift.name.asc()).all()
+
+    page_title = "Register New Employee" if is_corporate else "Enroll New Student"
 
     return templates.TemplateResponse(
         "enroll.html",
         {
             "request": request,
-            "page_title": "Enroll New Student",
+            "page_title": page_title,
             "active_page": "enroll",
             "departments": [d.to_dict() for d in departments],
             "classes": [c.to_dict() for c in classes],
             "divisions": [dv.to_dict() for dv in divisions],
+            "work_shifts": [ws.to_dict() for ws in work_shifts],
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
             "current_user": current_user.to_dict() if current_user else None,
+            "tenant_roles": tenant_roles,
+            "is_corporate": is_corporate,
         },
     )
 
@@ -400,6 +459,8 @@ def page_settings(
         d_dict["employee_count"] = emp_count
         dept_list.append(d_dict)
 
+    work_shifts = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id).order_by(WorkShift.is_default.desc(), WorkShift.name.asc()).all()
+
     return templates.TemplateResponse(
         "settings.html",
         {
@@ -411,6 +472,7 @@ def page_settings(
             "all_tenants": all_tenants,
             "current_user": current_user.to_dict() if current_user else None,
             "departments": dept_list,
+            "work_shifts": [ws.to_dict() for ws in work_shifts],
             "is_corporate": is_corporate,
         },
     )

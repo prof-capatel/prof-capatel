@@ -217,12 +217,12 @@
             <form id="createTenantForm" onsubmit="submitCreateTenant(event)">
                 <div class="form-group">
                     <label class="form-label" style="font-weight: 700;">Institution / Organization Name *</label>
-                    <input type="text" id="newTenantName" class="form-control" placeholder="e.g. Stanford School of Engineering" oninput="autoGenerateSlug(this.value)" required>
+                    <input type="text" id="newTenantName" class="form-control" placeholder="e.g. Tata Technologies / IIT Bombay" oninput="autoGenerateSlug(this.value)" required>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" style="font-weight: 700;">Subdomain Identifier / Slug *</label>
-                    <input type="text" id="newTenantSlug" class="form-control" placeholder="e.g. stanford-eng" style="font-family: monospace;" required>
+                    <input type="text" id="newTenantSlug" class="form-control" placeholder="e.g. tata-tech" style="font-family: monospace;" required>
                     <small style="color: var(--text-muted); font-size: 11.5px;">Lowercase alphanumeric identifier used for routing and data isolation.</small>
                 </div>
 
@@ -237,7 +237,7 @@
 
                 <div class="form-group">
                     <label class="form-label" style="font-weight: 700;">Contact Email</label>
-                    <input type="email" id="newTenantEmail" class="form-control" placeholder="admin@stanford.edu">
+                    <input type="email" id="newTenantEmail" class="form-control" placeholder="admin@tatatech.co.in">
                 </div>
 
                 <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
@@ -272,12 +272,12 @@
                     </span>
                     <div class="form-group">
                         <label class="form-label">Administrator Full Name *</label>
-                        <input type="text" id="newAdminFullName" class="form-control" placeholder="Dr. Robert Lang" required>
+                        <input type="text" id="newAdminFullName" class="form-control" placeholder="Shri Rajesh Sharma" required>
                     </div>
                     <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label">Username *</label>
-                            <input type="text" id="newAdminUsername" class="form-control" placeholder="admin_stanford" required>
+                            <input type="text" id="newAdminUsername" class="form-control" placeholder="admin_tatatech" required>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label">Temporary Password *</label>
@@ -608,7 +608,7 @@
                             <input type="number" id="newPlanMaxNodes" class="form-control" value="20" min="1" required>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Price / Mo ($)</label>
+                            <label class="form-label">Price / Mo (₹)</label>
                             <input type="number" id="newPlanPrice" class="form-control" value="99" min="0" step="0.1">
                         </div>
                     </div>
@@ -713,7 +713,7 @@
                 </td>
                 <td style="font-weight: 700;">${p.max_face_encodings.toLocaleString()}</td>
                 <td style="font-weight: 700;">${p.max_nodes}</td>
-                <td style="font-family: monospace; font-weight: 600;">$${p.price_monthly.toFixed(2)}</td>
+                <td style="font-family: monospace; font-weight: 600;">₹${p.price_monthly.toLocaleString()}</td>
                 <td style="text-align: right;">
                     <span class="badge ${p.is_active ? 'badge-present' : 'badge-slate'}" style="font-size: 10px;">
                         ${p.is_active ? 'Active' : 'Inactive'}

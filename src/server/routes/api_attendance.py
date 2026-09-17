@@ -15,7 +15,7 @@ from src.config import EXPORTS_DIR
 from src.core.attendance_manager import attendance_manager
 from src.core.camera_utils import decode_image_bytes
 from src.core.face_engine import face_engine
-from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant
+from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant, WorkShift
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
 from src.server.rbac_middleware import check_tenant_operational_access, create_access_token
@@ -168,11 +168,22 @@ def mark_manual_override(
                 record.work_duration_minutes = duration_mins
             
             # Evaluate shift completion against target checkout time
-            shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
+            emp_shift = student.shift
+            if not emp_shift and student.shift_id:
+                emp_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.id == student.shift_id).first()
+            if not emp_shift:
+                emp_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.is_default == True).first()
+
+            shift_out_str = emp_shift.end_time if emp_shift else (branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00")
+            grace_mins = emp_shift.grace_period_minutes if emp_shift else (branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not None else 15)
+            is_night_shift = emp_shift.is_night_shift if emp_shift else False
             try:
                 out_h, out_m = map(int, shift_out_str.split(":"))
-                target_out = datetime.combine(today, datetime.min.time()).replace(hour=out_h, minute=out_m)
-                record.shift_status = "EARLY_DEPARTURE" if log_time < target_out else "COMPLETED"
+                check_in_dt = record.check_in_time or record.timestamp
+                target_out_date = check_in_dt.date() + timedelta(days=1) if is_night_shift else check_in_dt.date()
+                target_out = datetime.combine(target_out_date, datetime.min.time()).replace(hour=out_h, minute=out_m)
+                early_threshold = target_out - timedelta(minutes=grace_mins)
+                record.shift_status = "EARLY_DEPARTURE" if log_time < early_threshold else "COMPLETED"
             except Exception:
                 record.shift_status = "COMPLETED"
 
@@ -201,11 +212,16 @@ def mark_manual_override(
             db.refresh(record)
             msg = f"Manual Check-Out recorded for '{student.name}' ({student.roll_number})."
     else:
-        # CHECK-IN FLOW
         shift_status = "ON_TIME"
         if is_corporate:
-            shift_in_str = branding.shift_check_in_time if branding and branding.shift_check_in_time else "10:30"
-            grace_mins = branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not None else 15
+            emp_shift = student.shift
+            if not emp_shift and student.shift_id:
+                emp_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.id == student.shift_id).first()
+            if not emp_shift:
+                emp_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.is_default == True).first()
+
+            shift_in_str = emp_shift.start_time if emp_shift else (branding.shift_check_in_time if branding and branding.shift_check_in_time else "10:30")
+            grace_mins = emp_shift.grace_period_minutes if emp_shift else (branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not None else 15)
             try:
                 in_h, in_m = map(int, shift_in_str.split(":"))
                 target_in = datetime.combine(today, datetime.min.time()).replace(hour=in_h, minute=in_m)
@@ -269,16 +285,19 @@ def serialize_evaluated_record(rec: AttendanceRecord, is_corporate: bool, brandi
         # Dynamic missed checkout evaluation
         if rec.check_in_time and not rec.check_out_time:
             rec_date = rec.timestamp.date() if rec.timestamp else now.date()
-            shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
+            emp_shift = rec.student.shift if (rec.student and rec.student.shift) else None
+            shift_out_str = emp_shift.end_time if emp_shift else (branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00")
+            is_night_shift = emp_shift.is_night_shift if emp_shift else False
             try:
                 out_parts = shift_out_str.split(":")
                 out_h, out_m = int(out_parts[0]), int(out_parts[1])
-                target_out = datetime.combine(rec_date, dt_time(hour=out_h, minute=out_m))
+                target_out_date = rec_date + timedelta(days=1) if is_night_shift else rec_date
+                target_out = datetime.combine(target_out_date, dt_time(hour=out_h, minute=out_m))
                 end_window = target_out + timedelta(minutes=30)
             except Exception:
                 end_window = datetime.combine(rec_date, dt_time(hour=18, minute=30))
 
-            if rec_date < now.date() or now > end_window:
+            if (rec_date < now.date() and not is_night_shift) or (is_night_shift and rec_date < now.date() - timedelta(days=1)) or now > end_window:
                 d["shift_status"] = "MISSED_CHECKOUT"
                 d["status_badge_label"] = "Missed Checkout"
             else:

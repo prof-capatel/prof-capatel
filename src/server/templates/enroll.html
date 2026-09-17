@@ -30,16 +30,23 @@
                 <div class="form-group">
                     <label class="form-label">User Role *</label>
                     <select id="userRole" class="form-control" required onchange="onEnrollRoleChanged('webcam')">
-                        {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
-                        <option value="employee" selected>Employee / Staff Member</option>
-                        <option value="manager">Manager / Team Lead</option>
-                        <option value="admin_staff">Administrative Staff</option>
-                        <option value="contractor">Contractor / Other Member</option>
+                        {% if tenant_roles %}
+                            {% for r in tenant_roles %}
+                            <option value="{{ r.value }}" {% if loop.first %}selected{% endif %}>{{ r.label }}</option>
+                            {% endfor %}
                         {% else %}
-                        <option value="student" selected>Student</option>
-                        <option value="teacher">Teacher / Faculty</option>
-                        <option value="admin_staff">Administrative Staff</option>
-                        <option value="other">Other Institutional Member</option>
+                            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                            <option value="employee" selected>Employee / Staff Member</option>
+                            <option value="manager">Manager / Team Lead</option>
+                            <option value="admin_staff">Administrative Staff</option>
+                            <option value="contractor">Contractor / External</option>
+                            <option value="intern">Intern / Trainee</option>
+                            {% else %}
+                            <option value="student" selected>Student</option>
+                            <option value="teacher">Teacher / Faculty</option>
+                            <option value="admin_staff">Administrative Staff</option>
+                            <option value="other">Other Institutional Member</option>
+                            {% endif %}
                         {% endif %}
                     </select>
                 </div>
@@ -51,7 +58,7 @@
 
                 <div class="form-group">
                     <label class="form-label">Full Name *</label>
-                    <input type="text" id="studentName" class="form-control" placeholder="e.g. Jane Doe" required>
+                    <input type="text" id="studentName" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. Rajesh Sharma{% else %}e.g. Aarav Patel{% endif %}" required>
                 </div>
 
                 <!-- Cascading Department -->
@@ -89,6 +96,23 @@
                 </div>
                 {% endif %}
 
+                {% if is_corporate or (current_tenant and current_tenant.tenant_type == 'corporate') %}
+                <div class="form-group">
+                    <label class="form-label">Assigned Work Shift *</label>
+                    <select id="enrollShiftSelect" class="form-control" required>
+                        {% if work_shifts %}
+                            {% for s in work_shifts %}
+                            <option value="{{ s.id }}" {% if s.is_default %}selected{% endif %}>
+                                {{ s.name }} ({{ s.start_time_formatted or s.start_time }} - {{ s.end_time_formatted or s.end_time }}){% if s.is_default %} [Default]{% endif %}
+                            </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">General Shift (Default)</option>
+                        {% endif %}
+                    </select>
+                </div>
+                {% endif %}
+
                 <div class="form-group">
                     <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Date of Joining (DOJ) *{% else %}Date of Admission / Joining{% endif %}</label>
                     <input type="date" id="dateOfJoining" class="form-control" {% if current_tenant and current_tenant.tenant_type == 'corporate' %}required{% endif %}>
@@ -96,12 +120,12 @@
 
                 <div class="form-group">
                     <label class="form-label">Email Address (Optional)</label>
-                    <input type="email" id="email" class="form-control" placeholder="e.g. jane.doe@university.edu">
+                    <input type="email" id="email" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. rajesh.sharma@company.co.in{% else %}e.g. aarav.patel@college.edu.in{% endif %}">
                 </div>
 
                 <button type="submit" id="btnRegisterProfile" class="btn btn-primary" style="width: 100%; margin-top: 6px;">
                     <i class="fa-solid fa-check"></i>
-                    <span>Register Profile & Start Face Capture</span>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Register Employee & Start Face Capture{% else %}Register Profile & Start Face Capture{% endif %}</span>
                 </button>
             </form>
 
@@ -144,7 +168,7 @@
 
                 <div id="enrollmentCompleteBox" style="display: none; margin-top: 16px; padding: 16px; background: var(--badge-emerald-bg); border: 1px solid var(--badge-emerald-border); border-radius: var(--radius-sm); text-align: center;">
                     <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald); font-size: 26px; margin-bottom: 6px;"></i>
-                    <h5 style="color: var(--badge-emerald-text); font-size: 15px; font-weight: 700;">Enrollment Completed!</h5>
+                    <h5 style="color: var(--badge-emerald-text); font-size: 15px; font-weight: 700;">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Registration Completed!{% else %}Enrollment Completed!{% endif %}</h5>
                     <p style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 14px;">3-angle embeddings cached into recognition engine.</p>
                     <a href="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}/employees{% else %}/students{% endif %}" class="btn btn-primary" style="padding: 7px 18px; font-size: 12.5px;">
                         <i class="fa-solid fa-users"></i> {% if current_tenant and current_tenant.tenant_type == 'corporate' %}View in Employee Directory{% else %}View in Student Directory{% endif %}
@@ -159,7 +183,7 @@
         <div class="card-header" style="flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-video" style="color: var(--accent-cyan);"></i>
-                <span>Live Enrollment View</span>
+                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Live Employee Face Capture{% else %}Live Enrollment View{% endif %}</span>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <select id="cameraSourceSelect" class="form-control" style="max-width: 170px; font-size: 11px; padding: 4px 8px; height: 30px; display: none;" onchange="onCameraSourceChanged(this.value)">
@@ -219,7 +243,7 @@
             <div class="card-header">
                 <h3>
                     <i class="fa-solid fa-cloud-arrow-up" style="color: var(--accent-primary);"></i>
-                    <span>Member Details & Batch Upload</span>
+                    <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Details & Batch Upload{% else %}Member Details & Batch Upload{% endif %}</span>
                 </h3>
             </div>
             <div class="card-body">
@@ -227,16 +251,23 @@
                     <div class="form-group">
                         <label class="form-label">User Role *</label>
                         <select id="batchUserRole" class="form-control" required onchange="onEnrollRoleChanged('batch')">
-                            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
-                            <option value="employee" selected>Employee / Staff Member</option>
-                            <option value="manager">Manager / Team Lead</option>
-                            <option value="admin_staff">Administrative Staff</option>
-                            <option value="contractor">Contractor / Other Member</option>
+                            {% if tenant_roles %}
+                                {% for r in tenant_roles %}
+                                <option value="{{ r.value }}" {% if loop.first %}selected{% endif %}>{{ r.label }}</option>
+                                {% endfor %}
                             {% else %}
-                            <option value="student" selected>Student</option>
-                            <option value="teacher">Teacher / Faculty</option>
-                            <option value="admin_staff">Administrative Staff</option>
-                            <option value="other">Other Institutional Member</option>
+                                {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                                <option value="employee" selected>Employee / Staff Member</option>
+                                <option value="manager">Manager / Team Lead</option>
+                                <option value="admin_staff">Administrative Staff</option>
+                                <option value="contractor">Contractor / External</option>
+                                <option value="intern">Intern / Trainee</option>
+                                {% else %}
+                                <option value="student" selected>Student</option>
+                                <option value="teacher">Teacher / Faculty</option>
+                                <option value="admin_staff">Administrative Staff</option>
+                                <option value="other">Other Institutional Member</option>
+                                {% endif %}
                             {% endif %}
                         </select>
                     </div>
@@ -248,7 +279,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Full Name *</label>
-                        <input type="text" id="batchStudentName" class="form-control" placeholder="e.g. Alex Morgan" required>
+                        <input type="text" id="batchStudentName" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. Priya Patel{% else %}e.g. Ananya Sen{% endif %}" required>
                     </div>
 
                     <!-- Cascading Department -->
@@ -286,6 +317,23 @@
                     </div>
                     {% endif %}
 
+                    {% if is_corporate or (current_tenant and current_tenant.tenant_type == 'corporate') %}
+                    <div class="form-group">
+                        <label class="form-label">Assigned Work Shift *</label>
+                        <select id="batchEnrollShiftSelect" class="form-control" required>
+                            {% if work_shifts %}
+                                {% for s in work_shifts %}
+                                <option value="{{ s.id }}" {% if s.is_default %}selected{% endif %}>
+                                    {{ s.name }} ({{ s.start_time_formatted or s.start_time }} - {{ s.end_time_formatted or s.end_time }}){% if s.is_default %} [Default]{% endif %}
+                                </option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="">General Shift (Default)</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% endif %}
+
                     <div class="form-group">
                         <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Date of Joining (DOJ) *{% else %}Date of Admission / Joining{% endif %}</label>
                         <input type="date" id="batchDateOfJoining" class="form-control" {% if current_tenant and current_tenant.tenant_type == 'corporate' %}required{% endif %}>
@@ -293,7 +341,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Email Address (Optional)</label>
-                        <input type="email" id="batchEmail" class="form-control" placeholder="e.g. alex.morgan@university.edu">
+                        <input type="email" id="batchEmail" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. priya.patel@company.co.in{% else %}e.g. ananya.sen@college.edu.in{% endif %}">
                     </div>
 
                     <button type="submit" id="btnSubmitBatch" class="btn btn-primary" style="width: 100%; margin-top: 10px;" disabled>
@@ -647,6 +695,8 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
 
     const email = document.getElementById("email").value.trim();
     const dateOfJoining = document.getElementById("dateOfJoining")?.value || null;
+    const shiftSelect = document.getElementById("enrollShiftSelect");
+    const shiftId = shiftSelect && shiftSelect.value ? parseInt(shiftSelect.value) : null;
 
     if (userRole === "student" && !classId) {
         alert("Please select a valid Class/Semester for the student.");
@@ -667,6 +717,7 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
                 division_id: divId,
                 email: email || null,
                 user_role: userRole,
+                shift_id: shiftId,
                 date_of_joining: dateOfJoining || null,
             })
         });
@@ -902,6 +953,10 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     if (divId) formData.append("division_id", divId);
     if (email) formData.append("email", email);
     if (batchDoj) formData.append("date_of_joining", batchDoj);
+    const batchShiftSelect = document.getElementById("batchEnrollShiftSelect");
+    if (batchShiftSelect && batchShiftSelect.value) {
+        formData.append("shift_id", batchShiftSelect.value);
+    }
 
     // Send exactly 3 distinct named files for API compatibility
     formData.append("photo_front", batchFiles[0]);

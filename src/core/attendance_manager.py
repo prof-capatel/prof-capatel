@@ -13,7 +13,7 @@ from src.config import (
     DEDUPLICATION_WINDOW_SECONDS,
     DEFAULT_TENANT_ID,
 )
-from src.database.models import AttendanceRecord, NodeDevice, Student, SystemBranding, Tenant
+from src.database.models import AttendanceRecord, NodeDevice, Student, SystemBranding, Tenant, WorkShift
 from src.database.session import SessionLocal, get_db_context
 from src.utils.timezone import get_ist_now, get_ist_date
 
@@ -210,9 +210,6 @@ class AttendanceManager:
             is_corporate = tenant_type in ["corporate", "company", "enterprise"]
 
             branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == tenant_id).first()
-            shift_in_str = branding.shift_check_in_time if branding and branding.shift_check_in_time else "10:30"
-            shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
-            grace_mins = branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not None else 15
             min_checkout_interval = branding.min_checkout_interval_minutes if branding and branding.min_checkout_interval_minutes is not None else 15
             if custom_cooldown_seconds is not None:
                 min_checkout_interval = max(0, custom_cooldown_seconds // 60)
@@ -234,16 +231,42 @@ class AttendanceManager:
                     "roll_number": student.roll_number,
                 }
 
+            # Resolve Employee Assigned Shift
+            emp_shift = student.shift
+            if not emp_shift and student.shift_id:
+                emp_shift = db.query(WorkShift).filter(WorkShift.tenant_id == tenant_id, WorkShift.id == student.shift_id).first()
+            if not emp_shift:
+                emp_shift = db.query(WorkShift).filter(WorkShift.tenant_id == tenant_id, WorkShift.is_default == True).first()
+            if not emp_shift:
+                emp_shift = db.query(WorkShift).filter(WorkShift.tenant_id == tenant_id).first()
+
+            if emp_shift:
+                shift_in_str = emp_shift.start_time or "10:30"
+                shift_out_str = emp_shift.end_time or "18:00"
+                grace_mins = emp_shift.grace_period_minutes if emp_shift.grace_period_minutes is not None else 15
+                is_night_shift = emp_shift.is_night_shift
+            else:
+                shift_in_str = branding.shift_check_in_time if branding and branding.shift_check_in_time else "10:30"
+                shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
+                grace_mins = branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not None else 15
+                try:
+                    sh, sm = map(int, shift_in_str.split(":"))
+                    eh, em = map(int, shift_out_str.split(":"))
+                    is_night_shift = (eh * 60 + em) < (sh * 60 + sm)
+                except Exception:
+                    is_night_shift = False
+
             if is_corporate:
                 # ----------------------------------------------------
                 # CORPORATE MULTI-PUNCH (CHECK-IN & CHECK-OUT) WORKFLOW
                 # ----------------------------------------------------
+                lookback_start = now - timedelta(hours=20) if is_night_shift else start_today
                 existing_record = (
                     db.query(AttendanceRecord)
                     .filter(
                         AttendanceRecord.tenant_id == tenant_id,
                         AttendanceRecord.student_id == student_id,
-                        AttendanceRecord.timestamp.between(start_today, end_today),
+                        AttendanceRecord.timestamp >= lookback_start,
                     )
                     .order_by(AttendanceRecord.timestamp.desc())
                     .first()
@@ -362,7 +385,9 @@ class AttendanceManager:
                     try:
                         out_parts = shift_out_str.split(":")
                         out_h, out_m = int(out_parts[0]), int(out_parts[1])
-                        target_out = datetime.combine(today, datetime.min.time()).replace(hour=out_h, minute=out_m)
+                        check_in_dt = existing_record.check_in_time or existing_record.timestamp
+                        target_out_date = check_in_dt.date() + timedelta(days=1) if is_night_shift else check_in_dt.date()
+                        target_out = datetime.combine(target_out_date, datetime.min.time()).replace(hour=out_h, minute=out_m)
                         early_threshold = target_out - timedelta(minutes=grace_mins)
                         if now < early_threshold:
                             existing_record.shift_status = "EARLY_DEPARTURE"

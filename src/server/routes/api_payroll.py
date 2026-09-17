@@ -38,7 +38,7 @@ class PayrollSettingsUpdateRequest(BaseModel):
     enable_overtime: Optional[bool] = True
     overtime_rate_multiplier: Optional[float] = 1.5
     missed_checkout_policy: Optional[str] = "HALF_DAY"  # HALF_DAY, ZERO_HOURS, STANDARD_SHIFT
-    currency_symbol: Optional[str] = "$"
+    currency_symbol: Optional[str] = "₹"
 
 
 def calculate_payroll_data(
@@ -65,7 +65,7 @@ def calculate_payroll_data(
     enable_overtime = bool(branding.enable_overtime if branding and branding.enable_overtime is not None else True)
     ot_multiplier = float(branding.overtime_rate_multiplier if branding and branding.overtime_rate_multiplier is not None else 1.5)
     missed_policy = (branding.missed_checkout_policy if branding and branding.missed_checkout_policy else "HALF_DAY").upper()
-    currency = branding.currency_symbol if branding and branding.currency_symbol else "$"
+    currency = branding.currency_symbol if branding and branding.currency_symbol else "₹"
     shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
 
     # Query active employees in tenant
@@ -113,6 +113,16 @@ def calculate_payroll_data(
             .all()
         )
 
+        # Resolve Employee specific shift hours & timings
+        emp_shift = emp.shift
+        emp_std_hours = float(emp_shift.total_shift_hours if emp_shift else std_daily_hours)
+        emp_shift_out = emp_shift.end_time if emp_shift else shift_out_str
+        is_emp_night = emp_shift.is_night_shift if emp_shift else False
+        try:
+            emp_out_h, emp_out_m = map(int, emp_shift_out.split(":"))
+        except Exception:
+            emp_out_h, emp_out_m = 18, 0
+
         # Group attendance records by calendar date
         daily_records = {}
         for r in records:
@@ -142,26 +152,27 @@ def calculate_payroll_data(
                     day_mins += max(0, r.work_duration_minutes)
                 elif r.check_in_time and not r.check_out_time:
                     # Open session -> evaluate missed checkout vs active shift
-                    target_out = datetime.combine(cal_date, dt_time(hour=out_h, minute=out_m))
-                    is_past = (cal_date < now.date()) or (now > target_out + timedelta(minutes=30))
+                    target_out_date = cal_date + timedelta(days=1) if is_emp_night else cal_date
+                    target_out = datetime.combine(target_out_date, dt_time(hour=emp_out_h, minute=emp_out_m))
+                    is_past = (cal_date < now.date() and not is_emp_night) or (is_emp_night and cal_date < now.date() - timedelta(days=1)) or (now > target_out + timedelta(minutes=30))
                     if is_past:
                         missed_checkouts += 1
                         if missed_policy == "HALF_DAY":
-                            day_mins += int(std_daily_hours * 0.5 * 60)
+                            day_mins += int(emp_std_hours * 0.5 * 60)
                         elif missed_policy == "STANDARD_SHIFT":
-                            day_mins += int(std_daily_hours * 60)
+                            day_mins += int(emp_std_hours * 60)
                         # ZERO_HOURS adds 0 minutes
                     else:
                         # Ongoing shift today -> credit partial elapsed hours
                         elapsed = int((now - r.check_in_time).total_seconds() / 60)
-                        day_mins += max(0, min(int(std_daily_hours * 60), elapsed))
+                        day_mins += max(0, min(int(emp_std_hours * 60), elapsed))
 
             day_hours = round(day_mins / 60.0, 2)
             emp_total_minutes += day_mins
 
-            if enable_overtime and day_hours > std_daily_hours:
-                emp_standard_hours += std_daily_hours
-                emp_overtime_hours += round(day_hours - std_daily_hours, 2)
+            if enable_overtime and day_hours > emp_std_hours:
+                emp_standard_hours += emp_std_hours
+                emp_overtime_hours += round(day_hours - emp_std_hours, 2)
             else:
                 emp_standard_hours += day_hours
 
@@ -180,7 +191,7 @@ def calculate_payroll_data(
             .all()
         )
         paid_leave_days = sum(float(l.total_days or 0.0) for l in approved_leaves)
-        paid_leave_hours = round(paid_leave_days * std_daily_hours, 2)
+        paid_leave_hours = round(paid_leave_days * emp_std_hours, 2)
 
         total_emp_hours = round(emp_total_minutes / 60.0, 2)
         total_payable_hours = round(total_emp_hours + paid_leave_hours, 2)
@@ -195,7 +206,7 @@ def calculate_payroll_data(
             ot_pay = round(emp_overtime_hours * effective_rate * ot_multiplier, 2) if enable_overtime else 0.0
             gross_pay = round(std_pay + ot_pay, 2)
         elif payroll_structure == "MONTHLY_CADRE":
-            base_monthly = float(emp.monthly_base_salary if emp.monthly_base_salary is not None else (effective_rate * std_daily_hours * 22))
+            base_monthly = float(emp.monthly_base_salary if emp.monthly_base_salary is not None else (effective_rate * emp_std_hours * 22))
             daily_rate = round(base_monthly / 22.0, 2)
             std_pay = round((days_worked + paid_leave_days) * daily_rate, 2)
             ot_pay = round(emp_overtime_hours * effective_rate * ot_multiplier, 2) if enable_overtime else 0.0
@@ -218,6 +229,9 @@ def calculate_payroll_data(
             "department": emp.department,
             "user_role": emp.user_role or "employee",
             "cadre_level": emp.cadre_level or "Standard Cadre",
+            "shift_id": emp.shift_id,
+            "shift_name": emp.shift.name if emp.shift else "Default Shift",
+            "shift_timings": f"{emp.shift.start_time} - {emp.shift.end_time}" if emp.shift else f"{branding.shift_check_in_time if branding else '10:30'} - {branding.shift_check_out_time if branding else '18:00'}",
             "days_worked": days_worked,
             "total_active_hours": total_emp_hours,
             "paid_leave_days": round(paid_leave_days, 1),
@@ -366,7 +380,7 @@ def export_payroll_report(
 
     items = payroll_res.get("items", [])
     summary = payroll_res.get("summary", {})
-    currency = summary.get("currency_symbol", "$")
+    currency = summary.get("currency_symbol", "₹")
 
     export_rows = []
     for item in items:

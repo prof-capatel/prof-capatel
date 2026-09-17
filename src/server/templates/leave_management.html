@@ -4,28 +4,17 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <!-- Header -->
-    <div class="portal-card" style="margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-            <div>
-                <h2 style="font-size: 22px; font-weight: 800; color: var(--text-heading); margin-bottom: 4px;">
-                    <i class="fa-solid fa-calendar-days" style="color: #6366f1; margin-right: 8px;"></i>
-                    Leave Management & Review Dashboard
-                </h2>
-                <p style="color: var(--text-muted); font-size: 13px; margin: 0;">
-                    Review employee leave applications, monitor remaining balances, and approve or reject submissions in real-time.
-                </p>
-            </div>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button onclick="openLeaveMasterModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px;">
-                    <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
-                    <span>Leave Master Settings</span>
-                </button>
-                <button onclick="loadLeaveRequests()" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px; background: #6366f1;">
-                    <i class="fa-solid fa-rotate"></i>
-                    <span>Refresh</span>
-                </button>
-            </div>
+    <!-- Header Actions Bar -->
+    <div class="portal-card" style="margin-bottom: 20px; padding: 12px 18px;">
+        <div style="display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <button onclick="openLeaveMasterModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
+                <span>Leave Master Settings</span>
+            </button>
+            <button onclick="loadLeaveRequests()" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px; background: #6366f1;">
+                <i class="fa-solid fa-rotate"></i>
+                <span>Refresh</span>
+            </button>
         </div>
     </div>
 

@@ -425,6 +425,8 @@ class TestFaceAttendanceSystem(unittest.TestCase):
         self.assertIn("Clean Minimalist Light", res.text)
         self.assertIn("Executive Midnight Dark", res.text)
         self.assertIn("Warm Academic", res.text)
+        self.assertIn("Professional Slate", res.text)
+        self.assertIn("themeCardSlate", res.text)
         self.assertIn("Institutional Attendance Parameters", res.text)
         self.assertIn("appThemeSelect", res.text)
         print("[PASS] Test 16: Multi-Theme Engine & Settings Menu View verified.")

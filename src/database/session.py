@@ -785,7 +785,7 @@ def run_schema_migrations():
 
             res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'currency_symbol'")).fetchall()
             if not res:
-                conn.execute(text("ALTER TABLE system_branding ADD COLUMN currency_symbol VARCHAR(10) DEFAULT '$' NOT NULL"))
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN currency_symbol VARCHAR(10) DEFAULT '₹' NOT NULL"))
                 logger.info("Migrated system_branding table: added currency_symbol column.")
 
             # 6. Attendance Records checkin / checkout and shift tracking columns
@@ -836,6 +836,36 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE students ADD COLUMN relieved_by_user_id INT NULL"))
                 logger.info("Migrated students table: added relieved_by_user_id column.")
+
+            # 8. Students shift_id column & work_shifts migration
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'shift_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN shift_id INT NULL"))
+                try:
+                    conn.execute(text("CREATE INDEX ix_student_shift_id ON students(shift_id)"))
+                except Exception:
+                    pass
+                logger.info("Migrated students table: added shift_id column.")
+
+            # Seed default WorkShift for corporate tenants if none exist
+            try:
+                corp_tenants = conn.execute(text("SELECT id, name FROM tenants WHERE tenant_type = 'corporate' AND is_deleted = 0")).fetchall()
+                for ct in corp_tenants:
+                    t_id = ct[0]
+                    shifts = conn.execute(text("SELECT id FROM work_shifts WHERE tenant_id = :tid"), {"tid": t_id}).fetchall()
+                    if not shifts:
+                        b_row = conn.execute(text("SELECT shift_check_in_time, shift_check_out_time, shift_grace_minutes FROM system_branding WHERE tenant_id = :tid"), {"tid": t_id}).fetchone()
+                        s_in = b_row[0] if b_row and b_row[0] else "10:30"
+                        s_out = b_row[1] if b_row and b_row[1] else "18:00"
+                        s_grace = b_row[2] if b_row and b_row[2] is not None else 15
+                        conn.execute(
+                            text("INSERT INTO work_shifts (tenant_id, name, code, start_time, end_time, grace_period_minutes, break_duration_minutes, half_day_hours, is_default, is_active, created_at) "
+                                 "VALUES (:tid, 'General Shift', 'GEN', :sin, :sout, :sgrace, 0, 4.0, 1, 1, NOW())"),
+                            {"tid": t_id, "sin": s_in, "sout": s_out, "sgrace": s_grace}
+                        )
+                        logger.info(f"Seeded default 'General Shift' for corporate Tenant #{t_id}.")
+            except Exception as e_shift:
+                logger.warning(f"WorkShift seeding note: {e_shift}")
 
     except Exception as e:
         logger.warning(f"Schema migration note: {e}")

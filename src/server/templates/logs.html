@@ -2,20 +2,11 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
-        <div>
-            <h3>
-                <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-primary);"></i>
-                <span>Attendance Logs & Audit Trail</span>
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Complete historical record with face recognition confidence and manual override verifications.
-            </p>
-        </div>
+    <div class="card-header" style="flex-wrap: wrap; gap: 12px; justify-content: flex-end;">
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Biometric Fallback Manual Attendance">
+            <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Manual check in/out">
                 <i class="fa-solid fa-user-check"></i>
-                <span>Manual Override</span>
+                <span>Manual check in/out</span>
             </button>
             <button onclick="exportData('csv')" class="btn btn-secondary" title="Export Filtered CSV">
                 <i class="fa-solid fa-file-csv" style="color: var(--accent-emerald);"></i>
@@ -61,7 +52,7 @@
                 <!-- Search Roll / Name -->
                 <div style="flex: 1.2; min-width: 160px;">
                     <label class="form-label" style="font-size: 11.5px;">{% if is_corporate %}Search Code / Name{% else %}Search Roll / Name{% endif %}</label>
-                    <input type="text" id="filterRoll" class="form-control" placeholder="{% if is_corporate %}e.g. EMP101 or Jane{% else %}e.g. CS2026 or Jane{% endif %}">
+                    <input type="text" id="filterRoll" class="form-control" placeholder="{% if is_corporate %}e.g. EMP101 or Rajesh{% else %}e.g. CS2026 or Aarav{% endif %}">
                 </div>
 
                 <!-- Department Filter -->
@@ -103,7 +94,7 @@
                     <select id="filterOverride" class="form-control">
                         <option value="">All Verification Sources</option>
                         <option value="false">Face Recognition Only</option>
-                        <option value="true">Manual Overrides Only</option>
+                        <option value="true">Manual Check In/Out Only</option>
                     </select>
                 </div>
 
@@ -160,7 +151,7 @@
         <div class="modal-header">
             <h3>
                 <i class="fa-solid fa-user-check" style="color: var(--accent-primary);"></i>
-                <span>Biometric Fallback / Manual Override</span>
+                <span>Manual check in/out</span>
             </h3>
             <button class="modal-close" onclick="closeManualOverrideModal()">
                 <i class="fa-solid fa-xmark"></i>

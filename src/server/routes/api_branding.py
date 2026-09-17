@@ -47,7 +47,7 @@ class BrandingUpdateRequest(BaseModel):
     enable_overtime: Optional[bool] = True
     overtime_rate_multiplier: Optional[float] = 1.5
     missed_checkout_policy: Optional[str] = "HALF_DAY"
-    currency_symbol: Optional[str] = "$"
+    currency_symbol: Optional[str] = "₹"
 
 
 def get_or_create_tenant_branding(db: Session, tenant_id: int, tenant_name: str = "FaceAttendance Campus") -> SystemBranding:

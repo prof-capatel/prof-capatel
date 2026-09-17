@@ -137,7 +137,7 @@ function handleManualOverrideEvent(data) {
             </div>
         </div>
         <div style="text-align: right;">
-            <span class="badge badge-present"><i class="fa-solid fa-shield-check"></i> Manual Override</span>
+            <span class="badge badge-present"><i class="fa-solid fa-shield-check"></i> Manual check in/out</span>
             <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">By ${data.override_by || 'Admin'}</div>
         </div>
     `;
@@ -326,7 +326,7 @@ function renderLogsTable(records) {
 
         let verificationBadge = `<span class="badge badge-present">✓ ${r.match_confidence_pct}% Face Match</span>`;
         if (r.is_manual_override) {
-            verificationBadge = `<span class="badge badge-amber" title="Override Reason: ${r.override_reason || 'N/A'} (By ${r.override_by || 'Admin'})"><i class="fa-solid fa-shield-check"></i> Manual Override</span>`;
+            verificationBadge = `<span class="badge badge-amber" title="Override Reason: ${r.override_reason || 'N/A'} (By ${r.override_by || 'Admin'})"><i class="fa-solid fa-shield-check"></i> Manual check in/out</span>`;
         } else if (r.is_self_attendance) {
             verificationBadge = `<span class="badge badge-emerald" title="GPS Dist: ${r.geo_distance_meters !== null ? r.geo_distance_meters + 'm' : 'Verified'} • Lat: ${r.geo_latitude || 'N/A'}, Lon: ${r.geo_longitude || 'N/A'}"><i class="fa-solid fa-satellite-dish"></i> ${r.match_confidence_pct}% (GPS)</span>`;
         }
@@ -508,6 +508,9 @@ function applyDirectoryFilters() {
     const deptIdVal = deptFilterEl?.value || "";
     const deptTextVal = deptIdVal && deptFilterEl ? (deptFilterEl.options[deptFilterEl.selectedIndex]?.text || "").toLowerCase().trim() : "";
 
+    const shiftFilterEl = document.getElementById("dirShiftFilter");
+    const shiftIdVal = shiftFilterEl?.value || "";
+
     const classIdVal = document.getElementById("dirClassFilter")?.value || "";
     const divIdVal = document.getElementById("dirDivFilter")?.value || "";
     const roleVal = document.getElementById("dirRoleFilter")?.value || "";
@@ -523,17 +526,19 @@ function applyDirectoryFilters() {
         const rowDept = (row.getAttribute("data-dept") || "").toLowerCase();
         const rowClassId = row.getAttribute("data-class-id") || "";
         const rowDivId = row.getAttribute("data-div-id") || "";
+        const rowShiftId = row.getAttribute("data-shift-id") || "";
         const rowRole = row.getAttribute("data-role") || "student";
         const rowStatus = row.getAttribute("data-status") || "active";
 
         let matchSearch = !searchVal || name.includes(searchVal) || roll.includes(searchVal);
         let matchDept = !deptIdVal || rowDeptId === deptIdVal || (rowDept && rowDept === deptTextVal);
+        let matchShift = !shiftIdVal || rowShiftId === shiftIdVal;
         let matchClass = !classIdVal || rowClassId === classIdVal;
         let matchDiv = !divIdVal || rowDivId === divIdVal;
         let matchRole = !roleVal || rowRole === roleVal;
         let matchStatus = (statusVal === "all") || (rowStatus === statusVal);
 
-        if (matchSearch && matchDept && matchClass && matchDiv && matchRole && matchStatus) {
+        if (matchSearch && matchDept && matchShift && matchClass && matchDiv && matchRole && matchStatus) {
             row.style.display = "";
             visibleCount++;
         } else {
@@ -550,6 +555,7 @@ function applyDirectoryFilters() {
 function resetDirectoryFilters() {
     if (document.getElementById("dirSearchInput")) document.getElementById("dirSearchInput").value = "";
     if (document.getElementById("dirDeptFilter")) document.getElementById("dirDeptFilter").value = "";
+    if (document.getElementById("dirShiftFilter")) document.getElementById("dirShiftFilter").value = "";
     if (document.getElementById("dirRoleFilter")) document.getElementById("dirRoleFilter").value = "";
     
     const classSelect = document.getElementById("dirClassFilter");
@@ -781,7 +787,7 @@ function onEditClassSelectChanged() {
     }
 }
 
-function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, cadreLevel, doj) {
+function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, cadreLevel, doj, shiftId) {
     const modal = document.getElementById("editStudentModal");
     if (!modal) return;
 
@@ -789,12 +795,41 @@ function openEditModal(id, name, roll, dept, email, role, classSem, deptId, clas
     document.getElementById("editStudentName").value = name;
     document.getElementById("editRollNumber").value = roll;
     document.getElementById("editEmail").value = email || "";
-    if (document.getElementById("editUserRole")) {
-        document.getElementById("editUserRole").value = role || "student";
+    const roleSelect = document.getElementById("editUserRole");
+    if (roleSelect) {
+        let targetRole = role || "";
+        const isCorp = window.IS_CORPORATE || (document.getElementById("statShiftHours") !== null) || (window.location.pathname.includes('/employees'));
+        
+        if (isCorp && (targetRole === "student" || targetRole === "teacher" || !targetRole)) {
+            targetRole = "employee";
+        } else if (!targetRole) {
+            targetRole = "student";
+        }
+
+        let hasOption = false;
+        for (let i = 0; i < roleSelect.options.length; i++) {
+            if (roleSelect.options[i].value === targetRole) {
+                hasOption = true;
+                break;
+            }
+        }
+
+        if (!hasOption && targetRole) {
+            const opt = document.createElement("option");
+            opt.value = targetRole;
+            opt.text = targetRole.replace(/_/g, ' ').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            roleSelect.appendChild(opt);
+        }
+
+        roleSelect.value = targetRole;
     }
 
     if (document.getElementById("editDateOfJoining")) {
         document.getElementById("editDateOfJoining").value = doj || "";
+    }
+
+    if (document.getElementById("editShiftSelect")) {
+        document.getElementById("editShiftSelect").value = (shiftId !== undefined && shiftId !== null) ? shiftId : "";
     }
 
     if (document.getElementById("editHourlyRate")) {
@@ -900,6 +935,9 @@ async function submitStudentEdit(e) {
     const divSelect = document.getElementById("editDivisionSelect");
     const divId = divSelect?.value ? parseInt(divSelect.value) : null;
 
+    const shiftSelect = document.getElementById("editShiftSelect");
+    const shiftId = (shiftSelect && shiftSelect.value) ? parseInt(shiftSelect.value) : null;
+
     const hourlyRateInput = document.getElementById("editHourlyRate")?.value;
     const monthlySalaryInput = document.getElementById("editMonthlyBaseSalary")?.value;
     const cadreInput = document.getElementById("editCadreLevel")?.value;
@@ -923,6 +961,7 @@ async function submitStudentEdit(e) {
                 class_id: classId,
                 class_semester: className,
                 division_id: divId,
+                shift_id: shiftId,
                 email: email || null,
                 user_role: role,
                 hourly_rate: hourlyRateInput ? parseFloat(hourlyRateInput) : null,
@@ -1484,14 +1523,18 @@ document.addEventListener("keydown", (e) => {
    ========================================================== */
 function initThemeSwitcher() {
     const currentTheme = document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
-    updateQuickThemeButton(currentTheme);
+    if (typeof updateQuickThemeButton === "function") {
+        updateQuickThemeButton(currentTheme);
+    }
     updateThemeSelectionCards(currentTheme);
+    updateThemeDropdown(currentTheme);
 }
 
 function setAppTheme(themeName) {
     let normalized = themeName;
     if (normalized === "academic") normalized = "warm";
-    if (!["light", "dark", "warm"].includes(normalized)) {
+    if (normalized === "corporate") normalized = "slate";
+    if (!["light", "dark", "warm", "slate"].includes(normalized)) {
         normalized = "light";
     }
     document.documentElement.setAttribute("data-theme", normalized);
@@ -1508,6 +1551,7 @@ function cycleAppTheme() {
     let nextTheme = "light";
     if (currentTheme === "light") nextTheme = "dark";
     else if (currentTheme === "dark") nextTheme = "warm";
+    else if (currentTheme === "warm" || currentTheme === "academic") nextTheme = "slate";
     else nextTheme = "light";
 
     setAppTheme(nextTheme);
@@ -1516,6 +1560,7 @@ function cycleAppTheme() {
 function updateThemeDropdown(theme) {
     let current = theme || document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
     if (current === "academic") current = "warm";
+    if (current === "corporate") current = "slate";
     const select = document.getElementById("appThemeSelect");
     const icon = document.getElementById("themeIconIndicator");
     if (select) select.value = current;
@@ -1526,6 +1571,9 @@ function updateThemeDropdown(theme) {
         } else if (current === "warm") {
             icon.className = "fa-solid fa-fire-flame-curved";
             icon.style.color = "#ea580c";
+        } else if (current === "slate") {
+            icon.className = "fa-solid fa-briefcase";
+            icon.style.color = "#1e40af";
         } else {
             icon.className = "fa-solid fa-sun";
             icon.style.color = "#f59e0b";
@@ -1536,14 +1584,17 @@ function updateThemeDropdown(theme) {
 function updateThemeSelectionCards(theme) {
     let current = theme || document.documentElement.getAttribute("data-theme") || "light";
     if (current === "academic") current = "warm";
+    if (current === "corporate") current = "slate";
     const cardLight = document.getElementById("themeCardLight");
     const cardDark = document.getElementById("themeCardDark");
     const cardWarm = document.getElementById("themeCardWarm") || document.getElementById("themeCardAcademic");
+    const cardSlate = document.getElementById("themeCardSlate") || document.getElementById("themeCardCorporate");
     const badge = document.getElementById("activeThemeBadge");
 
     if (cardLight) cardLight.classList.toggle("active", current === "light");
     if (cardDark) cardDark.classList.toggle("active", current === "dark");
     if (cardWarm) cardWarm.classList.toggle("active", current === "warm");
+    if (cardSlate) cardSlate.classList.toggle("active", current === "slate");
 
     if (badge) {
         if (current === "dark") {
@@ -1552,6 +1603,9 @@ function updateThemeSelectionCards(theme) {
         } else if (current === "warm") {
             badge.className = "badge badge-amber";
             badge.innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i> Active: Warm';
+        } else if (current === "slate") {
+            badge.className = "badge badge-indigo";
+            badge.innerHTML = '<i class="fa-solid fa-briefcase"></i> Active: Professional Slate';
         } else {
             badge.className = "badge badge-present";
             badge.innerHTML = '<i class="fa-solid fa-sun"></i> Active: Clean Light';
@@ -1560,6 +1614,28 @@ function updateThemeSelectionCards(theme) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    updateThemeDropdown();
+    initThemeSwitcher();
 });
+
+/* ==========================================================
+   Collapsible Biometric Terminal Gateway Handler
+   ========================================================== */
+function toggleBiometricGateway() {
+    const body = document.getElementById("biometricGatewayBody");
+    const chevron = document.getElementById("gatewayChevron");
+    const toggleText = document.getElementById("gatewayToggleText");
+    if (!body) return;
+
+    const isCollapsed = body.style.display === "none" || getComputedStyle(body).display === "none";
+    if (isCollapsed) {
+        body.style.display = "block";
+        if (chevron) chevron.style.transform = "rotate(90deg)";
+        if (toggleText) toggleText.textContent = "Hide Details";
+    } else {
+        body.style.display = "none";
+        if (chevron) chevron.style.transform = "rotate(0deg)";
+        if (toggleText) toggleText.textContent = "Show Details";
+    }
+}
+window.toggleBiometricGateway = toggleBiometricGateway;
 

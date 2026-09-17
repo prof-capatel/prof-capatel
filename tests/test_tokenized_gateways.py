@@ -494,7 +494,7 @@ class TestTokenizedGatewaysAndMapPicker(unittest.TestCase):
         # 1. Analytics HTML Page
         ana_page = self.client.get("/analytics", headers=headers)
         self.assertEqual(ana_page.status_code, 200)
-        self.assertIn("Corporate Workforce Analytics", ana_page.text)
+        self.assertIn("Workforce Analytics", ana_page.text)
         self.assertIn("Total Enrolled Employees", ana_page.text)
         self.assertIn("Low Attendance Employees / Defaulters List", ana_page.text)
         self.assertIn("Employee Profile", ana_page.text)

@@ -186,6 +186,68 @@
              radial-gradient(at 50% 100%, rgba(21, 128, 61, 0.03) 0px, transparent 50%);
 }
 
+/* ----------------------------------------------------------
+   THEME 4: Professional Slate (Corporate Human-Crafted)
+   ---------------------------------------------------------- */
+[data-theme="slate"],
+[data-theme="corporate"] {
+  /* Surfaces & Backgrounds */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fcfdfe;
+  --topbar-bg: rgba(255, 255, 255, 0.92);
+  
+  /* Borders & Dividers */
+  --border-color: #e2e8f0;
+  --border-subtle: #edf2f7;
+  --border-focus: #1e40af;
+  --border-hover: #cbd5e1;
+  
+  /* Typography */
+  --text-heading: #0f172a;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  
+  /* Accents & Gradients */
+  --accent-primary: #1e40af;
+  --accent-primary-hover: #1d4ed8;
+  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  --accent-cyan: #0284c7;
+  --accent-emerald: #059669;
+  --accent-amber: #d97706;
+  --accent-rose: #e11d48;
+  
+  /* Badges & Status Pills */
+  --badge-emerald-bg: #ecfdf5;
+  --badge-emerald-text: #047857;
+  --badge-emerald-border: #a7f3d0;
+  
+  --badge-sky-bg: #f0f9ff;
+  --badge-sky-text: #0369a1;
+  --badge-sky-border: #bae6fd;
+  
+  --badge-amber-bg: #fffbeb;
+  --badge-amber-text: #b45309;
+  --badge-amber-border: #fde68a;
+  
+  --badge-rose-bg: #fff1f2;
+  --badge-rose-text: #be123c;
+  --badge-rose-border: #fecdd3;
+  
+  --badge-indigo-bg: #eff6ff;
+  --badge-indigo-text: #1e40af;
+  --badge-indigo-border: #bfdbfe;
+
+  --bg-mesh: radial-gradient(at 0% 0%, rgba(30, 64, 175, 0.04) 0px, transparent 40%),
+             radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.03) 0px, transparent 40%),
+             radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.02) 0px, transparent 50%);
+}
+
 /* Common System Dimensions & Transitions */
 :root {
   --radius-xs: 6px;
@@ -393,34 +455,37 @@ body {
 }
 
 .content-body {
-  padding: 32px 36px;
+  padding: 24px 36px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  max-width: 1400px;
+  gap: 24px;
+  max-width: 100%;
   width: 100%;
-  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* ==========================================================
-   Stats Cards Grid
+   Stats Cards Grid (Single-Row 4-Column Balanced Grid)
    ========================================================== */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
 }
 
 .stat-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 22px 24px;
+  padding: 14px 16px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: space-between;
   box-shadow: var(--shadow-card);
   transition: all var(--transition-normal);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .stat-card:hover {
@@ -429,13 +494,14 @@ body {
   border-color: var(--border-hover);
 }
 
-/* Hero Command Center Metrics Grid */
+/* Hero Command Center Metrics Grid (50% / 50% Balanced Layout) */
 .dash-hero-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 420px) 1fr;
-  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
   margin-bottom: 24px;
   align-items: stretch;
+  width: 100%;
 }
 
 .hero-metrics-grid {
@@ -443,6 +509,7 @@ body {
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 16px;
+  width: 100%;
   height: 100%;
 }
 
@@ -451,13 +518,15 @@ body {
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: 22px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   transition: all var(--transition-normal);
   position: relative;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .hero-stat-card::before {
@@ -484,9 +553,14 @@ body {
 @media (max-width: 1024px) {
   .dash-hero-grid {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
   .hero-metrics-grid {
     min-height: 280px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 }
 
@@ -495,32 +569,47 @@ body {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
   }
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.stat-info {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .stat-info span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 700;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .stat-info h3 {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
-  margin-top: 6px;
+  margin-top: 3px;
   color: var(--text-heading);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
 }
 
 .stat-icon {
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 17px;
+  flex-shrink: 0;
 }
 
 .stat-icon.purple { background: var(--badge-indigo-bg); color: var(--accent-primary); border: 1px solid var(--badge-indigo-border); }
@@ -1577,8 +1666,8 @@ code {
 
 .theme-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .theme-card {
@@ -1662,6 +1751,12 @@ code {
 .theme-preview-box.academic-preview {
   background: #faf7f2;
   border-color: #e7ded3;
+}
+
+.theme-preview-box.slate-preview,
+.theme-preview-box.corporate-preview {
+  background: #f8fafc;
+  border-color: #e2e8f0;
 }
 
 .theme-preview-nav {

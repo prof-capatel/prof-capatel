@@ -10,7 +10,7 @@ from sqlalchemy import or_
 from src.config import FACES_DIR
 from src.core.camera_utils import decode_image_bytes, evaluate_image_quality
 from src.core.face_engine import face_engine, FaceEngine
-from src.database.models import Student, FaceEncoding, Tenant, Department, ClassModel, Division, AcademicYear, AuditLog, User
+from src.database.models import Student, FaceEncoding, Tenant, Department, ClassModel, Division, AcademicYear, AuditLog, User, WorkShift
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
 from src.server.rbac_middleware import check_tenant_operational_access, get_current_user_optional
@@ -34,6 +34,7 @@ class StudentCreate(BaseModel):
     hourly_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
     cadre_level: Optional[str] = None
+    shift_id: Optional[int] = None
     date_of_joining: Optional[str] = None
 
 
@@ -52,6 +53,7 @@ class StudentUpdate(BaseModel):
     hourly_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
     cadre_level: Optional[str] = None
+    shift_id: Optional[int] = None
     date_of_joining: Optional[str] = None
 
 
@@ -81,6 +83,7 @@ def list_enrolled_students(
     academic_year_id: Optional[int] = None,
     user_role: Optional[str] = None,
     role: Optional[str] = None,
+    shift_id: Optional[int] = None,
     status: Optional[str] = None,  # active, relieved, all
     search: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -111,6 +114,8 @@ def list_enrolled_students(
     target_role = user_role or role
     if target_role:
         query = query.filter(Student.user_role == target_role.strip().lower())
+    if shift_id:
+        query = query.filter(Student.shift_id == shift_id)
     if search:
         search_clean = f"%{search.strip()}%"
         query = query.filter(
@@ -210,6 +215,21 @@ def register_student(
     if not doj_val and is_corporate:
         doj_val = get_ist_now().date()
 
+    # Resolve Work Shift
+    chosen_shift_id = payload.shift_id
+    if chosen_shift_id:
+        s_obj = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.id == chosen_shift_id).first()
+        if not s_obj:
+            chosen_shift_id = None
+    elif is_corporate:
+        def_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.is_default == True).first()
+        if def_shift:
+            chosen_shift_id = def_shift.id
+        else:
+            any_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id).first()
+            if any_shift:
+                chosen_shift_id = any_shift.id
+
     student = Student(
         tenant_id=current_tenant.id,
         roll_number=clean_roll,
@@ -225,6 +245,7 @@ def register_student(
         hourly_rate=payload.hourly_rate,
         monthly_base_salary=payload.monthly_base_salary,
         cadre_level=payload.cadre_level,
+        shift_id=chosen_shift_id,
         date_of_joining=doj_val,
     )
     db.add(student)
@@ -359,6 +380,7 @@ async def batch_upload_enrollment(
     hourly_rate: Optional[float] = Form(None),
     monthly_base_salary: Optional[float] = Form(None),
     cadre_level: Optional[str] = Form(None),
+    shift_id: Optional[int] = Form(None),
     date_of_joining: Optional[str] = Form(None),
     photo_front: UploadFile = File(...),
     photo_left: UploadFile = File(...),
@@ -498,6 +520,21 @@ async def batch_upload_enrollment(
     if not doj_val and is_corporate:
         doj_val = get_ist_now().date()
 
+    # Resolve Work Shift
+    chosen_shift_id = shift_id
+    if chosen_shift_id:
+        s_obj = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.id == chosen_shift_id).first()
+        if not s_obj:
+            chosen_shift_id = None
+    elif is_corporate:
+        def_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.is_default == True).first()
+        if def_shift:
+            chosen_shift_id = def_shift.id
+        else:
+            any_shift = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id).first()
+            if any_shift:
+                chosen_shift_id = any_shift.id
+
     # Save Student
     student = Student(
         tenant_id=current_tenant.id,
@@ -514,6 +551,7 @@ async def batch_upload_enrollment(
         hourly_rate=hourly_rate,
         monthly_base_salary=monthly_base_salary,
         cadre_level=cadre_level,
+        shift_id=chosen_shift_id,
         date_of_joining=doj_val,
     )
     db.add(student)
@@ -617,6 +655,13 @@ def update_student_profile(
         student.monthly_base_salary = payload.monthly_base_salary
     if payload.cadre_level is not None:
         student.cadre_level = payload.cadre_level
+    if payload.shift_id is not None:
+        if payload.shift_id > 0:
+            s_obj = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.id == payload.shift_id).first()
+            if s_obj:
+                student.shift_id = s_obj.id
+        else:
+            student.shift_id = None
     if payload.date_of_joining is not None:
         if payload.date_of_joining.strip():
             try:

@@ -2,16 +2,7 @@
 
 {% block content %}
 <!-- Top Header & Export Action Bar -->
-<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 8px;">
-    <div>
-        <h3 style="font-size: 18px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-chart-line" style="color: var(--accent-primary);"></i>
-            <span>{% if is_corporate %}Corporate Workforce Analytics & Attendance Audit{% else %}Institutional Attendance Analytics & Defaulter Audit{% endif %}</span>
-        </h3>
-        <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
-            {% if is_corporate %}Comprehensive workforce attendance trends, department breakdowns, and compliance audits.{% else %}Comprehensive attendance trends, department breakdowns, and automated compliance tracking.{% endif %}
-        </p>
-    </div>
+<div style="display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <button onclick="exportComplianceReport('xlsx')" class="btn btn-primary" title="Download Official Compliance Excel">
             <i class="fa-solid fa-file-excel"></i>
@@ -21,9 +12,9 @@
             <i class="fa-solid fa-file-csv"></i>
             <span>Compliance CSV</span>
         </button>
-        <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Biometric Fallback Manual Attendance">
+        <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Manual check in/out">
             <i class="fa-solid fa-user-check"></i>
-            <span>Manual Override</span>
+            <span>Manual check in/out</span>
         </button>
     </div>
 </div>
@@ -153,7 +144,7 @@
                         {% endif %}
                         <th>{% if is_corporate %}Days Present{% else %}Sessions Attended{% endif %}</th>
                         <th>Attendance Rate</th>
-                        <th>Manual Overrides</th>
+                        <th>Manual Check In/Out</th>
                         <th>Compliance Status</th>
                         <th>Action</th>
                     </tr>
@@ -178,7 +169,7 @@
         <div class="modal-header">
             <h3>
                 <i class="fa-solid fa-user-check" style="color: var(--accent-primary);"></i>
-                <span>Biometric Fallback / Manual Override</span>
+                <span>Manual check in/out</span>
             </h3>
             <button class="modal-close" onclick="closeManualOverrideModal()">
                 <i class="fa-solid fa-xmark"></i>

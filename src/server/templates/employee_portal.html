@@ -388,7 +388,7 @@
             const res = await fetch("/api/v1/employee/payroll");
             const data = await res.json();
             if (res.ok) {
-                const cur = data.currency_symbol || "$";
+                const cur = data.currency_symbol || "₹";
                 document.getElementById("wageGrossPay").innerText = `${cur}${data.gross_earnings.toFixed(2)}`;
                 document.getElementById("wageRateLabel").innerText = `Rate: ${cur}${data.hourly_rate.toFixed(2)}/hr (Active Days: ${data.active_days_count})`;
                 document.getElementById("wageTotalHours").innerText = `${data.total_punch_hours} hrs`;

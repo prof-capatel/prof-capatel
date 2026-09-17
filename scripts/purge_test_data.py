@@ -25,6 +25,7 @@ from src.database.models import (
     LeaveBalance,
     LeaveRequest,
     LeaveType,
+    WorkShift,
 )
 
 def purge_test_data():
@@ -68,6 +69,7 @@ def purge_test_data():
         db.query(AuditLog).filter(AuditLog.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False)
         db.query(StudentBatchUpload).filter(StudentBatchUpload.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False)
         db.query(LeaveType).filter(LeaveType.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False)
+        db.query(WorkShift).filter(WorkShift.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False)
 
     # Purge transient test nodes in tenant 1 if any
     db.query(NodeDevice).filter(NodeDevice.node_id.in_(['NODE-TEST-101', 'NODE-TEST-INGEST'])).delete(synchronize_session=False)

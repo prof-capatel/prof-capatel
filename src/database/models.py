@@ -117,6 +117,7 @@ class Tenant(Base):
     leave_cadre_quotas = relationship("LeaveCadreQuota", back_populates="tenant", cascade="all, delete-orphan")
     leave_balances = relationship("LeaveBalance", back_populates="tenant", cascade="all, delete-orphan")
     leave_requests = relationship("LeaveRequest", back_populates="tenant", cascade="all, delete-orphan")
+    work_shifts = relationship("WorkShift", back_populates="tenant", cascade="all, delete-orphan")
 
     def to_dict(self):
         t_uuid = self.uuid or self.slug
@@ -397,6 +398,7 @@ class Student(Base):
     academic_year_id = Column(Integer, ForeignKey("academic_years.id", ondelete="SET NULL"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     batch_upload_id = Column(Integer, ForeignKey("student_batch_uploads.id", ondelete="SET NULL"), nullable=True, index=True)
+    shift_id = Column(Integer, ForeignKey("work_shifts.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Progression & Transfer Tracking History
     previous_department_id = Column(Integer, nullable=True)
@@ -442,6 +444,7 @@ class Student(Base):
     relieved_by_user = relationship("User", foreign_keys=[relieved_by_user_id])
     leave_balances = relationship("LeaveBalance", back_populates="student", cascade="all, delete-orphan")
     leave_requests = relationship("LeaveRequest", back_populates="student", cascade="all, delete-orphan")
+    shift = relationship("WorkShift", back_populates="students", foreign_keys=[shift_id])
 
     def to_dict(self):
         photos_list = []
@@ -495,6 +498,12 @@ class Student(Base):
             "hourly_rate": self.hourly_rate,
             "monthly_base_salary": self.monthly_base_salary,
             "cadre_level": self.cadre_level,
+            "shift_id": self.shift_id,
+            "shift_name": self.shift.name if self.shift else None,
+            "shift_code": self.shift.code if self.shift else None,
+            "shift_start_time": self.shift.start_time if self.shift else None,
+            "shift_end_time": self.shift.end_time if self.shift else None,
+            "shift_display": f"{self.shift.name} ({self.shift.start_time} - {self.shift.end_time})" if self.shift else "Default Shift",
             "date_of_joining": self.date_of_joining.strftime("%Y-%m-%d") if self.date_of_joining else None,
             "employment_status": self.employment_status or ("ACTIVE" if self.is_active else "RELIEVED"),
             "relieved_at": self.relieved_at.strftime("%Y-%m-%d %H:%M:%S") if self.relieved_at else None,
@@ -710,7 +719,7 @@ class SystemBranding(Base):
     enable_overtime = Column(Boolean, default=True, nullable=False)
     overtime_rate_multiplier = Column(Float, default=1.5, nullable=True)
     missed_checkout_policy = Column(String(30), default="HALF_DAY", nullable=False)  # HALF_DAY, ZERO_HOURS, STANDARD_SHIFT
-    currency_symbol = Column(String(10), default="$", nullable=False)
+    currency_symbol = Column(String(10), default="₹", nullable=False)
 
     updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
 
@@ -751,7 +760,7 @@ class SystemBranding(Base):
             "enable_overtime": bool(self.enable_overtime if self.enable_overtime is not None else True),
             "overtime_rate_multiplier": float(self.overtime_rate_multiplier if self.overtime_rate_multiplier is not None else 1.5),
             "missed_checkout_policy": self.missed_checkout_policy or "HALF_DAY",
-            "currency_symbol": self.currency_symbol or "$",
+            "currency_symbol": self.currency_symbol or "₹",
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
         }
 
@@ -1016,5 +1025,95 @@ class LeaveRequest(Base):
             "admin_remarks": self.admin_remarks or "",
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
         }
+
+
+class WorkShift(Base):
+    """
+    Work Shift master configuration per tenant (e.g. General Shift, Morning Shift, Night Shift).
+    """
+    __tablename__ = "work_shifts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)           # e.g., "General Shift", "Night Shift"
+    code = Column(String(30), nullable=True)            # e.g., "GEN", "MORN", "NIGHT"
+    start_time = Column(String(10), default="10:30", nullable=False) # "HH:MM" 24-hr format
+    end_time = Column(String(10), default="18:00", nullable=False)   # "HH:MM" 24-hr format
+    grace_period_minutes = Column(Integer, default=15, nullable=False)
+    break_duration_minutes = Column(Integer, default=0, nullable=False)
+    half_day_hours = Column(Float, default=4.0, nullable=False)
+    is_default = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", name="uq_tenant_shift_name"),
+        Index("ix_work_shift_tenant_active", "tenant_id", "is_active"),
+    )
+
+    tenant = relationship("Tenant", back_populates="work_shifts")
+    students = relationship("Student", back_populates="shift", foreign_keys="Student.shift_id")
+
+    @property
+    def total_shift_hours(self) -> float:
+        try:
+            sh, sm = map(int, self.start_time.split(":"))
+            eh, em = map(int, self.end_time.split(":"))
+            start_mins = sh * 60 + sm
+            end_mins = eh * 60 + em
+            if end_mins < start_mins:
+                # Midnight crossover (e.g. 22:00 to 06:00 -> (1440 - 1320) + 360 = 480 mins = 8h)
+                total_mins = (1440 - start_mins) + end_mins
+            else:
+                total_mins = end_mins - start_mins
+            return round(total_mins / 60.0, 2)
+        except Exception:
+            return 8.0
+
+    @property
+    def is_night_shift(self) -> bool:
+        try:
+            sh, sm = map(int, self.start_time.split(":"))
+            eh, em = map(int, self.end_time.split(":"))
+            return (eh * 60 + em) < (sh * 60 + sm)
+        except Exception:
+            return False
+
+    def to_dict(self):
+        active_emp_count = sum(1 for s in (self.students or []) if s.is_active)
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "code": self.code or self.name[:4].upper(),
+            "start_time": self.start_time or "10:30",
+            "end_time": self.end_time or "18:00",
+            "start_time_formatted": self._format_12hr(self.start_time),
+            "end_time_formatted": self._format_12hr(self.end_time),
+            "grace_period_minutes": self.grace_period_minutes if self.grace_period_minutes is not None else 15,
+            "break_duration_minutes": self.break_duration_minutes if self.break_duration_minutes is not None else 0,
+            "half_day_hours": float(self.half_day_hours if self.half_day_hours is not None else 4.0),
+            "total_shift_hours": self.total_shift_hours,
+            "is_night_shift": self.is_night_shift,
+            "is_default": bool(self.is_default),
+            "is_active": bool(self.is_active),
+            "assigned_employees_count": active_emp_count,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+    @staticmethod
+    def _format_12hr(time_str: str) -> str:
+        if not time_str:
+            return "--"
+        try:
+            h, m = map(int, time_str.split(":"))
+            period = "AM" if h < 12 else "PM"
+            h12 = h % 12
+            if h12 == 0:
+                h12 = 12
+            return f"{h12:02d}:{m:02d} {period}"
+        except Exception:
+            return time_str
+
 
 

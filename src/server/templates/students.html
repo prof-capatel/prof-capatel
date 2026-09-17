@@ -2,31 +2,22 @@
 
 {% block content %}
 <div class="card">
+    {% if not (current_tenant and current_tenant.tenant_type == 'corporate') %}
     <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
         <div>
             <h3>
-                <i class="fa-solid {% if current_tenant and current_tenant.tenant_type == 'corporate' %}fa-users-gear{% else %}fa-user-graduate{% endif %}" style="color: var(--accent-primary);"></i>
-                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Corporate Directory & Employee Management{% else %}Institutional Directory & Profile Management{% endif %}</span>
+                <i class="fa-solid fa-user-graduate" style="color: var(--accent-primary);"></i>
+                <span>Institutional Directory & Profile Management</span>
             </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
-                Manage registered employees, team leads, and staff with department and role filters.
-                {% else %}
-                Manage registered students, faculty, and administrative personnel with cascading dropdown filters.
-                {% endif %}
-            </p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="openManualOverrideModal()" class="btn btn-secondary" style="color: var(--accent-primary);" title="Biometric Fallback Manual Attendance">
-                <i class="fa-solid fa-user-check"></i>
-                <span>Manual Override</span>
-            </button>
             <a href="/enroll" class="btn btn-primary">
                 <i class="fa-solid fa-user-plus"></i>
-                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Enroll Employee{% else %}Enroll Profile{% endif %}</span>
+                <span>Enroll Profile</span>
             </a>
         </div>
     </div>
+    {% endif %}
     <div class="card-body">
         {% if is_super_admin %}
         <!-- Super Admin Mandatory Tenant Selector Banner -->
@@ -70,6 +61,19 @@
                         {% endfor %}
                     </select>
                 </div>
+
+                {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                <!-- Shift Dropdown Filter (Corporate) -->
+                <div style="flex: 1; min-width: 150px;">
+                    <label class="form-label">Work Shift</label>
+                    <select id="dirShiftFilter" class="form-control" onchange="applyDirectoryFilters()">
+                        <option value="">All Shifts</option>
+                        {% for ws in work_shifts %}
+                        <option value="{{ ws.id }}">{{ ws.name }} ({{ ws.start_time }}-{{ ws.end_time }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
 
                 {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
                 <!-- 2. Class Dropdown Filter (Cascading for Educational only) -->
@@ -148,7 +152,9 @@
                         <th>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID{% else %}Roll / ID Number{% endif %}</th>
                         <th>Role</th>
                         <th>Department</th>
-                        {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
+                        {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                        <th>Work Shift</th>
+                        {% else %}
                         <th>Class & Division</th>
                         {% endif %}
                         <th>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}DOJ{% else %}Joining Date{% endif %}</th>
@@ -170,6 +176,7 @@
                             data-class="{{ s.class_name|lower if s.class_name else (s.class_semester|lower if s.class_semester else '') }}"
                             data-div-id="{{ s.division_id or '' }}"
                             data-div="{{ s.division_name|lower if s.division_name else '' }}"
+                            data-shift-id="{{ s.shift_id or '' }}"
                             data-role="{{ s.user_role }}"
                             data-status="{{ 'active' if s.is_active else 'relieved' }}">
                             <td>#{{ s.id }}</td>
@@ -199,7 +206,17 @@
                             <td>
                                 <span id="stdDeptLabel{{ s.id }}" style="font-weight: 600; color: var(--text-heading);">{{ s.department }}</span>
                             </td>
-                            {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
+                            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                            <td>
+                                {% if s.shift_name %}
+                                    <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: var(--accent-primary); border: 1px solid rgba(99, 102, 241, 0.25);" id="stdShiftBadge{{ s.id }}" title="{{ s.shift_display }}">
+                                        <i class="fa-solid fa-clock"></i> {{ s.shift_name }}
+                                    </span>
+                                {% else %}
+                                    <span style="font-size: 11.5px; color: var(--text-light); font-style: italic;" id="stdShiftBadge{{ s.id }}">Default Shift</span>
+                                {% endif %}
+                            </td>
+                            {% else %}
                             <td>
                                 <span id="stdClassLabel{{ s.id }}">{{ s.class_name or s.class_semester or 'General' }}</span>
                                 {% if s.division_name and s.division_name != 'N/A' %}
@@ -209,7 +226,7 @@
                             {% endif %}
                             <td>
                                 <span id="stdDojLabel{{ s.id }}" style="font-size: 12px; font-family: monospace; color: var(--text-secondary);">
-                                    {{ s.date_of_joining.strftime('%Y-%m-%d') if s.date_of_joining else '—' }}
+                                    {{ s.date_of_joining if s.date_of_joining else '—' }}
                                 </span>
                             </td>
                             <td>
@@ -239,10 +256,7 @@
                             <td>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                                     {% if s.is_active %}
-                                    <button onclick="openManualOverrideForStudent({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-emerald);" title="Force Mark Attendance Override">
-                                        <i class="fa-solid fa-user-check"></i>
-                                    </button>
-                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}', '{{ s.department|replace("'", "\\'") }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }}, {{ s.hourly_rate or 'null' }}, {{ s.monthly_base_salary or 'null' }}, '{{ s.cadre_level or '' }}', '{{ s.date_of_joining.strftime('%Y-%m-%d') if s.date_of_joining else '' }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
+                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}', '{{ s.department|replace("'", "\\'") }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }}, {{ s.hourly_rate or 'null' }}, {{ s.monthly_base_salary or 'null' }}, '{{ s.cadre_level or '' }}', '{{ s.date_of_joining if s.date_of_joining else '' }}', {{ s.shift_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </button>
                                     <button onclick="openTransferDepartmentModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Transfer Department / Team{% else %}Transfer Department / Class{% endif %}">
@@ -292,7 +306,7 @@
         <div class="modal-header">
             <h3>
                 <i class="fa-solid fa-user-pen" style="color: var(--accent-primary);"></i>
-                <span>Edit Member Profile</span>
+                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Edit Employee Profile{% else %}Edit Member Profile{% endif %}</span>
             </h3>
             <button class="modal-close" onclick="closeEditModal()">
                 <i class="fa-solid fa-xmark"></i>
@@ -316,10 +330,24 @@
                 <div class="form-group">
                     <label class="form-label">User Role *</label>
                     <select id="editUserRole" class="form-control" required onchange="onEditRoleChanged()">
-                        <option value="student">Student</option>
-                        <option value="teacher">Teacher / Faculty</option>
-                        <option value="admin_staff">Administrative Staff</option>
-                        <option value="other">Other Institutional Member</option>
+                        {% if tenant_roles %}
+                            {% for r in tenant_roles %}
+                            <option value="{{ r.value }}">{{ r.label }}</option>
+                            {% endfor %}
+                        {% else %}
+                            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                            <option value="employee">Employee / Staff Member</option>
+                            <option value="manager">Manager / Team Lead</option>
+                            <option value="admin_staff">Administrative Staff</option>
+                            <option value="contractor">Contractor / External</option>
+                            <option value="intern">Intern / Trainee</option>
+                            {% else %}
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher / Faculty</option>
+                            <option value="admin_staff">Administrative Staff</option>
+                            <option value="other">Other Institutional Member</option>
+                            {% endif %}
+                        {% endif %}
                     </select>
                 </div>
 
@@ -329,7 +357,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Roll Number / Staff ID *</label>
+                    <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID / Staff Code *{% else %}Roll Number / Staff ID *{% endif %}</label>
                     <input type="text" id="editRollNumber" class="form-control" required>
                 </div>
 
@@ -343,7 +371,8 @@
                     </select>
                 </div>
 
-                <!-- Dynamic Cascading Class & Division Dropdowns -->
+                {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
+                <!-- Dynamic Cascading Class & Division Dropdowns (Educational Only) -->
                 <div id="editClassDivSection" class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="form-group">
                         <label class="form-label">Class / Grade</label>
@@ -364,6 +393,19 @@
                         </select>
                     </div>
                 </div>
+                {% endif %}
+
+                {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
+                <div class="form-group">
+                    <label class="form-label">Assigned Work Shift</label>
+                    <select id="editShiftSelect" class="form-control">
+                        <option value="">Org Default Shift</option>
+                        {% for ws in work_shifts %}
+                        <option value="{{ ws.id }}">{{ ws.name }} ({{ ws.start_time }} - {{ ws.end_time }}){% if ws.is_default %} [Default]{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
 
                 <div class="form-group">
                     <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Date of Joining (DOJ){% else %}Date of Admission / Joining{% endif %}</label>
@@ -382,12 +424,12 @@
                     </div>
                     <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 11px;">Hourly Rate ($/hr)</label>
+                            <label class="form-label" style="font-size: 11px;">Hourly Rate (₹/hr)</label>
                             <input type="number" step="0.25" min="0" id="editHourlyRate" class="form-control" placeholder="Org Default">
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 11px;">Monthly Base Salary ($)</label>
-                            <input type="number" step="50" min="0" id="editMonthlyBaseSalary" class="form-control" placeholder="e.g. 3500">
+                            <label class="form-label" style="font-size: 11px;">Monthly Base Salary (₹)</label>
+                            <input type="number" step="50" min="0" id="editMonthlyBaseSalary" class="form-control" placeholder="e.g. 35000">
                         </div>
                     </div>
                     <div class="form-group" style="margin-top: 8px; margin-bottom: 0;">

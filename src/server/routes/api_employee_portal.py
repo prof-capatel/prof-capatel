@@ -295,7 +295,7 @@ def get_employee_profile(
             "institution_name": branding.institution_name if branding else "Company Hub",
             "primary_accent_color": branding.primary_accent_color if branding else "#c2410c",
             "logo_url": f"/data/branding/{branding.logo_filename}" if (branding and branding.logo_filename) else None,
-            "currency_symbol": branding.currency_symbol if branding else "$",
+            "currency_symbol": branding.currency_symbol if branding else "₹",
         },
     }
 
@@ -373,7 +373,7 @@ def get_employee_payroll_summary(
     ot_mult = float(branding.overtime_rate_multiplier if branding and branding.overtime_rate_multiplier else 1.5)
     std_daily_hours = float(branding.standard_working_hours_per_day if branding and branding.standard_working_hours_per_day else 8.0)
     enable_ot = bool(branding.enable_overtime if branding else True)
-    currency = branding.currency_symbol if branding else "$"
+    currency = branding.currency_symbol if branding else "₹"
 
     # 1. Fetch attendance records in date range
     records = (

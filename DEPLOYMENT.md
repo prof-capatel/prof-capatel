@@ -29,9 +29,9 @@ The script automatically:
 
 ---
 
-## 🔒 Automated SSL / TLS (HTTPS) Setup
+## 🔒 Automated SSL / TLS (HTTPS) Setup for Custom Domain
 
-To secure the server with a valid Let's Encrypt SSL/TLS certificate and enforce HTTPS:
+To secure the server with a valid Let's Encrypt SSL/TLS certificate for `curiosityhub.co.in` & `www.curiosityhub.co.in` and enforce HTTPS:
 
 ```bash
 chmod +x scripts/setup_ssl.sh
@@ -39,9 +39,10 @@ chmod +x scripts/setup_ssl.sh
 ```
 
 This sets up:
-* **Let's Encrypt Certificate** via Certbot with automatic background renewal (`certbot.timer`).
+* **Let's Encrypt Certificate** covering both `curiosityhub.co.in` and `www.curiosityhub.co.in` via Certbot with automatic background renewal (`certbot.timer`).
 * **Nginx Port 443** server block with modern TLS 1.2 / 1.3 ciphers, HTTP/2, and HSTS.
 * **Automated 301 Redirection** from `http://` to `https://`.
+* **Real-time SSE live streaming support** for facial recognition cameras without proxy buffering lag.
 
 ---
 
