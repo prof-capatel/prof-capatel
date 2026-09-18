@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Base Paths
 BASE_DIR = Path(os.getenv("ATTENDANCE_BASE_DIR", str(Path(__file__).resolve().parent.parent)))
+load_dotenv(BASE_DIR / ".env")
 DATABASE_DIR = BASE_DIR / "database"
 DATA_DIR = BASE_DIR / "data"
 FACES_DIR = DATA_DIR / "faces"
