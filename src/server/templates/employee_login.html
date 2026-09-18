@@ -1,98 +1,190 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>Employee Face Login - {{ branding.institution_name if branding else tenant.name }}</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Plus Jakarta Sans & Inter Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Base Stylesheet -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    <!-- Immediate Zero-Flicker Theme Initializer matching tenant default -->
+    <script>
+        (function() {
+            try {
+                let defaultTheme = {% if tenant and tenant.tenant_type in ['corporate', 'company', 'enterprise'] %}"slate"{% else %}"academic"{% endif %};
+                const savedTheme = localStorage.getItem("app_theme") || defaultTheme;
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+
+    <!-- Dynamic Custom Accent Color if configured -->
+    {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#c2410c' and branding.primary_accent_color != '#6366f1' and branding.primary_accent_color != '#1e40af' %}
     <style>
-        :root {
-            --tenant-accent: {{ branding.primary_accent_color if branding and branding.primary_accent_color else '#c2410c' }};
+        :root, [data-theme="academic"], [data-theme="light"], [data-theme="slate"], [data-theme="dark"] {
+            --accent-primary: {{ branding.primary_accent_color }};
+            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #1e40af 100%);
         }
+    </style>
+    {% endif %}
+
+    <style>
         body {
             margin: 0;
             padding: 0;
-            background: #0f172a;
-            color: #f8fafc;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            justify-content: space-between;
             overflow-x: hidden;
+            transition: background 0.25s ease, color 0.25s ease;
         }
+
+        /* Top Brand Navigation Bar */
+        .portal-topbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(12px);
+        }
+
+        .portal-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .portal-brand-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-gradient, linear-gradient(135deg, var(--accent-primary), #3b82f6));
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .portal-brand-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            line-height: 1.2;
+        }
+
+        .portal-brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        /* Main Center Card */
+        .login-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
         .login-card {
             width: 100%;
             max-width: 440px;
-            background: #1e293b;
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            margin: 16px;
-            box-sizing: border-box;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px;
+            box-shadow: var(--shadow-lg, 0 12px 30px rgba(0, 0, 0, 0.08));
             text-align: center;
+            transition: all 0.3s ease;
         }
+
         .camera-container {
             position: relative;
             width: 100%;
-            height: 320px;
+            height: 310px;
             background: #090d16;
-            border-radius: 16px;
+            border-radius: var(--radius-md);
             overflow: hidden;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            margin: 16px 0;
+            border: 2px solid var(--border-color);
+            margin: 18px 0;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
         }
+
         #webcamVideo {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1);
         }
+
         .face-oval-guide {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 170px;
-            height: 220px;
-            border: 2.5px dashed var(--tenant-accent);
+            width: 175px;
+            height: 225px;
+            border: 2.5px dashed var(--accent-primary);
             border-radius: 50%;
-            box-shadow: 0 0 20px rgba(194, 65, 12, 0.3);
+            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45), 0 0 20px rgba(99, 102, 241, 0.3);
             pointer-events: none;
-            animation: pulseOval 2.5s infinite ease-in-out;
+            animation: pulseOval 2.4s infinite ease-in-out;
+            transition: all 0.3s ease;
         }
+
         @keyframes pulseOval {
             0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
-            50% { transform: translate(-50%, -50%) scale(1.04); opacity: 0.6; }
+            50% { transform: translate(-50%, -50%) scale(1.03); opacity: 0.7; }
         }
+
         .scan-overlay-text {
             position: absolute;
             bottom: 12px;
-            left: 0;
-            right: 0;
+            left: 12px;
+            right: 12px;
             font-size: 12px;
             font-weight: 600;
             color: #ffffff;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 6px 12px;
-            margin: 0 20px;
-            border-radius: 20px;
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.75);
+            padding: 7px 12px;
+            border-radius: var(--radius-full);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .btn-scan {
+
+        .btn-scan-primary {
             width: 100%;
             padding: 14px;
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 700;
-            border-radius: 12px;
-            background: var(--tenant-accent);
+            border-radius: var(--radius-sm);
+            background: var(--accent-gradient, var(--accent-primary));
             color: #ffffff;
             border: none;
             cursor: pointer;
@@ -100,193 +192,274 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            transition: all 0.2s;
-            box-shadow: 0 4px 14px rgba(194, 65, 12, 0.4);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
         }
-        .btn-scan:hover:not(:disabled) {
-            transform: translateY(-1px);
-            filter: brightness(1.1);
+
+        .btn-scan-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+            filter: brightness(1.05);
         }
-        .btn-scan:disabled {
-            opacity: 0.6;
+
+        .btn-scan-primary:disabled {
+            opacity: 0.65;
             cursor: not-allowed;
+            transform: none;
         }
-        .alert-box {
+
+        .feedback-alert {
             padding: 12px 14px;
-            border-radius: 10px;
+            border-radius: var(--radius-sm);
             font-size: 12.5px;
             margin-top: 14px;
             display: none;
             text-align: left;
-            line-height: 1.4;
+            line-height: 1.45;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feedback-alert.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #059669;
+        }
+        [data-theme="dark"] .feedback-alert.success, [data-theme="slate"] .feedback-alert.success {
+            color: #34d399;
+        }
+
+        .feedback-alert.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #dc2626;
+        }
+        [data-theme="dark"] .feedback-alert.error, [data-theme="slate"] .feedback-alert.error {
+            color: #f87171;
+        }
+
+        /* Footer */
+        .portal-footer {
+            padding: 16px 24px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
     </style>
 </head>
 <body>
 
-<div class="login-card">
-    <!-- Header with Branding -->
-    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px;">
-        {% if branding and branding.logo_url %}
-            <img src="{{ branding.logo_url }}" alt="Logo" style="height: 38px; border-radius: 8px;">
-        {% else %}
-            <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--tenant-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #fff;">
-                {{ tenant.name[0] }}
+    <!-- Top Branding & Controls Bar -->
+    <header class="portal-topbar">
+        <div class="portal-brand">
+            {% if branding and branding.logo_url %}
+                <img src="{{ branding.logo_url }}" alt="Logo" style="height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
+            {% else %}
+                <div class="portal-brand-avatar">
+                    {{ tenant.name[0] if tenant else 'E' }}
+                </div>
+            {% endif %}
+            <div>
+                <div class="portal-brand-title">{{ branding.institution_name if branding else tenant.name }}</div>
+                <div class="portal-brand-subtitle">
+                    <span><i class="fa-solid fa-face-smile" style="color: var(--accent-primary);"></i> Employee Face-Login Portal</span>
+                    <span>&bull;</span>
+                    <code>{{ tenant.slug }}</code>
+                </div>
             </div>
-        {% endif %}
-        <div style="text-align: left;">
-            <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff;">{{ branding.institution_name if branding else tenant.name }}</h3>
-            <span style="font-size: 11.5px; color: #94a3b8;">Employee Self-Service Portal</span>
         </div>
-    </div>
 
-    <p style="font-size: 13px; color: #94a3b8; margin: 10px 0 0;">
-        Position your face within the guide for instant passwordless biometric login.
-    </p>
-
-    <!-- Live Camera Container -->
-    <div class="camera-container">
-        <video id="webcamVideo" autoplay playsinline muted></video>
-        <canvas id="captureCanvas" style="display: none;"></canvas>
-        <div class="face-oval-guide"></div>
-        <div class="scan-overlay-text" id="scanStatusOverlay">
-            <i class="fa-solid fa-camera"></i> Camera Active — Align your face
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                <i class="fa-solid fa-moon"></i>
+            </button>
         </div>
-    </div>
+    </header>
 
-    <!-- Login Button -->
-    <button type="button" id="btnScanFace" class="btn-scan" onclick="performFaceLogin()">
-        <i class="fa-solid fa-expand"></i>
-        <span>Scan Face to Log In</span>
-    </button>
+    <!-- Center Facial Authentication Card -->
+    <main class="login-wrapper">
+        <div class="login-card">
+            
+            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-full); font-size: 11.5px; font-weight: 700; background: var(--bg-subtle); color: var(--accent-primary); border: 1px solid var(--border-color); margin-bottom: 12px;">
+                <i class="fa-solid fa-shield-halved"></i> 1:N Biometric Access
+            </div>
 
-    <!-- Feedback Alerts -->
-    <div id="loginAlertBox" class="alert-box"></div>
+            <h2 style="margin: 0; font-size: 19px; font-weight: 800; color: var(--text-heading);">Employee Face Login</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 6px 0 0; line-height: 1.45;">
+                Position your face within the guide for instant passwordless entry to your leave balances and payslips.
+            </p>
 
-    <!-- Tenant ID & Footer -->
-    <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b;">
-        <span>Org: <strong>{{ tenant.slug }}</strong></span>
-        <a href="/portal/{{ tenant.slug }}" style="color: #94a3b8; text-decoration: none;">
-            <i class="fa-solid fa-lock"></i> HR Admin Login
-        </a>
-    </div>
-</div>
+            <!-- Live Camera Container -->
+            <div class="camera-container" id="cameraViewport">
+                <video id="webcamVideo" autoplay playsinline muted></video>
+                <canvas id="captureCanvas" style="display: none;"></canvas>
+                <div class="face-oval-guide"></div>
+                <div class="scan-overlay-text" id="scanStatusOverlay">
+                    <i class="fa-solid fa-camera"></i> Initializing camera...
+                </div>
+            </div>
 
-<script>
-    const tenantSlug = "{{ tenant_slug }}";
-    let videoStream = null;
+            <!-- Login Trigger Button -->
+            <button type="button" id="btnScanFace" class="btn-scan-primary" onclick="performFaceLogin()">
+                <i class="fa-solid fa-expand"></i>
+                <span>Scan Face to Log In</span>
+            </button>
 
-    document.addEventListener("DOMContentLoaded", () => {
-        initCamera();
-    });
+            <!-- Feedback Alerts Container -->
+            <div id="loginAlertBox" class="feedback-alert"></div>
 
-    async function initCamera() {
-        const video = document.getElementById("webcamVideo");
-        const statusOverlay = document.getElementById("scanStatusOverlay");
+            <!-- Secondary HR Direct Login Link -->
+            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted);">
+                <span>Tenant: <strong>{{ tenant.name }}</strong></span>
+                <a href="/portal/{{ tenant.slug }}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">
+                    <i class="fa-solid fa-lock"></i> HR Admin Login
+                </a>
+            </div>
+        </div>
+    </main>
 
-        try {
-            const constraints = {
-                video: {
-                    facingMode: "user",
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                },
-                audio: false,
-            };
+    <!-- Footer -->
+    <footer class="portal-footer">
+        <div>&copy; 2026 {{ branding.institution_name if branding else tenant.name }}. All rights reserved.</div>
+        <div>
+            <span class="badge badge-sky" style="font-size: 11px;"><i class="fa-solid fa-bolt"></i> Fast Face Engine</span>
+        </div>
+    </footer>
 
-            videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = videoStream;
-            await video.play();
-            if (statusOverlay) {
-                statusOverlay.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Camera Ready. Tap Scan to Log In.';
+    <script>
+        const tenantSlug = "{{ tenant_slug }}";
+        let videoStream = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updateThemeIcon();
+            initCamera();
+        });
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const next = (current === "dark" || current === "slate") ? "light" : "slate";
+            document.documentElement.setAttribute("data-theme", next);
+            localStorage.setItem("app_theme", next);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const icon = document.querySelector("#themeToggleBtn i");
+            if (icon) {
+                icon.className = (current === "dark" || current === "slate") ? "fa-solid fa-sun" : "fa-solid fa-moon";
             }
-        } catch (err) {
-            console.error("Camera access failed:", err);
-            if (statusOverlay) {
-                statusOverlay.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Camera permission required.';
+        }
+
+        async function initCamera() {
+            const video = document.getElementById("webcamVideo");
+            const statusOverlay = document.getElementById("scanStatusOverlay");
+
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                    },
+                    audio: false,
+                };
+
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = videoStream;
+                await video.play();
+                if (statusOverlay) {
+                    statusOverlay.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Camera Ready. Tap Scan to Log In.';
+                }
+            } catch (err) {
+                console.error("Camera access failed:", err);
+                if (statusOverlay) {
+                    statusOverlay.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Camera permission required.';
+                }
+                showAlert("Could not access camera. Please grant camera permission in your browser settings.", "error");
             }
-            showAlert("Could not access camera. Please grant camera permission in your browser settings.", "error");
-        }
-    }
-
-    async function performFaceLogin() {
-        const video = document.getElementById("webcamVideo");
-        const canvas = document.getElementById("captureCanvas");
-        const btn = document.getElementById("btnScanFace");
-        const statusOverlay = document.getElementById("scanStatusOverlay");
-
-        if (!video || !canvas || !videoStream) {
-            showAlert("Camera is not active. Please reload the page.", "error");
-            return;
         }
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
-        if (statusOverlay) {
-            statusOverlay.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Matching face vector...';
-        }
+        async function performFaceLogin() {
+            const video = document.getElementById("webcamVideo");
+            const canvas = document.getElementById("captureCanvas");
+            const btn = document.getElementById("btnScanFace");
+            const statusOverlay = document.getElementById("scanStatusOverlay");
 
-        // Capture current video frame
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            if (!video || !canvas || !videoStream) {
+                showAlert("Camera is not active. Please grant camera permissions and reload.", "error");
+                return;
+            }
 
-        const photoBase64 = canvas.toDataURL("image/jpeg", 0.85);
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+            if (statusOverlay) {
+                statusOverlay.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Matching face vector...';
+            }
 
-        try {
-            const res = await fetch("/api/v1/employee/face-login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    tenant_identifier: tenantSlug,
-                    photo_base64: photoBase64,
-                }),
-            });
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            const data = await res.json();
+            const photoBase64 = canvas.toDataURL("image/jpeg", 0.85);
 
-            if (res.ok) {
-                if (statusOverlay) {
-                    statusOverlay.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Verified: ${data.employee.name} (${data.confidence_pct}% Match)`;
+            try {
+                const res = await fetch("/api/v1/employee/face-login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        tenant_identifier: tenantSlug,
+                        photo_base64: photoBase64,
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    if (statusOverlay) {
+                        statusOverlay.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Verified: ${data.employee.name} (${data.confidence_pct}% Match)`;
+                    }
+                    showAlert(`Welcome back, <strong>${data.employee.name}</strong>! Redirecting to your dashboard...`, "success");
+
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || `/employee/${tenantSlug}/dashboard`;
+                    }, 700);
+                } else {
+                    showAlert(data.detail || "Face not recognized. Please ensure clear lighting and try again.", "error");
+                    if (statusOverlay) {
+                        statusOverlay.innerHTML = '<i class="fa-solid fa-xmark" style="color: #ef4444;"></i> Authentication Failed';
+                    }
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-expand"></i> Try Again';
                 }
-                showAlert(`Welcome back, <strong>${data.employee.name}</strong>! Redirecting to your dashboard...`, "success");
-
-                setTimeout(() => {
-                    window.location.href = data.redirect_url || `/employee/${tenantSlug}/dashboard`;
-                }, 800);
-            } else {
-                showAlert(data.detail || "Face not recognized. Please ensure clear lighting and try again.", "error");
-                if (statusOverlay) {
-                    statusOverlay.innerHTML = '<i class="fa-solid fa-xmark" style="color: #ef4444;"></i> Authentication Failed';
-                }
+            } catch (err) {
+                showAlert("Network error during face verification.", "error");
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-expand"></i> Try Again';
             }
-        } catch (err) {
-            showAlert("Network error during face verification.", "error");
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-expand"></i> Try Again';
         }
-    }
 
-    function showAlert(msg, type) {
-        const box = document.getElementById("loginAlertBox");
-        if (!box) return;
+        function showAlert(msg, type) {
+            const box = document.getElementById("loginAlertBox");
+            if (!box) return;
 
-        box.style.display = "block";
-        if (type === "success") {
-            box.style.background = "rgba(16, 185, 129, 0.15)";
-            box.style.border = "1px solid rgba(16, 185, 129, 0.4)";
-            box.style.color = "#34d399";
-        } else {
-            box.style.background = "rgba(239, 68, 68, 0.15)";
-            box.style.border = "1px solid rgba(239, 68, 68, 0.4)";
-            box.style.color = "#f87171";
+            box.className = `feedback-alert ${type}`;
+            box.innerHTML = msg;
         }
-        box.innerHTML = msg;
-    }
-</script>
+    </script>
 
 </body>
 </html>

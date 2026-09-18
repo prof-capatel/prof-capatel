@@ -236,8 +236,8 @@
     </div>
 </div>
 
-<!-- Modal 2: Leave Master & Cadre Quota Configuration Modal -->
-<div class="modal" id="leaveMasterModal">
+<!-- Modal 2: Leave Master & Quota Configuration Modal -->
+<div class="modal-overlay" id="leaveMasterModal">
     <div class="modal-content" style="max-width: 840px;">
         <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -245,8 +245,8 @@
                     <i class="fa-solid fa-sliders"></i>
                 </div>
                 <div>
-                    <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--text-heading);">Leave Master & Cadre Quota Policy</h3>
-                    <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">Configure leave categories, default annual allowances, and cadre/role specific quota allocations.</p>
+                    <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--text-heading);">Leave Master & Quota Policy</h3>
+                    <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">Configure leave categories, pay structure, and default annual allowances.</p>
                 </div>
             </div>
             <button type="button" class="modal-close" onclick="closeLeaveMasterModal()">&times;</button>
@@ -274,14 +274,13 @@
                             <th>Category Name</th>
                             <th>Pay Type</th>
                             <th>Default Quota</th>
-                            <th>Cadre Overrides</th>
                             <th>Status</th>
                             <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="leaveMasterTableBody">
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 25px; color: var(--text-muted);">Loading leave types...</td>
+                            <td colspan="6" style="text-align: center; padding: 25px; color: var(--text-muted);">Loading leave types...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -334,28 +333,6 @@
                     <div class="form-group" style="margin-bottom: 14px;">
                         <label class="form-label" style="font-size: 12px;">Description / Policy Notes</label>
                         <input type="text" id="formLeaveTypeDesc" class="form-control" placeholder="Brief description of when this leave category applies...">
-                    </div>
-
-                    <!-- Cadre-Specific Quota Overrides Section -->
-                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div>
-                                <label class="form-label" style="margin: 0; font-size: 12.5px; font-weight: 700; color: var(--text-heading);">
-                                    <i class="fa-solid fa-users-gear" style="color: #6366f1; margin-right: 4px;"></i> Cadre / Role-Specific Quota Overrides
-                                </label>
-                                <span style="font-size: 11px; color: var(--text-muted); display: block;">Employees matching these cadre titles receive specific annual quotas instead of the default quota.</span>
-                            </div>
-                            <button type="button" class="btn btn-secondary" onclick="addCadreQuotaRow('', 12)" style="font-size: 11px; padding: 4px 10px;">
-                                <i class="fa-solid fa-plus"></i> Add Cadre Override
-                            </button>
-                        </div>
-
-                        <div id="cadreQuotasContainer" style="display: flex; flex-direction: column; gap: 8px;">
-                            <!-- Dynamic Cadre Rows go here -->
-                        </div>
-                        <div id="noCadreNotice" style="font-size: 11.5px; color: var(--text-muted); text-align: center; padding: 8px; font-style: italic;">
-                            No cadre overrides configured. All employees receive default quota.
-                        </div>
                     </div>
 
                     <div id="formResultAlert" style="display: none; margin-bottom: 12px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12px;"></div>
@@ -542,7 +519,6 @@
                     </td>
                     <td>
                         <span style="font-weight: 600; color: var(--text-primary); font-size: 12.5px;">${req.department || 'N/A'}</span>
-                        <div style="font-size: 11px; color: var(--text-muted);">${req.cadre_level || 'Staff'}</div>
                     </td>
                     <td>
                         <span class="badge badge-indigo" style="font-size: 11.5px;">${req.leave_type_name} (${req.leave_type_code})</span>
@@ -583,7 +559,7 @@
         currentReviewItem = item;
         document.getElementById("reviewRequestId").value = item.id;
         document.getElementById("reviewEmpName").innerText = item.student_name;
-        document.getElementById("reviewEmpMeta").innerText = `${item.roll_number} • ${item.department} (${item.cadre_level || 'Staff'})`;
+        document.getElementById("reviewEmpMeta").innerText = `${item.roll_number} • ${item.department}`;
         document.getElementById("reviewLeaveTypeBadge").innerText = `${item.leave_type_name} (${item.leave_type_code})`;
         document.getElementById("reviewDaysLabel").innerText = `${item.total_days} Day${item.total_days > 1 ? 's' : ''} ${item.is_half_day ? '(' + item.half_day_period + ')' : ''}`;
         document.getElementById("reviewDatesLabel").innerText = (item.start_date === item.end_date) ? item.start_date : `${item.start_date} to ${item.end_date}`;
@@ -674,7 +650,7 @@
     }
 
     /* ==========================================================================
-       LEAVE MASTER & CADRE QUOTA JS CONTROLLERS
+       LEAVE MASTER & QUOTA JS CONTROLLERS
        ========================================================================== */
     let cachedLeaveTypes = [];
 
@@ -703,10 +679,10 @@
                 if (badge) badge.innerText = `${cachedLeaveTypes.length} Categories`;
                 renderLeaveMasterTable(cachedLeaveTypes);
             } else {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-rose); padding: 20px;">Failed to load leave types: ${data.detail || 'Error'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-rose); padding: 20px;">Failed to load leave types: ${data.detail || 'Error'}</td></tr>`;
             }
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-rose); padding: 20px;">Network error loading leave master.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-rose); padding: 20px;">Network error loading leave master.</td></tr>`;
         }
     }
 
@@ -715,7 +691,7 @@
         if (!tbody) return;
 
         if (types.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">No leave categories configured. Click "+ Add Leave Category" above.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">No leave categories configured. Click "+ Add Leave Category" above.</td></tr>`;
             return;
         }
 
@@ -729,12 +705,6 @@
                 ? `<span class="badge badge-present" style="font-size: 11px;">Active</span>`
                 : `<span class="badge badge-unknown" style="font-size: 11px;">Archived</span>`;
 
-            let cadreOverrideBadge = `<span style="color: var(--text-muted); font-size: 11px;">None (Default)</span>`;
-            if (t.cadre_quotas && t.cadre_quotas.length > 0) {
-                const cadreList = t.cadre_quotas.map(cq => `${cq.cadre_level}: ${cq.allocated_days}d`).join(', ');
-                cadreOverrideBadge = `<span class="badge badge-indigo" style="font-size: 11px;" title="${cadreList}">${t.cadre_quotas.length} Cadre Override(s)</span>`;
-            }
-
             html += `
                 <tr>
                     <td><code style="font-weight: 700; color: #6366f1;">${t.code}</code></td>
@@ -744,10 +714,9 @@
                     </td>
                     <td>${payBadge}</td>
                     <td><strong style="font-size: 13px; color: var(--text-primary);">${t.default_days_per_year}</strong> <span style="font-size: 11px; color: var(--text-muted);">days/yr</span></td>
-                    <td>${cadreOverrideBadge}</td>
                     <td>${activeBadge}</td>
                     <td style="text-align: right; white-space: nowrap;">
-                        <button type="button" class="btn btn-secondary" onclick="editLeaveType(${t.id})" style="padding: 4px 8px; font-size: 11px; margin-right: 4px;" title="Edit Quota & Cadres">
+                        <button type="button" class="btn btn-secondary" onclick="editLeaveType(${t.id})" style="padding: 4px 8px; font-size: 11px; margin-right: 4px;" title="Edit Quota">
                             <i class="fa-solid fa-pen-to-square"></i> Edit
                         </button>
                         <button type="button" class="btn btn-danger" onclick="deleteLeaveType(${t.id}, '${t.name.replace(/'/g, "\\'")}')" style="padding: 4px 8px; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);" title="Delete / Deactivate">
@@ -770,9 +739,6 @@
         document.getElementById("formLeaveTypeDefaultDays").value = "12";
         document.getElementById("formLeaveTypeIsActive").value = "true";
         document.getElementById("formLeaveTypeDesc").value = "";
-        
-        document.getElementById("cadreQuotasContainer").innerHTML = "";
-        updateCadreNotice();
 
         document.getElementById("leaveTypeFormTitle").innerHTML = `<i class="fa-solid fa-plus" style="color: #6366f1;"></i> Add New Leave Category`;
         document.getElementById("leaveTypeFormCard").style.display = "block";
@@ -798,49 +764,10 @@
         document.getElementById("formLeaveTypeIsActive").value = item.is_active ? "true" : "false";
         document.getElementById("formLeaveTypeDesc").value = item.description || "";
 
-        const container = document.getElementById("cadreQuotasContainer");
-        container.innerHTML = "";
-        if (item.cadre_quotas && item.cadre_quotas.length > 0) {
-            item.cadre_quotas.forEach(cq => {
-                addCadreQuotaRow(cq.cadre_level, cq.allocated_days);
-            });
-        }
-        updateCadreNotice();
-
         document.getElementById("leaveTypeFormTitle").innerHTML = `<i class="fa-solid fa-pen-to-square" style="color: #6366f1;"></i> Edit ${item.name} (${item.code})`;
         document.getElementById("leaveTypeFormCard").style.display = "block";
         document.getElementById("formResultAlert").style.display = "none";
         document.getElementById("leaveTypeFormCard").scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function addCadreQuotaRow(cadreName = "", days = 12) {
-        const container = document.getElementById("cadreQuotasContainer");
-        const rowId = "cadreRow_" + Math.random().toString(36).substring(2, 9);
-        
-        const row = document.createElement("div");
-        row.id = rowId;
-        row.className = "cadre-override-row";
-        row.style = "display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; align-items: center;";
-        row.innerHTML = `
-            <input type="text" class="form-control cadre-name-input" placeholder="Cadre Title (e.g. Executive, Manager, Staff, Intern)" value="${cadreName}" required style="font-size: 12px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <input type="number" step="0.5" min="0" max="365" class="form-control cadre-days-input" value="${days}" required style="font-size: 12px; font-weight: 700;">
-                <span style="font-size: 11px; color: var(--text-muted);">Days</span>
-            </div>
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('${rowId}').remove(); updateCadreNotice();" style="padding: 6px 10px; font-size: 12px; color: #ef4444;" title="Remove Override">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
-        `;
-        container.appendChild(row);
-        updateCadreNotice();
-    }
-
-    function updateCadreNotice() {
-        const container = document.getElementById("cadreQuotasContainer");
-        const notice = document.getElementById("noCadreNotice");
-        if (notice && container) {
-            notice.style.display = (container.children.length === 0) ? "block" : "none";
-        }
     }
 
     async function saveLeaveTypeForm(e) {
@@ -854,17 +781,6 @@
         const isActiveVal = document.getElementById("formLeaveTypeIsActive").value === "true";
         const descVal = document.getElementById("formLeaveTypeDesc").value.trim();
 
-        // Extract cadre quotas
-        const cadreRows = document.querySelectorAll(".cadre-override-row");
-        const cadreQuotas = [];
-        cadreRows.forEach(row => {
-            const cadreName = row.querySelector(".cadre-name-input")?.value?.trim();
-            const days = parseFloat(row.querySelector(".cadre-days-input")?.value) || 0;
-            if (cadreName) {
-                cadreQuotas.push({ cadre_level: cadreName, allocated_days: days });
-            }
-        });
-
         const payload = {
             id: idVal ? parseInt(idVal) : null,
             name: nameVal,
@@ -873,7 +789,6 @@
             is_paid: isPaidVal,
             default_days_per_year: defaultDaysVal,
             is_active: isActiveVal,
-            cadre_quotas: cadreQuotas
         };
 
         try {

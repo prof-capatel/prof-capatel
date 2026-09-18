@@ -29,9 +29,16 @@ from src.database.models import (
     Student,
     SubscriptionPlan,
     LeaveType,
-    LeaveCadreQuota,
     LeaveBalance,
     LeaveRequest,
+    CompanyLocation,
+    DesignationMaster,
+    SalaryComponent,
+    SalaryTemplate,
+    EmployeeSalaryStructure,
+    SalaryRevisionHistory,
+    PayrollBatch,
+    PayrollPayslip,
 )
 from src.utils.auth_utils import hash_password
 
@@ -184,6 +191,174 @@ def seed_default_leave_types(db: Session, tenant_id: int):
         logger.info(f"Seeded default LeaveTypes for Tenant #{tenant_id}.")
 
 
+def seed_default_salary_components(db: Session, tenant_id: int):
+    """Seeds master Indian salary components (Basic, HRA, DA, PF, ESI, PT, TDS) for tenant."""
+    existing = db.query(SalaryComponent).filter(SalaryComponent.tenant_id == tenant_id).first()
+    if not existing:
+        defaults = [
+            {"name": "Basic Pay", "code": "BASIC", "component_type": "EARNING", "calculation_type": "PERCENTAGE_GROSS", "default_value": 50.0, "is_taxable": True, "is_statutory": False},
+            {"name": "House Rent Allowance", "code": "HRA", "component_type": "EARNING", "calculation_type": "PERCENTAGE_BASIC", "default_value": 40.0, "is_taxable": True, "is_statutory": False},
+            {"name": "Dearness Allowance", "code": "DA", "component_type": "EARNING", "calculation_type": "PERCENTAGE_BASIC", "default_value": 0.0, "is_taxable": True, "is_statutory": False},
+            {"name": "Conveyance Allowance", "code": "CONVEYANCE", "component_type": "EARNING", "calculation_type": "FIXED", "default_value": 1600.0, "is_taxable": True, "is_statutory": False},
+            {"name": "Medical Allowance", "code": "MEDICAL", "component_type": "EARNING", "calculation_type": "FIXED", "default_value": 1250.0, "is_taxable": True, "is_statutory": False},
+            {"name": "Special Allowance", "code": "SPECIAL_ALLOWANCE", "component_type": "EARNING", "calculation_type": "FIXED", "default_value": 0.0, "is_taxable": True, "is_statutory": False},
+            {"name": "Performance Incentive / Bonus", "code": "BONUS_INCENTIVE", "component_type": "EARNING", "calculation_type": "FIXED", "default_value": 0.0, "is_taxable": True, "is_statutory": False},
+            {"name": "Employee Provident Fund (EPF)", "code": "EPF_EMPLOYEE", "component_type": "STATUTORY_EMPLOYEE", "calculation_type": "PERCENTAGE_BASIC", "default_value": 12.0, "is_taxable": False, "is_statutory": True},
+            {"name": "Employer PF Contribution (EPF/EPS)", "code": "EPF_EMPLOYER", "component_type": "STATUTORY_EMPLOYER", "calculation_type": "PERCENTAGE_BASIC", "default_value": 12.0, "is_taxable": False, "is_statutory": True},
+            {"name": "Employee State Insurance (ESIC)", "code": "ESIC_EMPLOYEE", "component_type": "STATUTORY_EMPLOYEE", "calculation_type": "PERCENTAGE_GROSS", "default_value": 0.75, "is_taxable": False, "is_statutory": True},
+            {"name": "Employer State Insurance (ESIC)", "code": "ESIC_EMPLOYER", "component_type": "STATUTORY_EMPLOYER", "calculation_type": "PERCENTAGE_GROSS", "default_value": 3.25, "is_taxable": False, "is_statutory": True},
+            {"name": "Professional Tax (PT)", "code": "PROFESSIONAL_TAX", "component_type": "STATUTORY_EMPLOYEE", "calculation_type": "FIXED", "default_value": 200.0, "is_taxable": False, "is_statutory": True},
+            {"name": "Tax Deducted at Source (TDS)", "code": "TDS", "component_type": "DEDUCTION", "calculation_type": "FIXED", "default_value": 0.0, "is_taxable": False, "is_statutory": True},
+            {"name": "Loan & Salary Advance Recovery", "code": "LOAN_ADVANCE", "component_type": "DEDUCTION", "calculation_type": "FIXED", "default_value": 0.0, "is_taxable": False, "is_statutory": False},
+        ]
+        for c in defaults:
+            sc = SalaryComponent(
+                tenant_id=tenant_id,
+                name=c["name"],
+                code=c["code"],
+                component_type=c["component_type"],
+                calculation_type=c["calculation_type"],
+                default_value=c["default_value"],
+                is_taxable=c["is_taxable"],
+                is_statutory=c["is_statutory"],
+                is_active=True,
+            )
+            db.add(sc)
+        db.flush()
+        logger.info(f"Seeded default SalaryComponents for Tenant #{tenant_id}.")
+
+
+def seed_default_salary_templates(db: Session, tenant_id: int):
+    """Seeds default reusable Salary Templates for tenant."""
+    existing = db.query(SalaryTemplate).filter(SalaryTemplate.tenant_id == tenant_id).first()
+    if not existing:
+        templates = [
+            {
+                "name": "Executive Structured CTC",
+                "code": "EXEC_STD",
+                "compensation_model": "STRUCTURED_SALARY",
+                "description": "Standard corporate structured package: 50% Basic, 20% HRA, statutory EPF (12%), ESIC, and PT.",
+                "basic_percentage": 50.0,
+                "hra_percentage": 20.0,
+                "da_percentage": 0.0,
+                "conveyance_fixed": 1600.0,
+                "medical_fixed": 1250.0,
+                "enable_pf": True,
+                "pf_capped_at_ceiling": True,
+                "enable_esi": True,
+                "enable_pt": True,
+            },
+            {
+                "name": "Monthly Fixed Base Pay",
+                "code": "MONTHLY_FIXED",
+                "compensation_model": "MONTHLY_FIXED",
+                "description": "Monthly base compensation pro-rated by working days with overtime multiplier.",
+                "basic_percentage": 60.0,
+                "hra_percentage": 20.0,
+                "da_percentage": 0.0,
+                "conveyance_fixed": 0.0,
+                "medical_fixed": 0.0,
+                "enable_pf": True,
+                "pf_capped_at_ceiling": True,
+                "enable_esi": True,
+                "enable_pt": True,
+            },
+            {
+                "name": "Hourly Operations Worker",
+                "code": "HOURLY_OPS",
+                "compensation_model": "HOURLY",
+                "description": "Wage computed directly by tracked biometric hours worked and overtime multiplier.",
+                "basic_percentage": 100.0,
+                "hra_percentage": 0.0,
+                "da_percentage": 0.0,
+                "conveyance_fixed": 0.0,
+                "medical_fixed": 0.0,
+                "enable_pf": False,
+                "pf_capped_at_ceiling": True,
+                "enable_esi": True,
+                "enable_pt": True,
+            },
+            {
+                "name": "Graduate Trainee / Intern Stipend",
+                "code": "INTERN_STIPEND",
+                "compensation_model": "STIPEND",
+                "description": "Fixed monthly intern stipend pro-rated for unpaid leaves with zero PF deduction.",
+                "basic_percentage": 100.0,
+                "hra_percentage": 0.0,
+                "da_percentage": 0.0,
+                "conveyance_fixed": 0.0,
+                "medical_fixed": 0.0,
+                "enable_pf": False,
+                "pf_capped_at_ceiling": True,
+                "enable_esi": False,
+                "enable_pt": False,
+            },
+        ]
+        for t in templates:
+            st = SalaryTemplate(
+                tenant_id=tenant_id,
+                name=t["name"],
+                code=t["code"],
+                compensation_model=t["compensation_model"],
+                description=t["description"],
+                basic_percentage=t["basic_percentage"],
+                hra_percentage=t["hra_percentage"],
+                da_percentage=t["da_percentage"],
+                conveyance_fixed=t["conveyance_fixed"],
+                medical_fixed=t["medical_fixed"],
+                enable_pf=t["enable_pf"],
+                pf_capped_at_ceiling=t["pf_capped_at_ceiling"],
+                enable_esi=t["enable_esi"],
+                enable_pt=t["enable_pt"],
+                is_active=True,
+            )
+            db.add(st)
+        db.flush()
+        logger.info(f"Seeded default SalaryTemplates for Tenant #{tenant_id}.")
+
+
+def seed_default_locations_and_designations(db: Session, tenant_id: int):
+    """Seeds default branch location and designations for corporate tenant."""
+    existing_loc = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == tenant_id).first()
+    if not existing_loc:
+        loc = CompanyLocation(
+            tenant_id=tenant_id,
+            name="Main Corporate Office",
+            code="CORP-HQ",
+            city="Mumbai",
+            state="Maharashtra",
+            address="BKC Financial Hub, Bandra East, Mumbai, Maharashtra 400051",
+            contact_number="+91 22 2650 0000",
+            is_active=True,
+        )
+        db.add(loc)
+        logger.info(f"Seeded default CompanyLocation for Tenant #{tenant_id}.")
+
+    existing_desig = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == tenant_id).first()
+    if not existing_desig:
+        exec_tpl = db.query(SalaryTemplate).filter(SalaryTemplate.tenant_id == tenant_id, SalaryTemplate.code == "EXEC_STD").first()
+        fixed_tpl = db.query(SalaryTemplate).filter(SalaryTemplate.tenant_id == tenant_id, SalaryTemplate.code == "MONTHLY_FIXED").first()
+
+        desigs = [
+            {"title": "Senior Software Engineer", "code": "SSE", "salary_template_id": exec_tpl.id if exec_tpl else None, "description": "Lead software development and platform architecture."},
+            {"title": "Associate Engineer", "code": "ASE", "salary_template_id": fixed_tpl.id if fixed_tpl else None, "description": "Core engineering delivery and maintenance."},
+            {"title": "Project Lead / Manager", "code": "PLM", "salary_template_id": exec_tpl.id if exec_tpl else None, "description": "Operations and project delivery oversight."},
+            {"title": "Business Operations Executive", "code": "BOE", "salary_template_id": fixed_tpl.id if fixed_tpl else None, "description": "Corporate operations, logistics, and administration."},
+        ]
+        for d in desigs:
+            dm = DesignationMaster(
+                tenant_id=tenant_id,
+                title=d["title"],
+                code=d["code"],
+                salary_template_id=d["salary_template_id"],
+                description=d["description"],
+                is_active=True,
+            )
+            db.add(dm)
+        logger.info(f"Seeded default Designations for Tenant #{tenant_id}.")
+    db.flush()
+
+
 def seed_default_tenant_and_branding():
     """Seeds default tenant, branding, RBAC users, and academic structure if database is fresh."""
     with SessionLocal() as db:
@@ -191,6 +366,9 @@ def seed_default_tenant_and_branding():
             # 0. Subscription Plans
             seed_default_subscription_plans(db)
             seed_default_leave_types(db, DEFAULT_TENANT_ID)
+            seed_default_salary_components(db, DEFAULT_TENANT_ID)
+            seed_default_salary_templates(db, DEFAULT_TENANT_ID)
+            seed_default_locations_and_designations(db, DEFAULT_TENANT_ID)
 
             # 1. Default Tenant
             default_tenant = db.query(Tenant).filter(Tenant.id == DEFAULT_TENANT_ID).first()
@@ -727,10 +905,6 @@ def run_schema_migrations():
                 conn.execute(text("ALTER TABLE students ADD COLUMN monthly_base_salary FLOAT NULL"))
                 logger.info("Migrated students table: added monthly_base_salary column.")
 
-            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'cadre_level'")).fetchall()
-            if not res:
-                conn.execute(text("ALTER TABLE students ADD COLUMN cadre_level VARCHAR(50) NULL"))
-                logger.info("Migrated students table: added cadre_level column.")
 
             # 5. System Branding shift timings & payroll columns
             res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'shift_check_in_time'")).fetchall()
@@ -787,6 +961,51 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE system_branding ADD COLUMN currency_symbol VARCHAR(10) DEFAULT '₹' NOT NULL"))
                 logger.info("Migrated system_branding table: added currency_symbol column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'holiday_ot_multiplier'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN holiday_ot_multiplier FLOAT DEFAULT 2.0 NULL"))
+                logger.info("Migrated system_branding table: added holiday_ot_multiplier column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'enable_pf_ceiling'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN enable_pf_ceiling BOOLEAN DEFAULT TRUE NOT NULL"))
+                logger.info("Migrated system_branding table: added enable_pf_ceiling column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'epf_ceiling_limit'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN epf_ceiling_limit FLOAT DEFAULT 15000.0 NOT NULL"))
+                logger.info("Migrated system_branding table: added epf_ceiling_limit column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'esi_gross_threshold'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN esi_gross_threshold FLOAT DEFAULT 21000.0 NOT NULL"))
+                logger.info("Migrated system_branding table: added esi_gross_threshold column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'epf_employee_pct'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN epf_employee_pct FLOAT DEFAULT 12.0 NOT NULL"))
+                logger.info("Migrated system_branding table: added epf_employee_pct column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'epf_employer_pct'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN epf_employer_pct FLOAT DEFAULT 12.0 NOT NULL"))
+                logger.info("Migrated system_branding table: added epf_employer_pct column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'esic_employee_pct'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN esic_employee_pct FLOAT DEFAULT 0.75 NOT NULL"))
+                logger.info("Migrated system_branding table: added esic_employee_pct column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'esic_employer_pct'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN esic_employer_pct FLOAT DEFAULT 3.25 NOT NULL"))
+                logger.info("Migrated system_branding table: added esic_employer_pct column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'pt_monthly_default'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN pt_monthly_default FLOAT DEFAULT 200.0 NOT NULL"))
+                logger.info("Migrated system_branding table: added pt_monthly_default column.")
 
             # 6. Attendance Records checkin / checkout and shift tracking columns
             res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'punch_type'")).fetchall()
@@ -846,6 +1065,53 @@ def run_schema_migrations():
                 except Exception:
                     pass
                 logger.info("Migrated students table: added shift_id column.")
+
+            # 9. Students Location, Designation, Banking & Statutory columns
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'location_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN location_id INT NULL"))
+                logger.info("Migrated students table: added location_id column.")
+
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'designation_id'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN designation_id INT NULL"))
+                logger.info("Migrated students table: added designation_id column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'designation'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN designation VARCHAR(100) NULL"))
+                logger.info("Migrated students table: added designation column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'pan_number'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN pan_number VARCHAR(30) NULL"))
+                logger.info("Migrated students table: added pan_number column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'uan_number'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN uan_number VARCHAR(30) NULL"))
+                logger.info("Migrated students table: added uan_number column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'esic_number'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN esic_number VARCHAR(30) NULL"))
+                logger.info("Migrated students table: added esic_number column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'bank_name'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN bank_name VARCHAR(100) NULL"))
+                logger.info("Migrated students table: added bank_name column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'bank_account_number'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN bank_account_number VARCHAR(50) NULL"))
+                logger.info("Migrated students table: added bank_account_number column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'bank_ifsc_code'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN bank_ifsc_code VARCHAR(30) NULL"))
+                logger.info("Migrated students table: added bank_ifsc_code column.")
 
             # Seed default WorkShift for corporate tenants if none exist
             try:

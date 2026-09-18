@@ -298,6 +298,32 @@ async function applyLogFilters() {
     }
 }
 
+function formatAttendanceDateTime(dtStr) {
+    if (!dtStr) return null;
+    const s = String(dtStr).trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (m) {
+        const year = m[1];
+        const month = m[2];
+        const day = m[3];
+        const hour = m[4];
+        const min = m[5];
+        const sec = m[6] || "00";
+        return `${day}-${month}-${year} ${hour}:${min}:${sec}`;
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const hour = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const sec = String(d.getSeconds()).padStart(2, '0');
+        return `${day}-${month}-${year} ${hour}:${min}:${sec}`;
+    }
+    return s;
+}
+
 function renderLogsTable(records) {
     const tableBody = document.getElementById("logsTableBody");
     if (!tableBody) return;
@@ -337,9 +363,12 @@ function renderLogsTable(records) {
         }
 
         if (isCorp) {
-            // Corporate check-in/out presentation
-            let inTime = r.check_in_short || (r.check_in_time ? r.check_in_time.slice(11, 16) : '--:--');
-            let outTime = r.check_out_short || (r.check_out_time ? r.check_out_time.slice(11, 16) : '<span style="color: var(--text-muted);">--:--</span>');
+            // Corporate check-in/out presentation: Calendar Date + Precise Timestamp (DD-MM-YYYY HH:MM:SS)
+            let formattedIn = formatAttendanceDateTime(r.check_in_time || r.timestamp);
+            let inTime = formattedIn || r.check_in_short || '--:--';
+
+            let formattedOut = formatAttendanceDateTime(r.check_out_time);
+            let outTime = formattedOut || (r.check_out_time ? r.check_out_time : '<span style="color: var(--text-muted);">--:--</span>');
             
             let durationHtml = '<span style="color: var(--text-muted);">--</span>';
             if (r.work_duration_formatted) {
@@ -376,8 +405,8 @@ function renderLogsTable(records) {
                     <td>${roleBadge}</td>
                     <td>${r.department || 'N/A'}</td>
                     <td>${nodeBadge}</td>
-                    <td><strong style="color: var(--text-heading); font-family: monospace;">${inTime}</strong></td>
-                    <td><strong style="color: var(--text-heading); font-family: monospace;">${outTime}</strong></td>
+                    <td><strong style="color: var(--text-heading); font-family: monospace; font-size: 12px;">${inTime}</strong></td>
+                    <td><strong style="color: var(--text-heading); font-family: monospace; font-size: 12px;">${outTime}</strong></td>
                     <td>${durationHtml}</td>
                     <td>${statusBadge}</td>
                 </tr>
@@ -400,7 +429,7 @@ function renderLogsTable(records) {
                 <td>${r.department || 'N/A'}</td>
                 <td><span class="badge badge-node">${r.class_semester || 'General'}</span></td>
                 <td>${nodeBadge}</td>
-                <td>${r.timestamp}</td>
+                <td><span style="font-family: monospace; font-size: 12px;">${formatAttendanceDateTime(r.timestamp) || r.timestamp || '--'}</span></td>
                 <td>${verificationBadge}</td>
             </tr>
         `;
@@ -787,7 +816,35 @@ function onEditClassSelectChanged() {
     }
 }
 
-function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, cadreLevel, doj, shiftId) {
+function onEditDesignationChanged() {
+    const desigSelect = document.getElementById("editDesignationSelect");
+    const tplSelect = document.getElementById("editSalaryTemplateSelect");
+    if (!desigSelect || !tplSelect) return;
+
+    const opt = desigSelect.options[desigSelect.selectedIndex];
+    if (opt) {
+        const tplId = opt.getAttribute("data-template-id");
+        if (tplId) {
+            tplSelect.value = tplId;
+        }
+    }
+}
+
+function onEditDesignationChanged() {
+    const desigSelect = document.getElementById("editDesignationSelect");
+    const tplSelect = document.getElementById("editSalaryTemplateSelect");
+    if (!desigSelect || !tplSelect) return;
+
+    const opt = desigSelect.options[desigSelect.selectedIndex];
+    if (opt) {
+        const tplId = opt.getAttribute("data-template-id");
+        if (tplId && !tplSelect.value) {
+            tplSelect.value = tplId;
+        }
+    }
+}
+
+function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, doj, shiftId, locationId, designationId, salaryTemplateId) {
     const modal = document.getElementById("editStudentModal");
     if (!modal) return;
 
@@ -832,14 +889,24 @@ function openEditModal(id, name, roll, dept, email, role, classSem, deptId, clas
         document.getElementById("editShiftSelect").value = (shiftId !== undefined && shiftId !== null) ? shiftId : "";
     }
 
+    if (document.getElementById("editLocationSelect")) {
+        document.getElementById("editLocationSelect").value = (locationId !== undefined && locationId !== null) ? locationId : "";
+    }
+
+    if (document.getElementById("editDesignationSelect")) {
+        document.getElementById("editDesignationSelect").value = (designationId !== undefined && designationId !== null) ? designationId : "";
+    }
+
+    if (document.getElementById("editSalaryTemplateSelect")) {
+        document.getElementById("editSalaryTemplateSelect").value = (salaryTemplateId !== undefined && salaryTemplateId !== null) ? salaryTemplateId : "";
+    }
+
     if (document.getElementById("editHourlyRate")) {
         document.getElementById("editHourlyRate").value = (hourlyRate !== undefined && hourlyRate !== null) ? hourlyRate : "";
     }
+
     if (document.getElementById("editMonthlyBaseSalary")) {
         document.getElementById("editMonthlyBaseSalary").value = (monthlySalary !== undefined && monthlySalary !== null) ? monthlySalary : "";
-    }
-    if (document.getElementById("editCadreLevel")) {
-        document.getElementById("editCadreLevel").value = cadreLevel || "";
     }
 
     const deptSelect = document.getElementById("editDepartmentSelect");
@@ -938,9 +1005,19 @@ async function submitStudentEdit(e) {
     const shiftSelect = document.getElementById("editShiftSelect");
     const shiftId = (shiftSelect && shiftSelect.value) ? parseInt(shiftSelect.value) : null;
 
+    const locSelect = document.getElementById("editLocationSelect");
+    const locId = (locSelect && locSelect.value) ? parseInt(locSelect.value) : null;
+
+    const desigSelect = document.getElementById("editDesignationSelect");
+    const desigId = (desigSelect && desigSelect.value) ? parseInt(desigSelect.value) : null;
+    const desigOption = (desigSelect && desigSelect.selectedIndex >= 0) ? desigSelect.options[desigSelect.selectedIndex] : null;
+    const desigTitle = desigOption ? (desigOption.getAttribute("data-title") || desigOption.text) : null;
+
+    const tplSelect = document.getElementById("editSalaryTemplateSelect");
+    const tplId = (tplSelect && tplSelect.value) ? parseInt(tplSelect.value) : null;
+
     const hourlyRateInput = document.getElementById("editHourlyRate")?.value;
     const monthlySalaryInput = document.getElementById("editMonthlyBaseSalary")?.value;
-    const cadreInput = document.getElementById("editCadreLevel")?.value;
     const dojInput = document.getElementById("editDateOfJoining")?.value;
 
     const saveBtn = document.getElementById("btnSaveEdit");
@@ -962,11 +1039,14 @@ async function submitStudentEdit(e) {
                 class_semester: className,
                 division_id: divId,
                 shift_id: shiftId,
+                location_id: locId,
+                designation_id: desigId,
+                designation: desigTitle,
+                salary_template_id: tplId,
                 email: email || null,
                 user_role: role,
                 hourly_rate: hourlyRateInput ? parseFloat(hourlyRateInput) : null,
                 monthly_base_salary: monthlySalaryInput ? parseFloat(monthlySalaryInput) : null,
-                cadre_level: cadreInput || null,
                 date_of_joining: dojInput !== undefined ? dojInput : null,
             }),
         });

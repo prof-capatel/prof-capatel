@@ -114,10 +114,17 @@ class Tenant(Base):
     audit_logs = relationship("AuditLog", back_populates="tenant", cascade="all, delete-orphan")
     batch_uploads = relationship("StudentBatchUpload", back_populates="tenant", cascade="all, delete-orphan")
     leave_types = relationship("LeaveType", back_populates="tenant", cascade="all, delete-orphan")
-    leave_cadre_quotas = relationship("LeaveCadreQuota", back_populates="tenant", cascade="all, delete-orphan")
     leave_balances = relationship("LeaveBalance", back_populates="tenant", cascade="all, delete-orphan")
     leave_requests = relationship("LeaveRequest", back_populates="tenant", cascade="all, delete-orphan")
     work_shifts = relationship("WorkShift", back_populates="tenant", cascade="all, delete-orphan")
+    company_locations = relationship("CompanyLocation", back_populates="tenant", cascade="all, delete-orphan")
+    designations = relationship("DesignationMaster", back_populates="tenant", cascade="all, delete-orphan")
+    salary_components = relationship("SalaryComponent", back_populates="tenant", cascade="all, delete-orphan")
+    salary_templates = relationship("SalaryTemplate", back_populates="tenant", cascade="all, delete-orphan")
+    employee_salary_structures = relationship("EmployeeSalaryStructure", back_populates="tenant", cascade="all, delete-orphan")
+    salary_revision_histories = relationship("SalaryRevisionHistory", back_populates="tenant", cascade="all, delete-orphan")
+    payroll_batches = relationship("PayrollBatch", back_populates="tenant", cascade="all, delete-orphan")
+    payroll_payslips = relationship("PayrollPayslip", back_populates="tenant", cascade="all, delete-orphan")
 
     def to_dict(self):
         t_uuid = self.uuid or self.slug
@@ -399,6 +406,17 @@ class Student(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     batch_upload_id = Column(Integer, ForeignKey("student_batch_uploads.id", ondelete="SET NULL"), nullable=True, index=True)
     shift_id = Column(Integer, ForeignKey("work_shifts.id", ondelete="SET NULL"), nullable=True, index=True)
+    location_id = Column(Integer, ForeignKey("company_locations.id", ondelete="SET NULL"), nullable=True, index=True)
+    designation_id = Column(Integer, ForeignKey("designations.id", ondelete="SET NULL"), nullable=True, index=True)
+    designation = Column(String(100), nullable=True)
+
+    # Statutory & Banking Details
+    pan_number = Column(String(30), nullable=True)
+    uan_number = Column(String(30), nullable=True)
+    esic_number = Column(String(30), nullable=True)
+    bank_name = Column(String(100), nullable=True)
+    bank_account_number = Column(String(50), nullable=True)
+    bank_ifsc_code = Column(String(30), nullable=True)
 
     # Progression & Transfer Tracking History
     previous_department_id = Column(Integer, nullable=True)
@@ -408,10 +426,9 @@ class Student(Base):
     last_promoted_at = Column(DateTime, nullable=True)
     last_transferred_at = Column(DateTime, nullable=True)
 
-    # Corporate Compensation & Cadre Attributes
+    # Corporate Compensation Attributes
     hourly_rate = Column(Float, nullable=True)
     monthly_base_salary = Column(Float, nullable=True)
-    cadre_level = Column(String(50), nullable=True)
     date_of_joining = Column(Date, nullable=True)
 
     # Offboarding / Relieving Status & Audit
@@ -445,6 +462,11 @@ class Student(Base):
     leave_balances = relationship("LeaveBalance", back_populates="student", cascade="all, delete-orphan")
     leave_requests = relationship("LeaveRequest", back_populates="student", cascade="all, delete-orphan")
     shift = relationship("WorkShift", back_populates="students", foreign_keys=[shift_id])
+    location = relationship("CompanyLocation", back_populates="students", foreign_keys=[location_id])
+    designation_rel = relationship("DesignationMaster", back_populates="students", foreign_keys=[designation_id])
+    salary_structures = relationship("EmployeeSalaryStructure", back_populates="student", cascade="all, delete-orphan")
+    salary_revisions = relationship("SalaryRevisionHistory", back_populates="student", cascade="all, delete-orphan")
+    payslips = relationship("PayrollPayslip", back_populates="student", cascade="all, delete-orphan")
 
     def to_dict(self):
         photos_list = []
@@ -497,7 +519,16 @@ class Student(Base):
             "last_transferred_at": self.last_transferred_at.isoformat() if self.last_transferred_at else None,
             "hourly_rate": self.hourly_rate,
             "monthly_base_salary": self.monthly_base_salary,
-            "cadre_level": self.cadre_level,
+            "location_id": self.location_id,
+            "location_name": self.location.name if self.location else None,
+            "designation_id": self.designation_id,
+            "designation": self.designation or (self.designation_rel.title if self.designation_rel else "Staff"),
+            "pan_number": self.pan_number or "",
+            "uan_number": self.uan_number or "",
+            "esic_number": self.esic_number or "",
+            "bank_name": self.bank_name or "",
+            "bank_account_number": self.bank_account_number or "",
+            "bank_ifsc_code": self.bank_ifsc_code or "",
             "shift_id": self.shift_id,
             "shift_name": self.shift.name if self.shift else None,
             "shift_code": self.shift.code if self.shift else None,
@@ -510,6 +541,10 @@ class Student(Base):
             "relieving_reason": self.relieving_reason or "",
             "relieved_by_user_id": self.relieved_by_user_id,
             "relieved_by_name": self.relieved_by_user.full_name if self.relieved_by_user else None,
+            "salary_template_id": (
+                next((s.template_id for s in (self.salary_structures or []) if s.is_current and s.template_id), None)
+                or (self.designation_rel.salary_template_id if self.designation_rel else None)
+            ),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "is_active": self.is_active,
             "samples_count": len(self.encodings) if self.encodings else 0,
@@ -713,13 +748,24 @@ class SystemBranding(Base):
     min_checkout_interval_minutes = Column(Integer, default=15, nullable=False)
 
     # Corporate Payroll & Wage Configuration
-    payroll_structure = Column(String(30), default="HOURLY", nullable=False)  # HOURLY, MONTHLY_CADRE, HYBRID
+    payroll_structure = Column(String(30), default="HOURLY", nullable=False)  # HOURLY, MONTHLY_FIXED, HYBRID, STRUCTURED_SALARY
     default_hourly_rate = Column(Float, default=15.0, nullable=True)
     standard_working_hours_per_day = Column(Float, default=8.0, nullable=True)
     enable_overtime = Column(Boolean, default=True, nullable=False)
     overtime_rate_multiplier = Column(Float, default=1.5, nullable=True)
+    holiday_ot_multiplier = Column(Float, default=2.0, nullable=True)
     missed_checkout_policy = Column(String(30), default="HALF_DAY", nullable=False)  # HALF_DAY, ZERO_HOURS, STANDARD_SHIFT
     currency_symbol = Column(String(10), default="₹", nullable=False)
+
+    # Indian Statutory Payroll Defaults
+    enable_pf_ceiling = Column(Boolean, default=True, nullable=False)
+    epf_ceiling_limit = Column(Float, default=15000.0, nullable=False)
+    esi_gross_threshold = Column(Float, default=21000.0, nullable=False)
+    epf_employee_pct = Column(Float, default=12.0, nullable=False)
+    epf_employer_pct = Column(Float, default=12.0, nullable=False)
+    esic_employee_pct = Column(Float, default=0.75, nullable=False)
+    esic_employer_pct = Column(Float, default=3.25, nullable=False)
+    pt_monthly_default = Column(Float, default=200.0, nullable=False)
 
     updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
 
@@ -759,8 +805,17 @@ class SystemBranding(Base):
             "standard_working_hours_per_day": float(self.standard_working_hours_per_day if self.standard_working_hours_per_day is not None else 8.0),
             "enable_overtime": bool(self.enable_overtime if self.enable_overtime is not None else True),
             "overtime_rate_multiplier": float(self.overtime_rate_multiplier if self.overtime_rate_multiplier is not None else 1.5),
+            "holiday_ot_multiplier": float(self.holiday_ot_multiplier if self.holiday_ot_multiplier is not None else 2.0),
             "missed_checkout_policy": self.missed_checkout_policy or "HALF_DAY",
             "currency_symbol": self.currency_symbol or "₹",
+            "enable_pf_ceiling": bool(self.enable_pf_ceiling),
+            "epf_ceiling_limit": float(self.epf_ceiling_limit if self.epf_ceiling_limit is not None else 15000.0),
+            "esi_gross_threshold": float(self.esi_gross_threshold if self.esi_gross_threshold is not None else 21000.0),
+            "epf_employee_pct": float(self.epf_employee_pct if self.epf_employee_pct is not None else 12.0),
+            "epf_employer_pct": float(self.epf_employer_pct if self.epf_employer_pct is not None else 12.0),
+            "esic_employee_pct": float(self.esic_employee_pct if self.esic_employee_pct is not None else 0.75),
+            "esic_employer_pct": float(self.esic_employer_pct if self.esic_employer_pct is not None else 3.25),
+            "pt_monthly_default": float(self.pt_monthly_default if self.pt_monthly_default is not None else 200.0),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
         }
 
@@ -865,7 +920,6 @@ class LeaveType(Base):
     )
 
     tenant = relationship("Tenant", back_populates="leave_types")
-    cadre_quotas = relationship("LeaveCadreQuota", back_populates="leave_type", cascade="all, delete-orphan")
     balances = relationship("LeaveBalance", back_populates="leave_type", cascade="all, delete-orphan")
     requests = relationship("LeaveRequest", back_populates="leave_type", cascade="all, delete-orphan")
 
@@ -881,40 +935,6 @@ class LeaveType(Base):
             "accrual_frequency": self.accrual_frequency or "ANNUAL",
             "requires_document": bool(self.requires_document),
             "is_active": bool(self.is_active),
-            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
-            "cadre_quotas": [q.to_dict() for q in (self.cadre_quotas or [])],
-        }
-
-
-class LeaveCadreQuota(Base):
-    """
-    Cadre/Role-based quota override for a specific leave type within a tenant.
-    """
-    __tablename__ = "leave_cadre_quotas"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
-    leave_type_id = Column(Integer, ForeignKey("leave_types.id", ondelete="CASCADE"), nullable=False, index=True)
-    cadre_level = Column(String(50), nullable=False)     # e.g., "Executive", "Senior Manager", "Staff", "Intern"
-    allocated_days = Column(Float, default=12.0, nullable=False)
-    created_at = Column(DateTime, default=get_ist_now)
-
-    __table_args__ = (
-        UniqueConstraint("tenant_id", "leave_type_id", "cadre_level", name="uq_tenant_leave_cadre"),
-    )
-
-    tenant = relationship("Tenant", back_populates="leave_cadre_quotas")
-    leave_type = relationship("LeaveType", back_populates="cadre_quotas")
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "tenant_id": self.tenant_id,
-            "leave_type_id": self.leave_type_id,
-            "leave_type_name": self.leave_type.name if self.leave_type else "",
-            "leave_type_code": self.leave_type.code if self.leave_type else "",
-            "cadre_level": self.cadre_level,
-            "allocated_days": float(self.allocated_days if self.allocated_days is not None else 0.0),
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
         }
 
@@ -953,7 +973,6 @@ class LeaveBalance(Base):
             "student_name": self.student.name if self.student else "",
             "roll_number": self.student.roll_number if self.student else "",
             "department": self.student.department if self.student else "",
-            "cadre_level": self.student.cadre_level if self.student else "",
             "leave_type_id": self.leave_type_id,
             "leave_type_name": self.leave_type.name if self.leave_type else "",
             "leave_type_code": self.leave_type.code if self.leave_type else "",
@@ -1007,7 +1026,6 @@ class LeaveRequest(Base):
             "student_name": self.student.name if self.student else "",
             "roll_number": self.student.roll_number if self.student else "",
             "department": self.student.department if self.student else "",
-            "cadre_level": self.student.cadre_level if self.student else "",
             "leave_type_id": self.leave_type_id,
             "leave_type_name": self.leave_type.name if self.leave_type else "",
             "leave_type_code": self.leave_type.code if self.leave_type else "",
@@ -1114,6 +1132,563 @@ class WorkShift(Base):
             return f"{h12:02d}:{m:02d} {period}"
         except Exception:
             return time_str
+
+
+class CompanyLocation(Base):
+    """
+    Company Location / Branch / Office master entity per tenant.
+    """
+    __tablename__ = "company_locations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)           # e.g., "Bengaluru Tech Park", "Mumbai Head Office"
+    code = Column(String(30), nullable=True)            # e.g., "BLR-01", "MUM-HQ"
+    city = Column(String(50), nullable=True)
+    state = Column(String(50), nullable=True, default="Maharashtra")
+    address = Column(Text, nullable=True)
+    contact_number = Column(String(30), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", name="uq_tenant_location_name"),
+        Index("ix_location_tenant_active", "tenant_id", "is_active"),
+    )
+
+    tenant = relationship("Tenant", back_populates="company_locations")
+    students = relationship("Student", back_populates="location", foreign_keys="Student.location_id")
+
+    def to_dict(self):
+        active_emp_count = sum(1 for s in (self.students or []) if s.is_active)
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "code": self.code or self.name[:4].upper(),
+            "city": self.city or "",
+            "state": self.state or "Maharashtra",
+            "address": self.address or "",
+            "contact_number": self.contact_number or "",
+            "is_active": bool(self.is_active),
+            "assigned_employees_count": active_emp_count,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class DesignationMaster(Base):
+    """
+    Company Designation and Job-Role master per tenant.
+    """
+    __tablename__ = "designations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    department_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True)
+    salary_template_id = Column(Integer, ForeignKey("salary_templates.id", ondelete="SET NULL"), nullable=True, index=True)
+    title = Column(String(100), nullable=False)          # e.g., "Senior Software Engineer", "Sales Executive"
+    code = Column(String(30), nullable=True)            # e.g., "SSE", "SE"
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "title", name="uq_tenant_designation_title"),
+        Index("ix_designation_tenant_active", "tenant_id", "is_active"),
+    )
+
+    tenant = relationship("Tenant", back_populates="designations")
+    department = relationship("Department")
+    salary_template = relationship("SalaryTemplate", foreign_keys=[salary_template_id])
+    students = relationship("Student", back_populates="designation_rel", foreign_keys="Student.designation_id")
+
+    def to_dict(self):
+        active_emp_count = sum(1 for s in (self.students or []) if s.is_active)
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "department_id": self.department_id,
+            "department_name": self.department.name if self.department else "All Departments",
+            "salary_template_id": self.salary_template_id,
+            "salary_template_name": self.salary_template.name if self.salary_template else None,
+            "salary_template_code": self.salary_template.code if self.salary_template else None,
+            "salary_template_model": self.salary_template.compensation_model if self.salary_template else None,
+            "title": self.title,
+            "code": self.code or self.title[:4].upper(),
+            "description": self.description or "",
+            "is_active": bool(self.is_active),
+            "assigned_employees_count": active_emp_count,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class SalaryComponent(Base):
+    """
+    Master Catalogue of Indian Salary Components (Earnings, Deductions, Statutory).
+    """
+    __tablename__ = "salary_components"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)           # Basic Pay, House Rent Allowance, EPF, ESIC, etc.
+    code = Column(String(50), nullable=False)            # BASIC, HRA, DA, SPECIAL, EPF_EE, EPF_ER, ESIC_EE, PT, TDS
+    component_type = Column(String(30), nullable=False)  # EARNING, DEDUCTION, STATUTORY_EMPLOYEE, STATUTORY_EMPLOYER
+    calculation_type = Column(String(30), default="FIXED", nullable=False) # FIXED, PERCENTAGE_BASIC, PERCENTAGE_GROSS, FORMULA
+    default_value = Column(Float, default=0.0, nullable=False)
+    is_taxable = Column(Boolean, default=True, nullable=False)
+    is_statutory = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "code", name="uq_tenant_salary_component_code"),
+        Index("ix_salary_comp_tenant_type", "tenant_id", "component_type"),
+    )
+
+    tenant = relationship("Tenant", back_populates="salary_components")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "code": self.code,
+            "component_type": self.component_type,
+            "calculation_type": self.calculation_type,
+            "default_value": float(self.default_value or 0.0),
+            "is_taxable": bool(self.is_taxable),
+            "is_statutory": bool(self.is_statutory),
+            "is_active": bool(self.is_active),
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class SalaryTemplate(Base):
+    """
+    Reusable Salary Structure Template (e.g. "Standard Executive Structure", "Hourly Plant Staff", "Intern Stipend").
+    """
+    __tablename__ = "salary_templates"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)           # Standard Executive CTC, Hourly Operative, etc.
+    code = Column(String(30), nullable=False)            # EXEC_STD, PROD_HRLY, INTERN_STIP
+    compensation_model = Column(String(30), default="STRUCTURED_SALARY", nullable=False) # STRUCTURED_SALARY, MONTHLY_FIXED, HOURLY, DAILY_WAGE, STIPEND, CONTRACT, COMMISSION, HYBRID
+    description = Column(Text, nullable=True)
+    basic_percentage = Column(Float, default=50.0, nullable=False)   # % of CTC or Gross
+    hra_percentage = Column(Float, default=20.0, nullable=False)     # % of CTC or Basic
+    da_percentage = Column(Float, default=0.0, nullable=False)
+    conveyance_fixed = Column(Float, default=1600.0, nullable=False)
+    medical_fixed = Column(Float, default=1250.0, nullable=False)
+    enable_pf = Column(Boolean, default=True, nullable=False)
+    pf_capped_at_ceiling = Column(Boolean, default=True, nullable=False)
+    enable_esi = Column(Boolean, default=True, nullable=False)
+    enable_pt = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "code", name="uq_tenant_salary_tpl_code"),
+        Index("ix_salary_tpl_tenant_active", "tenant_id", "is_active"),
+    )
+
+    tenant = relationship("Tenant", back_populates="salary_templates")
+    structures = relationship("EmployeeSalaryStructure", back_populates="template")
+
+    def to_dict(self):
+        active_assigned_count = sum(1 for s in (self.structures or []) if s.is_current)
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "code": self.code,
+            "compensation_model": self.compensation_model,
+            "description": self.description or "",
+            "basic_percentage": float(self.basic_percentage or 50.0),
+            "hra_percentage": float(self.hra_percentage or 20.0),
+            "da_percentage": float(self.da_percentage or 0.0),
+            "conveyance_fixed": float(self.conveyance_fixed or 0.0),
+            "medical_fixed": float(self.medical_fixed or 0.0),
+            "enable_pf": bool(self.enable_pf),
+            "pf_capped_at_ceiling": bool(self.pf_capped_at_ceiling),
+            "enable_esi": bool(self.enable_esi),
+            "enable_pt": bool(self.enable_pt),
+            "is_active": bool(self.is_active),
+            "assigned_count": active_assigned_count,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class EmployeeSalaryStructure(Base):
+    """
+    Employee Active and Historical Salary / Wage Structure Assignment with Effective Dates.
+    """
+    __tablename__ = "employee_salary_structures"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    template_id = Column(Integer, ForeignKey("salary_templates.id", ondelete="SET NULL"), nullable=True, index=True)
+    compensation_model = Column(String(30), default="STRUCTURED_SALARY", nullable=False) # STRUCTURED_SALARY, MONTHLY_FIXED, HOURLY, DAILY_WAGE, STIPEND, CONTRACT, COMMISSION, HYBRID
+
+    annual_ctc = Column(Float, default=0.0, nullable=False)
+    monthly_gross = Column(Float, default=0.0, nullable=False)
+    monthly_basic = Column(Float, default=0.0, nullable=False)
+    monthly_da = Column(Float, default=0.0, nullable=False)
+    monthly_hra = Column(Float, default=0.0, nullable=False)
+    conveyance_allowance = Column(Float, default=0.0, nullable=False)
+    medical_allowance = Column(Float, default=0.0, nullable=False)
+    special_allowance = Column(Float, default=0.0, nullable=False)
+    other_allowances = Column(Float, default=0.0, nullable=False)
+
+    hourly_rate = Column(Float, default=0.0, nullable=False)
+    daily_rate = Column(Float, default=0.0, nullable=False)
+    fixed_stipend = Column(Float, default=0.0, nullable=False)
+    commission_percentage = Column(Float, default=0.0, nullable=False)
+
+    enable_pf = Column(Boolean, default=True, nullable=False)
+    pf_capped_at_ceiling = Column(Boolean, default=True, nullable=False)
+    enable_esi = Column(Boolean, default=True, nullable=False)
+    enable_pt = Column(Boolean, default=True, nullable=False)
+    pt_monthly_amount = Column(Float, default=200.0, nullable=False)
+    tds_monthly_amount = Column(Float, default=0.0, nullable=False)
+
+    effective_from_date = Column(Date, nullable=False)
+    effective_to_date = Column(Date, nullable=True) # None = currently active/open-ended
+    is_current = Column(Boolean, default=True, nullable=False, index=True)
+    revision_reason = Column(String(255), default="Initial Placement / Increment", nullable=True)
+    revised_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        Index("ix_emp_sal_tenant_student", "tenant_id", "student_id", "is_current"),
+        Index("ix_emp_sal_dates", "tenant_id", "student_id", "effective_from_date", "effective_to_date"),
+    )
+
+    tenant = relationship("Tenant", back_populates="employee_salary_structures")
+    student = relationship("Student", back_populates="salary_structures")
+    template = relationship("SalaryTemplate", back_populates="structures")
+    revised_by = relationship("User", foreign_keys=[revised_by_user_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "student_id": self.student_id,
+            "student_name": self.student.name if self.student else "",
+            "roll_number": self.student.roll_number if self.student else "",
+            "department": self.student.department if self.student else "",
+            "template_id": self.template_id,
+            "template_name": self.template.name if self.template else "Custom Individual Structure",
+            "compensation_model": self.compensation_model,
+            "annual_ctc": float(self.annual_ctc or 0.0),
+            "monthly_gross": float(self.monthly_gross or 0.0),
+            "monthly_basic": float(self.monthly_basic or 0.0),
+            "monthly_da": float(self.monthly_da or 0.0),
+            "monthly_hra": float(self.monthly_hra or 0.0),
+            "conveyance_allowance": float(self.conveyance_allowance or 0.0),
+            "medical_allowance": float(self.medical_allowance or 0.0),
+            "special_allowance": float(self.special_allowance or 0.0),
+            "other_allowances": float(self.other_allowances or 0.0),
+            "hourly_rate": float(self.hourly_rate or 0.0),
+            "daily_rate": float(self.daily_rate or 0.0),
+            "fixed_stipend": float(self.fixed_stipend or 0.0),
+            "commission_percentage": float(self.commission_percentage or 0.0),
+            "enable_pf": bool(self.enable_pf),
+            "pf_capped_at_ceiling": bool(self.pf_capped_at_ceiling),
+            "enable_esi": bool(self.enable_esi),
+            "enable_pt": bool(self.enable_pt),
+            "pt_monthly_amount": float(self.pt_monthly_amount or 200.0),
+            "tds_monthly_amount": float(self.tds_monthly_amount or 0.0),
+            "effective_from_date": self.effective_from_date.strftime("%Y-%m-%d") if self.effective_from_date else None,
+            "effective_to_date": self.effective_to_date.strftime("%Y-%m-%d") if self.effective_to_date else None,
+            "is_current": bool(self.is_current),
+            "revision_reason": self.revision_reason or "",
+            "revised_by_user_id": self.revised_by_user_id,
+            "revised_by_name": self.revised_by.full_name if self.revised_by else "Admin",
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class SalaryRevisionHistory(Base):
+    """
+    Audit Trail of every Salary Increment, Promotion or Compensation Change.
+    """
+    __tablename__ = "salary_revision_histories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    salary_structure_id = Column(Integer, ForeignKey("employee_salary_structures.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    effective_from_date = Column(Date, nullable=False)
+    effective_to_date = Column(Date, nullable=True)
+    previous_annual_ctc = Column(Float, default=0.0, nullable=False)
+    new_annual_ctc = Column(Float, default=0.0, nullable=False)
+    previous_monthly_gross = Column(Float, default=0.0, nullable=False)
+    new_monthly_gross = Column(Float, default=0.0, nullable=False)
+    previous_model = Column(String(30), nullable=True)
+    new_model = Column(String(30), nullable=False)
+    revision_reason = Column(String(255), nullable=True)
+    revised_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        Index("ix_sal_rev_tenant_student", "tenant_id", "student_id"),
+    )
+
+    tenant = relationship("Tenant", back_populates="salary_revision_histories")
+    student = relationship("Student", back_populates="salary_revisions")
+    salary_structure = relationship("EmployeeSalaryStructure")
+    revised_by = relationship("User", foreign_keys=[revised_by_user_id])
+
+    def to_dict(self):
+        inc_pct = 0.0
+        if self.previous_annual_ctc > 0:
+            inc_pct = round(((self.new_annual_ctc - self.previous_annual_ctc) / self.previous_annual_ctc) * 100.0, 2)
+
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "student_id": self.student_id,
+            "student_name": self.student.name if self.student else "",
+            "roll_number": self.student.roll_number if self.student else "",
+            "salary_structure_id": self.salary_structure_id,
+            "effective_from_date": self.effective_from_date.strftime("%Y-%m-%d") if self.effective_from_date else None,
+            "effective_to_date": self.effective_to_date.strftime("%Y-%m-%d") if self.effective_to_date else None,
+            "previous_annual_ctc": float(self.previous_annual_ctc or 0.0),
+            "new_annual_ctc": float(self.new_annual_ctc or 0.0),
+            "increment_percentage": inc_pct,
+            "previous_monthly_gross": float(self.previous_monthly_gross or 0.0),
+            "new_monthly_gross": float(self.new_monthly_gross or 0.0),
+            "previous_model": self.previous_model or "N/A",
+            "new_model": self.new_model,
+            "revision_reason": self.revision_reason or "",
+            "revised_by_user_id": self.revised_by_user_id,
+            "revised_by_name": self.revised_by.full_name if self.revised_by else "Admin",
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class PayrollBatch(Base):
+    """
+    Monthly Corporate Payroll Processing Batch Lifecycle.
+    """
+    __tablename__ = "payroll_batches"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    batch_number = Column(String(50), nullable=False)    # e.g., "PAYROLL-2026-09-A"
+    period_month = Column(Integer, nullable=False)       # 1-12
+    period_year = Column(Integer, nullable=False)        # e.g., 2026
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    total_working_days = Column(Float, default=26.0, nullable=False)
+    status = Column(String(30), default="DRAFT", nullable=False) # DRAFT, PROCESSED, VERIFIED, APPROVED, DISBURSED, LOCKED
+
+    total_employees_count = Column(Integer, default=0, nullable=False)
+    total_gross_outlay = Column(Float, default=0.0, nullable=False)
+    total_net_outlay = Column(Float, default=0.0, nullable=False)
+    total_pf_liability = Column(Float, default=0.0, nullable=False)
+    total_esi_liability = Column(Float, default=0.0, nullable=False)
+    total_pt_liability = Column(Float, default=0.0, nullable=False)
+    total_tds_liability = Column(Float, default=0.0, nullable=False)
+    total_employer_contributions = Column(Float, default=0.0, nullable=False)
+
+    processed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approved_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    disbursed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    processed_at = Column(DateTime, nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    disbursed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "period_year", "period_month", name="uq_tenant_payroll_period"),
+        Index("ix_payroll_batch_tenant_status", "tenant_id", "status"),
+    )
+
+    tenant = relationship("Tenant", back_populates="payroll_batches")
+    payslips = relationship("PayrollPayslip", back_populates="batch", cascade="all, delete-orphan")
+    processed_by = relationship("User", foreign_keys=[processed_by_user_id])
+    approved_by = relationship("User", foreign_keys=[approved_by_user_id])
+    disbursed_by = relationship("User", foreign_keys=[disbursed_by_user_id])
+
+    def to_dict(self):
+        month_names = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        m_name = month_names[self.period_month] if 1 <= self.period_month <= 12 else str(self.period_month)
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "batch_number": self.batch_number,
+            "period_month": self.period_month,
+            "period_year": self.period_year,
+            "period_label": f"{m_name} {self.period_year}",
+            "start_date": self.start_date.strftime("%Y-%m-%d") if self.start_date else None,
+            "end_date": self.end_date.strftime("%Y-%m-%d") if self.end_date else None,
+            "total_working_days": float(self.total_working_days or 26.0),
+            "status": self.status,
+            "total_employees_count": self.total_employees_count or len(self.payslips or []),
+            "total_gross_outlay": float(self.total_gross_outlay or 0.0),
+            "total_net_outlay": float(self.total_net_outlay or 0.0),
+            "total_pf_liability": float(self.total_pf_liability or 0.0),
+            "total_esi_liability": float(self.total_esi_liability or 0.0),
+            "total_pt_liability": float(self.total_pt_liability or 0.0),
+            "total_tds_liability": float(self.total_tds_liability or 0.0),
+            "total_employer_contributions": float(self.total_employer_contributions or 0.0),
+            "processed_at": self.processed_at.strftime("%Y-%m-%d %H:%M:%S") if self.processed_at else None,
+            "approved_at": self.approved_at.strftime("%Y-%m-%d %H:%M:%S") if self.approved_at else None,
+            "disbursed_at": self.disbursed_at.strftime("%Y-%m-%d %H:%M:%S") if self.disbursed_at else None,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class PayrollPayslip(Base):
+    """
+    Individual Employee Itemized Monthly Payslip.
+    """
+    __tablename__ = "payroll_payslips"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    batch_id = Column(Integer, ForeignKey("payroll_batches.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    template_id = Column(Integer, ForeignKey("salary_templates.id", ondelete="SET NULL"), nullable=True)
+
+    period_month = Column(Integer, nullable=False)
+    period_year = Column(Integer, nullable=False)
+
+    calendar_days = Column(Integer, default=30, nullable=False)
+    working_days = Column(Float, default=26.0, nullable=False)
+    present_days = Column(Float, default=0.0, nullable=False)
+    paid_leave_days = Column(Float, default=0.0, nullable=False)
+    unpaid_leave_days = Column(Float, default=0.0, nullable=False) # LWP (Loss of Pay)
+    absent_days = Column(Float, default=0.0, nullable=False)
+
+    billable_hours = Column(Float, default=0.0, nullable=False)
+    regular_ot_hours = Column(Float, default=0.0, nullable=False)
+    holiday_ot_hours = Column(Float, default=0.0, nullable=False)
+    ot_earnings = Column(Float, default=0.0, nullable=False)
+
+    # Earnings
+    basic_earned = Column(Float, default=0.0, nullable=False)
+    da_earned = Column(Float, default=0.0, nullable=False)
+    hra_earned = Column(Float, default=0.0, nullable=False)
+    conveyance_earned = Column(Float, default=0.0, nullable=False)
+    medical_earned = Column(Float, default=0.0, nullable=False)
+    special_allowance_earned = Column(Float, default=0.0, nullable=False)
+    other_earnings = Column(Float, default=0.0, nullable=False)
+    incentives_bonus = Column(Float, default=0.0, nullable=False)
+    gross_earnings = Column(Float, default=0.0, nullable=False)
+
+    # Deductions
+    epf_employee = Column(Float, default=0.0, nullable=False)
+    epf_employer = Column(Float, default=0.0, nullable=False)
+    eps_employer = Column(Float, default=0.0, nullable=False)
+    esic_employee = Column(Float, default=0.0, nullable=False)
+    esic_employer = Column(Float, default=0.0, nullable=False)
+    professional_tax = Column(Float, default=0.0, nullable=False)
+    tds_deduction = Column(Float, default=0.0, nullable=False)
+    advance_loan_deduction = Column(Float, default=0.0, nullable=False)
+    other_deductions = Column(Float, default=0.0, nullable=False)
+    total_deductions = Column(Float, default=0.0, nullable=False)
+
+    net_salary = Column(Float, default=0.0, nullable=False)
+    employer_total_ctc_outlay = Column(Float, default=0.0, nullable=False)
+
+    payment_status = Column(String(30), default="PENDING", nullable=False) # PENDING, PROCESSED, PAID, HOLD
+    payment_method = Column(String(30), default="BANK_TRANSFER", nullable=False) # BANK_TRANSFER, CHEQUE, CASH, UPI
+    payment_ref_no = Column(String(100), nullable=True)
+    payment_date = Column(Date, nullable=True)
+    breakdown_json = Column(Text, nullable=True)
+    remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "batch_id", "student_id", name="uq_tenant_batch_student_payslip"),
+        Index("ix_payslip_student_period", "tenant_id", "student_id", "period_year", "period_month"),
+    )
+
+    tenant = relationship("Tenant", back_populates="payroll_payslips")
+    batch = relationship("PayrollBatch", back_populates="payslips")
+    student = relationship("Student", back_populates="payslips")
+    template = relationship("SalaryTemplate")
+
+    def to_dict(self):
+        month_names = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        m_name = month_names[self.period_month] if 1 <= self.period_month <= 12 else str(self.period_month)
+        
+        breakdown = {}
+        if self.breakdown_json:
+            try:
+                breakdown = json.loads(self.breakdown_json)
+            except Exception:
+                breakdown = {}
+
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "batch_id": self.batch_id,
+            "batch_number": self.batch.batch_number if self.batch else "",
+            "student_id": self.student_id,
+            "student_name": self.student.name if self.student else "",
+            "roll_number": self.student.roll_number if self.student else "",
+            "department": self.student.department if self.student else "",
+            "designation": self.student.designation if (self.student and self.student.designation) else ((self.student.designation_rel.title if (self.student and self.student.designation_rel) else "Staff") if self.student else "Staff"),
+            "pan_number": self.student.pan_number if self.student else "",
+            "uan_number": self.student.uan_number if self.student else "",
+            "esic_number": self.student.esic_number if self.student else "",
+            "bank_name": self.student.bank_name if self.student else "",
+            "bank_account_number": self.student.bank_account_number if self.student else "",
+            "bank_ifsc_code": self.student.bank_ifsc_code if self.student else "",
+            "date_of_joining": self.student.date_of_joining.strftime("%Y-%m-%d") if (self.student and self.student.date_of_joining) else None,
+            "period_month": self.period_month,
+            "period_year": self.period_year,
+            "period_label": f"{m_name} {self.period_year}",
+            "calendar_days": self.calendar_days,
+            "working_days": float(self.working_days),
+            "present_days": float(self.present_days),
+            "paid_leave_days": float(self.paid_leave_days),
+            "unpaid_leave_days": float(self.unpaid_leave_days),
+            "absent_days": float(self.absent_days),
+            "billable_hours": float(self.billable_hours),
+            "regular_ot_hours": float(self.regular_ot_hours),
+            "holiday_ot_hours": float(self.holiday_ot_hours),
+            "ot_earnings": float(self.ot_earnings),
+            "basic_earned": float(self.basic_earned),
+            "da_earned": float(self.da_earned),
+            "hra_earned": float(self.hra_earned),
+            "conveyance_earned": float(self.conveyance_earned),
+            "medical_earned": float(self.medical_earned),
+            "special_allowance_earned": float(self.special_allowance_earned),
+            "other_earnings": float(self.other_earnings),
+            "incentives_bonus": float(self.incentives_bonus),
+            "gross_earnings": float(self.gross_earnings),
+            "epf_employee": float(self.epf_employee),
+            "epf_employer": float(self.epf_employer),
+            "eps_employer": float(self.eps_employer),
+            "esic_employee": float(self.esic_employee),
+            "esic_employer": float(self.esic_employer),
+            "professional_tax": float(self.professional_tax),
+            "tds_deduction": float(self.tds_deduction),
+            "advance_loan_deduction": float(self.advance_loan_deduction),
+            "other_deductions": float(self.other_deductions),
+            "total_deductions": float(self.total_deductions),
+            "net_salary": float(self.net_salary),
+            "employer_total_ctc_outlay": float(self.employer_total_ctc_outlay),
+            "payment_status": self.payment_status,
+            "payment_method": self.payment_method,
+            "payment_ref_no": self.payment_ref_no or "",
+            "payment_date": self.payment_date.strftime("%Y-%m-%d") if self.payment_date else None,
+            "breakdown": breakdown,
+            "remarks": self.remarks or "",
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+# Corporate Domain Alias: In corporate institutions, Student model represents Employee
+Employee = Student
+
 
 
 

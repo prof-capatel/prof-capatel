@@ -80,9 +80,10 @@ EOF
 
 # Restore database dump if dump exists and database is empty
 TABLE_COUNT=$(sudo mysql -D face_system -se "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'face_system';")
-if [ "${TABLE_COUNT}" -eq 0 ] && [ -f "${APP_DIR}/database/backups/pre_cleanup_backup_20260913_093613.sql" ]; then
-    echo "[*] Restoring production database dump (pre_cleanup_backup_20260913_093613.sql)..."
-    sudo mysql face_system < "${APP_DIR}/database/backups/pre_cleanup_backup_20260913_093613.sql"
+LATEST_DUMP=$(ls -t "${APP_DIR}/database/backups/"*.sql 2>/dev/null | head -n 1 || true)
+if [ "${TABLE_COUNT}" -eq 0 ] && [ -n "${LATEST_DUMP}" ] && [ -f "${LATEST_DUMP}" ]; then
+    echo "[*] Restoring latest production database dump (${LATEST_DUMP})..."
+    sudo mysql face_system < "${LATEST_DUMP}"
     echo "[OK] Production database restored successfully."
 else
     echo "[i] Tables already present in face_system (${TABLE_COUNT} tables found)."

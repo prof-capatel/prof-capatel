@@ -61,6 +61,7 @@ PRESERVED_TENANT_SPECS = [
     {"id": 115, "slug": "ssec", "name": "SSEC"},
     {"id": 155, "slug": "gecm", "name": "GECM"},
     {"id": 292, "slug": "raymond-store-1", "name": "Raymond Store 1"},
+    {"id": 750, "slug": "the-retail-store", "name": "The Retail Store"},
 ]
 
 

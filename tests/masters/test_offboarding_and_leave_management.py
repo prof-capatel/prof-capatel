@@ -1,5 +1,5 @@
 """
-Unit & Integration Tests for Employee Offboarding, Leave Master & Cadre Quotas,
+Unit & Integration Tests for Employee Offboarding, Leave Master & Leave Quotas,
 Approval Workflow, Employee Portal Self-Service, and Paid Leave Payroll Integration.
 """
 import os
@@ -33,7 +33,6 @@ from src.database.models import (
     SystemBranding,
     Department,
     LeaveType,
-    LeaveCadreQuota,
     LeaveBalance,
     LeaveRequest,
 )
@@ -70,7 +69,6 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
             test_codes = ["TEST_MAT", "TEST_PAT"]
             test_lts = db.query(LeaveType).filter(LeaveType.code.in_(test_codes)).all()
             for lt in test_lts:
-                db.query(LeaveCadreQuota).filter(LeaveCadreQuota.leave_type_id == lt.id).delete(synchronize_session=False)
                 db.delete(lt)
             db.commit()
 
@@ -87,7 +85,6 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
                 name="John Doe",
                 user_role="employee",
                 department="Engineering",
-                cadre_level="Staff",
                 is_active=True,
                 employment_status="ACTIVE",
             )
@@ -197,13 +194,13 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
             count = db.query(AttendanceRecord).filter(AttendanceRecord.student_id == emp_id).count()
             self.assertEqual(count, 0)
 
-    def test_03_leave_master_crud_and_cadre_quota_overrides(self):
-        """Verify creation of leave types and cadre-specific quota overrides."""
+    def test_03_leave_master_crud_and_balance_initialization(self):
+        """Verify creation of leave types and standard quota balance initialization."""
         with get_db_context() as db:
             ssec = db.query(Tenant).filter(Tenant.slug == "ssec").first()
             ssec_id = str(ssec.id)
 
-        # Create custom leave type with cadre quotas
+        # Create custom leave type
         payload = {
             "name": "Maternity / Parental Leave",
             "code": "TEST_MAT",
@@ -211,10 +208,6 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
             "is_paid": True,
             "default_days_per_year": 30.0,
             "is_active": True,
-            "cadre_quotas": [
-                {"cadre_level": "Executive", "allocated_days": 60.0},
-                {"cadre_level": "Intern", "allocated_days": 15.0},
-            ],
         }
 
         create_res = self.client.post("/api/v1/leave/types", headers={"X-Tenant-ID": ssec_id}, json=payload)
@@ -222,22 +215,20 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
         res_data = create_res.json()
         self.assertEqual(res_data["status"], "success")
 
-        # Fetch list and verify cadre quotas
+        # Fetch list and verify created type
         list_res = self.client.get("/api/v1/leave/types", headers={"X-Tenant-ID": ssec_id})
         self.assertEqual(list_res.status_code, 200)
         types = list_res.json()["leave_types"]
         mat_type = next((t for t in types if t["code"] == "TEST_MAT"), None)
         self.assertIsNotNone(mat_type)
-        self.assertEqual(len(mat_type["cadre_quotas"]), 2)
+        self.assertEqual(mat_type["default_days_per_year"], 30.0)
 
-        # Test cadre-aware balance initialization
+        # Test balance initialization
         with get_db_context() as db:
-            # Executive employee
             exec_emp = Student(
                 tenant_id=int(ssec_id),
                 roll_number="EMP_LEAVE_01",
                 name="Executive Officer",
-                cadre_level="Executive",
                 is_active=True,
             )
             db.add(exec_emp)
@@ -251,9 +242,8 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
         balances = bal_res.json()["balances"]
         mat_bal = next((b for b in balances if b["leave_type_code"] == "TEST_MAT"), None)
         self.assertIsNotNone(mat_bal)
-        # Executive should receive 60 days cadre override instead of default 30
-        self.assertEqual(mat_bal["total_allocated"], 60.0)
-        self.assertEqual(mat_bal["remaining_days"], 60.0)
+        self.assertEqual(mat_bal["total_allocated"], 30.0)
+        self.assertEqual(mat_bal["remaining_days"], 30.0)
 
     def test_04_employee_portal_leave_application_and_cancellation(self):
         """Verify employee self-service leave application, balance hold, and pre-approval cancellation."""
@@ -272,7 +262,6 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
                 tenant_id=ssec_id,
                 roll_number="EMP_LEAVE_02",
                 name="Bob Developer",
-                cadre_level="Staff",
                 is_active=True,
                 employment_status="ACTIVE",
             )
@@ -341,7 +330,6 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
                 tenant_id=int(ssec_id),
                 roll_number="EMP_LEAVE_01",
                 name="Alice Engineer",
-                cadre_level="Staff",
                 hourly_rate=20.0,
                 is_active=True,
                 employment_status="ACTIVE",

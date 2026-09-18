@@ -1,6 +1,32 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Quick Self-Enrollment Link Banner -->
+<div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.05)); border: 1px dashed var(--accent-primary); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-primary); font-size: 16px;">
+            <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 8px;">
+                <span>{% if is_corporate or (current_tenant and current_tenant.tenant_type == 'corporate') %}Employee Self-Enrollment Portal{% else %}Student Self-Registration Portal{% endif %}</span>
+                <span class="badge badge-sky" style="font-size: 10.5px;">Public Link</span>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted); font-family: monospace; margin-top: 2px;" id="enrollSelfOnboardUrl">
+                /onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-secondary" style="font-size: 11.5px; padding: 6px 14px;" onclick="copyEnrollOnboardLink(this)">
+            <i class="fa-solid fa-copy"></i> Copy Link
+        </button>
+        <a href="/onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}" target="_blank" class="btn btn-primary" style="font-size: 11.5px; padding: 6px 14px; text-decoration: none;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+        </a>
+    </div>
+</div>
+
 <!-- Mode Switcher Tabs -->
 <div class="enroll-tabs">
     <button id="tabBtnWebcam" class="enroll-tab-btn active" onclick="switchEnrollMode('webcam')">
@@ -97,6 +123,48 @@
                 {% endif %}
 
                 {% if is_corporate or (current_tenant and current_tenant.tenant_type == 'corporate') %}
+                <div class="form-group">
+                    <label class="form-label">Branch / Office Location</label>
+                    <select id="enrollLocationSelect" class="form-control">
+                        <option value="">-- Select Office Location (Optional) --</option>
+                        {% for loc in company_locations %}
+                        <option value="{{ loc.id }}">{{ loc.name }} ({{ loc.city or loc.state or 'HQ' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Designation / Role Title</label>
+                    <select id="enrollDesignationSelect" class="form-control" onchange="onDesignationChanged('webcam')">
+                        <option value="">-- Select Designation (Optional) --</option>
+                        {% for desig in designations %}
+                        <option value="{{ desig.id }}" data-title="{{ desig.title }}" data-template-id="{{ desig.salary_template_id or '' }}">{{ desig.title }}{% if desig.code %} ({{ desig.code }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Compensation Salary Template (Optional)</label>
+                    <select id="enrollSalaryTemplateSelect" class="form-control">
+                        <option value="">-- Custom / No Template --</option>
+                        {% for tpl in salary_templates %}
+                        <option value="{{ tpl.id }}" data-model="{{ tpl.compensation_model }}">{{ tpl.name }} ({{ tpl.code }} - {{ tpl.compensation_model }})</option>
+                        {% endfor %}
+                    </select>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Blueprint automatically populates components while allowing individual overrides.</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Monthly Gross (₹)</label>
+                        <input type="number" step="50" id="enrollMonthlySalary" class="form-control" placeholder="e.g. 45000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hourly Rate (₹/hr)</label>
+                        <input type="number" step="0.5" id="enrollHourlyRate" class="form-control" placeholder="e.g. 250">
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Assigned Work Shift *</label>
                     <select id="enrollShiftSelect" class="form-control" required>
@@ -319,6 +387,48 @@
 
                     {% if is_corporate or (current_tenant and current_tenant.tenant_type == 'corporate') %}
                     <div class="form-group">
+                        <label class="form-label">Branch / Office Location</label>
+                        <select id="batchEnrollLocationSelect" class="form-control">
+                            <option value="">-- Select Office Location (Optional) --</option>
+                            {% for loc in company_locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }} ({{ loc.city or loc.state or 'HQ' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Designation / Role Title</label>
+                        <select id="batchEnrollDesignationSelect" class="form-control" onchange="onDesignationChanged('batch')">
+                            <option value="">-- Select Designation (Optional) --</option>
+                            {% for desig in designations %}
+                            <option value="{{ desig.id }}" data-title="{{ desig.title }}" data-template-id="{{ desig.salary_template_id or '' }}">{{ desig.title }}{% if desig.code %} ({{ desig.code }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Compensation Salary Template (Optional)</label>
+                        <select id="batchEnrollSalaryTemplateSelect" class="form-control">
+                            <option value="">-- Custom / No Template --</option>
+                            {% for tpl in salary_templates %}
+                            <option value="{{ tpl.id }}" data-model="{{ tpl.compensation_model }}">{{ tpl.name }} ({{ tpl.code }} - {{ tpl.compensation_model }})</option>
+                            {% endfor %}
+                        </select>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Blueprint automatically populates components while allowing individual overrides.</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Monthly Gross (₹)</label>
+                            <input type="number" step="50" id="batchMonthlySalary" class="form-control" placeholder="e.g. 45000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Hourly Rate (₹/hr)</label>
+                            <input type="number" step="0.5" id="batchHourlyRate" class="form-control" placeholder="e.g. 250">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Assigned Work Shift *</label>
                         <select id="batchEnrollShiftSelect" class="form-control" required>
                             {% if work_shifts %}
@@ -475,6 +585,23 @@ function onEnrollRoleChanged(mode) {
     } else {
         classSelect.required = false;
         if (reqStar) reqStar.style.display = "none";
+    }
+}
+
+
+
+function onDesignationChanged(mode) {
+    const isBatch = mode === "batch";
+    const desigSelect = document.getElementById(isBatch ? "batchEnrollDesignationSelect" : "enrollDesignationSelect");
+    const tplSelect = document.getElementById(isBatch ? "batchEnrollSalaryTemplateSelect" : "enrollSalaryTemplateSelect");
+    if (!desigSelect || !tplSelect) return;
+
+    const opt = desigSelect.options[desigSelect.selectedIndex];
+    if (opt) {
+        const tplId = opt.getAttribute("data-template-id");
+        if (tplId) {
+            tplSelect.value = tplId;
+        }
     }
 }
 
@@ -698,6 +825,19 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
     const shiftSelect = document.getElementById("enrollShiftSelect");
     const shiftId = shiftSelect && shiftSelect.value ? parseInt(shiftSelect.value) : null;
 
+    const locSelect = document.getElementById("enrollLocationSelect");
+    const locId = locSelect && locSelect.value ? parseInt(locSelect.value) : null;
+
+    const desigSelect = document.getElementById("enrollDesignationSelect");
+    const desigId = desigSelect && desigSelect.value ? parseInt(desigSelect.value) : null;
+    const desigOption = desigSelect && desigSelect.selectedIndex >= 0 ? desigSelect.options[desigSelect.selectedIndex] : null;
+    const desigTitle = desigOption ? (desigOption.dataset.title || desigOption.text) : null;
+
+    const tplSelect = document.getElementById("enrollSalaryTemplateSelect");
+    const tplId = tplSelect && tplSelect.value ? parseInt(tplSelect.value) : null;
+    const monthlySalary = parseFloat(document.getElementById("enrollMonthlySalary")?.value) || null;
+    const hourlyRate = parseFloat(document.getElementById("enrollHourlyRate")?.value) || null;
+
     if (userRole === "student" && !classId) {
         alert("Please select a valid Class/Semester for the student.");
         return;
@@ -719,6 +859,12 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
                 user_role: userRole,
                 shift_id: shiftId,
                 date_of_joining: dateOfJoining || null,
+                location_id: locId,
+                designation_id: desigId,
+                designation: desigTitle,
+                salary_template_id: tplId,
+                monthly_base_salary: monthlySalary,
+                hourly_rate: hourlyRate,
             })
         });
         const data = await res.json();
@@ -957,6 +1103,31 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     if (batchShiftSelect && batchShiftSelect.value) {
         formData.append("shift_id", batchShiftSelect.value);
     }
+    const batchLocSelect = document.getElementById("batchEnrollLocationSelect");
+    if (batchLocSelect && batchLocSelect.value) {
+        formData.append("location_id", batchLocSelect.value);
+    }
+
+    const batchDesigSelect = document.getElementById("batchEnrollDesignationSelect");
+    if (batchDesigSelect && batchDesigSelect.value) {
+        formData.append("designation_id", batchDesigSelect.value);
+        const opt = batchDesigSelect.options[batchDesigSelect.selectedIndex];
+        if (opt) {
+            formData.append("designation", opt.dataset.title || opt.text);
+        }
+    }
+    const batchTplSelect = document.getElementById("batchEnrollSalaryTemplateSelect");
+    if (batchTplSelect && batchTplSelect.value) {
+        formData.append("salary_template_id", batchTplSelect.value);
+    }
+    const batchMonthly = document.getElementById("batchMonthlySalary")?.value;
+    if (batchMonthly) {
+        formData.append("monthly_base_salary", batchMonthly);
+    }
+    const batchHourly = document.getElementById("batchHourlyRate")?.value;
+    if (batchHourly) {
+        formData.append("hourly_rate", batchHourly);
+    }
 
     // Send exactly 3 distinct named files for API compatibility
     formData.append("photo_front", batchFiles[0]);
@@ -1006,6 +1177,46 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
         submitBtn.innerHTML = '<i class="fa-solid fa-upload"></i> Try Again';
     }
 });
+
+function copyEnrollOnboardLink(btn) {
+    const span = document.getElementById("enrollSelfOnboardUrl");
+    if (!span) return;
+    const fullUrl = window.location.origin + span.innerText.trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullUrl).then(() => {
+            showEnrollCopyFeedback(btn);
+        }).catch(() => {
+            fallbackEnrollCopy(fullUrl, btn);
+        });
+    } else {
+        fallbackEnrollCopy(fullUrl, btn);
+    }
+}
+
+function showEnrollCopyFeedback(btn) {
+    if (!btn) return;
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-check" style="color: var(--accent-emerald);"></i> <span style="color: var(--accent-emerald);">Copied!</span>';
+    setTimeout(() => {
+        btn.innerHTML = origHtml;
+    }, 2000);
+}
+
+function fallbackEnrollCopy(text, btn) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand("copy");
+        showEnrollCopyFeedback(btn);
+    } catch (e) {
+        prompt("Copy URL to clipboard:", text);
+    }
+    document.body.removeChild(ta);
+}
 </script>
 {% endblock %}
 

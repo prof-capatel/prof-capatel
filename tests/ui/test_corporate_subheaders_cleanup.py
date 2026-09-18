@@ -93,11 +93,13 @@ class TestCorporateSubheadersCleanup(unittest.TestCase):
         self.assertIn("Refresh", html)
 
     def test_06_settings_page_subheader_removed(self):
-        """Test /settings page preserves System Settings header as instructed."""
+        """Test /settings page subheader is removed and tabs are properly structured."""
         res = self.client.get("/settings")
         self.assertEqual(res.status_code, 200)
         html = res.text
-        self.assertIn("System Settings &amp; Institutional Branding", html.replace("&", "&amp;"))
+        self.assertNotIn("System Settings &amp; Institutional Branding", html.replace("&", "&amp;"))
+        self.assertNotIn("Configure core system parameters, department trees, multi-factor attendance policies", html)
+        self.assertIn("Organization Settings", html)
         self.assertIn("Institutional Profile &amp; White-Labeling", html.replace("&", "&amp;"))
 
 if __name__ == "__main__":

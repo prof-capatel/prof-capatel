@@ -1,39 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{% if is_corporate %}slate{% else %}academic{% endif %}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>{{ page_title }} - {{ branding.institution_name if branding and branding.institution_name else tenant.name }}</title>
     
-    <!-- Fonts & Icons -->
+    <!-- Google Fonts & Font Awesome Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Standard Dashboard Stylesheet for Dynamic Theme Inheritance -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
     
     <style>
         :root {
-            --bg-base: #0b0f19;
-            --bg-card: #111827;
-            --bg-subtle: #1f2937;
-            --border-color: #374151;
-            --text-heading: #f9fafb;
-            --text-body: #d1d5db;
-            --text-muted: #9ca3af;
-            --accent-primary: {{ branding.primary_accent_color if branding and branding.primary_accent_color else '#10b981' }};
-            --accent-emerald: #10b981;
-            --accent-rose: #ef4444;
-            --accent-amber: #f59e0b;
-            --accent-cyan: #06b6d4;
-            --radius-md: 14px;
-            --radius-sm: 8px;
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+            --accent-primary: {{ branding.primary_accent_color if branding and branding.primary_accent_color else '#6366f1' }};
         }
 
         body {
@@ -44,141 +27,79 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
+            padding: 16px;
+            margin: 0;
+            box-sizing: border-box;
         }
 
-        /* Ambient Glow Background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: -20%;
-            left: -10%;
-            width: 50vw;
-            height: 50vw;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.15), transparent 70%);
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: -20%;
-            right: -10%;
-            width: 50vw;
-            height: 50vw;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.12), transparent 70%);
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .onboard-container {
-            position: relative;
-            z-index: 1;
+        .enroll-page-card {
             width: 100%;
-            max-width: 540px;
+            max-width: 480px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-xl);
+            border-radius: var(--radius-md, 12px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
             overflow: hidden;
-            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
         }
 
-        .onboard-header {
-            padding: 28px 24px 20px;
+        .enroll-card-header {
+            padding: 20px 20px 16px;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
-            background: linear-gradient(180deg, rgba(31, 41, 55, 0.6), transparent);
+            background: var(--bg-subtle);
         }
 
-        .company-logo {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            background: var(--bg-subtle);
-            border: 1.5px solid var(--border-color);
+        .tenant-logo-box {
+            width: 54px;
+            height: 54px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 14px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
             color: var(--accent-primary);
-            font-size: 28px;
+            font-size: 24px;
             overflow: hidden;
         }
 
-        .company-logo img {
+        .tenant-logo-box img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
         }
 
-        .company-title {
-            font-size: 20px;
+        .tenant-heading {
+            font-size: 18px;
             font-weight: 800;
             color: var(--text-heading);
-            letter-spacing: -0.3px;
+            letter-spacing: -0.2px;
+            margin: 0;
         }
 
-        .company-subtitle {
-            font-size: 13px;
+        .tenant-subtitle {
+            font-size: 12px;
             color: var(--text-muted);
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
-        .step-progress {
-            display: flex;
-            padding: 14px 24px;
-            background: var(--bg-subtle);
-            border-bottom: 1px solid var(--border-color);
-            gap: 8px;
-        }
-
-        .step-pill {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            font-size: 11.5px;
-            font-weight: 700;
-            padding: 6px 10px;
-            border-radius: 20px;
-            background: rgba(255,255,255,0.05);
-            color: var(--text-muted);
-            transition: all 0.3s ease;
-        }
-
-        .step-pill.active {
-            background: var(--accent-primary);
-            color: #ffffff;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-        }
-
-        .step-pill.completed {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--accent-emerald);
-        }
-
-        .onboard-body {
-            padding: 24px;
+        .enroll-card-body {
+            padding: 20px;
         }
 
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 14px;
         }
 
         .form-label {
             display: block;
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: 700;
             color: var(--text-heading);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
 
         .form-control {
@@ -186,76 +107,48 @@
             background: var(--bg-base);
             border: 1px solid var(--border-color);
             color: var(--text-heading);
-            padding: 11px 14px;
-            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            border-radius: var(--radius-sm, 6px);
             font-size: 13.5px;
             font-family: inherit;
+            box-sizing: border-box;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .form-control:focus {
             outline: none;
             border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
         }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 20px;
-            font-size: 13.5px;
-            font-weight: 700;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            width: 100%;
-        }
-
-        .btn-primary {
-            background: var(--accent-primary);
-            color: #ffffff;
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
-        }
-
-        .btn-primary:hover {
-            filter: brightness(1.1);
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
+        .form-control[readonly] {
             background: var(--bg-subtle);
-            color: var(--text-body);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-secondary:hover {
-            background: #283548;
+            color: var(--text-secondary);
+            font-family: monospace;
+            font-weight: 700;
+            cursor: not-allowed;
         }
 
         /* Camera Box */
-        .camera-container {
+        .camera-viewport-box {
             position: relative;
             width: 100%;
             aspect-ratio: 4/3;
             background: #000;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-sm, 6px);
             overflow: hidden;
-            border: 2px solid var(--border-color);
-            margin-bottom: 16px;
+            border: 1.5px solid var(--border-color);
+            margin: 12px 0;
         }
 
         #cameraVideo, #capturedCanvas {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Mirror view */
+            transform: scaleX(-1);
         }
 
-        .camera-overlay {
+        .camera-overlay-guide {
             position: absolute;
             inset: 0;
             display: flex;
@@ -265,232 +158,313 @@
             pointer-events: none;
         }
 
-        .face-guide {
-            width: 180px;
-            height: 230px;
-            border: 2px dashed rgba(255, 255, 255, 0.6);
+        .face-oval {
+            width: 160px;
+            height: 205px;
+            border: 2px dashed rgba(255, 255, 255, 0.7);
             border-radius: 50% 50% 45% 45%;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
             transition: border-color 0.3s;
         }
 
-        .face-guide.detected {
-            border-color: var(--accent-emerald);
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25), 0 0 15px rgba(16, 185, 129, 0.6);
-        }
-
-        .alert-box {
-            padding: 12px 14px;
-            border-radius: var(--radius-sm);
-            font-size: 12.5px;
-            margin-bottom: 16px;
+        .angle-prompt-pill {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .alert-error {
+        /* 3-Angle Thumbnails Row */
+        .angle-thumbnails-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .angle-thumb-slot {
+            background: var(--bg-subtle);
+            border: 1.5px dashed var(--border-color);
+            border-radius: var(--radius-sm, 6px);
+            padding: 8px 4px;
+            text-align: center;
+            position: relative;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .angle-thumb-slot.active {
+            border-color: var(--accent-primary);
+            border-style: solid;
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .angle-thumb-slot.captured {
+            border-color: var(--accent-emerald, #10b981);
+            border-style: solid;
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .angle-thumb-slot img {
+            width: 100%;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+
+        .angle-thumb-slot span {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .btn-capture {
+            width: 100%;
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: var(--radius-sm, 6px);
+            background: var(--accent-primary);
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-capture:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-capture:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .alert-banner {
+            padding: 10px 12px;
+            border-radius: var(--radius-sm, 6px);
+            font-size: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-banner.error {
             background: rgba(239, 68, 68, 0.15);
-            border: 1px solid var(--accent-rose);
+            border: 1px solid var(--accent-rose, #ef4444);
             color: #fca5a5;
         }
 
-        .alert-success {
+        .alert-banner.success {
             background: rgba(16, 185, 129, 0.15);
-            border: 1px solid var(--accent-emerald);
+            border: 1px solid var(--accent-emerald, #10b981);
             color: #6ee7b7;
         }
 
-        .success-card {
+        /* Success Card View */
+        .registered-card {
             text-align: center;
-            padding: 20px 10px;
+            padding: 30px 16px;
         }
 
-        .success-icon {
+        .registered-icon {
             width: 72px;
             height: 72px;
             border-radius: 50%;
             background: rgba(16, 185, 129, 0.15);
-            color: var(--accent-emerald);
-            border: 2px solid var(--accent-emerald);
+            color: var(--accent-emerald, #10b981);
+            border: 2px solid var(--accent-emerald, #10b981);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-size: 32px;
-            margin-bottom: 18px;
-            animation: pulseSuccess 2s infinite;
+            margin-bottom: 16px;
         }
 
-        @keyframes pulseSuccess {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-            50% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+        .registered-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin: 0 0 6px 0;
         }
 
-        .copy-card {
-            background: var(--bg-base);
-            border: 1px dashed var(--accent-primary);
+        .registered-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        .registered-details {
+            margin-top: 20px;
             padding: 14px;
-            border-radius: var(--radius-sm);
+            background: var(--bg-subtle);
+            border-radius: var(--radius-sm, 6px);
+            border: 1px solid var(--border-color);
             text-align: left;
-            margin: 20px 0;
+            font-size: 12.5px;
         }
 
-        .copy-field {
+        .registered-details-row {
             display: flex;
-            gap: 8px;
-            margin-top: 8px;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .registered-details-row:last-child {
+            margin-bottom: 0;
         }
     </style>
 </head>
 <body>
 
-    <div class="onboard-container">
+    <div class="enroll-page-card">
         <!-- Header -->
-        <div class="onboard-header">
-            <div class="company-logo">
+        <div class="enroll-card-header">
+            <div class="tenant-logo-box">
                 {% if branding and branding.logo_filename %}
                     <img src="/data/branding/{{ branding.logo_filename }}" alt="Logo">
+                {% elif branding and branding.logo_url %}
+                    <img src="{{ branding.logo_url }}" alt="Logo">
                 {% else %}
                     <i class="fa-solid fa-building"></i>
                 {% endif %}
             </div>
-            <h1 class="company-title">{{ tenant.name }}</h1>
-            <p class="company-subtitle">
-                <i class="fa-solid fa-shield-check" style="color: var(--accent-primary);"></i>
-                {% if is_corporate %}Employee Digital Self-Onboarding Gateway{% else %}Student Face Registration Portal{% endif %}
-            </p>
-        </div>
-
-        <!-- Step Indicator -->
-        <div class="step-progress">
-            <div id="stepPill1" class="step-pill active">
-                <i class="fa-solid fa-1"></i> <span>Profile</span>
-            </div>
-            <div id="stepPill2" class="step-pill">
-                <i class="fa-solid fa-2"></i> <span>Face Capture</span>
-            </div>
-            <div id="stepPill3" class="step-pill">
-                <i class="fa-solid fa-3"></i> <span>Completed</span>
+            <h1 class="tenant-heading">{{ tenant.name }}</h1>
+            <div class="tenant-subtitle">
+                Face Registration Portal &bull; {% if is_corporate %}Employee Self-Enrollment{% else %}Student Self-Registration{% endif %}
             </div>
         </div>
 
-        <!-- Body Content -->
-        <div class="onboard-body">
+        <!-- Body Form -->
+        <div class="enroll-card-body" id="enrollMainSection">
+            
+            <div id="enrollAlert" class="alert-banner error" style="display: none;"></div>
 
-            <!-- Global Alert Box -->
-            <div id="onboardAlert" class="alert-box" style="display: none;"></div>
-
-            <!-- STEP 1: Profile Information -->
-            <div id="step1Container">
-                <form id="profileForm" onsubmit="submitEmployeeProfile(event)">
-                    <div class="form-group">
-                        <label class="form-label">Full Name *</label>
-                        <input type="text" id="employeeName" class="form-control" placeholder="e.g. Rohan Sharma" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">{% if is_corporate %}Employee ID / Work Code *{% else %}Roll / Student ID Number *{% endif %}</label>
-                        <input type="text" id="employeeRoll" class="form-control" placeholder="e.g. EMP-1042" style="font-family: monospace; font-weight: 700;" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Work Email Address</label>
-                        <input type="email" id="employeeEmail" class="form-control" placeholder="e.g. rohan.sharma@company.co.in">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">{% if is_corporate %}Department / Team *{% else %}Academic Department *{% endif %}</label>
-                        <select id="employeeDepartment" class="form-control" required>
-                            {% if departments %}
-                                {% for d in departments %}
-                                    <option value="{{ d.id }}">{{ d.name }}</option>
-                                {% endfor %}
-                            {% else %}
-                                <option value="General">General / Engineering</option>
-                                <option value="Operations">Operations</option>
-                                <option value="Sales & Marketing">Sales & Marketing</option>
-                                <option value="Human Resources">Human Resources</option>
-                            {% endif %}
-                        </select>
-                    </div>
-
-                    <button type="submit" id="btnContinueStep1" class="btn btn-primary" style="margin-top: 10px;">
-                        <span>Continue to Face Capture</span>
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </form>
-            </div>
-
-            <!-- STEP 2: Camera Face Capture -->
-            <div id="step2Container" style="display: none;">
-                <div style="text-align: center; margin-bottom: 14px;">
-                    <h3 style="font-size: 15px; font-weight: 700; color: var(--text-heading);">Biometric Face Enrollment</h3>
-                    <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-                        Position your face inside the guide oval with clear lighting.
-                    </p>
+            <form id="onboardSingleForm" onsubmit="event.preventDefault();">
+                <!-- 1. Full Name -->
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" id="empName" class="form-control" placeholder="e.g. Rajesh Sharma" required autofocus>
                 </div>
 
-                <div class="camera-container">
-                    <video id="cameraVideo" autoplay playsinline muted></video>
-                    <canvas id="capturedCanvas" style="display: none;"></canvas>
-                    <div class="camera-overlay" id="cameraOverlay">
-                        <div class="face-guide" id="faceGuide"></div>
-                    </div>
+                <!-- 2. Department -->
+                <div class="form-group">
+                    <label class="form-label">{% if is_corporate %}Department / Team *{% else %}Department *{% endif %}</label>
+                    <select id="empDept" class="form-control" required>
+                        <option value="">-- Select Department --</option>
+                        {% for d in departments %}
+                            <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <div id="cameraControls" style="display: flex; flex-direction: column; gap: 10px;">
-                    <button type="button" id="btnCaptureSnapshot" class="btn btn-primary" onclick="captureSnapshot()">
+                <!-- 3. Auto-Generated Employee ID / Code (Readonly) -->
+                <div class="form-group">
+                    <label class="form-label">{% if is_corporate %}Employee Code (Auto-Generated){% else %}Student ID (Auto-Generated){% endif %}</label>
+                    <input type="text" id="empCode" class="form-control" readonly value="EMP-{{ range(1000, 9999)|random }}">
+                </div>
+
+                <!-- 4. Live Camera Guided 3-Angle Capture -->
+                <div class="form-group" style="margin-top: 14px; margin-bottom: 6px;">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa-solid fa-camera"></i> 3-Angle Face Biometrics *</span>
+                        <span id="angleStepIndicator" style="font-size: 11px; color: var(--accent-primary); font-weight: 700;">Angle 1 of 3 (Front)</span>
+                    </label>
+
+                    <div class="camera-viewport-box">
+                        <video id="cameraVideo" autoplay playsinline muted></video>
+                        <canvas id="capturedCanvas" style="display: none;"></canvas>
+                        <div class="camera-overlay-guide">
+                            <div class="face-oval"></div>
+                        </div>
+                        <div class="angle-prompt-pill" id="anglePromptPill">
+                            <i class="fa-solid fa-user"></i> <span id="anglePromptText">1/3: Look Straight (Front)</span>
+                        </div>
+                    </div>
+
+                    <!-- 3 Angle Thumbnails -->
+                    <div class="angle-thumbnails-grid">
+                        <div class="angle-thumb-slot active" id="thumbSlot0">
+                            <div id="thumbContent0"><i class="fa-solid fa-user" style="font-size: 18px; opacity: 0.5;"></i></div>
+                            <span>1. Front</span>
+                        </div>
+                        <div class="angle-thumb-slot" id="thumbSlot1">
+                            <div id="thumbContent1"><i class="fa-solid fa-arrow-left" style="font-size: 18px; opacity: 0.5;"></i></div>
+                            <span>2. Left</span>
+                        </div>
+                        <div class="angle-thumb-slot" id="thumbSlot2">
+                            <div id="thumbContent2"><i class="fa-solid fa-arrow-right" style="font-size: 18px; opacity: 0.5;"></i></div>
+                            <span>3. Right</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Capture / Submit Button -->
+                    <button type="button" id="btnMainCapture" class="btn-capture" onclick="handleCaptureStep()">
                         <i class="fa-solid fa-camera"></i>
-                        <span>Capture Face Sample</span>
+                        <span id="btnCaptureText">Capture Front Angle (1/3)</span>
                     </button>
                     
-                    <div id="retakeControls" style="display: none; gap: 10px;">
-                        <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="retakeSnapshot()">
-                            <i class="fa-solid fa-rotate-left"></i> Retake
-                        </button>
-                        <button type="button" id="btnUploadFace" class="btn btn-primary" style="flex: 1;" onclick="uploadFaceSample()">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Save & Index
-                        </button>
-                    </div>
+                    <button type="button" id="btnRetakeAll" class="btn btn-secondary" style="width: 100%; margin-top: 8px; font-size: 12px; padding: 6px; display: none;" onclick="resetCaptureFlow()">
+                        <i class="fa-solid fa-rotate-left"></i> Retake Photos
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Success Registered Card -->
+        <div class="registered-card" id="registeredSuccessCard" style="display: none;">
+            <div class="registered-icon">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h2 class="registered-title">Registered</h2>
+            <p class="registered-subtitle" id="registeredSubtext">
+                Your employee profile and 3-angle biometric face samples have been successfully indexed.
+            </p>
+
+            <div class="registered-details">
+                <div class="registered-details-row">
+                    <span style="color: var(--text-muted);">Name:</span>
+                    <strong style="color: var(--text-heading);" id="successEmpName">—</strong>
+                </div>
+                <div class="registered-details-row">
+                    <span style="color: var(--text-muted);">Employee Code:</span>
+                    <code style="color: var(--accent-primary); font-weight: 700;" id="successEmpCode">—</code>
+                </div>
+                <div class="registered-details-row">
+                    <span style="color: var(--text-muted);">Department:</span>
+                    <span style="color: var(--text-heading);" id="successEmpDept">—</span>
+                </div>
+                <div class="registered-details-row">
+                    <span style="color: var(--text-muted);">Biometric Vectors:</span>
+                    <span style="color: var(--accent-emerald, #10b981); font-weight: 700;">3 Angles Indexed (Front, Left, Right)</span>
                 </div>
             </div>
-
-            <!-- STEP 3: Success Confirmation & Daily Check-In Handoff -->
-            <div id="step3Container" style="display: none;">
-                <div class="success-card">
-                    <div class="success-icon">
-                        <i class="fa-solid fa-check"></i>
-                    </div>
-                    <h2 style="font-size: 20px; font-weight: 800; color: var(--text-heading); margin-bottom: 6px;">
-                        Onboarding Complete!
-                    </h2>
-                    <p style="font-size: 13px; color: var(--text-muted); max-width: 400px; margin: 0 auto;">
-                        Your profile and biometric facial vector have been successfully registered. You are ready to mark daily attendance.
-                    </p>
-
-                    <div class="copy-card">
-                        <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
-                            <i class="fa-solid fa-bookmark" style="color: var(--accent-primary);"></i>
-                            <span>Save Your Daily Check-In URL:</span>
-                        </div>
-                        <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">
-                            Bookmark this permanent link on your smartphone to mark attendance daily.
-                        </p>
-                        <div class="copy-field">
-                            <input type="text" id="dailyCheckinUrlInput" class="form-control" readonly style="font-family: monospace; font-size: 12px;">
-                            <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 14px;" onclick="copyDailyCheckinUrl()">
-                                <i class="fa-solid fa-copy"></i> Copy
-                            </button>
-                        </div>
-                    </div>
-
-                    <a id="btnProceedCheckin" href="#" class="btn btn-primary" style="margin-top: 8px;">
-                        <i class="fa-solid fa-camera-viewfinder"></i>
-                        <span>Open Daily Check-In Camera</span>
-                    </a>
-                </div>
-            </div>
-
         </div>
     </div>
 
@@ -498,79 +472,35 @@
         const TENANT_UUID = "{{ tenant_uuid }}";
         const ONBOARDING_TOKEN = "{{ onboarding_token }}";
         
-        let registeredStudent = null;
         let cameraStream = null;
-        let capturedBlob = null;
-        let dailyCheckinUrl = "";
+        let currentAngleIndex = 0; // 0: Frontal, 1: Left, 2: Right
+        const angleConfigs = [
+            { angle: "frontal", label: "1. Front", prompt: "1/3: Look Straight (Front)", icon: "fa-user", nextBtn: "Capture Left Angle (2/3)" },
+            { angle: "left", label: "2. Left", prompt: "2/3: Turn Head Slightly Left", icon: "fa-arrow-left", nextBtn: "Capture Right Angle (3/3)" },
+            { angle: "right", label: "3. Right", prompt: "3/3: Turn Head Slightly Right", icon: "fa-arrow-right", nextBtn: "Complete & Register" }
+        ];
+
+        const capturedBlobs = [];
+        let registeredStudent = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initCamera();
+        });
 
         function showAlert(msg, isError = true) {
-            const alertEl = document.getElementById("onboardAlert");
-            alertEl.style.display = "flex";
-            alertEl.className = isError ? "alert-box alert-error" : "alert-box alert-success";
-            alertEl.innerHTML = `<i class="fa-solid ${isError ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> <span>${msg}</span>`;
+            const el = document.getElementById("enrollAlert");
+            if (!el) return;
+            el.style.display = "flex";
+            el.className = isError ? "alert-banner error" : "alert-banner success";
+            el.innerHTML = `<i class="fa-solid ${isError ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> <span>${msg}</span>`;
         }
 
         function hideAlert() {
-            document.getElementById("onboardAlert").style.display = "none";
+            const el = document.getElementById("enrollAlert");
+            if (el) el.style.display = "none";
         }
 
-        // --- STEP 1: Submit Profile ---
-        async function submitEmployeeProfile(e) {
-            e.preventDefault();
-            hideAlert();
-
-            const btn = document.getElementById("btnContinueStep1");
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Registering...`;
-
-            const payload = {
-                tenant_uuid: TENANT_UUID,
-                onboarding_token: ONBOARDING_TOKEN,
-                name: document.getElementById("employeeName").value.trim(),
-                roll_number: document.getElementById("employeeRoll").value.trim(),
-                email: document.getElementById("employeeEmail").value.trim() || null,
-                department_id: isNaN(parseInt(document.getElementById("employeeDepartment").value)) ? null : parseInt(document.getElementById("employeeDepartment").value),
-                department: document.getElementById("employeeDepartment").selectedOptions[0]?.text || "General",
-                role: "employee",
-            };
-
-            try {
-                const res = await fetch("/api/v1/enroll/onboard/register", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                });
-                const data = await res.json();
-
-                if (res.ok && data.student) {
-                    registeredStudent = data.student;
-                    dailyCheckinUrl = window.location.origin + (data.checkin_url || `/check-in/${TENANT_UUID}`);
-                    
-                    // Transition to Step 2
-                    transitionToStep2();
-                } else {
-                    showAlert(data.detail || "Registration failed. Check roll number or link validity.");
-                }
-            } catch (err) {
-                showAlert("Network communication error. Please check your connection.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<span>Continue to Face Capture</span> <i class="fa-solid fa-arrow-right"></i>`;
-            }
-        }
-
-        // --- STEP 2: Camera Capture ---
-        async function transitionToStep2() {
-            document.getElementById("step1Container").style.display = "none";
-            document.getElementById("step2Container").style.display = "block";
-            
-            document.getElementById("stepPill1").className = "step-pill completed";
-            document.getElementById("stepPill2").className = "step-pill active";
-
-            await startCamera();
-        }
-
-        async function startCamera() {
+        async function initCamera() {
             const video = document.getElementById("cameraVideo");
             try {
                 cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -587,110 +517,177 @@
             }
         }
 
-        function captureSnapshot() {
+        function handleCaptureStep() {
             hideAlert();
+
+            const name = document.getElementById("empName").value.trim();
+            const dept = document.getElementById("empDept").value;
+
+            if (!name) {
+                showAlert("Please enter your Full Name.");
+                document.getElementById("empName").focus();
+                return;
+            }
+            if (!dept) {
+                showAlert("Please select your Department.");
+                document.getElementById("empDept").focus();
+                return;
+            }
+
+            // Capture current frame
             const video = document.getElementById("cameraVideo");
             const canvas = document.getElementById("capturedCanvas");
-            const overlay = document.getElementById("cameraOverlay");
-            
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
             const ctx = canvas.getContext("2d");
-            
-            // Mirror frame onto canvas
+
+            // Mirror
             ctx.translate(canvas.width, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            video.style.display = "none";
-            canvas.style.display = "block";
-            overlay.style.display = "none";
+            const currentCfg = angleConfigs[currentAngleIndex];
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
 
-            document.getElementById("btnCaptureSnapshot").style.display = "none";
-            document.getElementById("retakeControls").style.display = "flex";
+            // Store slot preview
+            const thumbSlot = document.getElementById(`thumbSlot${currentAngleIndex}`);
+            const thumbContent = document.getElementById(`thumbContent${currentAngleIndex}`);
+            if (thumbSlot && thumbContent) {
+                thumbSlot.classList.remove("active");
+                thumbSlot.classList.add("captured");
+                thumbContent.innerHTML = `<img src="${dataUrl}" alt="${currentCfg.label}">`;
+            }
 
             canvas.toBlob(blob => {
-                capturedBlob = blob;
+                capturedBlobs[currentAngleIndex] = blob;
+
+                if (currentAngleIndex < 2) {
+                    // Advance to next angle
+                    currentAngleIndex++;
+                    const nextCfg = angleConfigs[currentAngleIndex];
+                    
+                    document.getElementById("anglePromptText").innerText = nextCfg.prompt;
+                    document.getElementById("anglePromptPill").innerHTML = `<i class="fa-solid ${nextCfg.icon}"></i> <span>${nextCfg.prompt}</span>`;
+                    document.getElementById("angleStepIndicator").innerText = `Angle ${currentAngleIndex + 1} of 3 (${nextCfg.label.split('. ')[1]})`;
+                    document.getElementById("btnCaptureText").innerText = currentCfg.nextBtn;
+
+                    const nextSlot = document.getElementById(`thumbSlot${currentAngleIndex}`);
+                    if (nextSlot) nextSlot.classList.add("active");
+                    
+                    document.getElementById("btnRetakeAll").style.display = "block";
+                } else {
+                    // All 3 angles captured -> Proceed to submit
+                    submitFullRegistration();
+                }
             }, "image/jpeg", 0.95);
         }
 
-        function retakeSnapshot() {
-            const video = document.getElementById("cameraVideo");
-            const canvas = document.getElementById("capturedCanvas");
-            const overlay = document.getElementById("cameraOverlay");
+        function resetCaptureFlow() {
+            currentAngleIndex = 0;
+            capturedBlobs.length = 0;
 
-            video.style.display = "block";
-            canvas.style.display = "none";
-            overlay.style.display = "flex";
-
-            document.getElementById("btnCaptureSnapshot").style.display = "flex";
-            document.getElementById("retakeControls").style.display = "none";
-            capturedBlob = null;
-        }
-
-        async function uploadFaceSample() {
-            if (!capturedBlob || !registeredStudent) {
-                showAlert("Please capture a clear face snapshot first.");
-                return;
+            for (let i = 0; i < 3; i++) {
+                const slot = document.getElementById(`thumbSlot${i}`);
+                const content = document.getElementById(`thumbContent${i}`);
+                if (slot) slot.className = (i === 0) ? "angle-thumb-slot active" : "angle-thumb-slot";
+                if (content) {
+                    const icon = (i === 0) ? "fa-user" : (i === 1 ? "fa-arrow-left" : "fa-arrow-right");
+                    content.innerHTML = `<i class="fa-solid ${icon}" style="font-size: 18px; opacity: 0.5;"></i>`;
+                }
             }
 
-            hideAlert();
-            const btn = document.getElementById("btnUploadFace");
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Indexing...`;
+            document.getElementById("anglePromptText").innerText = angleConfigs[0].prompt;
+            document.getElementById("anglePromptPill").innerHTML = `<i class="fa-solid fa-user"></i> <span>${angleConfigs[0].prompt}</span>`;
+            document.getElementById("angleStepIndicator").innerText = "Angle 1 of 3 (Front)";
+            document.getElementById("btnCaptureText").innerText = "Capture Front Angle (1/3)";
+            document.getElementById("btnRetakeAll").style.display = "none";
+            document.getElementById("btnMainCapture").disabled = false;
+        }
 
-            const formData = new FormData();
-            formData.append("tenant_uuid", TENANT_UUID);
-            formData.append("onboarding_token", ONBOARDING_TOKEN);
-            formData.append("student_id", registeredStudent.id);
-            formData.append("sample_angle", "frontal");
-            formData.append("image", capturedBlob, "face_sample.jpg");
+        async function submitFullRegistration() {
+            hideAlert();
+            const btn = document.getElementById("btnMainCapture");
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Registering & Indexing...</span>`;
+
+            const name = document.getElementById("empName").value.trim();
+            const deptSelect = document.getElementById("empDept");
+            const deptId = parseInt(deptSelect.value) || null;
+            const deptName = deptSelect.selectedOptions[0]?.text || "General";
+            const rollCode = document.getElementById("empCode").value.trim();
 
             try {
-                const res = await fetch("/api/v1/enroll/onboard/capture-sample", {
+                // Step 1: Register Employee Profile
+                const regRes = await fetch("/api/v1/enroll/onboard/register", {
                     method: "POST",
-                    body: formData,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        tenant_uuid: TENANT_UUID,
+                        onboarding_token: ONBOARDING_TOKEN,
+                        name: name,
+                        roll_number: rollCode,
+                        department_id: deptId,
+                        department: deptName,
+                        role: "employee"
+                    })
                 });
-                const data = await res.json();
 
-                if (res.ok) {
-                    // Stop camera stream
-                    if (cameraStream) {
-                        cameraStream.getTracks().forEach(t => t.stop());
-                    }
-                    transitionToStep3(data.checkin_url);
-                } else {
-                    showAlert(data.detail || "Face recognition extraction failed. Retake with better lighting.");
+                const regData = await regRes.json();
+                if (!regRes.ok || !regData.student) {
+                    showAlert(regData.detail || "Registration failed. Please try again.");
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-camera"></i> <span>Try Submitting Again</span>`;
+                    return;
                 }
+
+                registeredStudent = regData.student;
+
+                // Step 2: Sequentially Upload 3 Face Angle Vectors
+                for (let i = 0; i < 3; i++) {
+                    const blob = capturedBlobs[i];
+                    if (!blob) continue;
+
+                    const angleName = angleConfigs[i].angle;
+                    const formData = new FormData();
+                    formData.append("tenant_uuid", TENANT_UUID);
+                    formData.append("onboarding_token", ONBOARDING_TOKEN);
+                    formData.append("student_id", registeredStudent.id);
+                    formData.append("sample_angle", angleName);
+                    formData.append("image", blob, `sample_${angleName}.jpg`);
+
+                    const uploadRes = await fetch("/api/v1/enroll/onboard/capture-sample", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const uploadData = await uploadRes.json();
+                    if (!uploadRes.ok) {
+                        showAlert(`Warning on ${angleConfigs[i].label}: ${uploadData.detail || 'Sample upload issue.'}`);
+                    }
+                }
+
+                // Stop camera stream
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(t => t.stop());
+                }
+
+                // Step 3: Transition to Clean Success State
+                showSuccessScreen(name, rollCode, deptName);
+
             } catch (err) {
-                showAlert("Network upload error while submitting face vector.");
-            } finally {
+                showAlert("Network communication error. Please check your internet connection.");
                 btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Save & Index`;
+                btn.innerHTML = `<i class="fa-solid fa-camera"></i> <span>Try Submitting Again</span>`;
             }
         }
 
-        // --- STEP 3: Complete ---
-        function transitionToStep3(customCheckinPath) {
-            document.getElementById("step2Container").style.display = "none";
-            document.getElementById("step3Container").style.display = "block";
+        function showSuccessScreen(name, code, dept) {
+            document.getElementById("enrollMainSection").style.display = "none";
+            document.getElementById("registeredSuccessCard").style.display = "block";
 
-            document.getElementById("stepPill2").className = "step-pill completed";
-            document.getElementById("stepPill3").className = "step-pill active";
-
-            const finalUrl = customCheckinPath ? (window.location.origin + customCheckinPath) : dailyCheckinUrl;
-            document.getElementById("dailyCheckinUrlInput").value = finalUrl;
-            document.getElementById("btnProceedCheckin").href = finalUrl;
-        }
-
-        function copyDailyCheckinUrl() {
-            const input = document.getElementById("dailyCheckinUrlInput");
-            input.select();
-            navigator.clipboard.writeText(input.value).then(() => {
-                showAlert("Permanent check-in URL copied to clipboard!", false);
-            }).catch(() => {
-                showAlert("URL selected. Press Ctrl+C to copy.", false);
-            });
+            document.getElementById("successEmpName").innerText = name;
+            document.getElementById("successEmpCode").innerText = code;
+            document.getElementById("successEmpDept").innerText = dept;
         }
     </script>
 </body>

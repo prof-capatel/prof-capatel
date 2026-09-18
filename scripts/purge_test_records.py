@@ -15,17 +15,24 @@ from src.database.models import (
     AuditLog,
     SystemBranding,
     LeaveType,
-    LeaveCadreQuota,
     LeaveBalance,
     LeaveRequest,
+    CompanyLocation,
+    DesignationMaster,
+    SalaryTemplate,
+    SalaryComponent,
+    EmployeeSalaryStructure,
+    SalaryRevisionHistory,
+    PayrollBatch,
+    PayrollPayslip,
 )
 from src.utils.auth_utils import hash_password
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("purge_test_records")
 
-CORE_TENANT_SLUGS = ["default", "pulin1", "ssec", "gecm", "raymond-store-1"]
-CORE_USERNAMES = ["superadmin", "admin", "teacher1", "student1", "ssec", "gecm", "raymond"]
+CORE_TENANT_SLUGS = ["default", "pulin1", "ssec", "gecm", "raymond-store-1", "the-retail-store"]
+CORE_USERNAMES = ["superadmin", "admin", "teacher1", "student1", "ssec", "gecm", "raymond", "admin_retail"]
 
 
 def purge_test_records():
@@ -50,7 +57,7 @@ def purge_test_records():
 
         # 3. Identify test students to purge in core tenants
         test_students = db.query(Student).filter(
-            Student.name.ilike("%test%") | Student.name.ilike("Alice%") | Student.name.ilike("Bob%") | Student.name.ilike("Jane%") | Student.name.ilike("Charles%") | Student.name.ilike("Alex%") | Student.name.ilike("%Xavier%"),
+            Student.name.ilike("%test%") | Student.name.ilike("Alice%") | Student.name.ilike("Bob%") | Student.name.ilike("Jane%") | Student.name.ilike("Charles%") | Student.name.ilike("Alex%") | Student.name.ilike("%Xavier%") | Student.name.ilike("Temporary%"),
         ).all()
 
         purged_student_ids = []
@@ -58,14 +65,20 @@ def purge_test_records():
             purged_student_ids.append(s.id)
             logger.info(f"Targeting test student for deletion: ID #{s.id} - '{s.name}' (Roll: {s.roll_number}, Tenant: {s.tenant_id})")
 
-        # 3. Delete attendance logs associated with test students
         if purged_student_ids:
+            # Delete payslips for test students
+            db.query(PayrollPayslip).filter(PayrollPayslip.student_id.in_(purged_student_ids)).delete(synchronize_session=False)
+            # Delete salary revision history and structures for test students
+            db.query(SalaryRevisionHistory).filter(SalaryRevisionHistory.student_id.in_(purged_student_ids)).delete(synchronize_session=False)
+            db.query(EmployeeSalaryStructure).filter(EmployeeSalaryStructure.student_id.in_(purged_student_ids)).delete(synchronize_session=False)
+
+            # Delete attendance logs associated with test students
             deleted_logs = db.query(AttendanceRecord).filter(
                 AttendanceRecord.student_id.in_(purged_student_ids)
             ).delete(synchronize_session=False)
             logger.info(f"Deleted {deleted_logs} attendance records for test students.")
 
-            # 4. Delete leave requests and balances for test students
+            # Delete leave requests and balances for test students
             deleted_reqs = db.query(LeaveRequest).filter(
                 LeaveRequest.student_id.in_(purged_student_ids)
             ).delete(synchronize_session=False)
@@ -74,26 +87,57 @@ def purge_test_records():
             ).delete(synchronize_session=False)
             logger.info(f"Deleted {deleted_reqs} leave requests and {deleted_bals} leave balances for test students.")
 
-            # 5. Delete face encodings associated with test students
+            # Delete face encodings associated with test students
             deleted_faces = db.query(FaceEncoding).filter(
                 FaceEncoding.student_id.in_(purged_student_ids)
             ).delete(synchronize_session=False)
             logger.info(f"Deleted {deleted_faces} face encoding vectors for test students.")
 
-            # 6. Delete test student rows
+            # Delete test student rows
             deleted_stds = db.query(Student).filter(
                 Student.id.in_(purged_student_ids)
             ).delete(synchronize_session=False)
             logger.info(f"Deleted {deleted_stds} test student records.")
 
-        # 6. Ensure core admin accounts have valid standard demo passwords
+        # 4. Clean up test/orphaned payroll batches and test templates
+        test_batches = db.query(PayrollBatch).filter(
+            PayrollBatch.batch_number.ilike("%TEST%") | PayrollBatch.batch_number.ilike("%DUMMY%") | (PayrollBatch.period_year > 2050)
+        ).all()
+        for tb in test_batches:
+            logger.info(f"Deleting test payroll batch #{tb.id}: '{tb.batch_number}'")
+            db.delete(tb)
+
+        test_templates = db.query(SalaryTemplate).filter(
+            SalaryTemplate.name.ilike("test_%") | SalaryTemplate.name.ilike("dummy_%") | SalaryTemplate.code.ilike("TEST_%")
+        ).all()
+        for tt in test_templates:
+            logger.info(f"Deleting test salary template #{tt.id}: '{tt.name}'")
+            db.delete(tt)
+
+        test_desigs = db.query(DesignationMaster).filter(
+            DesignationMaster.title.ilike("test_%") | DesignationMaster.code.ilike("TEST_%")
+        ).all()
+        for td in test_desigs:
+            logger.info(f"Deleting test designation #{td.id}: '{td.title}'")
+            db.delete(td)
+
+        test_locs = db.query(CompanyLocation).filter(
+            CompanyLocation.name.ilike("test_%") | CompanyLocation.code.ilike("TEST_%")
+        ).all()
+        for tl in test_locs:
+            logger.info(f"Deleting test location #{tl.id}: '{tl.name}'")
+            db.delete(tl)
+
+        db.flush()
+
+        # 5. Ensure core admin accounts have valid standard demo passwords
         core_admins = db.query(User).filter(User.role.in_(["SUPER_ADMIN", "TENANT_ADMIN"])).all()
         for u in core_admins:
             u.password_hash = hash_password("admin123")
         db.flush()
         logger.info(f"Standardized passwords to 'admin123' for {len(core_admins)} administrators.")
 
-        # 7. Delete test users outside core list
+        # 6. Delete test users outside core list
         test_users = db.query(User).filter(
             User.username.ilike("test_%") | User.username.ilike("dummy_%") | User.username.ilike("a.turing_%") | User.username.ilike("prof_%")
         ).all()
@@ -102,7 +146,7 @@ def purge_test_records():
                 logger.info(f"Deleting test user: ID #{u.id} - '{u.username}'")
                 db.delete(u)
 
-        # 8. Audit Log record of cleanup
+        # 7. Audit Log record of cleanup
         audit = AuditLog(
             tenant_id=None,
             user_id=1,

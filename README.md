@@ -102,8 +102,53 @@ D:\Attendance System\
 
 ---
 
-## 🧪 Running Automated Tests
+## 🧪 Automated Testing & Selective Execution
 
+The test suite includes **136 tests** across 21 test modules. To avoid slow feedback loops during day-to-day feature development (~130s full run), use the **Selective Test Runner** (`run_tests.py`):
+
+### 1. Targeted Suite Execution (Fast Feedback Loops)
+Run only the test modules relevant to the modified domain:
 ```powershell
-.\venv\Scripts\python.exe -m unittest discover -s tests
+# Payroll & Statutory Compliance (~8-10s)
+.\venv\Scripts\python.exe run_tests.py --suite payroll
+
+# Attendance, Multi-Shift Scheduling & Overrides (~7-9s)
+.\venv\Scripts\python.exe run_tests.py --suite attendance
+
+# Company Locations, Designations & Leave Management (~5-7s)
+.\venv\Scripts\python.exe run_tests.py --suite masters
+
+# Multi-Tenant Auth, Token Gateways & Portals (~6-8s)
+.\venv\Scripts\python.exe run_tests.py --suite auth
+
+# UI Dashboard Layout & Templates (~3-5s)
+.\venv\Scripts\python.exe run_tests.py --suite ui
+
+# Computer Vision & dlib HOG Pipeline (~3-5s)
+.\venv\Scripts\python.exe run_tests.py --suite cv
 ```
+
+### 2. Fast Modular Suite (Excludes Heavy Monolith)
+Runs all 20 modular test files in **~15-20s**:
+```powershell
+.\venv\Scripts\python.exe run_tests.py --quick
+```
+
+### 3. File Pattern Matching & Fast-Fail Mode
+```powershell
+# Run only test files matching a specific pattern (e.g. location or payroll)
+.\venv\Scripts\python.exe run_tests.py --file location
+
+# Fast-fail mode: stop immediately on first error
+.\venv\Scripts\python.exe run_tests.py --suite payroll --failfast
+```
+
+### 4. Pre-Deployment Full Test Gate
+Reserved for pre-deployment validation to execute all 136 tests across all 21 modules:
+```powershell
+.\venv\Scripts\python.exe run_tests.py --full
+```
+
+### 5. Automated Database Hygiene
+All `run_tests.py` runs automatically purge temporary test records and mock tenants upon completion, guaranteeing zero database residues.
+

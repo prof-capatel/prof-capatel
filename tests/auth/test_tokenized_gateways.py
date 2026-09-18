@@ -192,6 +192,7 @@ class TestTokenizedGatewaysAndMapPicker(unittest.TestCase):
             if not branding:
                 branding = SystemBranding(tenant_id=tenant.id, institution_name=tenant.name, short_code="TEST-HUB")
                 db.add(branding)
+            branding.institution_name = tenant.name
             branding.enable_self_attendance = True
             branding.geo_latitude = 23.0225
             branding.geo_longitude = 72.5714

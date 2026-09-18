@@ -1,647 +1,1004 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Employee Portal - {{ employee.name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Employee Portal - {{ employee.name }} | {{ branding.institution_name if branding else tenant.name }}</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Plus Jakarta Sans & Inter Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Base Stylesheet -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    <!-- Immediate Zero-Flicker Theme Initializer matching tenant default -->
+    <script>
+        (function() {
+            try {
+                let defaultTheme = {% if tenant and tenant.tenant_type in ['corporate', 'company', 'enterprise'] %}"slate"{% else %}"academic"{% endif %};
+                const savedTheme = localStorage.getItem("app_theme") || defaultTheme;
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+
+    <!-- Dynamic Custom Accent Color if configured -->
+    {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#c2410c' and branding.primary_accent_color != '#6366f1' and branding.primary_accent_color != '#1e40af' %}
     <style>
-        :root {
-            --tenant-accent: {{ branding.primary_accent_color if branding and branding.primary_accent_color else '#c2410c' }};
+        :root, [data-theme="academic"], [data-theme="light"], [data-theme="slate"], [data-theme="dark"] {
+            --accent-primary: {{ branding.primary_accent_color }};
+            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #1e40af 100%);
         }
+    </style>
+    {% endif %}
+
+    <style>
         body {
             margin: 0;
             padding: 0;
-            background: #0b1120;
-            color: #f1f5f9;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            transition: background 0.25s ease, color 0.25s ease;
         }
-        .portal-wrapper {
-            max-width: 720px;
+
+        /* Top Brand Navigation Bar */
+        .portal-topbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(12px);
+        }
+
+        .portal-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .portal-brand-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-gradient, linear-gradient(135deg, var(--accent-primary), #3b82f6));
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .portal-brand-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            line-height: 1.2;
+        }
+
+        .portal-brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .portal-container {
+            max-width: 740px;
+            width: 100%;
             margin: 0 auto;
-            padding: 16px;
+            padding: 20px 16px 40px 16px;
             box-sizing: border-box;
+            flex: 1;
         }
-        .emp-header-card {
-            background: #1e293b;
-            border-radius: 18px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            margin-bottom: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+
+        /* Hero Profile Card */
+        .emp-profile-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
+            transition: all 0.3s ease;
         }
-        .emp-tab-nav {
+
+        .emp-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--accent-gradient, var(--accent-primary));
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+        }
+
+        /* 4-Tab Navigation Grid */
+        .emp-nav-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            background: #1e293b;
+            background: var(--bg-card);
             padding: 4px;
-            border-radius: 14px;
+            border-radius: var(--radius-md);
             gap: 4px;
-            margin-bottom: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            margin-bottom: 18px;
+            border: 1px solid var(--border-color);
         }
+
         .emp-tab-btn {
             padding: 10px 6px;
-            font-size: 11.5px;
+            font-size: 12px;
             font-weight: 700;
             border: none;
             background: transparent;
-            color: #94a3b8;
-            border-radius: 10px;
+            color: var(--text-muted);
+            border-radius: var(--radius-sm);
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            transition: all 0.2s;
+            gap: 5px;
+            transition: all 0.2s ease;
         }
+
         .emp-tab-btn i {
             font-size: 14px;
         }
+
+        .emp-tab-btn:hover {
+            color: var(--text-heading);
+            background: var(--bg-subtle);
+        }
+
         .emp-tab-btn.active {
-            background: var(--tenant-accent);
+            background: var(--accent-gradient, var(--accent-primary));
             color: #ffffff;
-            box-shadow: 0 4px 12px rgba(194, 65, 12, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
-        .tab-section {
+
+        .tab-content-pane {
             display: none;
+            animation: fadeIn 0.25s ease-out;
         }
-        .tab-section.active {
+
+        .tab-content-pane.active {
             display: block;
         }
-        .glass-card {
-            background: #1e293b;
-            border-radius: 16px;
-            padding: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            margin-bottom: 14px;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .timeline-item {
+
+        /* Content Card Styling */
+        .clean-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
+        }
+
+        .clean-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .clean-card-header h3 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timeline-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px 14px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-subtle);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
             margin-bottom: 10px;
+            transition: all 0.2s ease;
         }
-        .balance-card {
-            background: rgba(15, 23, 42, 0.7);
-            border-radius: 12px;
+
+        .timeline-row:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .quota-card {
+            background: var(--bg-subtle);
+            border-radius: var(--radius-sm);
             padding: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .quota-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+
+        .footer-bar {
+            padding: 16px 20px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
         }
     </style>
 </head>
 <body>
 
-<div class="portal-wrapper">
-    <!-- Header Profile Card -->
-    <div class="emp-header-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--tenant-accent); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #fff; box-shadow: 0 4px 10px rgba(194,65,12,0.3);">
-                    {{ employee.name[0] }}
+    <!-- Top Navigation Header -->
+    <header class="portal-topbar">
+        <div class="portal-brand">
+            {% if branding and branding.logo_url %}
+                <img src="{{ branding.logo_url }}" alt="Logo" style="height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
+            {% else %}
+                <div class="portal-brand-avatar">
+                    {{ tenant.name[0] if tenant else 'O' }}
                 </div>
-                <div>
-                    <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #ffffff;">{{ employee.name }}</h2>
-                    <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
-                        <code>{{ employee.roll_number }}</code> &bull; {{ employee.department }}
-                    </div>
+            {% endif %}
+            <div>
+                <div class="portal-brand-title">{{ branding.institution_name if branding else tenant.name }}</div>
+                <div class="portal-brand-subtitle">
+                    <span><i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-primary);"></i> Self-Service Portal</span>
+                    <span>&bull;</span>
+                    <code>{{ tenant.slug }}</code>
                 </div>
             </div>
-            <button onclick="employeeLogout()" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; border-radius: 8px; color: #f87171;" title="Logout">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <button onclick="employeeLogout()" class="btn btn-secondary btn-sm" style="padding: 7px 12px; font-size: 12px; color: var(--accent-rose, #ef4444); border-color: var(--border-color);" title="Sign Out">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span style="margin-left: 4px;">Sign Out</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="portal-container">
+        
+        <!-- Employee Profile Header Card -->
+        <div class="emp-profile-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="emp-avatar">
+                        {{ employee.name[0] }}
+                    </div>
+                    <div>
+                        <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-heading);">{{ employee.name }}</h2>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 6px;">
+                            <code style="background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-weight: 700; color: var(--text-heading);">{{ employee.roll_number }}</code>
+                            <span>&bull;</span>
+                            <span>{{ employee.department }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                    <span class="badge badge-amber" style="font-size: 11px;">
+                        <i class="fa-solid fa-briefcase"></i> {{ employee.designation or 'Staff' }}
+                    </span>
+                    <span class="badge badge-emerald" style="font-size: 11px;">
+                        <i class="fa-solid fa-face-smile"></i> Biometric Active
+                    </span>
+                    <span class="badge badge-sky" style="font-size: 11px;">
+                        <i class="fa-solid fa-building"></i> {{ tenant.name }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Sub-Tabs Navigation Grid -->
+        <div class="emp-nav-grid">
+            <button type="button" class="emp-tab-btn active" id="tabBtnPunches" onclick="switchEmpTab('punches')">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Punches</span>
+            </button>
+            <button type="button" class="emp-tab-btn" id="tabBtnWages" onclick="switchEmpTab('wages')">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+                <span>Wages</span>
+            </button>
+            <button type="button" class="emp-tab-btn" id="tabBtnApply" onclick="switchEmpTab('apply')">
+                <i class="fa-solid fa-calendar-plus"></i>
+                <span>Apply Leave</span>
+            </button>
+            <button type="button" class="emp-tab-btn" id="tabBtnLeaves" onclick="switchEmpTab('leaves')">
+                <i class="fa-solid fa-calendar-check"></i>
+                <span>My Quotas</span>
             </button>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
-            <span class="badge" style="background: rgba(194, 65, 12, 0.15); color: #fb923c; border: 1px solid rgba(194, 65, 12, 0.3); font-size: 11px;">
-                <i class="fa-solid fa-briefcase"></i> {{ employee.cadre_level or 'Standard Staff' }}
-            </span>
-            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px;">
-                <i class="fa-solid fa-circle-check"></i> Biometric Verified
-            </span>
-            <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); font-size: 11px;">
-                <i class="fa-solid fa-building"></i> {{ tenant.name }}
-            </span>
-        </div>
-    </div>
-
-    <!-- 4 Navigation Tabs -->
-    <div class="emp-tab-nav">
-        <button type="button" class="emp-tab-btn active" id="tabBtnPunches" onclick="switchEmpTab('punches')">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <span>Punches</span>
-        </button>
-        <button type="button" class="emp-tab-btn" id="tabBtnWages" onclick="switchEmpTab('wages')">
-            <i class="fa-solid fa-money-bill-wave"></i>
-            <span>Wages</span>
-        </button>
-        <button type="button" class="emp-tab-btn" id="tabBtnApply" onclick="switchEmpTab('apply')">
-            <i class="fa-solid fa-plane-departure"></i>
-            <span>Apply Leave</span>
-        </button>
-        <button type="button" class="emp-tab-btn" id="tabBtnLeaves" onclick="switchEmpTab('leaves')">
-            <i class="fa-solid fa-calendar-check"></i>
-            <span>My Leaves</span>
-        </button>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- TAB 1: PUNCHES & SHIFTS TIMELINE                           -->
-    <!-- ========================================================= -->
-    <div id="sectionPunches" class="tab-section active">
-        <div class="glass-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <h3 style="margin: 0; font-size: 15px; font-weight: 700;">Recent Shift Punches</h3>
-                <button onclick="loadMyAttendance()" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;">
-                    <i class="fa-solid fa-rotate"></i>
-                </button>
-            </div>
-            <div id="punchesTimelineList">
-                <div style="text-align: center; padding: 30px; color: #94a3b8;">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Loading shift logs...
+        <!-- ========================================================= -->
+        <!-- TAB 1: PUNCHES & SHIFTS TIMELINE                           -->
+        <!-- ========================================================= -->
+        <div id="sectionPunches" class="tab-content-pane active">
+            <div class="clean-card">
+                <div class="clean-card-header">
+                    <h3>
+                        <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-primary);"></i>
+                        <span>Recent Shift Punches</span>
+                    </h3>
+                    <button onclick="loadMyAttendance()" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px;">
+                        <i class="fa-solid fa-rotate"></i> Refresh
+                    </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- TAB 2: WAGES & EARNINGS BREAKDOWN                          -->
-    <!-- ========================================================= -->
-    <div id="sectionWages" class="tab-section">
-        <div class="glass-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <h3 style="margin: 0; font-size: 15px; font-weight: 700;">Monthly Wage Summary</h3>
-                <span id="wagePeriodLabel" class="badge badge-indigo" style="font-size: 11px;">Current Month</span>
-            </div>
-
-            <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 78, 59, 0.3)); border-radius: 14px; padding: 18px; border: 1px solid rgba(16, 185, 129, 0.3); text-align: center; margin-bottom: 16px;">
-                <span style="font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #6ee7b7; font-weight: 700;">Estimated Gross Pay</span>
-                <div id="wageGrossPay" style="font-size: 32px; font-weight: 800; color: #34d399; margin: 4px 0;">$--</div>
-                <span id="wageRateLabel" style="font-size: 12px; color: #a7f3d0;">Hourly Rate: $--/hr</span>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                    <span style="font-size: 11px; color: #94a3b8;">Punch Work Hours</span>
-                    <div id="wageTotalHours" style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-top: 2px;">-- hrs</div>
-                </div>
-                <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                    <span style="font-size: 11px; color: #94a3b8;">Overtime Hours</span>
-                    <div id="wageOvertimeHours" style="font-size: 16px; font-weight: 700; color: #fbbf24; margin-top: 2px;">-- hrs</div>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                    <span style="font-size: 11px; color: #94a3b8;">Paid Leave Credit</span>
-                    <div id="wagePaidLeaveHours" style="font-size: 16px; font-weight: 700; color: #818cf8; margin-top: 2px;">-- hrs</div>
-                </div>
-                <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                    <span style="font-size: 11px; color: #94a3b8;">Missed Checkouts</span>
-                    <div id="wageMissedCheckouts" style="font-size: 16px; font-weight: 700; color: #f87171; margin-top: 2px;">--</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- TAB 3: APPLY FOR LEAVE                                     -->
-    <!-- ========================================================= -->
-    <div id="sectionApply" class="tab-section">
-        <div class="glass-card">
-            <h3 style="margin: 0 0 14px; font-size: 15px; font-weight: 700;">Submit Leave Application</h3>
-
-            <form id="applyLeaveForm" onsubmit="submitLeaveApplication(event)">
-                <div class="form-group" style="margin-bottom: 14px;">
-                    <label class="form-label" style="font-size: 12px; color: #cbd5e1;">Leave Category *</label>
-                    <select id="applyLeaveTypeSelect" class="form-control" required onchange="onApplyLeaveTypeChanged()" style="background: #0f172a; border-color: rgba(255,255,255,0.15); color: #f8fafc;">
-                        <option value="">-- Choose Leave Category --</option>
-                        {% for lt in leave_types %}
-                        <option value="{{ lt.id }}" data-is-paid="{{ 'true' if lt.is_paid else 'false' }}">{{ lt.name }} ({{ lt.code }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- Live Quota Balance Callout -->
-                <div id="applyBalanceNotice" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #818cf8; margin-bottom: 14px; display: none;">
-                    Available balance: <strong>--</strong> days
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
-                    <div class="form-group">
-                        <label class="form-label" style="font-size: 12px; color: #cbd5e1;">Start Date *</label>
-                        <input type="date" id="applyStartDate" class="form-control" required onchange="calculateApplyDays()" style="background: #0f172a; border-color: rgba(255,255,255,0.15); color: #f8fafc;">
+                <div id="punchesTimelineList">
+                    <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading shift logs...
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" style="font-size: 12px; color: #cbd5e1;">End Date *</label>
-                        <input type="date" id="applyEndDate" class="form-control" required onchange="calculateApplyDays()" style="background: #0f172a; border-color: rgba(255,255,255,0.15); color: #f8fafc;">
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- TAB 2: WAGES, CTC & MONTHLY PAYSLIPS                       -->
+        <!-- ========================================================= -->
+        <div id="sectionWages" class="tab-content-pane">
+            <!-- Active CTC & Salary Structure Card -->
+            <div class="clean-card">
+                <div class="clean-card-header">
+                    <h3>
+                        <i class="fa-solid fa-wallet" style="color: var(--accent-emerald, #10b981);"></i>
+                        <span>Compensation & CTC Structure</span>
+                    </h3>
+                    <span id="empCompModelBadge" class="badge badge-indigo" style="font-size: 11px;">STRUCTURED_SALARY</span>
+                </div>
+                
+                <div style="background: var(--bg-subtle); border-radius: var(--radius-md); padding: 16px 20px; border: 1px solid var(--border-color); margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Monthly Base Gross</span>
+                        <div id="empMonthlyGrossDisplay" style="font-size: 22px; font-weight: 800; color: var(--text-heading); margin-top: 2px;">₹0.00</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Annual CTC</span>
+                        <div id="empAnnualCtcDisplay" style="font-size: 20px; font-weight: 800; color: var(--accent-emerald, #10b981); margin-top: 2px;">₹0.00</div>
                     </div>
                 </div>
 
-                <!-- Half-Day Toggle -->
-                <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); margin-bottom: 14px;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer;">
-                        <input type="checkbox" id="applyHalfDayCheck" onchange="onHalfDayToggled()" style="width: 16px; height: 16px; accent-color: var(--tenant-accent);">
-                        <span>Half-Day Leave (Single calendar day only)</span>
-                    </label>
-                    <div id="halfDayPeriodBox" style="display: none; margin-top: 8px;">
-                        <select id="applyHalfDayPeriod" class="form-control" onchange="calculateApplyDays()" style="background: #0f172a; border-color: rgba(255,255,255,0.15); color: #f8fafc; font-size: 12px;">
-                            <option value="FIRST_HALF">First Half (Morning Shift)</option>
-                            <option value="SECOND_HALF">Second Half (Afternoon Shift)</option>
+                <!-- Salary Breakdown Grid -->
+                <div id="empStructureBreakdownGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 12px; margin-bottom: 8px;">
+                    <div style="background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); color: var(--text-muted);">
+                        Basic: <strong id="empBasicDisplay" style="color: var(--text-heading);">₹0.00</strong>
+                    </div>
+                    <div style="background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); color: var(--text-muted);">
+                        HRA: <strong id="empHraDisplay" style="color: var(--text-heading);">₹0.00</strong>
+                    </div>
+                    <div style="background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); color: var(--text-muted);">
+                        Allowances: <strong id="empAllowancesDisplay" style="color: var(--text-heading);">₹0.00</strong>
+                    </div>
+                    <div style="background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); color: var(--text-muted);">
+                        Statutory: <strong id="empStatutoryDisplay" style="color: var(--accent-primary);">PF, ESI, PT</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Published Monthly Payslips -->
+            <div class="clean-card">
+                <div class="clean-card-header">
+                    <h3>
+                        <i class="fa-solid fa-file-invoice" style="color: var(--accent-primary);"></i>
+                        <span>Itemized Monthly Payslips</span>
+                    </h3>
+                    <button onclick="loadMyPayslips()" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px;">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+                <div id="myPayslipsList">
+                    <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading payslips...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shift Attendance Wage Accumulator -->
+            <div class="clean-card">
+                <div class="clean-card-header">
+                    <h3>
+                        <i class="fa-solid fa-chart-line" style="color: var(--accent-sky, #0284c7);"></i>
+                        <span>Current Month Wage Accumulator</span>
+                    </h3>
+                    <span id="wagePeriodLabel" class="badge badge-sky" style="font-size: 11px;">Current Month</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Punch Work Hours</span>
+                        <div id="wageTotalHours" style="font-size: 16px; font-weight: 800; color: var(--text-heading); margin-top: 3px;">-- hrs</div>
+                    </div>
+                    <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Overtime Hours</span>
+                        <div id="wageOvertimeHours" style="font-size: 16px; font-weight: 800; color: var(--accent-amber, #d97706); margin-top: 3px;">-- hrs</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Paid Leave Credit</span>
+                        <div id="wagePaidLeaveHours" style="font-size: 16px; font-weight: 800; color: var(--accent-primary); margin-top: 3px;">-- hrs</div>
+                    </div>
+                    <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Missed Checkouts</span>
+                        <div id="wageMissedCheckouts" style="font-size: 16px; font-weight: 800; color: var(--accent-rose, #ef4444); margin-top: 3px;">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- TAB 3: APPLY FOR LEAVE                                     -->
+        <!-- ========================================================= -->
+        <div id="sectionApply" class="tab-content-pane">
+            <div class="clean-card">
+                <div class="clean-card-header">
+                    <h3>
+                        <i class="fa-solid fa-paper-plane" style="color: var(--accent-primary);"></i>
+                        <span>Submit Leave Application</span>
+                    </h3>
+                </div>
+
+                <form id="applyLeaveForm" onsubmit="submitLeaveApplication(event)">
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Leave Category *</label>
+                        <select id="applyLeaveTypeSelect" class="form-control" required onchange="onApplyLeaveTypeChanged()">
+                            <option value="">-- Choose Leave Category --</option>
+                            {% for lt in leave_types %}
+                            <option value="{{ lt.id }}" data-is-paid="{{ 'true' if lt.is_paid else 'false' }}">{{ lt.name }} ({{ lt.code }})</option>
+                            {% endfor %}
                         </select>
                     </div>
-                </div>
 
-                <div class="form-group" style="margin-bottom: 14px;">
-                    <label class="form-label" style="font-size: 12px; color: #cbd5e1;">Total Duration: <strong id="applyCalculatedDaysLabel" style="color: var(--tenant-accent);">1.0 Day</strong></label>
-                </div>
+                    <!-- Live Quota Balance Callout -->
+                    <div id="applyBalanceNotice" style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-left: 3px solid var(--accent-primary); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12px; color: var(--accent-primary); margin-bottom: 14px; display: none;">
+                        Available balance: <strong>--</strong> days
+                    </div>
 
-                <div class="form-group" style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-size: 12px; color: #cbd5e1;">Reason & Notes *</label>
-                    <textarea id="applyReasonInput" class="form-control" rows="3" placeholder="Briefly specify the reason for your leave request..." required style="background: #0f172a; border-color: rgba(255,255,255,0.15); color: #f8fafc;"></textarea>
-                </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Start Date *</label>
+                            <input type="date" id="applyStartDate" class="form-control" required onchange="calculateApplyDays()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">End Date *</label>
+                            <input type="date" id="applyEndDate" class="form-control" required onchange="calculateApplyDays()">
+                        </div>
+                    </div>
 
-                <div id="applyResultAlert" style="display: none; padding: 12px; border-radius: 10px; font-size: 12.5px; margin-bottom: 14px;"></div>
+                    <!-- Half-Day Toggle -->
+                    <div style="background: var(--bg-subtle); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 14px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--text-heading); cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="applyHalfDayCheck" onchange="onHalfDayToggled()" style="width: 16px; height: 16px; accent-color: var(--accent-primary);">
+                            <span>Half-Day Leave (Single calendar day only)</span>
+                        </label>
+                        <div id="halfDayPeriodBox" style="display: none; margin-top: 10px;">
+                            <select id="applyHalfDayPeriod" class="form-control" onchange="calculateApplyDays()" style="font-size: 12px;">
+                                <option value="FIRST_HALF">First Half (Morning Shift)</option>
+                                <option value="SECOND_HALF">Second Half (Afternoon Shift)</option>
+                            </select>
+                        </div>
+                    </div>
 
-                <button type="submit" id="btnSubmitLeave" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 700; background: var(--tenant-accent); border: none;">
-                    <i class="fa-solid fa-paper-plane"></i> Submit Leave Application
-                </button>
-            </form>
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-calculator" style="color: var(--accent-primary);"></i>
+                            <span>Calculated Duration:</span>
+                            <strong id="applyCalculatedDaysLabel" style="color: var(--accent-primary); font-size: 13px;">1.0 Day</strong>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Reason & Purpose *</label>
+                        <textarea id="applyReasonInput" class="form-control" rows="3" placeholder="Briefly specify the reason for your leave request..." required></textarea>
+                    </div>
+
+                    <div id="applyResultAlert" style="display: none; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px; margin-bottom: 14px;"></div>
+
+                    <button type="submit" id="btnSubmitLeave" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 700;">
+                        <i class="fa-solid fa-paper-plane"></i> Submit Leave Application
+                    </button>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <!-- ========================================================= -->
-    <!-- TAB 4: MY LEAVES & BALANCES                                -->
-    <!-- ========================================================= -->
-    <div id="sectionLeaves" class="tab-section">
-        <!-- Balances Grid -->
-        <div class="glass-card" style="margin-bottom: 16px;">
-            <h3 style="margin: 0 0 12px; font-size: 15px; font-weight: 700;">Annual Leave Quotas ({{ branding.year or '2026' }})</h3>
-            <div id="leaveBalancesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div style="text-align: center; grid-column: span 2; padding: 15px; color: #94a3b8;">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Loading quotas...
+        <!-- ========================================================= -->
+        <!-- TAB 4: MY LEAVES & BALANCES                                -->
+        <!-- ========================================================= -->
+        <div id="sectionLeaves" class="tab-content-pane">
+            <!-- Balances Grid -->
+            <div class="clean-card">
+                <div class="clean-card-header">
+                    <h3>
+                        <i class="fa-solid fa-chart-pie" style="color: var(--accent-emerald, #10b981);"></i>
+                        <span>Annual Leave Quotas ({{ branding.year or '2026' }})</span>
+                    </h3>
+                </div>
+                <div id="leaveBalancesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="text-align: center; grid-column: span 2; padding: 20px; color: var(--text-muted);">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading quotas...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submitted Applications History -->
+            <div class="clean-card">
+                <div class="clean-card-header">
+                    <h3>
+                        <i class="fa-solid fa-list-check" style="color: var(--accent-primary);"></i>
+                        <span>My Leave Applications</span>
+                    </h3>
+                </div>
+                <div id="myLeaveRequestsList">
+                    <div style="text-align: center; padding: 25px; color: var(--text-muted);">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading applications...
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Submitted Applications History -->
-        <div class="glass-card">
-            <h3 style="margin: 0 0 12px; font-size: 15px; font-weight: 700;">My Leave Applications</h3>
-            <div id="myLeaveRequestsList">
-                <div style="text-align: center; padding: 25px; color: #94a3b8;">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Loading applications...
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    </main>
 
-<script>
-    let myBalancesList = [];
+    <footer class="footer-bar">
+        <div>&copy; 2026 {{ branding.institution_name if branding else tenant.name }}. All rights reserved.</div>
+    </footer>
 
-    document.addEventListener("DOMContentLoaded", () => {
-        // Set default application date to tomorrow
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomStr = tomorrow.toISOString().split("T")[0];
-        document.getElementById("applyStartDate").value = tomStr;
-        document.getElementById("applyEndDate").value = tomStr;
+    <script>
+        let myBalancesList = [];
 
-        loadMyAttendance();
-        loadMyPayroll();
-        loadMyBalances();
-        loadMyLeaveRequests();
-    });
+        document.addEventListener("DOMContentLoaded", () => {
+            updateThemeIcon();
 
-    function switchEmpTab(tabKey) {
-        document.querySelectorAll(".emp-tab-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".tab-section").forEach(s => s.classList.remove("active"));
+            // Set default application date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomStr = tomorrow.toISOString().split("T")[0];
+            const startInput = document.getElementById("applyStartDate");
+            const endInput = document.getElementById("applyEndDate");
+            if (startInput) startInput.value = tomStr;
+            if (endInput) endInput.value = tomStr;
 
-        if (tabKey === "punches") {
-            document.getElementById("tabBtnPunches").classList.add("active");
-            document.getElementById("sectionPunches").classList.add("active");
             loadMyAttendance();
-        } else if (tabKey === "wages") {
-            document.getElementById("tabBtnWages").classList.add("active");
-            document.getElementById("sectionWages").classList.add("active");
             loadMyPayroll();
-        } else if (tabKey === "apply") {
-            document.getElementById("tabBtnApply").classList.add("active");
-            document.getElementById("sectionApply").classList.add("active");
-        } else if (tabKey === "leaves") {
-            document.getElementById("tabBtnLeaves").classList.add("active");
-            document.getElementById("sectionLeaves").classList.add("active");
             loadMyBalances();
             loadMyLeaveRequests();
+        });
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const next = (current === "dark" || current === "slate") ? "light" : "slate";
+            document.documentElement.setAttribute("data-theme", next);
+            localStorage.setItem("app_theme", next);
+            updateThemeIcon();
         }
-    }
 
-    async function loadMyAttendance() {
-        const container = document.getElementById("punchesTimelineList");
-        if (!container) return;
-
-        try {
-            const res = await fetch("/api/v1/employee/attendance");
-            const data = await res.json();
-
-            if (res.ok && data.records && data.records.length > 0) {
-                let html = "";
-                data.records.forEach(r => {
-                    const statusClass = (r.shift_status === "ON_TIME" || r.shift_status === "COMPLETED" || r.shift_status === "PRESENT") ? "#34d399" : "#f59e0b";
-                    html += `
-                        <div class="timeline-item">
-                            <div>
-                                <strong style="font-size: 13px; color: #f8fafc;">${r.timestamp.split(" ")[0]}</strong>
-                                <div style="font-size: 11.5px; color: #94a3b8; margin-top: 3px;">
-                                    In: <span style="color: #38bdf8;">${r.check_in_short || '--'}</span> &bull; 
-                                    Out: <span style="color: #fb923c;">${r.check_out_short || '--'}</span>
-                                </div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 13.5px; font-weight: 700; color: #f8fafc;">${r.work_duration_formatted || '--'}</div>
-                                <span class="badge" style="font-size: 10.5px; background: rgba(255,255,255,0.05); color: ${statusClass}; margin-top: 3px;">${r.shift_status}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = `<div style="text-align: center; padding: 25px; color: #94a3b8;">No attendance punch logs recorded yet.</div>`;
+        function updateThemeIcon() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const icon = document.querySelector("#themeToggleBtn i");
+            if (icon) {
+                icon.className = (current === "dark" || current === "slate") ? "fa-solid fa-sun" : "fa-solid fa-moon";
             }
-        } catch (e) {
-            container.innerHTML = `<div style="text-align: center; color: #f87171; padding: 20px;">Error loading punch history.</div>`;
         }
-    }
 
-    async function loadMyPayroll() {
-        try {
-            const res = await fetch("/api/v1/employee/payroll");
-            const data = await res.json();
-            if (res.ok) {
-                const cur = data.currency_symbol || "₹";
-                document.getElementById("wageGrossPay").innerText = `${cur}${data.gross_earnings.toFixed(2)}`;
-                document.getElementById("wageRateLabel").innerText = `Rate: ${cur}${data.hourly_rate.toFixed(2)}/hr (Active Days: ${data.active_days_count})`;
-                document.getElementById("wageTotalHours").innerText = `${data.total_punch_hours} hrs`;
-                document.getElementById("wageOvertimeHours").innerText = `${data.overtime_hours} hrs`;
-                document.getElementById("wagePaidLeaveHours").innerText = `${data.paid_leave_hours} hrs (${data.paid_leave_days}d)`;
-                document.getElementById("wageMissedCheckouts").innerText = `${data.missed_checkouts_count}`;
+        function switchEmpTab(tabKey) {
+            document.querySelectorAll(".emp-tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content-pane").forEach(s => s.classList.remove("active"));
+
+            if (tabKey === "punches") {
+                document.getElementById("tabBtnPunches").classList.add("active");
+                document.getElementById("sectionPunches").classList.add("active");
+                loadMyAttendance();
+            } else if (tabKey === "wages") {
+                document.getElementById("tabBtnWages").classList.add("active");
+                document.getElementById("sectionWages").classList.add("active");
+                loadMyPayroll();
+            } else if (tabKey === "apply") {
+                document.getElementById("tabBtnApply").classList.add("active");
+                document.getElementById("sectionApply").classList.add("active");
+            } else if (tabKey === "leaves") {
+                document.getElementById("tabBtnLeaves").classList.add("active");
+                document.getElementById("sectionLeaves").classList.add("active");
+                loadMyBalances();
+                loadMyLeaveRequests();
             }
-        } catch (e) {
-            console.error("Payroll fetch error:", e);
         }
-    }
 
-    async function loadMyBalances() {
-        const grid = document.getElementById("leaveBalancesGrid");
-        if (!grid) return;
+        async function loadMyAttendance() {
+            const container = document.getElementById("punchesTimelineList");
+            if (!container) return;
 
-        try {
-            const res = await fetch("/api/v1/employee/leave/balances");
-            const data = await res.json();
-            if (res.ok && data.balances) {
-                myBalancesList = data.balances;
-                let html = "";
-                data.balances.forEach(b => {
-                    html += `
-                        <div class="balance-card">
-                            <span style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${b.leave_type_name} (${b.leave_type_code})</span>
-                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
-                                <span style="font-size: 18px; font-weight: 800; color: #38bdf8;">${b.remaining_days}</span>
-                                <span style="font-size: 11px; color: #64748b;">/ ${b.total_allocated} days</span>
-                            </div>
-                            <div style="font-size: 10.5px; color: #94a3b8; margin-top: 4px;">
-                                Used: ${b.used_days}d &bull; Pending: ${b.pending_days}d
-                            </div>
-                        </div>
-                    `;
-                });
-                grid.innerHTML = html;
-            }
-        } catch (e) {
-            console.error("Balance fetch error:", e);
-        }
-    }
+            try {
+                const res = await fetch("/api/v1/employee/attendance");
+                const data = await res.json();
 
-    async function loadMyLeaveRequests() {
-        const container = document.getElementById("myLeaveRequestsList");
-        if (!container) return;
+                if (res.ok && data.records && data.records.length > 0) {
+                    let html = "";
+                    data.records.forEach(r => {
+                        const isGood = (r.shift_status === "ON_TIME" || r.shift_status === "COMPLETED" || r.shift_status === "PRESENT");
+                        const statusBadge = isGood 
+                            ? `<span class="badge badge-emerald" style="font-size: 10.5px;">${r.shift_status}</span>` 
+                            : `<span class="badge badge-amber" style="font-size: 10.5px;">${r.shift_status}</span>`;
 
-        try {
-            const res = await fetch("/api/v1/employee/leave/requests");
-            const data = await res.json();
-
-            if (res.ok && data.requests && data.requests.length > 0) {
-                let html = "";
-                data.requests.forEach(r => {
-                    let statusBadge = "";
-                    let cancelBtn = "";
-
-                    if (r.status === "PENDING") {
-                        statusBadge = `<span class="badge badge-amber" style="font-size: 11px;"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
-                        // User enhancement: Employee can cancel pending requests if applied by mistake!
-                        cancelBtn = `
-                            <button onclick="cancelMyLeaveRequest(${r.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; color: #f87171; border-color: rgba(239,68,68,0.3);" title="Cancel Application">
-                                <i class="fa-solid fa-ban"></i> Cancel
-                            </button>
-                        `;
-                    } else if (r.status === "APPROVED") {
-                        statusBadge = `<span class="badge badge-emerald" style="font-size: 11px;"><i class="fa-solid fa-circle-check"></i> Approved</span>`;
-                    } else if (r.status === "REJECTED") {
-                        statusBadge = `<span class="badge badge-rose" style="font-size: 11px;"><i class="fa-solid fa-circle-xmark"></i> Rejected</span>`;
-                    } else {
-                        statusBadge = `<span class="badge" style="background: rgba(148, 163, 184, 0.2); color: #94a3b8; font-size: 11px;"><i class="fa-solid fa-ban"></i> Cancelled</span>`;
-                    }
-
-                    html += `
-                        <div class="timeline-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                        html += `
+                            <div class="timeline-row">
                                 <div>
-                                    <strong style="font-size: 13.5px; color: #f8fafc;">${r.leave_type_name}</strong>
-                                    <span style="font-size: 11.5px; color: #94a3b8; margin-left: 6px;">(${r.total_days} Day${r.total_days > 1 ? 's' : ''})</span>
+                                    <strong style="font-size: 13px; color: var(--text-heading);">${r.timestamp.split(" ")[0]}</strong>
+                                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">
+                                        In: <span style="color: var(--accent-primary); font-weight: 600;">${r.check_in_short || '--'}</span> &bull; 
+                                        Out: <span style="color: var(--accent-amber, #d97706); font-weight: 600;">${r.check_out_short || '--'}</span>
+                                    </div>
                                 </div>
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    ${statusBadge}
-                                    ${cancelBtn}
+                                <div style="text-align: right;">
+                                    <div style="font-size: 13.5px; font-weight: 800; color: var(--text-heading);">${r.work_duration_formatted || '--'}</div>
+                                    <div style="margin-top: 3px;">${statusBadge}</div>
                                 </div>
                             </div>
-                            <div style="font-size: 12px; color: #38bdf8;">
-                                <i class="fa-solid fa-calendar-day"></i> ${r.start_date === r.end_date ? r.start_date : r.start_date + ' to ' + r.end_date}
-                            </div>
-                            <div style="font-size: 11.5px; color: #94a3b8; font-style: italic;">
-                                "${r.reason}"
-                            </div>
-                            ${r.admin_remarks ? `<div style="font-size: 11px; color: #cbd5e1; background: rgba(255,255,255,0.04); padding: 4px 8px; border-radius: 6px;">HR Note: ${r.admin_remarks}</div>` : ''}
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = `<div style="text-align: center; padding: 25px; color: #94a3b8;">No leave applications submitted yet.</div>`;
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `<div style="text-align: center; padding: 25px; color: var(--text-muted);">No attendance punch logs recorded yet.</div>`;
+                }
+            } catch (e) {
+                container.innerHTML = `<div style="text-align: center; color: var(--accent-rose, #ef4444); padding: 20px;">Error loading punch history.</div>`;
             }
-        } catch (e) {
-            container.innerHTML = `<div style="text-align: center; color: #f87171; padding: 20px;">Error loading applications.</div>`;
-        }
-    }
-
-    function onApplyLeaveTypeChanged() {
-        const typeSelect = document.getElementById("applyLeaveTypeSelect");
-        const typeId = parseInt(typeSelect.value);
-        const notice = document.getElementById("applyBalanceNotice");
-
-        if (!typeId) {
-            if (notice) notice.style.display = "none";
-            return;
         }
 
-        const bal = myBalancesList.find(b => b.leave_type_id === typeId);
-        if (bal && notice) {
-            notice.style.display = "block";
-            notice.innerHTML = `Available balance for <strong>${bal.leave_type_name}</strong>: <strong>${bal.remaining_days}</strong> / ${bal.total_allocated} days`;
-        }
-    }
+        async function loadMyPayroll() {
+            loadMyCompensation();
+            loadMyPayslips();
 
-    function onHalfDayToggled() {
-        const isHalf = document.getElementById("applyHalfDayCheck").checked;
-        const periodBox = document.getElementById("halfDayPeriodBox");
-        if (isHalf) {
-            periodBox.style.display = "block";
-            // Lock end date to start date for half-day
+            try {
+                const res = await fetch("/api/v1/employee/payroll");
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById("wageTotalHours").innerText = `${data.total_punch_hours} hrs`;
+                    document.getElementById("wageOvertimeHours").innerText = `${data.overtime_hours} hrs`;
+                    document.getElementById("wagePaidLeaveHours").innerText = `${data.paid_leave_hours} hrs (${data.paid_leave_days}d)`;
+                    document.getElementById("wageMissedCheckouts").innerText = `${data.missed_checkouts_count}`;
+                }
+            } catch (e) {
+                console.error("Payroll fetch error:", e);
+            }
+        }
+
+        async function loadMyCompensation() {
+            try {
+                const res = await fetch("/api/v1/employee/compensation");
+                const data = await res.json();
+                if (res.ok && data.structure) {
+                    const cur = data.currency || "₹";
+                    const st = data.structure;
+                    document.getElementById("empCompModelBadge").innerText = st.compensation_model || "STRUCTURED_SALARY";
+                    document.getElementById("empMonthlyGrossDisplay").innerText = `${cur}${(st.monthly_gross || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    document.getElementById("empAnnualCtcDisplay").innerText = `${cur}${(st.annual_ctc || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+                    document.getElementById("empBasicDisplay").innerText = `${cur}${(st.monthly_basic || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    document.getElementById("empHraDisplay").innerText = `${cur}${(st.monthly_hra || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    const allw = (st.conveyance_allowance || 0) + (st.medical_allowance || 0) + (st.special_allowance || 0) + (st.other_allowances || 0);
+                    document.getElementById("empAllowancesDisplay").innerText = `${cur}${allw.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+                    let statParts = [];
+                    if (st.enable_pf) statParts.push("PF");
+                    if (st.enable_esi) statParts.push("ESI");
+                    if (st.enable_pt) statParts.push("PT");
+                    document.getElementById("empStatutoryDisplay").innerText = statParts.length > 0 ? statParts.join(", ") : "None";
+                }
+            } catch (e) {
+                console.error("Compensation fetch error:", e);
+            }
+        }
+
+        async function loadMyPayslips() {
+            const container = document.getElementById("myPayslipsList");
+            if (!container) return;
+
+            try {
+                const res = await fetch("/api/v1/employee/payslips");
+                const data = await res.json();
+                if (res.ok && data.payslips && data.payslips.length > 0) {
+                    container.innerHTML = data.payslips.map(p => {
+                        return `
+                            <div class="timeline-row">
+                                <div>
+                                    <strong style="font-size: 13.5px; color: var(--text-heading);">${p.period_label}</strong>
+                                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                                        Worked: <b>${p.present_days}d</b> &bull; Gross: ₹${p.gross_earnings.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                    </div>
+                                </div>
+                                <div style="text-align: right; display: flex; align-items: center; gap: 10px;">
+                                    <div>
+                                        <div style="font-size: 14px; font-weight: 800; color: var(--accent-emerald, #10b981);">₹${p.net_salary.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                                        <span class="badge badge-emerald" style="font-size: 10px;">${p.payment_status}</span>
+                                    </div>
+                                    <a href="/payroll/payslip/${p.id}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 5px 10px; font-size: 11px; text-decoration: none;" title="View / Print Salary Slip">
+                                        <i class="fa-solid fa-file-invoice"></i> Slip
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+                } else {
+                    container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">No monthly payslips published yet.</div>`;
+                }
+            } catch (e) {
+                container.innerHTML = `<div style="text-align: center; color: var(--accent-rose, #ef4444); padding: 15px;">Error loading payslips.</div>`;
+            }
+        }
+
+        async function loadMyBalances() {
+            const grid = document.getElementById("leaveBalancesGrid");
+            if (!grid) return;
+
+            try {
+                const res = await fetch("/api/v1/employee/leave/balances");
+                const data = await res.json();
+                if (res.ok && data.balances) {
+                    myBalancesList = data.balances;
+                    let html = "";
+                    data.balances.forEach(b => {
+                        html += `
+                            <div class="quota-card">
+                                <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">${b.leave_type_name} (${b.leave_type_code})</span>
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                                    <span style="font-size: 18px; font-weight: 800; color: var(--accent-primary);">${b.remaining_days}</span>
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">/ ${b.total_allocated} days</span>
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                                    Used: <b>${b.used_days}d</b> &bull; Pending: <b>${b.pending_days}d</b>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    grid.innerHTML = html;
+                }
+            } catch (e) {
+                console.error("Balance fetch error:", e);
+            }
+        }
+
+        async function loadMyLeaveRequests() {
+            const container = document.getElementById("myLeaveRequestsList");
+            if (!container) return;
+
+            try {
+                const res = await fetch("/api/v1/employee/leave/requests");
+                const data = await res.json();
+
+                if (res.ok && data.requests && data.requests.length > 0) {
+                    let html = "";
+                    data.requests.forEach(r => {
+                        let statusBadge = "";
+                        let cancelBtn = "";
+
+                        if (r.status === "PENDING") {
+                            statusBadge = `<span class="badge badge-amber" style="font-size: 11px;"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
+                            cancelBtn = `
+                                <button onclick="cancelMyLeaveRequest(${r.id})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 11px; color: var(--accent-rose, #ef4444);" title="Cancel Application">
+                                    <i class="fa-solid fa-ban"></i> Cancel
+                                </button>
+                            `;
+                        } else if (r.status === "APPROVED") {
+                            statusBadge = `<span class="badge badge-emerald" style="font-size: 11px;"><i class="fa-solid fa-circle-check"></i> Approved</span>`;
+                        } else if (r.status === "REJECTED") {
+                            statusBadge = `<span class="badge badge-rose" style="font-size: 11px;"><i class="fa-solid fa-circle-xmark"></i> Rejected</span>`;
+                        } else {
+                            statusBadge = `<span class="badge" style="background: var(--bg-subtle); color: var(--text-muted); font-size: 11px;"><i class="fa-solid fa-ban"></i> Cancelled</span>`;
+                        }
+
+                        html += `
+                            <div class="timeline-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong style="font-size: 13.5px; color: var(--text-heading);">${r.leave_type_name}</strong>
+                                        <span style="font-size: 11.5px; color: var(--text-muted); margin-left: 6px;">(${r.total_days} Day${r.total_days > 1 ? 's' : ''})</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        ${statusBadge}
+                                        ${cancelBtn}
+                                    </div>
+                                </div>
+                                <div style="font-size: 12px; color: var(--accent-primary); font-weight: 600;">
+                                    <i class="fa-solid fa-calendar-day"></i> ${r.start_date === r.end_date ? r.start_date : r.start_date + ' to ' + r.end_date}
+                                </div>
+                                <div style="font-size: 11.5px; color: var(--text-muted); font-style: italic;">
+                                    "${r.reason}"
+                                </div>
+                                ${r.admin_remarks ? `<div style="font-size: 11px; color: var(--text-secondary); background: var(--bg-card); padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color);">HR Note: ${r.admin_remarks}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `<div style="text-align: center; padding: 25px; color: var(--text-muted);">No leave applications submitted yet.</div>`;
+                }
+            } catch (e) {
+                container.innerHTML = `<div style="text-align: center; color: var(--accent-rose, #ef4444); padding: 20px;">Error loading applications.</div>`;
+            }
+        }
+
+        function onApplyLeaveTypeChanged() {
+            const typeSelect = document.getElementById("applyLeaveTypeSelect");
+            const typeId = parseInt(typeSelect.value);
+            const notice = document.getElementById("applyBalanceNotice");
+
+            if (!typeId) {
+                if (notice) notice.style.display = "none";
+                return;
+            }
+
+            const bal = myBalancesList.find(b => b.leave_type_id === typeId);
+            if (bal && notice) {
+                notice.style.display = "block";
+                notice.innerHTML = `Available quota for <strong>${bal.leave_type_name}</strong>: <strong>${bal.remaining_days}</strong> / ${bal.total_allocated} days`;
+            }
+        }
+
+        function onHalfDayToggled() {
+            const isHalf = document.getElementById("applyHalfDayCheck").checked;
+            const periodBox = document.getElementById("halfDayPeriodBox");
+            if (isHalf) {
+                periodBox.style.display = "block";
+                const sDate = document.getElementById("applyStartDate").value;
+                if (sDate) document.getElementById("applyEndDate").value = sDate;
+            } else {
+                periodBox.style.display = "none";
+            }
+            calculateApplyDays();
+        }
+
+        function calculateApplyDays() {
+            const sDateVal = document.getElementById("applyStartDate").value;
+            const eDateVal = document.getElementById("applyEndDate").value;
+            const isHalf = document.getElementById("applyHalfDayCheck").checked;
+            const label = document.getElementById("applyCalculatedDaysLabel");
+
+            if (!sDateVal || !eDateVal) return;
+
+            const s = new Date(sDateVal);
+            const e = new Date(eDateVal);
+            const diffDays = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+
+            if (diffDays <= 0) {
+                label.innerText = "Invalid Date Range";
+                return;
+            }
+
+            if (isHalf && diffDays === 1) {
+                label.innerText = "0.5 Day";
+            } else {
+                label.innerText = `${diffDays} Day${diffDays > 1 ? 's' : ''}`;
+            }
+        }
+
+        async function submitLeaveApplication(e) {
+            e.preventDefault();
+            const typeId = document.getElementById("applyLeaveTypeSelect").value;
             const sDate = document.getElementById("applyStartDate").value;
-            if (sDate) document.getElementById("applyEndDate").value = sDate;
-        } else {
-            periodBox.style.display = "none";
-        }
-        calculateApplyDays();
-    }
+            const eDate = document.getElementById("applyEndDate").value;
+            const isHalf = document.getElementById("applyHalfDayCheck").checked;
+            const period = document.getElementById("applyHalfDayPeriod").value;
+            const reason = document.getElementById("applyReasonInput").value;
 
-    function calculateApplyDays() {
-        const sDateVal = document.getElementById("applyStartDate").value;
-        const eDateVal = document.getElementById("applyEndDate").value;
-        const isHalf = document.getElementById("applyHalfDayCheck").checked;
-        const label = document.getElementById("applyCalculatedDaysLabel");
+            const btn = document.getElementById("btnSubmitLeave");
+            const alertBox = document.getElementById("applyResultAlert");
 
-        if (!sDateVal || !eDateVal) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
 
-        const s = new Date(sDateVal);
-        const e = new Date(eDateVal);
-        const diffDays = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+            try {
+                const res = await fetch("/api/v1/employee/leave/apply", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        leave_type_id: parseInt(typeId),
+                        start_date: sDate,
+                        end_date: eDate,
+                        is_half_day: isHalf,
+                        half_day_period: isHalf ? period : "NONE",
+                        reason: reason,
+                    }),
+                });
 
-        if (diffDays <= 0) {
-            label.innerText = "Invalid Date Range";
-            return;
-        }
+                const data = await res.json();
 
-        if (isHalf && diffDays === 1) {
-            label.innerText = "0.5 Day";
-        } else {
-            label.innerText = `${diffDays} Day${diffDays > 1 ? 's' : ''}`;
-        }
-    }
+                if (res.ok) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(16, 185, 129, 0.12)";
+                    alertBox.style.border = "1px solid rgba(16, 185, 129, 0.35)";
+                    alertBox.style.color = "var(--accent-emerald, #059669)";
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message}`;
 
-    async function submitLeaveApplication(e) {
-        e.preventDefault();
-        const typeId = document.getElementById("applyLeaveTypeSelect").value;
-        const sDate = document.getElementById("applyStartDate").value;
-        const eDate = document.getElementById("applyEndDate").value;
-        const isHalf = document.getElementById("applyHalfDayCheck").checked;
-        const period = document.getElementById("applyHalfDayPeriod").value;
-        const reason = document.getElementById("applyReasonInput").value;
-
-        const btn = document.getElementById("btnSubmitLeave");
-        const alertBox = document.getElementById("applyResultAlert");
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
-
-        try {
-            const res = await fetch("/api/v1/employee/leave/apply", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    leave_type_id: parseInt(typeId),
-                    start_date: sDate,
-                    end_date: eDate,
-                    is_half_day: isHalf,
-                    half_day_period: isHalf ? period : "NONE",
-                    reason: reason,
-                }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "rgba(16, 185, 129, 0.15)";
-                alertBox.style.border = "1px solid rgba(16, 185, 129, 0.4)";
-                alertBox.style.color = "#34d399";
-                alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message}`;
-
-                setTimeout(() => {
-                    document.getElementById("applyReasonInput").value = "";
-                    alertBox.style.display = "none";
+                    setTimeout(() => {
+                        document.getElementById("applyReasonInput").value = "";
+                        alertBox.style.display = "none";
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Leave Application';
+                        switchEmpTab("leaves");
+                    }, 900);
+                } else {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(239, 68, 68, 0.12)";
+                    alertBox.style.border = "1px solid rgba(239, 68, 68, 0.35)";
+                    alertBox.style.color = "var(--accent-rose, #dc2626)";
+                    alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Application submission failed.'}`;
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Leave Application';
-                    switchEmpTab("leaves");
-                }, 1000);
-            } else {
+                }
+            } catch (err) {
                 alertBox.style.display = "block";
-                alertBox.style.background = "rgba(239, 68, 68, 0.15)";
-                alertBox.style.border = "1px solid rgba(239, 68, 68, 0.4)";
-                alertBox.style.color = "#f87171";
-                alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Application submission failed.'}`;
+                alertBox.style.background = "rgba(239, 68, 68, 0.12)";
+                alertBox.style.border = "1px solid rgba(239, 68, 68, 0.35)";
+                alertBox.style.color = "var(--accent-rose, #dc2626)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Leave Application';
             }
-        } catch (err) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "rgba(239, 68, 68, 0.15)";
-            alertBox.style.border = "1px solid rgba(239, 68, 68, 0.4)";
-            alertBox.style.color = "#f87171";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Leave Application';
-        }
-    }
-
-    async function cancelMyLeaveRequest(requestId) {
-        if (!confirm("Are you sure you want to cancel this leave application? Your pending balance will be restored.")) {
-            return;
         }
 
-        try {
-            const res = await fetch(`/api/v1/employee/leave/requests/${requestId}/cancel`, {
-                method: "POST",
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert(data.message || "Application cancelled successfully.");
-                loadMyBalances();
-                loadMyLeaveRequests();
-            } else {
-                alert(data.detail || "Failed to cancel request.");
+        async function cancelMyLeaveRequest(requestId) {
+            if (!confirm("Are you sure you want to cancel this leave application? Your pending balance will be restored.")) {
+                return;
             }
-        } catch (e) {
-            alert("Network error cancelling application.");
-        }
-    }
 
-    async function employeeLogout() {
-        try {
-            await fetch("/api/v1/employee/logout", { method: "POST" });
-        } catch (e) {}
-        window.location.href = "/employee/{{ tenant.slug }}";
-    }
-</script>
+            try {
+                const res = await fetch(`/api/v1/employee/leave/requests/${requestId}/cancel`, {
+                    method: "POST",
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    loadMyBalances();
+                    loadMyLeaveRequests();
+                } else {
+                    alert(data.detail || "Failed to cancel request.");
+                }
+            } catch (e) {
+                alert("Network error cancelling application.");
+            }
+        }
+
+        async function employeeLogout() {
+            try {
+                await fetch("/api/v1/employee/logout", { method: "POST" });
+            } catch (e) {}
+            window.location.href = "/employee/{{ tenant.slug }}";
+        }
+    </script>
 
 </body>
 </html>

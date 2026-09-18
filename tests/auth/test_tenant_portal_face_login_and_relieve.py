@@ -91,7 +91,6 @@ class TestTenantPortalFaceLoginAndRelieve(unittest.TestCase):
                 name="Alice Employee",
                 user_role="employee",
                 department="Engineering",
-                cadre_level="Staff",
                 is_active=True,
                 employment_status="ACTIVE",
             )
@@ -164,7 +163,6 @@ class TestTenantPortalFaceLoginAndRelieve(unittest.TestCase):
                 name="Sarah Manager",
                 user_role="admin",
                 department="Management",
-                cadre_level="Executive",
                 is_active=True,
                 employment_status="ACTIVE",
             )

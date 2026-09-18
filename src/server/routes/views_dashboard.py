@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from src.database.models import (
     Student,
@@ -23,11 +23,18 @@ from src.database.models import (
     LeaveRequest,
     LeaveBalance,
     WorkShift,
+    PayrollBatch,
+    PayrollPayslip,
+    CompanyLocation,
+    DesignationMaster,
+    SalaryTemplate,
+    SalaryComponent,
 )
 from src.database.session import get_db, seed_default_leave_types
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
 from src.server.rbac_middleware import get_current_user_optional, create_access_token, check_tenant_login_access
 from src.server.routes.api_employee_portal import decode_employee_token, EMP_COOKIE_NAME
+from src.core.payroll_engine import number_to_words_inr
 from src.utils.timezone import get_ist_now
 
 templates = Jinja2Templates(directory="src/server/templates")
@@ -211,6 +218,14 @@ def page_students(
     students = (
         db.query(Student)
         .filter(Student.tenant_id == selected_tenant.id)
+        .options(
+            joinedload(Student.department_rel),
+            joinedload(Student.designation_rel),
+            joinedload(Student.location),
+            joinedload(Student.shift),
+            joinedload(Student.class_obj),
+            joinedload(Student.division_obj),
+        )
         .order_by(Student.name.asc())
         .all()
     )
@@ -221,6 +236,9 @@ def page_students(
     all_tenants = get_all_active_tenants(db)
     tenant_roles = get_tenant_roles_list(db, selected_tenant)
     work_shifts = db.query(WorkShift).filter(WorkShift.tenant_id == selected_tenant.id).order_by(WorkShift.is_default.desc(), WorkShift.name.asc()).all()
+    locations = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == selected_tenant.id, CompanyLocation.is_active == True).order_by(CompanyLocation.name.asc()).all()
+    designations = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == selected_tenant.id, DesignationMaster.is_active == True).order_by(DesignationMaster.title.asc()).all()
+    salary_templates = db.query(SalaryTemplate).filter(SalaryTemplate.tenant_id == selected_tenant.id, SalaryTemplate.is_active == True).order_by(SalaryTemplate.name.asc()).all()
 
     active_page_tag = "employees" if (is_corporate or request.url.path.startswith("/employees")) else "students"
     page_title = "Employee Directory" if is_corporate else "Student Directory"
@@ -236,6 +254,9 @@ def page_students(
             "classes": [c.to_dict() for c in classes],
             "divisions": [dv.to_dict() for dv in divisions],
             "work_shifts": [ws.to_dict() for ws in work_shifts],
+            "company_locations": [l.to_dict() for l in locations],
+            "designations": [d.to_dict() for d in designations],
+            "salary_templates": [st.to_dict() for st in salary_templates],
             "branding": branding,
             "current_tenant": selected_tenant.to_dict(),
             "all_tenants": all_tenants,
@@ -264,6 +285,9 @@ def page_enroll(
     all_tenants = get_all_active_tenants(db)
     tenant_roles = get_tenant_roles_list(db, current_tenant)
     work_shifts = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.is_active == True).order_by(WorkShift.is_default.desc(), WorkShift.name.asc()).all()
+    locations = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == current_tenant.id, CompanyLocation.is_active == True).order_by(CompanyLocation.name.asc()).all()
+    designations = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == current_tenant.id, DesignationMaster.is_active == True).order_by(DesignationMaster.title.asc()).all()
+    salary_templates = db.query(SalaryTemplate).filter(SalaryTemplate.tenant_id == current_tenant.id, SalaryTemplate.is_active == True).order_by(SalaryTemplate.name.asc()).all()
 
     page_title = "Register New Employee" if is_corporate else "Enroll New Student"
 
@@ -277,6 +301,9 @@ def page_enroll(
             "classes": [c.to_dict() for c in classes],
             "divisions": [dv.to_dict() for dv in divisions],
             "work_shifts": [ws.to_dict() for ws in work_shifts],
+            "company_locations": [l.to_dict() for l in locations],
+            "designations": [d.to_dict() for d in designations],
+            "salary_templates": [st.to_dict() for st in salary_templates],
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": all_tenants,
@@ -496,6 +523,9 @@ def page_payroll(
             selected_tenant = custom_t
 
     departments = db.query(Department).filter(Department.tenant_id == selected_tenant.id).order_by(Department.name.asc()).all()
+    locations = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == selected_tenant.id).order_by(CompanyLocation.name.asc()).all()
+    designations = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == selected_tenant.id).order_by(DesignationMaster.title.asc()).all()
+    salary_templates = db.query(SalaryTemplate).filter(SalaryTemplate.tenant_id == selected_tenant.id).order_by(SalaryTemplate.name.asc()).all()
     branding = get_branding_dict(db, selected_tenant.id)
     all_tenants = get_all_active_tenants(db)
 
@@ -510,7 +540,7 @@ def page_payroll(
         "payroll.html",
         {
             "request": request,
-            "page_title": "Corporate Payroll & Wage Engine",
+            "page_title": "Payroll management",
             "active_page": "payroll",
             "branding": branding,
             "current_tenant": selected_tenant.to_dict(),
@@ -519,9 +549,45 @@ def page_payroll(
             "is_super_admin": is_super_admin,
             "selected_tenant_id": selected_tenant.id,
             "departments": [d.to_dict() for d in departments],
+            "company_locations": [l.to_dict() for l in locations],
+            "designations": [d.to_dict() for d in designations],
+            "salary_templates": [st.to_dict() for st in salary_templates],
             "today_str": today_str,
             "first_of_month_str": first_of_month_str,
             "is_corporate": is_corporate,
+        },
+    )
+
+
+@router.get("/payroll/payslip/{payslip_id}", response_class=HTMLResponse)
+def page_payslip_view(
+    payslip_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    fallback_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Printable & Downloadable Indian Salary Payslip View."""
+    current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
+    payslip = db.query(PayrollPayslip).filter(PayrollPayslip.id == payslip_id).first()
+    if not payslip:
+        return HTMLResponse("<h2>Payslip not found</h2>", status_code=404)
+
+    target_tenant = payslip.tenant or current_tenant
+    branding = get_branding_dict(db, target_tenant.id)
+    payslip_data = payslip.to_dict()
+    net_in_words = number_to_words_inr(payslip.net_salary)
+
+    return templates.TemplateResponse(
+        "payslip_view.html",
+        {
+            "request": request,
+            "page_title": f"Payslip - {payslip.student.name if payslip.student else 'Employee'} ({payslip_data.get('period_label')})",
+            "branding": branding,
+            "current_tenant": target_tenant.to_dict(),
+            "payslip": payslip_data,
+            "employee": payslip.student.to_dict() if payslip.student else {},
+            "net_in_words": net_in_words,
+            "current_user": current_user.to_dict() if current_user else None,
         },
     )
 

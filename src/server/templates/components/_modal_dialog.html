@@ -1,0 +1,25 @@
+{# ============================================================================== #}
+{# REUSABLE MODAL DIALOG WRAPPER COMPONENT                                      #}
+{# Usage:                                                                        #}
+{#   {% import "components/_modal_dialog.html" as modal %}                      #}
+{#   {% call modal.wrapper(id="myModal", title="Modal Title", icon="fa-sliders", max_width="600px", close_fn="closeMyModal()") %} #}
+{#     <div class="modal-body">...</div>                                         #}
+{#   {% endcall %}                                                              #}
+{# ============================================================================== #}
+
+{% macro wrapper(id, title, icon="fa-sliders", max_width="600px", close_fn="closeModal()", icon_color="#6366f1") -%}
+<div class="modal-overlay" id="{{ id }}">
+    <div class="modal-content" style="max-width: {{ max_width }};">
+        <div class="modal-header">
+            <h3>
+                <i class="fa-solid {{ icon }}" style="color: {{ icon_color }};"></i>
+                <span>{{ title }}</span>
+            </h3>
+            <button class="modal-close" onclick="{{ close_fn }}" type="button">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        {{ caller() }}
+    </div>
+</div>
+{%- endmacro %}

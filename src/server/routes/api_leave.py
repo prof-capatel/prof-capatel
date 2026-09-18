@@ -10,7 +10,6 @@ from src.database.models import (
     Tenant,
     Student,
     LeaveType,
-    LeaveCadreQuota,
     LeaveBalance,
     LeaveRequest,
     Department,
@@ -27,11 +26,6 @@ logger = logging.getLogger("api_leave")
 router = APIRouter(prefix="/api/v1/leave", tags=["Leave Management Master & Approval"])
 
 
-class LeaveCadreQuotaItem(BaseModel):
-    cadre_level: str
-    allocated_days: float
-
-
 class LeaveTypePayload(BaseModel):
     id: Optional[int] = None
     name: str
@@ -42,7 +36,6 @@ class LeaveTypePayload(BaseModel):
     accrual_frequency: Optional[str] = "ANNUAL"
     requires_document: Optional[bool] = False
     is_active: Optional[bool] = True
-    cadre_quotas: Optional[List[LeaveCadreQuotaItem]] = []
 
 
 class LeaveReviewPayload(BaseModel):
@@ -57,7 +50,7 @@ def get_or_create_leave_balance(
     leave_type: LeaveType,
     year: int,
 ) -> LeaveBalance:
-    """Retrieves or automatically initializes an employee's annual leave balance from default or cadre quota."""
+    """Retrieves or automatically initializes an employee's annual leave balance from default quota."""
     balance = (
         db.query(LeaveBalance)
         .filter(
@@ -70,20 +63,7 @@ def get_or_create_leave_balance(
     )
 
     if not balance:
-        # Check cadre-specific quota override
         allocated = float(leave_type.default_days_per_year or 0.0)
-        if student.cadre_level:
-            cadre_q = (
-                db.query(LeaveCadreQuota)
-                .filter(
-                    LeaveCadreQuota.tenant_id == tenant_id,
-                    LeaveCadreQuota.leave_type_id == leave_type.id,
-                    LeaveCadreQuota.cadre_level == student.cadre_level.strip(),
-                )
-                .first()
-            )
-            if cadre_q:
-                allocated = float(cadre_q.allocated_days)
 
         balance = LeaveBalance(
             tenant_id=tenant_id,
@@ -107,20 +87,14 @@ def list_leave_types(
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Lists all configured leave categories and cadre-specific quotas for the tenant."""
-    # Ensure default types exist
-    seed_default_leave_types(db, current_tenant.id)
-    db.commit()
-
-    query = db.query(LeaveType).filter(LeaveType.tenant_id == current_tenant.id)
-    if not include_inactive:
-        query = query.filter(LeaveType.is_active == True)
-
-    types = query.order_by(LeaveType.id.asc()).all()
+    """Lists all configured leave categories for the tenant."""
+    from src.services.leave_service import LeaveService
+    service = LeaveService(db)
+    types = service.list_leave_types(current_tenant.id, include_inactive)
     return {
         "status": "success",
         "tenant_id": current_tenant.id,
-        "leave_types": [lt.to_dict() for lt in types],
+        "leave_types": types,
         "count": len(types),
     }
 
@@ -131,58 +105,17 @@ def save_leave_type(
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Creates or updates a leave type and its role/cadre quota matrix."""
+    """Creates or updates a leave type."""
     check_tenant_operational_access(current_tenant)
-    clean_code = payload.code.strip().upper()
-    clean_name = payload.name.strip()
-
-    if not clean_code or not clean_name:
-        raise HTTPException(status_code=400, detail="Leave type name and code are required.")
-
-    if payload.id:
-        lt = db.query(LeaveType).filter(LeaveType.id == payload.id, LeaveType.tenant_id == current_tenant.id).first()
-        if not lt:
-            raise HTTPException(status_code=404, detail="Leave type not found.")
-    else:
-        # Check uniqueness of code
-        existing = db.query(LeaveType).filter(LeaveType.tenant_id == current_tenant.id, LeaveType.code == clean_code).first()
-        if existing:
-            raise HTTPException(status_code=400, detail=f"Leave type with code '{clean_code}' already exists.")
-        lt = LeaveType(tenant_id=current_tenant.id)
-        db.add(lt)
-
-    lt.name = clean_name
-    lt.code = clean_code
-    lt.description = payload.description.strip() if payload.description else ""
-    lt.is_paid = bool(payload.is_paid)
-    lt.default_days_per_year = float(payload.default_days_per_year if payload.default_days_per_year is not None else 12.0)
-    lt.accrual_frequency = payload.accrual_frequency or "ANNUAL"
-    lt.requires_document = bool(payload.requires_document)
-    lt.is_active = bool(payload.is_active if payload.is_active is not None else True)
-    db.flush()
-
-    # Update cadre quotas
-    if payload.cadre_quotas is not None:
-        # Delete old quotas for this leave type
-        db.query(LeaveCadreQuota).filter(LeaveCadreQuota.tenant_id == current_tenant.id, LeaveCadreQuota.leave_type_id == lt.id).delete()
-        for cq in payload.cadre_quotas:
-            if cq.cadre_level and cq.cadre_level.strip():
-                new_cq = LeaveCadreQuota(
-                    tenant_id=current_tenant.id,
-                    leave_type_id=lt.id,
-                    cadre_level=cq.cadre_level.strip(),
-                    allocated_days=float(cq.allocated_days),
-                )
-                db.add(new_cq)
-
-    db.commit()
-    db.refresh(lt)
-
+    from src.services.leave_service import LeaveService
+    service = LeaveService(db)
+    res = service.upsert_leave_type(current_tenant.id, payload)
+    lt_data = res.get("data", {})
     return {
         "status": "success",
         "tenant_id": current_tenant.id,
-        "message": f"Leave category '{lt.name}' ({lt.code}) saved successfully.",
-        "leave_type": lt.to_dict(),
+        "message": f"Leave category '{lt_data.get('name')}' ({lt_data.get('code')}) saved successfully.",
+        "leave_type": lt_data,
     }
 
 
@@ -194,16 +127,9 @@ def delete_leave_type(
 ):
     """Soft-deactivates a leave type category."""
     check_tenant_operational_access(current_tenant)
-    lt = db.query(LeaveType).filter(LeaveType.id == type_id, LeaveType.tenant_id == current_tenant.id).first()
-    if not lt:
-        raise HTTPException(status_code=404, detail="Leave type not found.")
-
-    lt.is_active = False
-    db.commit()
-    return {
-        "status": "success",
-        "message": f"Leave type '{lt.name}' ({lt.code}) deactivated successfully.",
-    }
+    from src.services.leave_service import LeaveService
+    service = LeaveService(db)
+    return service.delete_leave_type(current_tenant.id, type_id)
 
 
 @router.get("/requests")

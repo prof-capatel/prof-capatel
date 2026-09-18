@@ -72,7 +72,6 @@ from src.database.models import (
     AuditLog,
     SubscriptionPlan,
     LeaveType,
-    LeaveCadreQuota,
     LeaveBalance,
     LeaveRequest,
 )
@@ -84,6 +83,7 @@ CORE_WHITELIST_SPECS = [
     {"id": 115, "slug": "ssec", "name": "SSEC"},
     {"id": 155, "slug": "gecm", "name": "GECM"},
     {"id": 292, "slug": "raymond-store-1", "name": "Raymond Store 1"},
+    {"id": 750, "slug": "the-retail-store", "name": "The Retail Store"},
 ]
 
 STANDARD_PLAN_CODES = {"FREE", "STANDARD", "ENTERPRISE"}
@@ -207,7 +207,6 @@ def audit_entities(db) -> Dict[str, Any]:
     if test_tenant_ids:
         child_counts["leave_balances"] = db.query(LeaveBalance).filter(LeaveBalance.tenant_id.in_(test_tenant_ids)).count()
         child_counts["leave_requests"] = db.query(LeaveRequest).filter(LeaveRequest.tenant_id.in_(test_tenant_ids)).count()
-        child_counts["leave_cadre_quotas"] = db.query(LeaveCadreQuota).filter(LeaveCadreQuota.tenant_id.in_(test_tenant_ids)).count()
         child_counts["leave_types"] = db.query(LeaveType).filter(LeaveType.tenant_id.in_(test_tenant_ids)).count()
         child_counts["attendance_records"] = db.query(AttendanceRecord).filter(AttendanceRecord.tenant_id.in_(test_tenant_ids)).count()
         child_counts["face_encodings"] = db.query(FaceEncoding).filter(FaceEncoding.tenant_id.in_(test_tenant_ids)).count()
@@ -222,7 +221,7 @@ def audit_entities(db) -> Dict[str, Any]:
         child_counts["system_branding"] = db.query(SystemBranding).filter(SystemBranding.tenant_id.in_(test_tenant_ids)).count()
         child_counts["audit_logs"] = db.query(AuditLog).filter(AuditLog.tenant_id.in_(test_tenant_ids)).count()
     else:
-        for k in ["leave_balances", "leave_requests", "leave_cadre_quotas", "leave_types",
+        for k in ["leave_balances", "leave_requests", "leave_types",
                   "attendance_records", "face_encodings", "teacher_assignments", "student_batch_uploads",
                   "students", "divisions", "classes", "academic_years", "departments",
                   "node_devices", "system_branding", "audit_logs"]:
@@ -314,7 +313,6 @@ def execute_purge(db, audit_data: Dict[str, Any]):
     # 1. Leave Subsystem
     del_leave_balances = db.query(LeaveBalance).filter(LeaveBalance.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False) if test_tenant_ids else 0
     del_leave_requests = db.query(LeaveRequest).filter(LeaveRequest.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False) if test_tenant_ids else 0
-    del_leave_cadre = db.query(LeaveCadreQuota).filter(LeaveCadreQuota.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False) if test_tenant_ids else 0
     del_leave_types = db.query(LeaveType).filter(LeaveType.tenant_id.in_(test_tenant_ids)).delete(synchronize_session=False) if test_tenant_ids else 0
 
     # 2. Attendance & Biometric Vectors

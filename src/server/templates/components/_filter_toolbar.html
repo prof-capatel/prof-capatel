@@ -1,0 +1,10 @@
+{# ============================================================================== #}
+{# REUSABLE FILTER TOOLBAR COMPONENT                                             #}
+{# ============================================================================== #}
+
+{% macro search_input(input_id="searchInput", placeholder="Search records...", on_input="applyFilters()") -%}
+<div class="search-box" style="display: inline-flex; align-items: center; background: var(--bg-subtle); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px 10px; gap: 8px;">
+    <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted); font-size: 13px;"></i>
+    <input type="text" id="{{ input_id }}" placeholder="{{ placeholder }}" oninput="{{ on_input }}" style="border: none; background: transparent; outline: none; font-size: 13px; color: var(--text-primary); width: 220px;">
+</div>
+{%- endmacro %}

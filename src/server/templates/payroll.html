@@ -2,21 +2,15 @@
 
 {% block content %}
 <!-- Top Header & Action Bar -->
-<div style="display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="openPayrollSettingsModal()" class="btn btn-secondary" title="Configure Hourly Multipliers & Shift Policies">
-            <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
-            <span>Payroll Settings</span>
-        </button>
-        <button onclick="exportPayroll('xlsx')" class="btn btn-primary" title="Download Formatted Payroll Spreadsheet">
-            <i class="fa-solid fa-file-excel"></i>
-            <span>Export Excel (.xlsx)</span>
-        </button>
-        <button onclick="exportPayroll('csv')" class="btn btn-secondary" title="Download Raw Payroll CSV">
-            <i class="fa-solid fa-file-csv" style="color: var(--accent-emerald);"></i>
-            <span>Export CSV</span>
-        </button>
-    </div>
+<div style="display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+    <button onclick="openGenerateBatchModal()" class="btn btn-primary" title="Execute Monthly Payroll Run">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Generate payroll</span>
+    </button>
+    <button onclick="openPayrollSettingsModal()" class="btn btn-secondary" title="Configure Indian Statutory Rules & Overtime">
+        <i class="fa-solid fa-scale-balanced" style="color: var(--accent-primary);"></i>
+        <span>Payroll Settings</span>
+    </button>
 </div>
 
 <!-- Super Admin Mandatory Tenant Selector Banner -->
@@ -26,7 +20,7 @@
         <span style="font-size: 18px; color: var(--accent-primary);"><i class="fa-solid fa-crown"></i></span>
         <div>
             <div style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Super Admin Multi-Tenant Payroll Inspector</div>
-            <div style="font-size: 11.5px; color: var(--text-muted);">Select tenant organization to review its isolated workforce hours and payroll liabilities.</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);">Select tenant organization to review isolated workforce hours, statutory obligations, and payroll batches.</div>
         </div>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -42,387 +36,2418 @@
 </div>
 {% endif %}
 
-<!-- Quick Date-Range Selector & Multi-Parameter Filter Card -->
-<div class="card" style="margin-bottom: 20px;">
-    <div class="card-body" style="padding: 16px;">
-        <!-- Preset Date Range Pills -->
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Date Presets:</span>
-                <button type="button" class="btn btn-secondary preset-btn" data-preset="today" onclick="selectPayrollPreset('today')" style="padding: 6px 12px; font-size: 12px;">Today</button>
-                <button type="button" class="btn btn-secondary preset-btn" data-preset="week" onclick="selectPayrollPreset('week')" style="padding: 6px 12px; font-size: 12px;">This Week</button>
-                <button type="button" class="btn btn-primary preset-btn" data-preset="month" onclick="selectPayrollPreset('month')" style="padding: 6px 12px; font-size: 12px;">This Month</button>
-                <button type="button" class="btn btn-secondary preset-btn" data-preset="last30" onclick="selectPayrollPreset('last30')" style="padding: 6px 12px; font-size: 12px;">Last 30 Days</button>
+<!-- Primary Navigation Tabs -->
+<div style="display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 20px; overflow-x: auto;">
+    <button type="button" class="tab-btn active" id="tabBtnBatches" onclick="switchPayrollTab('batches')">
+        <i class="fa-solid fa-calendar-check"></i> Monthly Payroll
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnEmployees" onclick="switchPayrollTab('employees')">
+        <i class="fa-solid fa-users-viewfinder"></i> Employee Salary Structures
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnTemplates" onclick="switchPayrollTab('templates')">
+        <i class="fa-solid fa-layer-group"></i> Salary Templates
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnMasters" onclick="switchPayrollTab('masters')">
+        <i class="fa-solid fa-building-user"></i> Payroll Masters
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnRealtime" onclick="switchPayrollTab('realtime')">
+        <i class="fa-solid fa-chart-line"></i> Attendance Wage Estimator
+    </button>
+</div>
+
+<style>
+    .tab-btn {
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 10px 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .tab-btn:hover {
+        color: var(--text-heading);
+    }
+    .tab-btn.active {
+        color: var(--accent-primary);
+        border-bottom-color: var(--accent-primary);
+        font-weight: 700;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+</style>
+
+<!-- ========================================================================= -->
+<!-- TAB 1: MONTHLY PAYROLL RUNS & BATCHES                                     -->
+<!-- ========================================================================= -->
+<div id="tabContentBatches" class="tab-content active">
+    
+    <!-- KPI Summary Bar for Batches -->
+    <div class="stats-grid" style="margin-bottom: 20px;">
+        <div class="stat-card">
+            <div class="stat-info">
+                <span>Total Batches</span>
+                <h3 id="kpiBatchCount">--</h3>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Processed monthly cycles</div>
             </div>
-            <div id="payrollDateRangeDisplay" style="font-size: 12.5px; font-weight: 600; color: var(--accent-primary);">
-                <i class="fa-regular fa-calendar-days"></i> <span id="payrollRangeLabel">Loading period...</span>
-            </div>
+            <div class="stat-icon purple"><i class="fa-solid fa-box-archive"></i></div>
         </div>
-
-        <!-- Filter Inputs Grid -->
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
-            <!-- Start Date -->
-            <div style="flex: 1; min-width: 140px;">
-                <label class="form-label" style="font-size: 11.5px;">From Date</label>
-                <input type="date" id="payrollStartDate" class="form-control" value="{{ first_of_month_str }}" onchange="onCustomDateChange()">
+        <div class="stat-card">
+            <div class="stat-info">
+                <span>Latest Net Outlay</span>
+                <h3 id="kpiLatestNetOutlay" style="color: var(--accent-emerald);">₹0.00</h3>
+                <div id="kpiLatestBatchLabel" style="font-size: 11px; color: var(--accent-emerald); font-weight: 600; margin-top: 4px;">--</div>
             </div>
-
-            <!-- End Date -->
-            <div style="flex: 1; min-width: 140px;">
-                <label class="form-label" style="font-size: 11.5px;">To Date</label>
-                <input type="date" id="payrollEndDate" class="form-control" value="{{ today_str }}" onchange="onCustomDateChange()">
+            <div class="stat-icon emerald"><i class="fa-solid fa-sack-dollar"></i></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-info">
+                <span>Statutory Liabilities</span>
+                <h3 id="kpiLatestStatutory" style="color: var(--accent-amber);">₹0.00</h3>
+                <div style="font-size: 11px; color: var(--accent-amber); font-weight: 600; margin-top: 4px;">EPF + ESIC + PT Liability</div>
             </div>
-
-            <!-- Department Filter -->
-            <div style="flex: 1.2; min-width: 160px;">
-                <label class="form-label" style="font-size: 11.5px;">Department / Team</label>
-                <select id="payrollDeptFilter" class="form-control" onchange="loadPayrollSummary()">
-                    <option value="">All Departments</option>
-                    {% for d in departments %}
-                    <option value="{{ d.id }}">{{ d.name }}</option>
-                    {% endfor %}
-                </select>
+            <div class="stat-icon amber"><i class="fa-solid fa-shield-halved"></i></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-info">
+                <span>Employer Total CTC</span>
+                <h3 id="kpiLatestEmployerCtc">₹0.00</h3>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Gross + Employer PF/ESI</div>
             </div>
+            <div class="stat-icon rose"><i class="fa-solid fa-building-columns"></i></div>
+        </div>
+    </div>
 
-            <!-- Role Filter -->
-            <div style="flex: 1; min-width: 140px;">
-                <label class="form-label" style="font-size: 11.5px;">Designation / Role</label>
-                <select id="payrollRoleFilter" class="form-control" onchange="loadPayrollSummary()">
-                    <option value="">All Roles</option>
-                    <option value="employee">Employees</option>
-                    <option value="manager">Managers & Leads</option>
-                    <option value="admin_staff">HR & Admin Staff</option>
-                    <option value="contractor">Contractors / External</option>
-                    <option value="intern">Interns</option>
-                </select>
-            </div>
-
-            <!-- Search Employee Name/ID -->
-            <div style="flex: 1.5; min-width: 180px;">
-                <label class="form-label" style="font-size: 11.5px;">Search Employee</label>
-                <input type="text" id="payrollSearchInput" class="form-control" placeholder="Search by name, ID..." oninput="debouncePayrollSearch()">
-            </div>
-
+    <!-- Batches Table Card -->
+    <div class="card">
+        <div class="card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
             <div>
-                <button type="button" onclick="loadPayrollSummary()" class="btn btn-primary" style="padding: 10px 18px;" title="Recalculate Payroll">
-                    <i class="fa-solid fa-arrows-rotate"></i> Recalculate
+                <h3>
+                    <i class="fa-solid fa-receipt" style="color: var(--accent-primary);"></i>
+                    <span>Monthly Payroll</span>
+                </h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Progress batches through Draft &rarr; Verified &rarr; Approved &rarr; Disbursed with automated bank advice.
+                </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="loadPayrollBatches()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
                 </button>
             </div>
         </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="custom-table" id="batchesTable">
+                    <thead>
+                        <tr>
+                            <th>Batch ID</th>
+                            <th>Month / Period</th>
+                            <th>Employees</th>
+                            <th>Gross Outlay</th>
+                            <th>Net Payable</th>
+                            <th>PF / ESI / PT</th>
+                            <th>Employer Cost</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchesTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Loading payroll batches...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
+
 </div>
 
-<!-- KPI Summary Cards Grid -->
-<div class="stats-grid" style="margin-bottom: 20px;">
-    <!-- 1. Active Workforce -->
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Active Workforce</span>
-            <h3 id="kpiActiveWorkforce">--</h3>
-            <div id="kpiWorkforceSub" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">-- total enrolled</div>
-        </div>
-        <div class="stat-icon purple">
-            <i class="fa-solid fa-users-gear"></i>
-        </div>
-    </div>
-
-    <!-- 2. Total Billed Hours -->
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Total Billed Hours</span>
-            <h3 id="kpiTotalHours">-- hrs</h3>
-            <div id="kpiHoursBreakdown" style="font-size: 11px; color: var(--accent-primary); font-weight: 600; margin-top: 4px;">-- Standard • -- OT</div>
-        </div>
-        <div class="stat-icon cyan">
-            <i class="fa-solid fa-stopwatch"></i>
+<!-- ========================================================================= -->
+<!-- TAB 2: EMPLOYEE SALARY STRUCTURES & REVISIONS                             -->
+<!-- ========================================================================= -->
+<div id="tabContentEmployees" class="tab-content">
+    
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-body" style="padding: 14px 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 10px; flex: 1; max-width: 450px;">
+                    <input type="text" id="empStructureSearchInput" class="form-control" placeholder="Search employee name or code..." oninput="filterEmployeeStructuresTable()">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="loadEmployeeStructures()" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Refresh List
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- 3. Gross Payroll Outlay -->
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Gross Payroll Outlay</span>
-            <h3 id="kpiGrossOutlay" style="color: var(--accent-emerald);">--</h3>
-            <div id="kpiStructureDisplay" style="font-size: 11px; color: var(--accent-emerald); font-weight: 600; margin-top: 4px;">Hourly Model</div>
-        </div>
-        <div class="stat-icon emerald">
-            <i class="fa-solid fa-sack-dollar"></i>
-        </div>
-    </div>
-
-    <!-- 4. Overtime Outlay -->
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Overtime Outlay</span>
-            <h3 id="kpiOvertimeOutlay" style="color: var(--accent-amber);">--</h3>
-            <div id="kpiOvertimeMultiplier" style="font-size: 11px; color: var(--accent-amber); font-weight: 600; margin-top: 4px;">1.5x Multiplier</div>
-        </div>
-        <div class="stat-icon amber">
-            <i class="fa-solid fa-bolt"></i>
-        </div>
-    </div>
-
-    <!-- 5. Average Hourly Payout -->
-    <div class="stat-card">
-        <div class="stat-info">
-            <span>Average Rate</span>
-            <h3 id="kpiAvgHourly">--</h3>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Per Billed Hour</div>
-        </div>
-        <div class="stat-icon rose">
-            <i class="fa-solid fa-scale-balanced"></i>
-        </div>
-    </div>
-</div>
-
-<!-- Detailed Employee Earnings Table Card -->
-<div class="card">
-    <div class="card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between;">
-        <div>
-            <h3>
-                <i class="fa-solid fa-table-list" style="color: var(--accent-primary);"></i>
-                <span>Employee Earnings & Work-Hour Breakdown</span>
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Verified shift hours aggregated from biometric face recognition check-in/out logs.
-            </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span id="payrollTableCountBadge" class="badge badge-node" style="font-size: 12px;">0 Records</span>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="table-container">
-            <table class="custom-table" id="payrollTable">
-                <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Code / ID</th>
-                        <th>Department</th>
-                        <th>Role / Cadre</th>
-                        <th>Days</th>
-                        <th>Std Hours</th>
-                        <th>OT Hours</th>
-                        <th>Total Hours</th>
-                        <th>Rate (₹/hr)</th>
-                        <th>Gross Pay</th>
-                        <th>Shift Audit</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="payrollTableBody">
-                    <tr>
-                        <td colspan="12" style="text-align: center; padding: 36px; color: var(--text-muted);">
-                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 20px; margin-right: 8px;"></i>
-                            Computing active shift hours and gross earnings...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- ========================================================= -->
-<!-- MODAL 1: INDIVIDUAL EMPLOYEE RATE ADJUSTMENT              -->
-<!-- ========================================================= -->
-<div id="editRateModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 480px;">
-        <div class="modal-header">
+    <div class="card">
+        <div class="card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
             <div>
                 <h3>
-                    <i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i>
-                    <span>Adjust Employee Wage Rate</span>
+                    <i class="fa-solid fa-address-card" style="color: var(--accent-primary);"></i>
+                    <span>Employee Compensation & Statutory Profiles</span>
                 </h3>
-                <p id="editRateModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Update custom hourly rate or monthly salary</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Assign CTC models, set up banking details, and track mid-month salary revision history.
+                </p>
             </div>
-            <button class="modal-close" onclick="closeRateModal()">
-                <i class="fa-solid fa-xmark"></i>
+            <span id="empStructureCountBadge" class="badge badge-node">0 Active Profiles</span>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="custom-table" id="empStructuresTable">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Code / ID</th>
+                            <th>Department & Location</th>
+                            <th>Designation</th>
+                            <th>Salary Structure</th>
+                            <th>Monthly Gross / CTC</th>
+                            <th>Statutory Enrollments</th>
+                            <th>Banking & PAN</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="empStructuresTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Loading employee profiles...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- TAB 3: SALARY TEMPLATES BUILDER                                           -->
+<!-- ========================================================================= -->
+<div id="tabContentTemplates" class="tab-content">
+    
+    <div class="card">
+        <div class="card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-layer-group" style="color: var(--accent-primary);"></i>
+                    <span>Standard Indian Salary & Wage Templates</span>
+                </h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Reusable compensation blueprints defining component percentages, fixed allowances, and statutory rules.
+                </p>
+            </div>
+            <button onclick="openCreateTemplateModal()" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Create Template
             </button>
         </div>
-        <form id="editRateForm" onsubmit="submitRateUpdate(event)">
-            <div class="modal-body">
-                <input type="hidden" id="rateStudentId">
-
-                <div class="form-group">
-                    <label class="form-label">Employee Name</label>
-                    <input type="text" id="rateEmployeeName" class="form-control" readonly style="background: var(--bg-subtle);">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Custom Hourly Rate (₹/hr)</label>
-                    <input type="number" step="0.25" min="0" id="rateHourlyInput" class="form-control" placeholder="Leave empty for organization default">
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Applied for hourly wage computation.</div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Monthly Base Salary (₹)</label>
-                    <input type="number" step="50" min="0" id="rateMonthlyInput" class="form-control" placeholder="e.g. 45000.00">
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Applied for monthly cadre structure.</div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Cadre / Seniority Level</label>
-                    <select id="rateCadreInput" class="form-control">
-                        <option value="Executive Cadre">Executive Cadre</option>
-                        <option value="Senior Staff">Senior Staff</option>
-                        <option value="Associate Staff">Associate Staff</option>
-                        <option value="Junior / Intern">Junior / Intern</option>
-                        <option value="Contractor Cadre">Contractor Cadre</option>
-                    </select>
-                </div>
-
-                <div id="rateResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="custom-table" id="templatesTable">
+                    <thead>
+                        <tr>
+                            <th>Template Name</th>
+                            <th>Code</th>
+                            <th>Model</th>
+                            <th>Basic / HRA Breakdown</th>
+                            <th>Fixed Allowances</th>
+                            <th>Statutory Rules</th>
+                            <th>Assigned</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="templatesTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Loading salary templates...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeRateModal()">Cancel</button>
-                <button type="submit" id="btnSaveRate" class="btn btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i> Update Rate
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- TAB 4: MASTERS & STATUTORY SETTINGS                                       -->
+<!-- ========================================================================= -->
+<div id="tabContentMasters" class="tab-content">
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        
+        <!-- Locations Master -->
+        <div class="card">
+            <div class="card-header" style="justify-content: space-between;">
+                <div>
+                    <h3><i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i> Company Locations / Branches</h3>
+                </div>
+                <button onclick="openCreateLocationModal()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                    <i class="fa-solid fa-plus"></i> Add Location
                 </button>
             </div>
-        </form>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Name & Code</th>
+                                <th>City / State</th>
+                                <th>Employees</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationsTableBody">
+                            <tr><td colspan="4" style="text-align: center; padding: 18px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Designations Master -->
+        <div class="card">
+            <div class="card-header" style="justify-content: space-between;">
+                <div>
+                    <h3><i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i> Designations & Roles</h3>
+                </div>
+                <button onclick="openCreateDesignationModal()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                    <i class="fa-solid fa-plus"></i> Add Designation
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Title & Code</th>
+                                <th>Salary Template</th>
+                                <th>Employees</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="designationsTableBody">
+                            <tr><td colspan="4" style="text-align: center; padding: 18px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+    <!-- Indian Statutory Compliance Rules Card -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3><i class="fa-solid fa-landmark-flag" style="color: var(--accent-emerald);"></i> Indian Statutory Compliance & Overtime Formula</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Configurable statutory contribution percentages, wage ceilings, and overtime multipliers.
+                </p>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="statutorySettingsForm" onsubmit="submitStatutorySettings(event)">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                    
+                    <!-- EPF -->
+                    <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-shield-heart" style="color: var(--accent-primary);"></i> EPF (Employee Provident Fund)
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Employee PF Rate (%)</label>
+                            <input type="number" step="0.5" id="cfgEpfEePct" class="form-control" value="12.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Employer PF Rate (%)</label>
+                            <input type="number" step="0.5" id="cfgEpfErPct" class="form-control" value="12.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Statutory Wage Ceiling (₹)</label>
+                            <input type="number" step="500" id="cfgEpfCeiling" class="form-control" value="15000.0" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">PF Ceiling Capping</label>
+                            <select id="cfgPfCeilingToggle" class="form-control">
+                                <option value="true">Enforce ₹15,000 Cap (₹1,800/mo max)</option>
+                                <option value="false">Uncapped (PF on Actual Basic)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- ESIC -->
+                    <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-hospital-user" style="color: var(--accent-emerald);"></i> ESIC (Employee State Insurance)
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Employee ESIC Rate (%)</label>
+                            <input type="number" step="0.05" id="cfgEsiEePct" class="form-control" value="0.75" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Employer ESIC Rate (%)</label>
+                            <input type="number" step="0.05" id="cfgEsiErPct" class="form-control" value="3.25" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Monthly Gross Threshold (₹)</label>
+                            <input type="number" step="1000" id="cfgEsiThreshold" class="form-control" value="21000.0" required>
+                        </div>
+                    </div>
+
+                    <!-- Professional Tax & Overtime -->
+                    <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-amber);"></i> Professional Tax & Overtime
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Monthly PT Flat Rate (₹)</label>
+                            <input type="number" step="10" id="cfgPtMonthly" class="form-control" value="200.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Regular Overtime Multiplier</label>
+                            <input type="number" step="0.1" id="cfgOtMultiplier" class="form-control" value="1.5" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Holiday / Weekend OT Multiplier</label>
+                            <input type="number" step="0.1" id="cfgHolidayOtMultiplier" class="form-control" value="2.0" required>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <div id="statutorySettingsAlert" style="display: none; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 12.5px; align-items: center;"></div>
+                    <button type="submit" id="btnSaveStatutorySettings" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Statutory & OT Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
 
-<!-- ========================================================= -->
-<!-- MODAL 2: CORPORATE PAYROLL CONFIGURATION SETTINGS         -->
-<!-- ========================================================= -->
-<div id="payrollSettingsModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 540px;">
+<!-- ========================================================================= -->
+<!-- TAB 5: REAL-TIME ATTENDANCE WAGE ESTIMATOR                                -->
+<!-- ========================================================================= -->
+<div id="tabContentRealtime" class="tab-content">
+    
+    <!-- Quick Date-Range Selector Card -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-body" style="padding: 16px;">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label" style="font-size: 11.5px;">From Date</label>
+                    <input type="date" id="payrollStartDate" class="form-control" value="{{ first_of_month_str }}" onchange="loadPayrollSummary()">
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label" style="font-size: 11.5px;">To Date</label>
+                    <input type="date" id="payrollEndDate" class="form-control" value="{{ today_str }}" onchange="loadPayrollSummary()">
+                </div>
+                <div style="flex: 1.2; min-width: 160px;">
+                    <label class="form-label" style="font-size: 11.5px;">Department / Team</label>
+                    <select id="payrollDeptFilter" class="form-control" onchange="loadPayrollSummary()">
+                        <option value="">All Departments</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="flex: 1.5; min-width: 180px;">
+                    <label class="form-label" style="font-size: 11.5px;">Search Employee</label>
+                    <input type="text" id="payrollSearchInput" class="form-control" placeholder="Search by name, ID..." oninput="debouncePayrollSearch()">
+                </div>
+                <div>
+                    <button type="button" onclick="loadPayrollSummary()" class="btn btn-primary" style="padding: 10px 18px;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Recalculate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table of Real-Time Estimates -->
+    <div class="card">
+        <div class="card-header" style="justify-content: space-between;">
+            <div>
+                <h3><i class="fa-solid fa-calculator" style="color: var(--accent-primary);"></i> Attendance Verified Wage Outlay</h3>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="exportPayroll('xlsx')" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">
+                    <i class="fa-solid fa-file-excel"></i> Export Excel
+                </button>
+                <button onclick="exportPayroll('csv')" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">
+                    <i class="fa-solid fa-file-csv"></i> Export CSV
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="custom-table" id="payrollTable">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Code / ID</th>
+                            <th>Department</th>
+                            <th>Days</th>
+                            <th>Total Hours</th>
+                            <th>Rate (₹/hr)</th>
+                            <th>Gross Earnings</th>
+                            <th>Net Estimate</th>
+                            <th>Audit Flags</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payrollTableBody">
+                        <tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Calculating attendance...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: RUN / GENERATE MONTHLY PAYROLL BATCH                               -->
+<!-- ========================================================================= -->
+<div id="generateBatchModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
         <div class="modal-header">
             <div>
                 <h3>
-                    <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
-                    <span>Corporate Payroll Engine Settings</span>
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary);"></i>
+                    <span>Generate Monthly Payroll Batch</span>
                 </h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Institution-wide wage formula & overtime rules</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Processes biometric attendance, leaves, overtime, and statutory deductions for all active employees.
+                </p>
             </div>
-            <button class="modal-close" onclick="closePayrollSettingsModal()">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+            <button class="modal-close" onclick="closeGenerateBatchModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form id="payrollSettingsForm" onsubmit="submitPayrollSettings(event)">
+        <form id="generateBatchForm" onsubmit="submitGenerateBatch(event)">
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">Payroll Wage Structure *</label>
-                    <select id="cfgPayrollStructure" class="form-control" required>
-                        <option value="HOURLY">Hourly Wage (Rate × Billed Shift Hours + OT)</option>
-                        <option value="MONTHLY_CADRE">Monthly Cadre Salary (Monthly Base / 22 Days + OT)</option>
-                        <option value="HYBRID">Hybrid (Base Retainer + Hourly Output)</option>
-                    </select>
-                </div>
-
-                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group">
-                        <label class="form-label">Default Hourly Rate (₹/hr) *</label>
-                        <input type="number" step="0.5" min="0" id="cfgDefaultHourlyRate" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Standard Daily Shift (Hrs) *</label>
-                        <input type="number" step="0.5" min="4" max="16" id="cfgStdDailyHours" class="form-control" required>
-                    </div>
-                </div>
-
-                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                        <label class="form-label">Enable Overtime Premium</label>
-                        <select id="cfgEnableOvertime" class="form-control">
-                            <option value="true">Enabled (Work > Standard Shift)</option>
-                            <option value="false">Disabled (Cap at Flat Rate)</option>
+                        <label class="form-label">Period Month *</label>
+                        <select id="batchPeriodMonth" class="form-control" required>
+                            <option value="1">1 - January</option>
+                            <option value="2">2 - February</option>
+                            <option value="3">3 - March</option>
+                            <option value="4">4 - April</option>
+                            <option value="5">5 - May</option>
+                            <option value="6">6 - June</option>
+                            <option value="7">7 - July</option>
+                            <option value="8">8 - August</option>
+                            <option value="9" selected>9 - September</option>
+                            <option value="10">10 - October</option>
+                            <option value="11">11 - November</option>
+                            <option value="12">12 - December</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">OT Rate Multiplier *</label>
-                        <input type="number" step="0.1" min="1.0" max="3.0" id="cfgOvertimeMultiplier" class="form-control" required>
+                        <label class="form-label">Period Year *</label>
+                        <input type="number" id="batchPeriodYear" class="form-control" value="2026" min="2020" max="2030" required>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Missed Checkout Automated Policy *</label>
-                    <select id="cfgMissedCheckoutPolicy" class="form-control" required>
-                        <option value="HALF_DAY">Half-Day Shift Credit (4.0 hrs credited with audit tag)</option>
-                        <option value="ZERO_HOURS">Zero Hours (0.0 hrs credited until manual admin override)</option>
-                        <option value="STANDARD_SHIFT">Full Shift Credit (8.0 hrs credited)</option>
-                    </select>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-                        Applied automatically if employee checks in without scanning out at shift end.
-                    </div>
+                    <label class="form-label">Total Monthly Working Days *</label>
+                    <input type="number" step="0.5" id="batchWorkingDays" class="form-control" value="26.0" required>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Standard working days in month excluding weekly offs (typically 26.0).</div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Currency Symbol</label>
-                    <input type="text" id="cfgCurrencySymbol" class="form-control" maxlength="5" placeholder="₹">
-                </div>
-
-                <div id="payrollSettingsAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
+                <div id="batchGenerateAlert" style="display: none; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px; margin-top: 12px;"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closePayrollSettingsModal()">Cancel</button>
-                <button type="submit" id="btnSavePayrollSettings" class="btn btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Configuration
+                <button type="button" class="btn btn-secondary" onclick="closeGenerateBatchModal()">Cancel</button>
+                <button type="submit" id="btnRunBatch" class="btn btn-primary">
+                    <i class="fa-solid fa-play"></i> Execute Payroll Run
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: BATCH DETAILS & ITEMIZED PAYSLIPS DRILLDOWN                        -->
+<!-- ========================================================================= -->
+<div id="batchDetailsModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 950px;">
+        <div class="modal-header">
+            <div>
+                <h3 id="batchDetailTitle">Payroll Batch Statement</h3>
+                <p id="batchDetailSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Itemized payslips & disbursement status</p>
+            </div>
+            <button class="modal-close" onclick="closeBatchDetailsModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div id="batchActionsBar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: var(--bg-subtle); padding: 12px 16px; border-radius: var(--radius-sm); flex-wrap: wrap; gap: 10px;">
+                <div id="batchStatusBadgeContainer"></div>
+                <div style="display: flex; gap: 8px;" id="batchLifecycleBtns"></div>
+            </div>
+
+            <div class="table-container">
+                <table class="custom-table" id="batchPayslipsTable">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Code</th>
+                            <th>Worked</th>
+                            <th>Gross (₹)</th>
+                            <th>EPF (₹)</th>
+                            <th>ESIC (₹)</th>
+                            <th>PT (₹)</th>
+                            <th>Net Pay (₹)</th>
+                            <th>Status</th>
+                            <th>Slip</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchPayslipsTableBody">
+                        <tr><td colspan="10" style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeBatchDetailsModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: VIEW EMPLOYEE SALARY STRUCTURE                                     -->
+<!-- ========================================================================= -->
+<div id="assignStructureModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-file-invoice-dollar" style="color: var(--accent-primary);"></i>
+                    <span>Employee Compensation Structure</span>
+                </h3>
+                <p id="assignStructureSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Review active compensation breakdown, allowances, and statutory model</p>
+            </div>
+            <button class="modal-close" onclick="closeAssignStructureModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="assignStructureForm" onsubmit="event.preventDefault(); closeAssignStructureModal();">
+            <div class="modal-body">
+                <input type="hidden" id="assignStudentId">
+
+                <div class="form-group">
+                    <label class="form-label">Employee</label>
+                    <input type="text" id="assignEmployeeName" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 600;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Salary Structure / Model</label>
+                        <select id="assignCompModel" class="form-control" disabled style="background: var(--bg-subtle);">
+                            <option value="STRUCTURED_SALARY">Structured CTC (Basic + HRA + Allowances)</option>
+                            <option value="MONTHLY_FIXED">Monthly Fixed Base</option>
+                            <option value="HOURLY">Hourly Wage</option>
+                            <option value="DAILY_WAGE">Daily Wage</option>
+                            <option value="STIPEND">Internship Fixed Stipend</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Template Blueprint</label>
+                        <select id="assignTemplateSelect" class="form-control" disabled style="background: var(--bg-subtle);">
+                            <option value="">-- Custom Individual Structure --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Annual CTC (₹)</label>
+                        <input type="number" step="1000" id="assignAnnualCtc" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 600;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Gross (₹)</label>
+                        <input type="number" step="50" id="assignMonthlyGross" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 700; color: var(--accent-emerald);">
+                    </div>
+                </div>
+
+                <!-- Breakdown fields for STRUCTURED_SALARY -->
+                <div id="structuredFieldsBox" style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 14px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">Active Monthly Breakdown (₹):</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Basic Pay (50%)</label>
+                            <input type="number" step="10" id="assignMonthlyBasic" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">HRA (20%)</label>
+                            <input type="number" step="10" id="assignMonthlyHra" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Conveyance Allowance</label>
+                            <input type="number" step="10" id="assignConveyance" class="form-control" readonly style="background: var(--bg-card);" value="1600">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Medical Allowance</label>
+                            <input type="number" step="10" id="assignMedical" class="form-control" readonly style="background: var(--bg-card);" value="1250">
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <label style="font-size: 11px; color: var(--text-muted);">Special Allowance (Balance)</label>
+                        <input type="number" step="10" id="assignSpecialAllowance" class="form-control" readonly style="background: var(--bg-card);">
+                    </div>
+                </div>
+
+                <!-- Hourly / Daily / Stipend fields -->
+                <div id="hourlyDailyFieldsBox" style="display: none; background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 14px; border: 1px solid var(--border-color);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Hourly Rate (₹/hr)</label>
+                            <input type="number" step="0.5" id="assignHourlyRate" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Daily Rate (₹/day)</label>
+                            <input type="number" step="10" id="assignDailyRate" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Effective From Date</label>
+                        <input type="date" id="assignEffectiveFrom" class="form-control" readonly style="background: var(--bg-subtle);">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Revision Reason</label>
+                        <input type="text" id="assignRevisionReason" class="form-control" readonly style="background: var(--bg-subtle);">
+                    </div>
+                </div>
+
+                <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 11.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-circle-info" style="color: var(--accent-primary); font-size: 14px;"></i>
+                    <span>To modify or revise employee compensation, edit the employee in <strong>Employee Directory</strong>.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeAssignStructureModal()">
+                    <i class="fa-solid fa-check"></i> Close
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: BANKING & STATUTORY DETAILS PROFILE                                -->
+<!-- ========================================================================= -->
+<div id="statutoryBankingModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-building-columns" style="color: var(--accent-primary);"></i>
+                    <span>Banking & Statutory Identity</span>
+                </h3>
+                <p id="statutoryBankingSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">PAN, UAN, ESIC & Bank Account</p>
+            </div>
+            <button class="modal-close" onclick="closeStatutoryBankingModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="statutoryBankingForm" onsubmit="submitStatutoryBanking(event)">
+            <div class="modal-body">
+                <input type="hidden" id="bankStudentId">
+
+                <div class="form-group">
+                    <label class="form-label">PAN Number (Permanent Account No)</label>
+                    <input type="text" id="bankPanNumber" class="form-control" placeholder="e.g. ABCDE1234F" maxlength="10" style="text-transform: uppercase;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">UAN (PF Number)</label>
+                        <input type="text" id="bankUanNumber" class="form-control" placeholder="12-digit UAN" maxlength="12">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ESIC IP Number</label>
+                        <input type="text" id="bankEsicNumber" class="form-control" placeholder="17-digit ESIC" maxlength="17">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Bank Name</label>
+                    <input type="text" id="bankNameInput" class="form-control" placeholder="e.g. HDFC Bank / State Bank of India">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Bank Account Number</label>
+                        <input type="text" id="bankAccountInput" class="form-control" placeholder="Account Number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IFSC Code</label>
+                        <input type="text" id="bankIfscInput" class="form-control" placeholder="e.g. HDFC0001234" maxlength="11" style="text-transform: uppercase;">
+                    </div>
+                </div>
+
+                <div id="statutoryBankingAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeStatutoryBankingModal()">Cancel</button>
+                <button type="submit" id="btnSaveBanking" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Update Details
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: REVISION HISTORY TIMELINE                                          -->
+<!-- ========================================================================= -->
+<div id="revisionHistoryModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 580px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-timeline" style="color: var(--accent-primary);"></i>
+                    <span>Salary Revision History & Increments</span>
+                </h3>
+                <p id="revisionHistorySubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Audit log of compensation adjustments</p>
+            </div>
+            <button class="modal-close" onclick="closeRevisionHistoryModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" style="max-height: 450px; overflow-y: auto;">
+            <div id="revisionHistoryTimeline">
+                <div style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeRevisionHistoryModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: CREATE / EDIT COMPANY LOCATION                                     -->
+<!-- ========================================================================= -->
+<div id="locationModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <div>
+                <h3 id="locationModalTitle">
+                    <i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i>
+                    <span>Add Office Location</span>
+                </h3>
+                <p id="locationModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Register physical branch, campus, or office location</p>
+            </div>
+            <button class="modal-close" onclick="closeLocationModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="locationForm" onsubmit="submitLocationForm(event)">
+            <div class="modal-body">
+                <input type="hidden" id="locModalId">
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Location / Branch Name *</label>
+                        <input type="text" id="locModalName" class="form-control" placeholder="e.g. Pune Tech Park / Mumbai HQ" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location Code</label>
+                        <input type="text" id="locModalCode" class="form-control" placeholder="e.g. PN-01" maxlength="20" style="text-transform: uppercase;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" id="locModalCity" class="form-control" placeholder="e.g. Pune">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">State</label>
+                        <input type="text" id="locModalState" class="form-control" value="Maharashtra" placeholder="e.g. Maharashtra">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contact Number (Optional)</label>
+                    <input type="text" id="locModalContact" class="form-control" placeholder="e.g. +91 9876543210">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Address (Optional)</label>
+                    <textarea id="locModalAddress" class="form-control" rows="2" placeholder="Full office address or landmark..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Status</label>
+                    <select id="locModalIsActive" class="form-control">
+                        <option value="true">Active Location</option>
+                        <option value="false">Inactive / Closed</option>
+                    </select>
+                </div>
+
+                <div id="locationModalAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeLocationModal()">Cancel</button>
+                <button type="submit" id="btnSaveLocation" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Location
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: CREATE / EDIT DESIGNATION & ROLE                                    -->
+<!-- ========================================================================= -->
+<div id="designationModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <div>
+                <h3 id="designationModalTitle">
+                    <i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i>
+                    <span>Add Designation</span>
+                </h3>
+                <p id="designationModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Job title, department, and salary template assignment</p>
+            </div>
+            <button class="modal-close" onclick="closeDesignationModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="designationForm" onsubmit="submitDesignationForm(event)">
+            <div class="modal-body">
+                <input type="hidden" id="desigModalId">
+                <div class="form-group">
+                    <label class="form-label">Designation / Role Title *</label>
+                    <input type="text" id="desigModalTitle" class="form-control" placeholder="e.g. Senior Software Engineer" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Designation Code</label>
+                    <input type="text" id="desigModalCode" class="form-control" placeholder="e.g. SSE-01" maxlength="20" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Department / Business Unit</label>
+                    <select id="desigModalDept" class="form-control">
+                        <option value="">-- All / General Department --</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Default Salary Template (Optional)</label>
+                    <select id="desigModalSalaryTemplate" class="form-control">
+                        <option value="">-- No Default Template --</option>
+                    </select>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Automatically suggested/assigned when onboarding employees with this designation.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role Description (Optional)</label>
+                    <textarea id="desigModalDescription" class="form-control" rows="2" placeholder="Key responsibilities or band details..."></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Status</label>
+                    <select id="desigModalIsActive" class="form-control">
+                        <option value="true">Active Role</option>
+                        <option value="false">Inactive / Deprecated</option>
+                    </select>
+                </div>
+                <div id="designationModalAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDesignationModal()">Cancel</button>
+                <button type="submit" id="btnSaveDesignation" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Designation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: CREATE / EDIT SALARY TEMPLATE                                      -->
+<!-- ========================================================================= -->
+<div id="salaryTemplateModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-header">
+            <div>
+                <h3 id="salaryTemplateModalTitle">
+                    <i class="fa-solid fa-layer-group" style="color: var(--accent-primary);"></i>
+                    <span>Create Salary Template</span>
+                </h3>
+                <p id="salaryTemplateModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Standardized Indian compensation blueprint and statutory rules</p>
+            </div>
+            <button class="modal-close" onclick="closeTemplateModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="salaryTemplateForm" onsubmit="submitTemplateForm(event)">
+            <div class="modal-body">
+                <input type="hidden" id="tplModalId">
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Template Name *</label>
+                        <input type="text" id="tplModalName" class="form-control" placeholder="e.g. Standard Executive CTC" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Template Code *</label>
+                        <input type="text" id="tplModalCode" class="form-control" placeholder="e.g. EXEC-STD" maxlength="20" style="text-transform: uppercase;" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Salary Structure *</label>
+                    <select id="tplModalModel" class="form-control" onchange="toggleTemplateComponentVisibility()" required>
+                        <option value="STRUCTURED_SALARY">Structured CTC (Basic + HRA + Special Allowance)</option>
+                        <option value="MONTHLY_FIXED">Monthly Fixed Base</option>
+                        <option value="HOURLY">Hourly Wage</option>
+                        <option value="DAILY_WAGE">Daily Wage</option>
+                        <option value="STIPEND">Internship Fixed Stipend</option>
+                    </select>
+                </div>
+
+                <!-- Breakdown Percentages (Conditionally rendered only for Structured Salary) -->
+                <div id="tplComponentBreakdownSection" style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 12px;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">Breakdown Rules (% of Monthly Gross):</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Basic % *</label>
+                            <input type="number" step="1" id="tplModalBasicPct" class="form-control" value="50" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">HRA % *</label>
+                            <input type="number" step="1" id="tplModalHraPct" class="form-control" value="20" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">DA %</label>
+                            <input type="number" step="1" id="tplModalDaPct" class="form-control" value="0">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Conveyance (₹/mo)</label>
+                            <input type="number" step="50" id="tplModalConvFixed" class="form-control" value="1600">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Medical (₹/mo)</label>
+                            <input type="number" step="50" id="tplModalMedFixed" class="form-control" value="1250">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statutory Rule Toggles -->
+                <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 12px;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">Statutory Deduction Defaults:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                            <input type="checkbox" id="tplModalEnablePf" checked>
+                            <span>Enable EPF (12%)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                            <input type="checkbox" id="tplModalPfCeiling" checked>
+                            <span>Cap EPF at ₹15,000 Ceiling</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                            <input type="checkbox" id="tplModalEnableEsi" checked>
+                            <span>Enable ESIC (0.75% / 3.25%)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                            <input type="checkbox" id="tplModalEnablePt" checked>
+                            <span>Enable Professional Tax (PT)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description (Optional)</label>
+                    <textarea id="tplModalDescription" class="form-control" rows="2" placeholder="e.g. Standard compensation blueprint for white-collar engineering & marketing staff..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Status</label>
+                    <select id="tplModalIsActive" class="form-control">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+
+                <div id="salaryTemplateModalAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeTemplateModal()">Cancel</button>
+                <button type="submit" id="btnSaveTemplate" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Template
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-    let currentPayrollConfig = null;
-    let searchDebounceTimer = null;
+    let globalTemplates = [];
+    let globalEmployees = [];
+    let globalBatches = [];
 
     document.addEventListener("DOMContentLoaded", () => {
-        loadPayrollSummary();
+        loadPayrollBatches();
+        loadEmployeeStructures();
+        loadSalaryTemplates();
+        loadOrganizationMasters();
+        loadPayrollSettings();
     });
 
-    function selectPayrollPreset(preset) {
-        const now = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        const toIso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    function switchPayrollTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-        let s = new Date(now);
-        let e = new Date(now);
+        const tabBtn = document.getElementById('tabBtn' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+        const tabContent = document.getElementById('tabContent' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
 
-        if (preset === 'today') {
-            // today
-        } else if (preset === 'week') {
-            const day = now.getDay();
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-            s = new Date(now.setDate(diff));
-            e = new Date();
-        } else if (preset === 'month') {
-            s = new Date(now.getFullYear(), now.getMonth(), 1);
-            e = new Date();
-        } else if (preset === 'last30') {
-            s = new Date(now.getTime() - (29 * 24 * 60 * 60 * 1000));
-            e = new Date();
+        if (tabBtn) tabBtn.classList.add('active');
+        if (tabContent) tabContent.classList.add('active');
+
+        if (tabName === 'realtime') {
+            loadPayrollSummary();
+        }
+    }
+
+    // =========================================================================
+    // 1. MONTHLY RUNS & BATCHES
+    // =========================================================================
+
+    async function loadPayrollBatches() {
+        const tableBody = document.getElementById("batchesTableBody");
+        if (!tableBody) return;
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading payroll batches...</td></tr>`;
+
+        try {
+            const res = await fetch("/api/v1/payroll/batches");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "Failed to load batches");
+
+            globalBatches = data.data || [];
+            renderBatchesTable(globalBatches);
+            updateBatchesKPIs(globalBatches);
+        } catch (e) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--accent-rose); padding: 20px;">Error: ${e.message}</td></tr>`;
+        }
+    }
+
+    function updateBatchesKPIs(batches) {
+        document.getElementById("kpiBatchCount").innerText = batches.length;
+        if (batches.length > 0) {
+            const latest = batches[0];
+            document.getElementById("kpiLatestNetOutlay").innerText = `₹${latest.total_net_outlay.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById("kpiLatestBatchLabel").innerText = `${latest.period_label} (${latest.batch_number})`;
+            const statTotal = (latest.total_pf_liability || 0) + (latest.total_esi_liability || 0) + (latest.total_pt_liability || 0);
+            document.getElementById("kpiLatestStatutory").innerText = `₹${statTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            const totalCtc = (latest.total_gross_outlay || 0) + (latest.total_employer_contributions || 0);
+            document.getElementById("kpiLatestEmployerCtc").innerText = `₹${totalCtc.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        }
+    }
+
+    function renderBatchesTable(batches) {
+        const tableBody = document.getElementById("batchesTableBody");
+        if (!tableBody) return;
+
+        if (!batches || batches.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">No payroll batches processed yet. Click "Generate payroll" above to generate.</td></tr>`;
+            return;
         }
 
-        document.getElementById("payrollStartDate").value = toIso(s);
-        document.getElementById("payrollEndDate").value = toIso(e);
+        tableBody.innerHTML = batches.map(b => {
+            let statusBadge = '<span class="badge badge-node">Draft</span>';
+            if (b.status === 'VERIFIED') statusBadge = '<span class="badge badge-sky"><i class="fa-solid fa-clipboard-check"></i> Verified</span>';
+            else if (b.status === 'APPROVED') statusBadge = '<span class="badge badge-amber"><i class="fa-solid fa-stamp"></i> Approved</span>';
+            else if (b.status === 'DISBURSED') statusBadge = '<span class="badge badge-present"><i class="fa-solid fa-circle-check"></i> Disbursed</span>';
 
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            if (btn.getAttribute('data-preset') === preset) {
-                btn.classList.add('btn-primary');
-                btn.classList.remove('btn-secondary');
+            const statLiab = (b.total_pf_liability || 0) + (b.total_esi_liability || 0) + (b.total_pt_liability || 0);
+            const totalCtc = (b.total_gross_outlay || 0) + (b.total_employer_contributions || 0);
+
+            return `
+                <tr>
+                    <td><code>${b.batch_number}</code></td>
+                    <td><strong>${b.period_label}</strong></td>
+                    <td><span class="badge badge-indigo">${b.total_employees_count} Employees</span></td>
+                    <td><strong style="font-family: monospace;">₹${b.total_gross_outlay.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                    <td><strong style="color: var(--accent-emerald); font-family: monospace; font-size: 14px;">₹${b.total_net_outlay.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                    <td><span style="font-family: monospace; font-size: 12px;">₹${statLiab.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
+                    <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">₹${totalCtc.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="viewBatchDetails(${b.id})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="View Statement">
+                                <i class="fa-solid fa-eye"></i> View
+                            </button>
+                            <a href="/api/v1/payroll/batches/${b.id}/export-bank-advice?export_format=xlsx" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-emerald);" title="Bank Advice (.xlsx)">
+                                <i class="fa-solid fa-file-excel"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function openGenerateBatchModal() {
+        const modal = document.getElementById("generateBatchModal");
+        if (modal) modal.classList.add("active");
+        const alertBox = document.getElementById("batchGenerateAlert");
+        if (alertBox) alertBox.style.display = "none";
+    }
+
+    function closeGenerateBatchModal() {
+        const modal = document.getElementById("generateBatchModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function submitGenerateBatch(e) {
+        e.preventDefault();
+        const month = parseInt(document.getElementById("batchPeriodMonth").value);
+        const year = parseInt(document.getElementById("batchPeriodYear").value);
+        const workingDays = parseFloat(document.getElementById("batchWorkingDays").value);
+
+        const runBtn = document.getElementById("btnRunBatch");
+        const alertBox = document.getElementById("batchGenerateAlert");
+
+        runBtn.disabled = true;
+        runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+        try {
+            const res = await fetch("/api/v1/payroll/batches/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    period_year: year,
+                    period_month: month,
+                    working_days: workingDays,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+
+                setTimeout(() => {
+                    closeGenerateBatchModal();
+                    runBtn.disabled = false;
+                    runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Execute Payroll Run';
+                    loadPayrollBatches();
+                }, 700);
             } else {
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-secondary');
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Generation failed.");
+                runBtn.disabled = false;
+                runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Execute Payroll Run';
             }
-        });
-
-        loadPayrollSummary();
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            runBtn.disabled = false;
+            runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Execute Payroll Run';
+        }
     }
 
-    function onCustomDateChange() {
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.classList.remove('btn-primary');
-            btn.classList.add('btn-secondary');
-        });
-        loadPayrollSummary();
+    async function viewBatchDetails(batchId) {
+        const modal = document.getElementById("batchDetailsModal");
+        if (!modal) return;
+        modal.classList.add("active");
+
+        const tableBody = document.getElementById("batchPayslipsTableBody");
+        tableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching batch payslips...</td></tr>`;
+
+        try {
+            const res = await fetch(`/api/v1/payroll/batches/${batchId}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "Failed to load batch");
+
+            const batch = data.batch;
+            const payslips = data.payslips || [];
+
+            document.getElementById("batchDetailTitle").innerText = `${batch.period_label} — ${batch.batch_number}`;
+            document.getElementById("batchDetailSubtitle").innerText = `Total Gross: ₹${batch.total_gross_outlay.toLocaleString(undefined, {minimumFractionDigits: 2})} | Net Outlay: ₹${batch.total_net_outlay.toLocaleString(undefined, {minimumFractionDigits: 2})} (${payslips.length} Employees)`;
+
+            // Render Lifecycle action buttons
+            renderBatchLifecycleButtons(batch);
+
+            // Render Payslips Table
+            tableBody.innerHTML = payslips.map(p => {
+                return `
+                    <tr>
+                        <td><strong>${p.student_name}</strong></td>
+                        <td><code>${p.roll_number}</code></td>
+                        <td><span style="font-family: monospace;">${p.present_days}d / ${p.billable_hours}h</span></td>
+                        <td><strong style="font-family: monospace;">₹${p.gross_earnings.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                        <td><span style="font-family: monospace; font-size: 12px;">₹${p.epf_employee.toFixed(2)}</span></td>
+                        <td><span style="font-family: monospace; font-size: 12px;">₹${p.esic_employee.toFixed(2)}</span></td>
+                        <td><span style="font-family: monospace; font-size: 12px;">₹${p.professional_tax.toFixed(2)}</span></td>
+                        <td><strong style="color: var(--accent-emerald); font-family: monospace; font-size: 13.5px;">₹${p.net_salary.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                        <td><span class="badge badge-node">${p.payment_status}</span></td>
+                        <td>
+                            <a href="/payroll/payslip/${p.id}" target="_blank" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; color: var(--accent-primary);" title="Open Printable Slip">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Slip
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+        } catch (e) {
+            tableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--accent-rose); padding: 20px;">Error: ${e.message}</td></tr>`;
+        }
     }
 
+    function renderBatchLifecycleButtons(batch) {
+        const badgeContainer = document.getElementById("batchStatusBadgeContainer");
+        const btnContainer = document.getElementById("batchLifecycleBtns");
+
+        badgeContainer.innerHTML = `<span class="badge badge-indigo" style="font-size: 13px; padding: 6px 12px;">Status: ${batch.status}</span>`;
+
+        let btns = `
+            <a href="/api/v1/payroll/batches/${batch.id}/export-bank-advice?export_format=xlsx" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">
+                <i class="fa-solid fa-file-excel" style="color: var(--accent-emerald);"></i> Bank Advice (.xlsx)
+            </a>
+        `;
+
+        if (batch.status === 'DRAFT') {
+            btns += `
+                <button onclick="transitionBatchStatus(${batch.id}, 'verify')" class="btn btn-primary" style="font-size: 12px; padding: 6px 12px;">
+                    <i class="fa-solid fa-check-double"></i> Verify Batch
+                </button>
+            `;
+        } else if (batch.status === 'VERIFIED') {
+            btns += `
+                <button onclick="transitionBatchStatus(${batch.id}, 'approve')" class="btn btn-primary" style="font-size: 12px; padding: 6px 12px; background: var(--accent-emerald); border-color: var(--accent-emerald);">
+                    <i class="fa-solid fa-stamp"></i> Approve Batch
+                </button>
+            `;
+        } else if (batch.status === 'APPROVED') {
+            btns += `
+                <button onclick="transitionBatchStatus(${batch.id}, 'disburse')" class="btn btn-primary" style="font-size: 12px; padding: 6px 12px; background: #059669; border-color: #059669;">
+                    <i class="fa-solid fa-money-bill-transfer"></i> Mark Disbursed & Paid
+                </button>
+            `;
+        }
+
+        btnContainer.innerHTML = btns;
+    }
+
+    async function transitionBatchStatus(batchId, action) {
+        if (!confirm(`Are you sure you want to ${action.toUpperCase()} this payroll batch?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/payroll/batches/${batchId}/${action}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message);
+                viewBatchDetails(batchId);
+                loadPayrollBatches();
+            } else {
+                alert("Error: " + (data.detail || "Action failed"));
+            }
+        } catch (e) {
+            alert("Network error.");
+        }
+    }
+
+    function closeBatchDetailsModal() {
+        const modal = document.getElementById("batchDetailsModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    // =========================================================================
+    // 2. EMPLOYEE SALARY STRUCTURES & REVISIONS
+    // =========================================================================
+
+    async function loadEmployeeStructures() {
+        const tableBody = document.getElementById("empStructuresTableBody");
+        if (!tableBody) return;
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading employee profiles...</td></tr>`;
+
+        try {
+            const res = await fetch("/api/v1/payroll/structures");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "Failed to load profiles");
+
+            globalEmployees = data.data || [];
+            document.getElementById("empStructureCountBadge").innerText = `${globalEmployees.length} Active Profiles`;
+            renderEmployeeStructuresTable(globalEmployees);
+        } catch (e) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--accent-rose); padding: 20px;">Error: ${e.message}</td></tr>`;
+        }
+    }
+
+    function filterEmployeeStructuresTable() {
+        const query = document.getElementById("empStructureSearchInput")?.value.toLowerCase() || "";
+        const filtered = globalEmployees.filter(e =>
+            (e.name || "").toLowerCase().includes(query) ||
+            (e.roll_number || "").toLowerCase().includes(query) ||
+            (e.department || "").toLowerCase().includes(query)
+        );
+        renderEmployeeStructuresTable(filtered);
+    }
+
+    function renderEmployeeStructuresTable(employees) {
+        const tableBody = document.getElementById("empStructuresTableBody");
+        if (!tableBody) return;
+
+        if (!employees || employees.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">No employee records found.</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = employees.map(emp => {
+            const st = emp.active_structure;
+            let modelLabel = st ? st.compensation_model.replace('_', ' ') : 'HOURLY / UNSET';
+            let grossLabel = st && st.monthly_gross > 0 ? `₹${st.monthly_gross.toLocaleString(undefined, {minimumFractionDigits: 2})}/mo` : (emp.hourly_rate > 0 ? `₹${emp.hourly_rate.toFixed(2)}/hr` : '₹0.00');
+
+            let statBadges = '';
+            if (st && st.enable_pf) statBadges += '<span class="badge badge-indigo" style="font-size: 10.5px; margin-right: 4px;">PF</span>';
+            if (st && st.enable_esi) statBadges += '<span class="badge badge-sky" style="font-size: 10.5px; margin-right: 4px;">ESIC</span>';
+            if (st && st.enable_pt) statBadges += '<span class="badge badge-amber" style="font-size: 10.5px;">PT</span>';
+            if (!statBadges) statBadges = '<span style="color: var(--text-muted); font-size: 11px;">None</span>';
+
+            const bankInfo = emp.bank_account_number ? `<code>${emp.bank_account_number}</code>` : '<span style="color: var(--text-muted); font-size: 11px;">Not configured</span>';
+            const panInfo = emp.pan_number ? `PAN: <code>${emp.pan_number}</code>` : '';
+
+            return `
+                <tr>
+                    <td>
+                        <strong>${emp.name}</strong>
+                    </td>
+                    <td><code>${emp.roll_number}</code></td>
+                    <td>
+                        <span class="badge badge-indigo">${emp.department}</span>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${emp.location_name}</div>
+                    </td>
+                    <td><div style="font-size: 12.5px; font-weight: 500;">${emp.designation}</div></td>
+                    <td><span class="badge badge-node">${modelLabel}</span></td>
+                    <td><strong style="color: var(--accent-emerald); font-family: monospace; font-size: 13.5px;">${grossLabel}</strong></td>
+                    <td>${statBadges}</td>
+                    <td>
+                        <div>${bankInfo}</div>
+                        <div style="font-size: 11px; margin-top: 2px;">${panInfo}</div>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="openAssignStructureModal(${emp.id})" class="btn btn-secondary" style="padding: 6px 9px; font-size: 11px;" title="View Compensation Structure">
+                                <i class="fa-solid fa-file-invoice-dollar"></i> Structure
+                            </button>
+                            <button onclick="openStatutoryBankingModal(${emp.id})" class="btn btn-secondary" style="padding: 6px 9px; font-size: 11px; color: var(--accent-primary);" title="Banking Profile">
+                                <i class="fa-solid fa-building-columns"></i>
+                            </button>
+                            <button onclick="openRevisionHistoryModal(${emp.id})" class="btn btn-secondary" style="padding: 6px 9px; font-size: 11px; color: var(--accent-indigo);" title="Revision History">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    async function openAssignStructureModal(studentId) {
+        const modal = document.getElementById("assignStructureModal");
+        if (!modal) return;
+
+        const emp = globalEmployees.find(e => e.id === studentId);
+        if (!emp) return;
+
+        document.getElementById("assignStudentId").value = emp.id;
+        document.getElementById("assignEmployeeName").value = `${emp.name} (${emp.roll_number})`;
+        document.getElementById("assignRevisionReason").value = "Annual Appraisal / Incremental Revision";
+
+        // Populate template select
+        const tplSelect = document.getElementById("assignTemplateSelect");
+        tplSelect.innerHTML = '<option value="">-- Custom Individual Structure --</option>' +
+            globalTemplates.map(t => `<option value="${t.id}">${t.name} (${t.compensation_model})</option>`).join("");
+
+        const st = emp.active_structure;
+        if (st) {
+            document.getElementById("assignCompModel").value = st.compensation_model;
+            document.getElementById("assignAnnualCtc").value = st.annual_ctc || "";
+            document.getElementById("assignMonthlyGross").value = st.monthly_gross || "";
+            document.getElementById("assignMonthlyBasic").value = st.monthly_basic || "";
+            document.getElementById("assignMonthlyHra").value = st.monthly_hra || "";
+            document.getElementById("assignConveyance").value = st.conveyance_allowance || 1600;
+            document.getElementById("assignMedical").value = st.medical_allowance || 1250;
+            document.getElementById("assignSpecialAllowance").value = st.special_allowance || "";
+            document.getElementById("assignHourlyRate").value = st.hourly_rate || "";
+            document.getElementById("assignDailyRate").value = st.daily_rate || "";
+            if (st.template_id) tplSelect.value = st.template_id;
+        } else {
+            // Option A: Default to mapped designation template blueprint if available
+            if (emp.default_template_id) {
+                tplSelect.value = emp.default_template_id;
+                onSelectTemplateBlueprint();
+            } else {
+                document.getElementById("assignCompModel").value = "STRUCTURED_SALARY";
+            }
+            const defaultGross = (emp.monthly_base_salary && emp.monthly_base_salary > 0) ? emp.monthly_base_salary : 35000;
+            document.getElementById("assignMonthlyGross").value = defaultGross;
+            autoCalculateBreakdown();
+        }
+
+        onCompModelChange();
+        const alertBox = document.getElementById("assignStructureAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        modal.classList.add("active");
+    }
+
+    function closeAssignStructureModal() {
+        const modal = document.getElementById("assignStructureModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    function onCompModelChange() {
+        const model = document.getElementById("assignCompModel").value;
+        const structuredBox = document.getElementById("structuredFieldsBox");
+        const hourlyBox = document.getElementById("hourlyDailyFieldsBox");
+
+        if (model === "STRUCTURED_SALARY") {
+            structuredBox.style.display = "block";
+            hourlyBox.style.display = "none";
+        } else if (model === "HOURLY" || model === "DAILY_WAGE") {
+            structuredBox.style.display = "none";
+            hourlyBox.style.display = "block";
+        } else {
+            structuredBox.style.display = "none";
+            hourlyBox.style.display = "none";
+        }
+    }
+
+    function onSelectTemplateBlueprint() {
+        const tplId = parseInt(document.getElementById("assignTemplateSelect").value);
+        if (!tplId) return;
+
+        const tpl = globalTemplates.find(t => t.id === tplId);
+        if (!tpl) return;
+
+        document.getElementById("assignCompModel").value = tpl.compensation_model;
+        onCompModelChange();
+        autoCalculateBreakdown();
+    }
+
+    function autoCalculateMonthlyGross() {
+        const ctc = parseFloat(document.getElementById("assignAnnualCtc").value) || 0;
+        if (ctc > 0) {
+            document.getElementById("assignMonthlyGross").value = (ctc / 12.0).toFixed(2);
+            autoCalculateBreakdown();
+        }
+    }
+
+    function autoCalculateBreakdown() {
+        const gross = parseFloat(document.getElementById("assignMonthlyGross").value) || 0;
+        const ctc = parseFloat(document.getElementById("assignAnnualCtc").value) || 0;
+        if (gross > 0 && ctc <= 0) {
+            document.getElementById("assignAnnualCtc").value = (gross * 12.0).toFixed(2);
+        }
+
+        const tplId = parseInt(document.getElementById("assignTemplateSelect")?.value);
+        const tpl = (globalTemplates || []).find(t => t.id === tplId);
+
+        const basicPct = tpl && tpl.basic_percentage !== undefined ? tpl.basic_percentage : 50;
+        const hraPct = tpl && tpl.hra_percentage !== undefined ? tpl.hra_percentage : 20;
+        const daPct = tpl && tpl.da_percentage !== undefined ? tpl.da_percentage : 0;
+        const conv = tpl && tpl.conveyance_fixed !== undefined ? tpl.conveyance_fixed : 1600;
+        const med = tpl && tpl.medical_fixed !== undefined ? tpl.medical_fixed : 1250;
+
+        const basic = Math.round(gross * (basicPct / 100.0) * 100) / 100;
+        const da = Math.round(gross * (daPct / 100.0) * 100) / 100;
+        const hra = Math.round(basic * (hraPct / 100.0) * 100) / 100;
+        const specified = basic + da + hra + conv + med;
+        const special = Math.max(0, Math.round((gross - specified) * 100) / 100);
+
+        document.getElementById("assignMonthlyBasic").value = basic;
+        document.getElementById("assignMonthlyHra").value = hra;
+        document.getElementById("assignConveyance").value = conv;
+        document.getElementById("assignMedical").value = med;
+        document.getElementById("assignSpecialAllowance").value = special;
+
+        document.getElementById("assignDailyRate").value = (gross / 26.0).toFixed(2);
+        document.getElementById("assignHourlyRate").value = (gross / (26.0 * 8.0)).toFixed(2);
+    }
+
+    async function submitAssignStructure(e) {
+        e.preventDefault();
+        const studentId = parseInt(document.getElementById("assignStudentId").value);
+        const tplId = document.getElementById("assignTemplateSelect").value ? parseInt(document.getElementById("assignTemplateSelect").value) : null;
+        const model = document.getElementById("assignCompModel").value;
+        const ctc = parseFloat(document.getElementById("assignAnnualCtc").value) || 0;
+        const gross = parseFloat(document.getElementById("assignMonthlyGross").value) || 0;
+        const basic = parseFloat(document.getElementById("assignMonthlyBasic").value) || 0;
+        const hra = parseFloat(document.getElementById("assignMonthlyHra").value) || 0;
+        const conv = parseFloat(document.getElementById("assignConveyance").value) || 0;
+        const med = parseFloat(document.getElementById("assignMedical").value) || 0;
+        const special = parseFloat(document.getElementById("assignSpecialAllowance").value) || 0;
+        const hourly = parseFloat(document.getElementById("assignHourlyRate").value) || 0;
+        const daily = parseFloat(document.getElementById("assignDailyRate").value) || 0;
+        let effDate = document.getElementById("assignEffectiveFrom").value;
+        if (!effDate || !effDate.trim()) {
+            effDate = new Date().toISOString().split('T')[0];
+        }
+        const reason = document.getElementById("assignRevisionReason").value;
+
+        const saveBtn = document.getElementById("btnSaveStructure");
+        const alertBox = document.getElementById("assignStructureAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        try {
+            const res = await fetch("/api/v1/payroll/structure/assign", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    template_id: tplId,
+                    compensation_model: model,
+                    annual_ctc: ctc,
+                    monthly_gross: gross,
+                    monthly_basic: basic,
+                    monthly_hra: hra,
+                    conveyance_allowance: conv,
+                    medical_allowance: med,
+                    special_allowance: special,
+                    hourly_rate: hourly,
+                    daily_rate: daily,
+                    effective_from_date: effDate,
+                    revision_reason: reason,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+
+                setTimeout(() => {
+                    closeAssignStructureModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Apply Structure';
+                    loadEmployeeStructures();
+                }, 600);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Assignment failed.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Apply Structure';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Apply Structure';
+        }
+    }
+
+    // Statutory & Banking Modal
+    function openStatutoryBankingModal(studentId) {
+        const modal = document.getElementById("statutoryBankingModal");
+        if (!modal) return;
+
+        const emp = globalEmployees.find(e => e.id === studentId);
+        if (!emp) return;
+
+        document.getElementById("bankStudentId").value = emp.id;
+        document.getElementById("statutoryBankingSubtitle").innerText = `Employee: ${emp.name} (${emp.roll_number})`;
+        document.getElementById("bankPanNumber").value = emp.pan_number || "";
+        document.getElementById("bankUanNumber").value = emp.uan_number || "";
+        document.getElementById("bankEsicNumber").value = emp.esic_number || "";
+        document.getElementById("bankNameInput").value = emp.bank_name || "";
+        document.getElementById("bankAccountInput").value = emp.bank_account_number || "";
+        document.getElementById("bankIfscInput").value = emp.bank_ifsc_code || "";
+
+        const alertBox = document.getElementById("statutoryBankingAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        modal.classList.add("active");
+    }
+
+    function closeStatutoryBankingModal() {
+        const modal = document.getElementById("statutoryBankingModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function submitStatutoryBanking(e) {
+        e.preventDefault();
+        const studentId = parseInt(document.getElementById("bankStudentId").value);
+        const pan = document.getElementById("bankPanNumber").value;
+        const uan = document.getElementById("bankUanNumber").value;
+        const esic = document.getElementById("bankEsicNumber").value;
+        const bankName = document.getElementById("bankNameInput").value;
+        const acct = document.getElementById("bankAccountInput").value;
+        const ifsc = document.getElementById("bankIfscInput").value;
+
+        const saveBtn = document.getElementById("btnSaveBanking");
+        const alertBox = document.getElementById("statutoryBankingAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        try {
+            const res = await fetch(`/api/v1/payroll/employee/${studentId}/statutory-banking`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    pan_number: pan,
+                    uan_number: uan,
+                    esic_number: esic,
+                    bank_name: bankName,
+                    bank_account_number: acct,
+                    bank_ifsc_code: ifsc,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+
+                setTimeout(() => {
+                    closeStatutoryBankingModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Details';
+                    loadEmployeeStructures();
+                }, 600);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Update failed.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Details';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Details';
+        }
+    }
+
+    // Revision History Timeline Modal
+    async function openRevisionHistoryModal(studentId) {
+        const modal = document.getElementById("revisionHistoryModal");
+        if (!modal) return;
+        modal.classList.add("active");
+
+        const timelineBox = document.getElementById("revisionHistoryTimeline");
+        timelineBox.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching revision timeline...</div>`;
+
+        try {
+            const res = await fetch(`/api/v1/payroll/employee/${studentId}/structure`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "Failed to load history");
+
+            document.getElementById("revisionHistorySubtitle").innerText = `Employee: ${data.employee.name} (${data.employee.roll_number})`;
+            const history = data.revision_history || [];
+
+            if (history.length === 0) {
+                timelineBox.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--text-muted);">No revision history recorded yet. Initial structure is active.</div>`;
+                return;
+            }
+
+            timelineBox.innerHTML = history.map(h => {
+                const incBadge = h.increment_percentage > 0 ? `<span class="badge badge-present">+${h.increment_percentage}% Increment</span>` : '';
+                return `
+                    <div style="border-left: 3px solid var(--accent-primary); padding-left: 14px; margin-bottom: 18px; position: relative;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); display: flex; justify-content: space-between; align-items: center;">
+                            <span>Effective From: ${h.effective_from_date}</span>
+                            ${incBadge}
+                        </div>
+                        <div style="font-size: 12.5px; margin-top: 4px;">
+                            <strong>₹${h.new_monthly_gross.toLocaleString(undefined, {minimumFractionDigits: 2})}/mo</strong>
+                            <span style="color: var(--text-muted);"> (Annual CTC: ₹${h.new_annual_ctc.toLocaleString(undefined, {minimumFractionDigits: 2})})</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                            Model: <code>${h.new_model}</code> • Reason: <em>${h.revision_reason || 'N/A'}</em>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+        } catch (e) {
+            timelineBox.innerHTML = `<div style="text-align: center; color: var(--accent-rose); padding: 20px;">Error: ${e.message}</div>`;
+        }
+    }
+
+    function closeRevisionHistoryModal() {
+        const modal = document.getElementById("revisionHistoryModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    let globalLocations = [];
+    let globalDesignations = [];
+
+    // =========================================================================
+    // 3. SALARY TEMPLATES CRUD
+    // =========================================================================
+
+    async function loadSalaryTemplates() {
+        const tableBody = document.getElementById("templatesTableBody");
+        if (!tableBody) return;
+
+        try {
+            const res = await fetch("/api/v1/payroll/masters/templates");
+            const data = await res.json();
+            if (res.ok) {
+                globalTemplates = data.data || [];
+                renderSalaryTemplatesTable(globalTemplates);
+            }
+        } catch (e) {
+            tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--accent-rose);">Failed to load templates.</td></tr>`;
+        }
+    }
+
+    function toggleTemplateComponentVisibility() {
+        const model = document.getElementById("tplModalModel")?.value;
+        const breakdownSec = document.getElementById("tplComponentBreakdownSection");
+        const basicInput = document.getElementById("tplModalBasicPct");
+        const hraInput = document.getElementById("tplModalHraPct");
+        if (!breakdownSec) return;
+        if (model === "STRUCTURED_SALARY") {
+            breakdownSec.style.display = "block";
+            if (basicInput) basicInput.required = true;
+            if (hraInput) hraInput.required = true;
+        } else {
+            breakdownSec.style.display = "none";
+            if (basicInput) basicInput.required = false;
+            if (hraInput) hraInput.required = false;
+        }
+    }
+
+    function renderSalaryTemplatesTable(templates) {
+        const tableBody = document.getElementById("templatesTableBody");
+        if (!tableBody) return;
+
+        if (!templates || templates.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">No salary templates created yet. Click "Create Template" to add one.</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = templates.map(t => {
+            const safeName = (t.name || "").replace(/'/g, "\\'");
+            const isStructured = (t.compensation_model === 'STRUCTURED_SALARY');
+            const statusBadge = (t.is_active !== false) ? '<span class="badge badge-present">Active</span>' : '<span class="badge badge-node">Inactive</span>';
+            const breakdownStr = isStructured 
+                ? `Basic: ${t.basic_percentage}% • HRA: ${t.hra_percentage}%${t.da_percentage > 0 ? ' • DA: ' + t.da_percentage + '%' : ''}`
+                : '<span style="color: var(--text-muted); font-size: 11px;">Standard Base</span>';
+            const fixedStr = isStructured
+                ? `Conv: ₹${t.conveyance_fixed} • Med: ₹${t.medical_fixed}`
+                : '<span style="color: var(--text-muted); font-size: 11px;">--</span>';
+
+            return `
+                <tr>
+                    <td>
+                        <strong>${t.name}</strong>
+                        <div style="margin-top: 3px;">${statusBadge}</div>
+                    </td>
+                    <td><code>${t.code}</code></td>
+                    <td><span class="badge badge-node">${(t.compensation_model || 'STRUCTURED_SALARY').replace('_', ' ')}</span></td>
+                    <td>${breakdownStr}</td>
+                    <td>${fixedStr}</td>
+                    <td>
+                        ${t.enable_pf ? '<span class="badge badge-indigo" style="font-size: 10px;">PF</span> ' : ''}
+                        ${t.enable_esi ? '<span class="badge badge-sky" style="font-size: 10px;">ESI</span> ' : ''}
+                        ${t.enable_pt ? '<span class="badge badge-amber" style="font-size: 10px;">PT</span>' : ''}
+                    </td>
+                    <td><span class="badge ${t.assigned_count > 0 ? 'badge-present' : 'badge-node'}">${t.assigned_count} Assigned</span></td>
+                    <td>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="openEditTemplateModal(${t.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" title="Edit Template">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
+                            </button>
+                            <button onclick="deleteTemplate(${t.id}, '${safeName}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" title="Delete Template">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function openCreateTemplateModal() {
+        document.getElementById("tplModalId").value = "";
+        document.getElementById("salaryTemplateModalTitle").innerHTML = '<i class="fa-solid fa-layer-group" style="color: var(--accent-primary);"></i> <span>Create Salary Template</span>';
+        document.getElementById("salaryTemplateForm").reset();
+        document.getElementById("tplModalModel").value = "STRUCTURED_SALARY";
+        document.getElementById("tplModalBasicPct").value = "50";
+        document.getElementById("tplModalHraPct").value = "20";
+        document.getElementById("tplModalDaPct").value = "0";
+        document.getElementById("tplModalConvFixed").value = "1600";
+        document.getElementById("tplModalMedFixed").value = "1250";
+        document.getElementById("tplModalEnablePf").checked = true;
+        document.getElementById("tplModalPfCeiling").checked = true;
+        document.getElementById("tplModalEnableEsi").checked = true;
+        document.getElementById("tplModalEnablePt").checked = true;
+        document.getElementById("tplModalIsActive").value = "true";
+
+        toggleTemplateComponentVisibility();
+
+        const alertBox = document.getElementById("salaryTemplateModalAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        const modal = document.getElementById("salaryTemplateModal");
+        if (modal) modal.classList.add("active");
+    }
+
+    async function openEditTemplateModal(tplId) {
+        let tpl = globalTemplates.find(t => t.id === tplId);
+        if (!tpl) {
+            try {
+                const res = await fetch(`/api/v1/payroll/masters/templates/${tplId}`);
+                const data = await res.json();
+                if (res.ok && data.data) tpl = data.data;
+            } catch (e) {}
+        }
+        if (!tpl) {
+            alert("Could not load salary template details.");
+            return;
+        }
+
+        document.getElementById("tplModalId").value = tpl.id;
+        document.getElementById("salaryTemplateModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Salary Template</span>';
+        document.getElementById("tplModalName").value = tpl.name || "";
+        document.getElementById("tplModalCode").value = tpl.code || "";
+        document.getElementById("tplModalModel").value = tpl.compensation_model || "STRUCTURED_SALARY";
+        document.getElementById("tplModalBasicPct").value = tpl.basic_percentage !== undefined ? tpl.basic_percentage : 50;
+        document.getElementById("tplModalHraPct").value = tpl.hra_percentage !== undefined ? tpl.hra_percentage : 20;
+        document.getElementById("tplModalDaPct").value = tpl.da_percentage !== undefined ? tpl.da_percentage : 0;
+        document.getElementById("tplModalConvFixed").value = tpl.conveyance_fixed !== undefined ? tpl.conveyance_fixed : 1600;
+        document.getElementById("tplModalMedFixed").value = tpl.medical_fixed !== undefined ? tpl.medical_fixed : 1250;
+        document.getElementById("tplModalEnablePf").checked = Boolean(tpl.enable_pf);
+        document.getElementById("tplModalPfCeiling").checked = Boolean(tpl.pf_capped_at_ceiling);
+        document.getElementById("tplModalEnableEsi").checked = Boolean(tpl.enable_esi);
+        document.getElementById("tplModalEnablePt").checked = Boolean(tpl.enable_pt);
+        document.getElementById("tplModalDescription").value = tpl.description || "";
+        document.getElementById("tplModalIsActive").value = (tpl.is_active !== false) ? "true" : "false";
+
+        toggleTemplateComponentVisibility();
+
+        const alertBox = document.getElementById("salaryTemplateModalAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        const modal = document.getElementById("salaryTemplateModal");
+        if (modal) modal.classList.add("active");
+    }
+
+    function closeTemplateModal() {
+        const modal = document.getElementById("salaryTemplateModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function submitTemplateForm(e) {
+        e.preventDefault();
+        const tplId = document.getElementById("tplModalId").value;
+        const name = document.getElementById("tplModalName").value.trim();
+        const code = document.getElementById("tplModalCode").value.trim().toUpperCase();
+        const model = document.getElementById("tplModalModel").value;
+        const isStructured = (model === "STRUCTURED_SALARY");
+        const basicPct = isStructured ? (parseFloat(document.getElementById("tplModalBasicPct").value) || 0) : 0;
+        const hraPct = isStructured ? (parseFloat(document.getElementById("tplModalHraPct").value) || 0) : 0;
+        const daPct = isStructured ? (parseFloat(document.getElementById("tplModalDaPct").value) || 0) : 0;
+        const convFixed = isStructured ? (parseFloat(document.getElementById("tplModalConvFixed").value) || 0) : 0;
+        const medFixed = isStructured ? (parseFloat(document.getElementById("tplModalMedFixed").value) || 0) : 0;
+        const enablePf = document.getElementById("tplModalEnablePf").checked;
+        const pfCeiling = document.getElementById("tplModalPfCeiling").checked;
+        const enableEsi = document.getElementById("tplModalEnableEsi").checked;
+        const enablePt = document.getElementById("tplModalEnablePt").checked;
+        const desc = document.getElementById("tplModalDescription").value.trim();
+        const isActive = document.getElementById("tplModalIsActive").value === "true";
+
+        const payload = {
+            name: name,
+            code: code,
+            compensation_model: model,
+            description: desc || null,
+            basic_percentage: basicPct,
+            hra_percentage: hraPct,
+            da_percentage: daPct,
+            conveyance_fixed: convFixed,
+            medical_fixed: medFixed,
+            enable_pf: enablePf,
+            pf_capped_at_ceiling: pfCeiling,
+            enable_esi: enableEsi,
+            enable_pt: enablePt,
+            is_active: isActive,
+        };
+
+        const saveBtn = document.getElementById("btnSaveTemplate");
+        const alertBox = document.getElementById("salaryTemplateModalAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        const url = tplId ? `/api/v1/payroll/masters/templates/${tplId}` : "/api/v1/payroll/masters/templates";
+        const method = tplId ? "PUT" : "POST";
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Template saved successfully!");
+
+                setTimeout(() => {
+                    closeTemplateModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Template';
+                    loadSalaryTemplates();
+                }, 600);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Save failed.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Template';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Template';
+        }
+    }
+
+    async function deleteTemplate(tplId, name) {
+        if (!confirm(`Are you sure you want to delete salary template '${name}'?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/payroll/masters/templates/${tplId}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(data.message || "Template deleted successfully.");
+                loadSalaryTemplates();
+            } else {
+                alert("Cannot delete template: " + (data.detail || "Action failed"));
+            }
+        } catch (e) {
+            alert("Network error deleting template.");
+        }
+    }
+
+    // =========================================================================
+    // 4. ORGANIZATION MASTERS (LOCATIONS, DESIGNATIONS) & STATUTORY SETTINGS
+    // =========================================================================
+
+    async function loadOrganizationMasters() {
+        try {
+            const locRes = await fetch("/api/v1/payroll/masters/locations");
+            const locData = await locRes.json();
+            if (locRes.ok) {
+                globalLocations = locData.data || [];
+                const locBody = document.getElementById("locationsTableBody");
+                if (locBody) {
+                    if (globalLocations.length === 0) {
+                        locBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--text-muted);">No locations added yet. Click "+ Add Location" to register one.</td></tr>';
+                    } else {
+                        locBody.innerHTML = globalLocations.map(l => {
+                            const safeName = (l.name || "").replace(/'/g, "\\'");
+                            const statusBadge = l.is_active ? '<span class="badge badge-present">Active</span>' : '<span class="badge badge-node">Inactive</span>';
+                            return `
+                                <tr>
+                                    <td>
+                                        <strong>${l.name}</strong>
+                                        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">Code: ${l.code || 'N/A'}</div>
+                                    </td>
+                                    <td>${l.city ? l.city + ', ' : ''}${l.state || 'Maharashtra'}</td>
+                                    <td><span class="badge ${l.assigned_employees_count > 0 ? 'badge-indigo' : 'badge-node'}">${l.assigned_employees_count} Employees</span></td>
+                                    <td>
+                                        <div style="display: flex; gap: 6px; align-items: center;">
+                                            ${statusBadge}
+                                            <button onclick="openEditLocationModal(${l.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" title="Edit Location">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <button onclick="deleteLocation(${l.id}, '${safeName}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" title="Delete Location">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join("");
+                    }
+                }
+            }
+
+            const desigRes = await fetch("/api/v1/payroll/masters/designations");
+            const desigData = await desigRes.json();
+            if (desigRes.ok) {
+                globalDesignations = desigData.data || [];
+                const desigBody = document.getElementById("designationsTableBody");
+                if (desigBody) {
+                    if (globalDesignations.length === 0) {
+                        desigBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--text-muted);">No designations added yet. Click "+ Add Designation" to register one.</td></tr>';
+                    } else {
+                        desigBody.innerHTML = globalDesignations.map(d => {
+                            const safeTitle = (d.title || "").replace(/'/g, "\\'");
+                            const statusBadge = d.is_active ? '<span class="badge badge-present">Active</span>' : '<span class="badge badge-node">Inactive</span>';
+                            const tplBadge = d.salary_template_name ? `<span class="badge badge-indigo" title="Template Code: ${d.salary_template_code || 'N/A'}"><i class="fa-solid fa-layer-group"></i> ${d.salary_template_name}</span>` : '<span class="badge badge-node">No Template</span>';
+                            return `
+                                <tr>
+                                    <td>
+                                        <strong>${d.title}</strong>
+                                        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">Code: ${d.code || 'N/A'}</div>
+                                    </td>
+                                    <td>${tplBadge}</td>
+                                    <td><span class="badge ${d.assigned_employees_count > 0 ? 'badge-indigo' : 'badge-node'}">${d.assigned_employees_count} Employees</span></td>
+                                    <td>
+                                        <div style="display: flex; gap: 6px; align-items: center;">
+                                            ${statusBadge}
+                                            <button onclick="openEditDesignationModal(${d.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" title="Edit Designation">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <button onclick="deleteDesignation(${d.id}, '${safeTitle}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" title="Delete Designation">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join("");
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load masters", e);
+        }
+    }
+
+    // --- Locations CRUD Handlers ---
+    function openCreateLocationModal() {
+        document.getElementById("locModalId").value = "";
+        document.getElementById("locationModalTitle").innerHTML = '<i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i> <span>Add Office Location</span>';
+        document.getElementById("locationForm").reset();
+        document.getElementById("locModalState").value = "Maharashtra";
+        document.getElementById("locModalIsActive").value = "true";
+        const alertBox = document.getElementById("locationModalAlert");
+        if (alertBox) alertBox.style.display = "none";
+        const modal = document.getElementById("locationModal");
+        if (modal) modal.classList.add("active");
+    }
+
+    async function openEditLocationModal(locId) {
+        let loc = globalLocations.find(l => l.id === locId);
+        if (!loc) {
+            try {
+                const res = await fetch(`/api/v1/payroll/masters/locations/${locId}`);
+                const data = await res.json();
+                if (res.ok && data.data) loc = data.data;
+            } catch (e) {}
+        }
+        if (!loc) {
+            alert("Location details could not be loaded.");
+            return;
+        }
+
+        document.getElementById("locModalId").value = loc.id;
+        document.getElementById("locationModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Office Location</span>';
+        document.getElementById("locModalName").value = loc.name || "";
+        document.getElementById("locModalCode").value = loc.code || "";
+        document.getElementById("locModalCity").value = loc.city || "";
+        document.getElementById("locModalState").value = loc.state || "Maharashtra";
+        document.getElementById("locModalContact").value = loc.contact_number || "";
+        document.getElementById("locModalAddress").value = loc.address || "";
+        document.getElementById("locModalIsActive").value = loc.is_active ? "true" : "false";
+
+        const alertBox = document.getElementById("locationModalAlert");
+        if (alertBox) alertBox.style.display = "none";
+        const modal = document.getElementById("locationModal");
+        if (modal) modal.classList.add("active");
+    }
+
+    function closeLocationModal() {
+        const modal = document.getElementById("locationModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function submitLocationForm(e) {
+        e.preventDefault();
+        const locId = document.getElementById("locModalId").value;
+        const name = document.getElementById("locModalName").value.trim();
+        const code = document.getElementById("locModalCode").value.trim().toUpperCase();
+        const city = document.getElementById("locModalCity").value.trim();
+        const state = document.getElementById("locModalState").value.trim();
+        const contact = document.getElementById("locModalContact").value.trim();
+        const address = document.getElementById("locModalAddress").value.trim();
+        const isActive = document.getElementById("locModalIsActive").value === "true";
+
+        const payload = {
+            name: name,
+            code: code || null,
+            city: city || null,
+            state: state || "Maharashtra",
+            contact_number: contact || null,
+            address: address || null,
+            is_active: isActive,
+        };
+
+        const saveBtn = document.getElementById("btnSaveLocation");
+        const alertBox = document.getElementById("locationModalAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        const url = locId ? `/api/v1/payroll/masters/locations/${locId}` : "/api/v1/payroll/masters/locations";
+        const method = locId ? "PUT" : "POST";
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Location saved successfully!");
+
+                setTimeout(() => {
+                    closeLocationModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Location';
+                    loadOrganizationMasters();
+                }, 600);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Save failed.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Location';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Location';
+        }
+    }
+
+    async function deleteLocation(locId, name) {
+        if (!confirm(`Are you sure you want to delete location '${name}'?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/payroll/masters/locations/${locId}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(data.message || "Location deleted successfully.");
+                loadOrganizationMasters();
+            } else {
+                alert("Cannot delete location: " + (data.detail || "Action failed"));
+            }
+        } catch (e) {
+            alert("Network error deleting location.");
+        }
+    }
+
+    // --- Designations CRUD Handlers ---
+    function populateDesignationTemplateSelect(selectedId) {
+        const sel = document.getElementById("desigModalSalaryTemplate");
+        if (!sel) return;
+        sel.innerHTML = '<option value="">-- No Default Template --</option>' +
+            (globalTemplates || []).map(t => `<option value="${t.id}">${t.name} (${t.code})</option>`).join("");
+        sel.value = selectedId || "";
+    }
+
+    function openCreateDesignationModal() {
+        document.getElementById("desigModalId").value = "";
+        document.getElementById("designationModalTitle").innerHTML = '<i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i> <span>Add Designation</span>';
+        document.getElementById("designationForm").reset();
+        document.getElementById("desigModalIsActive").value = "true";
+        populateDesignationTemplateSelect("");
+        const alertBox = document.getElementById("designationModalAlert");
+        if (alertBox) alertBox.style.display = "none";
+        const modal = document.getElementById("designationModal");
+        if (modal) modal.classList.add("active");
+    }
+
+    async function openEditDesignationModal(desigId) {
+        let desig = globalDesignations.find(d => d.id === desigId);
+        if (!desig) {
+            try {
+                const res = await fetch(`/api/v1/payroll/masters/designations/${desigId}`);
+                const data = await res.json();
+                if (res.ok && data.data) desig = data.data;
+            } catch (e) {}
+        }
+        if (!desig) {
+            alert("Designation details could not be loaded.");
+            return;
+        }
+
+        document.getElementById("desigModalId").value = desig.id;
+        document.getElementById("designationModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Designation</span>';
+        document.getElementById("desigModalTitle").value = desig.title || "";
+        document.getElementById("desigModalCode").value = desig.code || "";
+        document.getElementById("desigModalDept").value = desig.department_id || "";
+        populateDesignationTemplateSelect(desig.salary_template_id || "");
+        document.getElementById("desigModalDescription").value = desig.description || "";
+        document.getElementById("desigModalIsActive").value = desig.is_active ? "true" : "false";
+
+        const alertBox = document.getElementById("designationModalAlert");
+        if (alertBox) alertBox.style.display = "none";
+        const modal = document.getElementById("designationModal");
+        if (modal) modal.classList.add("active");
+    }
+
+    function closeDesignationModal() {
+        const modal = document.getElementById("designationModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function submitDesignationForm(e) {
+        e.preventDefault();
+        const desigId = document.getElementById("desigModalId").value;
+        const title = document.getElementById("desigModalTitle").value.trim();
+        const code = document.getElementById("desigModalCode").value.trim().toUpperCase();
+        const deptId = document.getElementById("desigModalDept").value ? parseInt(document.getElementById("desigModalDept").value) : null;
+        const tplId = document.getElementById("desigModalSalaryTemplate")?.value ? parseInt(document.getElementById("desigModalSalaryTemplate").value) : null;
+        const desc = document.getElementById("desigModalDescription").value.trim();
+        const isActive = document.getElementById("desigModalIsActive").value === "true";
+
+        const payload = {
+            title: title,
+            code: code || null,
+            department_id: deptId,
+            salary_template_id: tplId,
+            description: desc || null,
+            is_active: isActive,
+        };
+
+        const saveBtn = document.getElementById("btnSaveDesignation");
+        const alertBox = document.getElementById("designationModalAlert");
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        const url = desigId ? `/api/v1/payroll/masters/designations/${desigId}` : "/api/v1/payroll/masters/designations";
+        const method = desigId ? "PUT" : "POST";
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Designation saved successfully!");
+
+                setTimeout(() => {
+                    closeDesignationModal();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Designation';
+                    loadOrganizationMasters();
+                }, 600);
+            } else {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Save failed.");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Designation';
+            }
+        } catch (e) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Designation';
+        }
+    }
+
+    async function deleteDesignation(desigId, title) {
+        if (!confirm(`Are you sure you want to delete designation '${title}'?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/payroll/masters/designations/${desigId}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(data.message || "Designation deleted successfully.");
+                loadOrganizationMasters();
+            } else {
+                alert("Cannot delete designation: " + (data.detail || "Action failed"));
+            }
+        } catch (e) {
+            alert("Network error deleting designation.");
+        }
+    }
+
+    // =========================================================================
+    // 5. REAL-TIME ESTIMATOR
+    // =========================================================================
+
+    let searchDebounceTimer = null;
     function debouncePayrollSearch() {
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(loadPayrollSummary, 300);
@@ -432,259 +2457,104 @@
         const startDate = document.getElementById("payrollStartDate")?.value || "";
         const endDate = document.getElementById("payrollEndDate")?.value || "";
         const deptId = document.getElementById("payrollDeptFilter")?.value || "";
-        const role = document.getElementById("payrollRoleFilter")?.value || "";
         const search = document.getElementById("payrollSearchInput")?.value || "";
         const tableBody = document.getElementById("payrollTableBody");
 
         if (!tableBody) return;
-        tableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 28px; color: var(--text-muted); font-weight: 500;"><i class="fa-solid fa-spinner fa-spin"></i> Computing active shift hours and gross earnings...</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Calculating attendance...</td></tr>`;
 
         let url = `/api/v1/payroll/summary?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
         if (deptId) url += `&department_id=${encodeURIComponent(deptId)}`;
-        if (role) url += `&user_role=${encodeURIComponent(role)}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
 
         try {
             const res = await fetch(url);
             const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || "Failed to load payroll.");
+            if (!res.ok) throw new Error(data.detail || "Failed to load summary");
 
-            currentPayrollConfig = data.config;
-            renderPayrollKPIs(data);
-            renderPayrollTable(data.items, data.config);
-        } catch (e) {
-            tableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; color: var(--accent-rose); padding: 24px; font-weight: 600;">Failed to fetch payroll data: ${e.message}</td></tr>`;
-        }
-    }
-
-    function renderPayrollKPIs(data) {
-        const summary = data.summary;
-        const config = data.config;
-        const curr = summary.currency_symbol || "₹";
-
-        document.getElementById("payrollRangeLabel").innerText = `${data.date_range.start_date} to ${data.date_range.end_date} (${data.date_range.days_count} Days)`;
-        document.getElementById("kpiActiveWorkforce").innerText = summary.active_workforce;
-        document.getElementById("kpiWorkforceSub").innerText = `${summary.total_employees} registered profiles`;
-        document.getElementById("kpiTotalHours").innerText = `${summary.total_billed_hours.toLocaleString()} hrs`;
-        document.getElementById("kpiGrossOutlay").innerText = `${curr}${summary.total_gross_outlay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        document.getElementById("kpiStructureDisplay").innerText = `${config.payroll_structure.replace('_', ' ')} Model`;
-        document.getElementById("kpiOvertimeOutlay").innerText = `${curr}${summary.total_overtime_outlay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        document.getElementById("kpiOvertimeMultiplier").innerText = `${config.overtime_rate_multiplier}x Multiplier (> ${config.standard_working_hours_per_day}h/day)`;
-        document.getElementById("kpiAvgHourly").innerText = `${curr}${summary.average_hourly_payout.toFixed(2)}/hr`;
-    }
-
-    function renderPayrollTable(items, config) {
-        const tableBody = document.getElementById("payrollTableBody");
-        const countBadge = document.getElementById("payrollTableCountBadge");
-        if (!tableBody) return;
-
-        if (countBadge) countBadge.innerText = `${items.length} Employees`;
-
-        if (!items || items.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 36px; color: var(--text-muted);">No employee payroll records found matching the active filters.</td></tr>`;
-            return;
-        }
-
-        const curr = config.currency_symbol || "₹";
-
-        tableBody.innerHTML = items.map(emp => {
-            let roleBadge = '<span class="badge badge-present">Employee</span>';
-            if (emp.user_role === 'manager') roleBadge = '<span class="badge badge-sky"><i class="fa-solid fa-user-gear"></i> Manager</span>';
-            else if (emp.user_role === 'admin_staff') roleBadge = '<span class="badge badge-amber"><i class="fa-solid fa-user-shield"></i> Admin Staff</span>';
-            else if (emp.user_role === 'contractor') roleBadge = '<span class="badge badge-node">Contractor</span>';
-            else if (emp.user_role === 'intern') roleBadge = '<span class="badge badge-node">Intern</span>';
-
-            let auditBadges = '';
-            if (emp.missed_checkout_count > 0) {
-                auditBadges += `<span class="badge badge-rose" style="font-size: 11px; margin-right: 4px;" title="${emp.missed_checkout_count} missed checkout(s) credited under policy"><i class="fa-solid fa-triangle-exclamation"></i> ${emp.missed_checkout_count} Missed Out</span>`;
-            }
-            if (emp.late_checkin_count > 0) {
-                auditBadges += `<span class="badge badge-amber" style="font-size: 11px;" title="${emp.late_checkin_count} late check-in(s)"><i class="fa-solid fa-clock"></i> ${emp.late_checkin_count} Late</span>`;
-            }
-            if (!auditBadges) {
-                auditBadges = `<span class="badge badge-present" style="font-size: 11px;"><i class="fa-solid fa-check"></i> Compliant</span>`;
-            }
-
-            const otHighlight = emp.overtime_hours > 0 ? `<strong style="color: var(--accent-amber); font-family: monospace;">+${emp.overtime_hours} hrs</strong>` : `<span style="color: var(--text-muted);">0.0</span>`;
-
-            return `
+            tableBody.innerHTML = (data.items || []).map(emp => `
                 <tr>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="feed-avatar" style="width: 32px; height: 32px; font-size: 12px;">
-                                <span>${(emp.name || 'U').charAt(0)}</span>
-                            </div>
-                            <div>
-                                <strong style="color: var(--text-heading); font-size: 13.5px;">${emp.name}</strong>
-                                <div style="font-size: 11px; color: var(--text-muted);">${emp.cadre_level || 'Standard Cadre'}</div>
-                            </div>
-                        </div>
-                    </td>
+                    <td><strong>${emp.name}</strong></td>
                     <td><code>${emp.roll_number}</code></td>
                     <td><span class="badge badge-indigo">${emp.department || 'General'}</span></td>
-                    <td>${roleBadge}</td>
-                    <td><strong style="color: var(--text-heading); font-family: monospace;">${emp.days_worked}</strong></td>
-                    <td><span style="font-family: monospace;">${emp.standard_hours} hrs</span></td>
-                    <td>${otHighlight}</td>
+                    <td><span style="font-family: monospace;">${emp.days_worked}</span></td>
                     <td><strong style="color: var(--accent-primary); font-family: monospace;">${emp.total_active_hours} hrs</strong></td>
-                    <td><strong style="color: var(--text-heading); font-family: monospace;">${curr}${emp.hourly_rate.toFixed(2)}</strong></td>
-                    <td>
-                        <strong style="color: var(--accent-emerald); font-size: 14px; font-family: monospace;">
-                            ${curr}${emp.gross_pay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        </strong>
-                    </td>
-                    <td>${auditBadges}</td>
-                    <td>
-                        <div style="display: flex; gap: 6px; align-items: center;">
-                            <button onclick="openRateModal(${emp.student_id}, '${emp.name.replace(/'/g, "\\'")}', ${emp.hourly_rate}, ${emp.monthly_base_salary || 'null'}, '${(emp.cadre_level || '').replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Adjust Rate">
-                                <i class="fa-solid fa-pen-to-square"></i> Rate
-                            </button>
-                            <a href="/logs?roll=${encodeURIComponent(emp.roll_number)}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="View Attendance Logs">
-                                <i class="fa-solid fa-clock-rotate-left"></i>
-                            </a>
-                        </div>
-                    </td>
+                    <td><span style="font-family: monospace;">₹${emp.hourly_rate.toFixed(2)}</span></td>
+                    <td><strong style="font-family: monospace;">₹${emp.gross_pay.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                    <td><strong style="color: var(--accent-emerald); font-family: monospace;">₹${(emp.net_pay || emp.gross_pay).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                    <td><span class="badge badge-present">Compliant</span></td>
                 </tr>
-            `;
-        }).join("");
+            `).join("") || '<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);">No records found.</td></tr>';
+        } catch (e) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: var(--accent-rose); padding: 20px;">Error: ${e.message}</td></tr>`;
+        }
     }
 
     function exportPayroll(format) {
         const startDate = document.getElementById("payrollStartDate")?.value || "";
         const endDate = document.getElementById("payrollEndDate")?.value || "";
         const deptId = document.getElementById("payrollDeptFilter")?.value || "";
-        const role = document.getElementById("payrollRoleFilter")?.value || "";
         const search = document.getElementById("payrollSearchInput")?.value || "";
 
         let url = `/api/v1/payroll/export?export_format=${format}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
         if (deptId) url += `&department_id=${encodeURIComponent(deptId)}`;
-        if (role) url += `&user_role=${encodeURIComponent(role)}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
 
         window.location.href = url;
     }
 
-    function openRateModal(studentId, name, hourlyRate, monthlySalary, cadre) {
-        const modal = document.getElementById("editRateModal");
-        if (!modal) return;
-
-        document.getElementById("rateStudentId").value = studentId;
-        document.getElementById("rateEmployeeName").value = name;
-        document.getElementById("rateHourlyInput").value = hourlyRate || "";
-        document.getElementById("rateMonthlyInput").value = monthlySalary || "";
-        if (cadre && document.getElementById("rateCadreInput")) {
-            document.getElementById("rateCadreInput").value = cadre;
-        }
-
-        const alertBox = document.getElementById("rateResultAlert");
-        if (alertBox) alertBox.style.display = "none";
-
-        modal.classList.add("active");
+    function openPayrollSettingsModal() {
+        switchPayrollTab('masters');
     }
 
-    function closeRateModal() {
-        const modal = document.getElementById("editRateModal");
-        if (modal) modal.classList.remove("active");
-    }
-
-    async function submitRateUpdate(e) {
-        e.preventDefault();
-        const studentId = parseInt(document.getElementById("rateStudentId").value);
-        const hourly = document.getElementById("rateHourlyInput").value;
-        const monthly = document.getElementById("rateMonthlyInput").value;
-        const cadre = document.getElementById("rateCadreInput").value;
-
-        const saveBtn = document.getElementById("btnSaveRate");
-        const alertBox = document.getElementById("rateResultAlert");
-
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-
+    async function loadPayrollSettings() {
         try {
-            const res = await fetch("/api/v1/payroll/employee-rate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    student_id: studentId,
-                    hourly_rate: hourly ? parseFloat(hourly) : null,
-                    monthly_base_salary: monthly ? parseFloat(monthly) : null,
-                    cadre_level: cadre,
-                }),
-            });
+            const res = await fetch("/api/v1/payroll/settings");
             const data = await res.json();
-
-            if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-emerald-bg)";
-                alertBox.style.color = "var(--badge-emerald-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Employee rate updated successfully!';
-
-                setTimeout(() => {
-                    closeRateModal();
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Rate';
-                    loadPayrollSummary();
-                }, 600);
-            } else {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-rose-bg)";
-                alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Update failed.");
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Rate';
+            if (res.ok && data.data) {
+                const s = data.data;
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el && val !== undefined && val !== null) el.value = val;
+                };
+                setVal("cfgEpfEePct", s.epf_employee_pct);
+                setVal("cfgEpfErPct", s.epf_employer_pct);
+                setVal("cfgEpfCeiling", s.epf_wage_ceiling);
+                setVal("cfgPfCeilingToggle", s.enable_pf_ceiling ? "true" : "false");
+                setVal("cfgEsiEePct", s.esi_employee_pct);
+                setVal("cfgEsiErPct", s.esi_employer_pct);
+                setVal("cfgEsiThreshold", s.esi_gross_threshold);
+                setVal("cfgPtMonthly", s.pt_monthly_default);
+                setVal("cfgOtMultiplier", s.overtime_rate_multiplier);
+                setVal("cfgHolidayOtMultiplier", s.holiday_ot_multiplier);
             }
         } catch (e) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-rose-bg)";
-            alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Rate';
+            console.error("Failed to load statutory settings", e);
         }
     }
 
-    function openPayrollSettingsModal() {
-        const modal = document.getElementById("payrollSettingsModal");
-        if (!modal) return;
-
-        if (currentPayrollConfig) {
-            document.getElementById("cfgPayrollStructure").value = currentPayrollConfig.payroll_structure || "HOURLY";
-            document.getElementById("cfgDefaultHourlyRate").value = currentPayrollConfig.default_hourly_rate || 15.0;
-            document.getElementById("cfgStdDailyHours").value = currentPayrollConfig.standard_working_hours_per_day || 8.0;
-            document.getElementById("cfgEnableOvertime").value = currentPayrollConfig.enable_overtime ? "true" : "false";
-            document.getElementById("cfgOvertimeMultiplier").value = currentPayrollConfig.overtime_rate_multiplier || 1.5;
-            document.getElementById("cfgMissedCheckoutPolicy").value = currentPayrollConfig.missed_checkout_policy || "HALF_DAY";
-            document.getElementById("cfgCurrencySymbol").value = currentPayrollConfig.currency_symbol || "₹";
-        }
-
-        const alertBox = document.getElementById("payrollSettingsAlert");
-        if (alertBox) alertBox.style.display = "none";
-
-        modal.classList.add("active");
-    }
-
-    function closePayrollSettingsModal() {
-        const modal = document.getElementById("payrollSettingsModal");
-        if (modal) modal.classList.remove("active");
-    }
-
-    async function submitPayrollSettings(e) {
+    async function submitStatutorySettings(e) {
         e.preventDefault();
         const payload = {
-            payroll_structure: document.getElementById("cfgPayrollStructure").value,
-            default_hourly_rate: parseFloat(document.getElementById("cfgDefaultHourlyRate").value),
-            standard_working_hours_per_day: parseFloat(document.getElementById("cfgStdDailyHours").value),
-            enable_overtime: document.getElementById("cfgEnableOvertime").value === "true",
-            overtime_rate_multiplier: parseFloat(document.getElementById("cfgOvertimeMultiplier").value),
-            missed_checkout_policy: document.getElementById("cfgMissedCheckoutPolicy").value,
-            currency_symbol: document.getElementById("cfgCurrencySymbol").value.trim() || "₹",
+            epf_employee_pct: parseFloat(document.getElementById("cfgEpfEePct")?.value) || 12.0,
+            epf_employer_pct: parseFloat(document.getElementById("cfgEpfErPct")?.value) || 12.0,
+            epf_wage_ceiling: parseFloat(document.getElementById("cfgEpfCeiling")?.value) || 15000.0,
+            enable_pf_ceiling: document.getElementById("cfgPfCeilingToggle")?.value === "true",
+            esi_employee_pct: parseFloat(document.getElementById("cfgEsiEePct")?.value) || 0.75,
+            esi_employer_pct: parseFloat(document.getElementById("cfgEsiErPct")?.value) || 3.25,
+            esi_gross_threshold: parseFloat(document.getElementById("cfgEsiThreshold")?.value) || 21000.0,
+            pt_monthly_default: parseFloat(document.getElementById("cfgPtMonthly")?.value) || 200.0,
+            overtime_rate_multiplier: parseFloat(document.getElementById("cfgOtMultiplier")?.value) || 1.5,
+            holiday_ot_multiplier: parseFloat(document.getElementById("cfgHolidayOtMultiplier")?.value) || 2.0,
         };
 
-        const saveBtn = document.getElementById("btnSavePayrollSettings");
-        const alertBox = document.getElementById("payrollSettingsAlert");
+        const saveBtn = document.getElementById("btnSaveStatutorySettings");
+        const alertBox = document.getElementById("statutorySettingsAlert");
 
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        }
 
         try {
             const res = await fetch("/api/v1/payroll/settings", {
@@ -695,32 +2565,42 @@
             const data = await res.json();
 
             if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-emerald-bg)";
-                alertBox.style.color = "var(--badge-emerald-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Configuration saved successfully!';
-
+                if (alertBox) {
+                    alertBox.style.display = "inline-flex";
+                    alertBox.style.background = "var(--badge-emerald-bg)";
+                    alertBox.style.color = "var(--badge-emerald-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Settings updated successfully!");
+                }
                 setTimeout(() => {
-                    closePayrollSettingsModal();
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Configuration';
-                    loadPayrollSummary();
-                }, 600);
+                    if (alertBox) alertBox.style.display = "none";
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Statutory & OT Settings';
+                    }
+                }, 3000);
             } else {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-rose-bg)";
-                alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Failed to save settings.");
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Configuration';
+                if (alertBox) {
+                    alertBox.style.display = "inline-flex";
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Update failed.");
+                }
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Statutory & OT Settings';
+                }
             }
         } catch (e) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-rose-bg)";
-            alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Configuration';
+            if (alertBox) {
+                alertBox.style.display = "inline-flex";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            }
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Statutory & OT Settings';
+            }
         }
     }
 </script>

@@ -84,7 +84,6 @@ class TestCorporatePayrollAndDateRanges(unittest.TestCase):
                 department=dept.name if dept else "Engineering",
                 user_role="employee",
                 hourly_rate=25.0,
-                cadre_level="Senior Staff",
                 is_active=True,
             )
             db.add(emp)
@@ -187,7 +186,6 @@ class TestCorporatePayrollAndDateRanges(unittest.TestCase):
             "student_id": emp_id,
             "hourly_rate": 32.5,
             "monthly_base_salary": 4800.0,
-            "cadre_level": "Executive Cadre",
         })
         self.assertEqual(res_rate.status_code, 200)
 
@@ -196,7 +194,6 @@ class TestCorporatePayrollAndDateRanges(unittest.TestCase):
             updated_emp = db.query(Student).filter(Student.id == emp_id).first()
             self.assertEqual(updated_emp.hourly_rate, 32.5)
             self.assertEqual(updated_emp.monthly_base_salary, 4800.0)
-            self.assertEqual(updated_emp.cadre_level, "Executive Cadre")
 
         # 2. Update Payroll Configuration
         res_cfg = client.post("/api/v1/payroll/settings", json={
@@ -330,7 +327,7 @@ class TestCorporatePayrollAndDateRanges(unittest.TestCase):
 
         res_payroll = client.get("/payroll")
         self.assertEqual(res_payroll.status_code, 200)
-        self.assertIn("Corporate Payroll", res_payroll.text)
+        self.assertIn("Payroll management", res_payroll.text)
         self.assertIn("payrollStartDate", res_payroll.text)
 
         res_students = client.get("/students")

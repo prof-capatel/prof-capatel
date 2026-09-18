@@ -10,7 +10,22 @@ from sqlalchemy import or_
 from src.config import FACES_DIR
 from src.core.camera_utils import decode_image_bytes, evaluate_image_quality
 from src.core.face_engine import face_engine, FaceEngine
-from src.database.models import Student, FaceEncoding, Tenant, Department, ClassModel, Division, AcademicYear, AuditLog, User, WorkShift
+from src.database.models import (
+    Student,
+    FaceEncoding,
+    Tenant,
+    Department,
+    ClassModel,
+    Division,
+    AcademicYear,
+    AuditLog,
+    User,
+    WorkShift,
+    CompanyLocation,
+    DesignationMaster,
+    SalaryTemplate,
+    EmployeeSalaryStructure,
+)
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
 from src.server.rbac_middleware import check_tenant_operational_access, get_current_user_optional
@@ -33,9 +48,12 @@ class StudentCreate(BaseModel):
     class_semester: Optional[str] = "General"
     hourly_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
-    cadre_level: Optional[str] = None
     shift_id: Optional[int] = None
     date_of_joining: Optional[str] = None
+    location_id: Optional[int] = None
+    designation_id: Optional[int] = None
+    designation: Optional[str] = None
+    salary_template_id: Optional[int] = None
 
 
 class StudentUpdate(BaseModel):
@@ -52,9 +70,12 @@ class StudentUpdate(BaseModel):
     class_semester: Optional[str] = "General"
     hourly_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
-    cadre_level: Optional[str] = None
     shift_id: Optional[int] = None
     date_of_joining: Optional[str] = None
+    location_id: Optional[int] = None
+    designation_id: Optional[int] = None
+    designation: Optional[str] = None
+    salary_template_id: Optional[int] = None
 
 
 class StudentDepartmentTransferPayload(BaseModel):
@@ -230,6 +251,29 @@ def register_student(
             if any_shift:
                 chosen_shift_id = any_shift.id
 
+    # Resolve Location
+    loc_id = payload.location_id
+    if loc_id:
+        loc_obj = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == current_tenant.id, CompanyLocation.id == loc_id).first()
+        if not loc_obj:
+            loc_id = None
+
+    # Resolve Designation
+    desig_id = payload.designation_id
+    desig_title = payload.designation
+    desig_obj = None
+    if desig_id:
+        desig_obj = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == current_tenant.id, DesignationMaster.id == desig_id).first()
+        if desig_obj:
+            desig_title = desig_obj.title
+        else:
+            desig_id = None
+
+    # Resolve Salary Template (explicit > designation)
+    target_tpl_id = payload.salary_template_id
+    if not target_tpl_id and desig_obj and getattr(desig_obj, "salary_template_id", None):
+        target_tpl_id = desig_obj.salary_template_id
+
     student = Student(
         tenant_id=current_tenant.id,
         roll_number=clean_roll,
@@ -244,11 +288,66 @@ def register_student(
         user_role=chosen_role,
         hourly_rate=payload.hourly_rate,
         monthly_base_salary=payload.monthly_base_salary,
-        cadre_level=payload.cadre_level,
         shift_id=chosen_shift_id,
         date_of_joining=doj_val,
+        location_id=loc_id,
+        designation_id=desig_id,
+        designation=desig_title,
     )
     db.add(student)
+    db.flush()
+
+    if is_corporate and target_tpl_id:
+        tpl = db.query(SalaryTemplate).filter(SalaryTemplate.id == target_tpl_id, SalaryTemplate.tenant_id == current_tenant.id).first()
+        if tpl:
+            gross_val = float(payload.monthly_base_salary or 0.0)
+            hr_val = float(payload.hourly_rate or 0.0)
+            model_val = tpl.compensation_model
+
+            if model_val == "STRUCTURED_SALARY" and gross_val > 0:
+                basic_val = round(gross_val * (tpl.basic_percentage / 100.0), 2)
+                da_val = round(gross_val * (tpl.da_percentage / 100.0), 2)
+                hra_val = round(basic_val * (tpl.hra_percentage / 100.0), 2)
+                conv_allow = tpl.conveyance_fixed
+                med_allow = tpl.medical_fixed
+                specified = basic_val + da_val + hra_val + conv_allow + med_allow
+                special_allow = max(0.0, round(gross_val - specified, 2))
+            else:
+                basic_val = round(gross_val * 0.50, 2) if gross_val > 0 else 0.0
+                da_val = 0.0
+                hra_val = 0.0
+                conv_allow = 0.0
+                med_allow = 0.0
+                special_allow = 0.0
+
+            init_struct = EmployeeSalaryStructure(
+                tenant_id=current_tenant.id,
+                student_id=student.id,
+                template_id=tpl.id,
+                compensation_model=model_val,
+                annual_ctc=gross_val * 12.0,
+                monthly_gross=gross_val,
+                monthly_basic=basic_val,
+                monthly_da=da_val,
+                monthly_hra=hra_val,
+                conveyance_allowance=conv_allow,
+                medical_allowance=med_allow,
+                special_allowance=special_allow,
+                other_allowances=0.0,
+                hourly_rate=hr_val if hr_val > 0 else (round(gross_val / (26.0 * 8.0), 2) if gross_val > 0 else 0.0),
+                daily_rate=round(gross_val / 26.0, 2) if gross_val > 0 else 0.0,
+                fixed_stipend=gross_val if model_val == "STIPEND" else 0.0,
+                enable_pf=tpl.enable_pf,
+                pf_capped_at_ceiling=tpl.pf_capped_at_ceiling,
+                enable_esi=tpl.enable_esi,
+                enable_pt=tpl.enable_pt,
+                effective_from_date=doj_val or get_ist_now().date(),
+                effective_to_date=None,
+                is_current=True,
+                revision_reason="Initial Placement / Onboarding",
+            )
+            db.add(init_struct)
+
     db.commit()
     db.refresh(student)
 
@@ -379,9 +478,12 @@ async def batch_upload_enrollment(
     class_semester: Optional[str] = Form("General"),
     hourly_rate: Optional[float] = Form(None),
     monthly_base_salary: Optional[float] = Form(None),
-    cadre_level: Optional[str] = Form(None),
     shift_id: Optional[int] = Form(None),
     date_of_joining: Optional[str] = Form(None),
+    location_id: Optional[int] = Form(None),
+    designation_id: Optional[int] = Form(None),
+    designation: Optional[str] = Form(None),
+    salary_template_id: Optional[int] = Form(None),
     photo_front: UploadFile = File(...),
     photo_left: UploadFile = File(...),
     photo_right: UploadFile = File(...),
@@ -535,6 +637,29 @@ async def batch_upload_enrollment(
             if any_shift:
                 chosen_shift_id = any_shift.id
 
+    # Resolve Location
+    loc_id = location_id
+    if loc_id:
+        loc_obj = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == current_tenant.id, CompanyLocation.id == loc_id).first()
+        if not loc_obj:
+            loc_id = None
+
+    # Resolve Designation
+    desig_id = designation_id
+    desig_title = designation
+    desig_obj = None
+    if desig_id:
+        desig_obj = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == current_tenant.id, DesignationMaster.id == desig_id).first()
+        if desig_obj:
+            desig_title = desig_obj.title
+        else:
+            desig_id = None
+
+    # Resolve Salary Template (explicit > designation)
+    target_tpl_id = salary_template_id
+    if not target_tpl_id and desig_obj and getattr(desig_obj, "salary_template_id", None):
+        target_tpl_id = desig_obj.salary_template_id
+
     # Save Student
     student = Student(
         tenant_id=current_tenant.id,
@@ -550,9 +675,11 @@ async def batch_upload_enrollment(
         user_role=chosen_role,
         hourly_rate=hourly_rate,
         monthly_base_salary=monthly_base_salary,
-        cadre_level=cadre_level,
         shift_id=chosen_shift_id,
         date_of_joining=doj_val,
+        location_id=loc_id,
+        designation_id=desig_id,
+        designation=desig_title,
     )
     db.add(student)
     db.flush()
@@ -567,6 +694,57 @@ async def batch_upload_enrollment(
             tenant_id=current_tenant.id,
         )
         db.add(encoding_record)
+
+    if is_corporate and target_tpl_id:
+        tpl = db.query(SalaryTemplate).filter(SalaryTemplate.id == target_tpl_id, SalaryTemplate.tenant_id == current_tenant.id).first()
+        if tpl:
+            gross_val = float(monthly_base_salary or 0.0)
+            hr_val = float(hourly_rate or 0.0)
+            model_val = tpl.compensation_model
+
+            if model_val == "STRUCTURED_SALARY" and gross_val > 0:
+                basic_val = round(gross_val * (tpl.basic_percentage / 100.0), 2)
+                da_val = round(gross_val * (tpl.da_percentage / 100.0), 2)
+                hra_val = round(basic_val * (tpl.hra_percentage / 100.0), 2)
+                conv_allow = tpl.conveyance_fixed
+                med_allow = tpl.medical_fixed
+                specified = basic_val + da_val + hra_val + conv_allow + med_allow
+                special_allow = max(0.0, round(gross_val - specified, 2))
+            else:
+                basic_val = round(gross_val * 0.50, 2) if gross_val > 0 else 0.0
+                da_val = 0.0
+                hra_val = 0.0
+                conv_allow = 0.0
+                med_allow = 0.0
+                special_allow = 0.0
+
+            init_struct = EmployeeSalaryStructure(
+                tenant_id=current_tenant.id,
+                student_id=student.id,
+                template_id=tpl.id,
+                compensation_model=model_val,
+                annual_ctc=gross_val * 12.0,
+                monthly_gross=gross_val,
+                monthly_basic=basic_val,
+                monthly_da=da_val,
+                monthly_hra=hra_val,
+                conveyance_allowance=conv_allow,
+                medical_allowance=med_allow,
+                special_allowance=special_allow,
+                other_allowances=0.0,
+                hourly_rate=hr_val if hr_val > 0 else (round(gross_val / (26.0 * 8.0), 2) if gross_val > 0 else 0.0),
+                daily_rate=round(gross_val / 26.0, 2) if gross_val > 0 else 0.0,
+                fixed_stipend=gross_val if model_val == "STIPEND" else 0.0,
+                enable_pf=tpl.enable_pf,
+                pf_capped_at_ceiling=tpl.pf_capped_at_ceiling,
+                enable_esi=tpl.enable_esi,
+                enable_pt=tpl.enable_pt,
+                effective_from_date=doj_val or get_ist_now().date(),
+                effective_to_date=None,
+                is_current=True,
+                revision_reason="Initial Placement / Corporate Batch Onboarding",
+            )
+            db.add(init_struct)
 
     db.commit()
     db.refresh(student)
@@ -653,8 +831,6 @@ def update_student_profile(
         student.hourly_rate = payload.hourly_rate
     if payload.monthly_base_salary is not None:
         student.monthly_base_salary = payload.monthly_base_salary
-    if payload.cadre_level is not None:
-        student.cadre_level = payload.cadre_level
     if payload.shift_id is not None:
         if payload.shift_id > 0:
             s_obj = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.id == payload.shift_id).first()
@@ -670,6 +846,111 @@ def update_student_profile(
                 pass
         else:
             student.date_of_joining = None
+
+    fields_set = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
+
+    if "location_id" in fields_set:
+        if payload.location_id and payload.location_id > 0:
+            loc_obj = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == current_tenant.id, CompanyLocation.id == payload.location_id).first()
+            student.location_id = loc_obj.id if loc_obj else None
+        else:
+            student.location_id = None
+
+    if "designation_id" in fields_set:
+        if payload.designation_id and payload.designation_id > 0:
+            desig_obj = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == current_tenant.id, DesignationMaster.id == payload.designation_id).first()
+            if desig_obj:
+                student.designation_id = desig_obj.id
+                student.designation = desig_obj.title
+            else:
+                student.designation_id = None
+                student.designation = None
+        else:
+            student.designation_id = None
+            student.designation = None
+
+    if "designation" in fields_set and payload.designation is not None:
+        student.designation = payload.designation.strip()
+
+    is_corporate = (getattr(current_tenant, "tenant_type", "educational") == "corporate")
+    if is_corporate and ("salary_template_id" in fields_set or "designation_id" in fields_set or "monthly_base_salary" in fields_set or "hourly_rate" in fields_set):
+        target_tpl_id = payload.salary_template_id
+        if not target_tpl_id and "salary_template_id" not in fields_set:
+            if student.designation_id:
+                des_obj = db.query(DesignationMaster).filter(DesignationMaster.id == student.designation_id, DesignationMaster.tenant_id == current_tenant.id).first()
+                if des_obj and des_obj.salary_template_id:
+                    target_tpl_id = des_obj.salary_template_id
+            if not target_tpl_id:
+                existing_curr = db.query(EmployeeSalaryStructure).filter(
+                    EmployeeSalaryStructure.tenant_id == current_tenant.id,
+                    EmployeeSalaryStructure.student_id == student.id,
+                    EmployeeSalaryStructure.is_current == True,
+                ).first()
+                if existing_curr:
+                    target_tpl_id = existing_curr.template_id
+
+        if target_tpl_id and target_tpl_id > 0:
+            tpl = db.query(SalaryTemplate).filter(SalaryTemplate.id == target_tpl_id, SalaryTemplate.tenant_id == current_tenant.id).first()
+            if tpl:
+                gross_val = float(student.monthly_base_salary or 0.0)
+                hr_val = float(student.hourly_rate or 0.0)
+                model_val = tpl.compensation_model
+
+                if model_val == "STRUCTURED_SALARY" and gross_val > 0:
+                    basic_val = round(gross_val * (tpl.basic_percentage / 100.0), 2)
+                    da_val = round(gross_val * (tpl.da_percentage / 100.0), 2)
+                    hra_val = round(basic_val * (tpl.hra_percentage / 100.0), 2)
+                    conv_allow = tpl.conveyance_fixed
+                    med_allow = tpl.medical_fixed
+                    specified = basic_val + da_val + hra_val + conv_allow + med_allow
+                    special_allow = max(0.0, round(gross_val - specified, 2))
+                else:
+                    basic_val = round(gross_val * 0.50, 2) if gross_val > 0 else 0.0
+                    da_val = 0.0
+                    hra_val = 0.0
+                    conv_allow = 0.0
+                    med_allow = 0.0
+                    special_allow = 0.0
+
+                existing_struct = db.query(EmployeeSalaryStructure).filter(
+                    EmployeeSalaryStructure.tenant_id == current_tenant.id,
+                    EmployeeSalaryStructure.student_id == student.id,
+                    EmployeeSalaryStructure.is_current == True,
+                ).first()
+
+                eff_from = get_ist_now().date()
+                if existing_struct:
+                    existing_struct.is_current = False
+                    if not existing_struct.effective_to_date or existing_struct.effective_to_date >= eff_from:
+                        existing_struct.effective_to_date = eff_from
+
+                new_struct = EmployeeSalaryStructure(
+                    tenant_id=current_tenant.id,
+                    student_id=student.id,
+                    template_id=tpl.id,
+                    compensation_model=model_val,
+                    annual_ctc=gross_val * 12.0,
+                    monthly_gross=gross_val,
+                    monthly_basic=basic_val,
+                    monthly_da=da_val,
+                    monthly_hra=hra_val,
+                    conveyance_allowance=conv_allow,
+                    medical_allowance=med_allow,
+                    special_allowance=special_allow,
+                    other_allowances=0.0,
+                    hourly_rate=hr_val if hr_val > 0 else (round(gross_val / (26.0 * 8.0), 2) if gross_val > 0 else 0.0),
+                    daily_rate=round(gross_val / 26.0, 2) if gross_val > 0 else 0.0,
+                    fixed_stipend=gross_val if model_val == "STIPEND" else 0.0,
+                    enable_pf=tpl.enable_pf,
+                    pf_capped_at_ceiling=tpl.pf_capped_at_ceiling,
+                    enable_esi=tpl.enable_esi,
+                    enable_pt=tpl.enable_pt,
+                    effective_from_date=eff_from,
+                    effective_to_date=None,
+                    is_current=True,
+                    revision_reason="Profile Update / Template Assignment",
+                )
+                db.add(new_struct)
 
     db.commit()
     db.refresh(student)

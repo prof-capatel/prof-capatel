@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title or 'Employee Salary Slip' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4338ca;
+            --primary-dark: #312e81;
+            --primary-light: #e0e7ff;
+            --success: #059669;
+            --danger: #dc2626;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --bg-page: #f1f5f9;
+            --bg-card: #ffffff;
+            --border-color: #cbd5e1;
+            --border-dark: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .no-print-bar {
+            width: 100%;
+            max-width: 850px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 14px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .no-print-bar .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: #ffffff;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn-outline:hover {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        /* Payslip Sheet Canvas */
+        .payslip-sheet {
+            width: 100%;
+            max-width: 850px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-dark);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            padding: 32px;
+            position: relative;
+        }
+
+        /* Header */
+        .header-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 18px;
+            margin-bottom: 20px;
+        }
+
+        .company-meta h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+
+        .company-meta p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .slip-title-box {
+            text-align: right;
+        }
+
+        .slip-badge {
+            display: inline-block;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .period-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .batch-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Employee Details Grid */
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .details-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-row {
+            display: flex;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .detail-label {
+            width: 140px;
+            color: var(--text-muted);
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* Attendance Metrics Bar */
+        .attendance-bar {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .att-item .label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .att-item .val {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Earnings & Deductions Tables */
+        .salary-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border: 1px solid var(--border-dark);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .breakdown-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .breakdown-column:first-child {
+            border-right: 1px solid var(--border-dark);
+        }
+
+        .col-header {
+            background: #1e293b;
+            color: #ffffff;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        .comp-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 14px;
+            font-size: 13px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .comp-row:last-child {
+            border-bottom: none;
+        }
+
+        .comp-name {
+            color: #334155;
+            font-weight: 500;
+        }
+
+        .comp-amt {
+            font-weight: 600;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .col-footer {
+            background: #f1f5f9;
+            border-top: 1px solid var(--border-dark);
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .col-footer .total-amt {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--primary-dark);
+        }
+
+        /* Net Pay Banner */
+        .net-pay-box {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .net-pay-left .label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #a5b4fc;
+            margin-bottom: 4px;
+        }
+
+        .net-pay-left .words {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f8fafc;
+            font-style: italic;
+        }
+
+        .net-pay-right {
+            text-align: right;
+        }
+
+        .net-pay-right .amount {
+            font-size: 26px;
+            font-weight: 800;
+            color: #34d399;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .net-pay-right .status {
+            font-size: 12px;
+            color: #c7d2fe;
+            margin-top: 2px;
+        }
+
+        /* Employer Contribution & Note */
+        .employer-statutory-note {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .employer-statutory-note strong {
+            color: var(--text-main);
+        }
+
+        /* Signature Row */
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 40px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 20px;
+        }
+
+        .sig-block {
+            text-align: center;
+            width: 220px;
+        }
+
+        .sig-line {
+            border-top: 1px dashed var(--border-dark);
+            margin-bottom: 8px;
+        }
+
+        .sig-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .confidential-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        /* Print Media Styles */
+        @media print {
+            body {
+                background: #ffffff;
+                padding: 0;
+            }
+
+            .no-print-bar {
+                display: none !important;
+            }
+
+            .payslip-sheet {
+                box-shadow: none;
+                border: 1px solid #64748b;
+                padding: 20px;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Action Bar (Hidden on Print) -->
+    <div class="no-print-bar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <a href="/payroll" class="btn btn-outline"><i class="fa-solid fa-arrow-left"></i> Back to Payroll</a>
+            <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">
+                Generated on {{ payslip.created_at or 'IST' }}
+            </span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="fa-solid fa-print"></i> Print Payslip / Save PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Printable Payslip Sheet -->
+    <div class="payslip-sheet">
+        
+        <!-- Header Banner -->
+        <div class="header-box">
+            <div class="company-meta">
+                <h1>{{ branding.institution_name or current_tenant.name }}</h1>
+                <p>{{ branding.tagline or 'Corporate Workforce Management' }}</p>
+                <p>Location / Base: {{ employee.location_name or 'Corporate Head Office' }}</p>
+            </div>
+            <div class="slip-title-box">
+                <div class="slip-badge">Payslip for the Period</div>
+                <div class="period-text">{{ payslip.period_label }}</div>
+                <div class="batch-text">Batch: {{ payslip.batch_number }}</div>
+            </div>
+        </div>
+
+        <!-- Employee Metadata Grid -->
+        <div class="details-grid">
+            <div class="details-col">
+                <div class="detail-row">
+                    <span class="detail-label">Employee Code:</span>
+                    <span class="detail-value" style="font-family: 'JetBrains Mono'; color: var(--primary);">{{ employee.roll_number or payslip.roll_number }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Employee Name:</span>
+                    <span class="detail-value">{{ employee.name or payslip.student_name }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Department:</span>
+                    <span class="detail-value">{{ employee.department or payslip.department or 'General' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Designation:</span>
+                    <span class="detail-value">{{ payslip.designation or employee.designation or 'Staff' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date of Joining:</span>
+                    <span class="detail-value">{{ employee.date_of_joining or 'N/A' }}</span>
+                </div>
+            </div>
+            <div class="details-col">
+                <div class="detail-row">
+                    <span class="detail-label">PAN Number:</span>
+                    <span class="detail-value">{{ employee.pan_number or payslip.pan_number or 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">UAN (PF):</span>
+                    <span class="detail-value">{{ employee.uan_number or payslip.uan_number or 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">ESIC No:</span>
+                    <span class="detail-value">{{ employee.esic_number or payslip.esic_number or 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Bank Name:</span>
+                    <span class="detail-value">{{ employee.bank_name or payslip.bank_name or 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Bank A/C & IFSC:</span>
+                    <span class="detail-value">
+                        {{ employee.bank_account_number or payslip.bank_account_number or 'N/A' }} 
+                        {% if employee.bank_ifsc_code or payslip.bank_ifsc_code %}
+                            ({{ employee.bank_ifsc_code or payslip.bank_ifsc_code }})
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Summary -->
+        <div class="attendance-bar">
+            <div class="att-item">
+                <div class="label">Total Days</div>
+                <div class="val">{{ payslip.calendar_days }}</div>
+            </div>
+            <div class="att-item">
+                <div class="label">Working Days</div>
+                <div class="val">{{ "%.1f"|format(payslip.working_days) }}</div>
+            </div>
+            <div class="att-item">
+                <div class="label">Present Days</div>
+                <div class="val" style="color: var(--success);">{{ "%.1f"|format(payslip.present_days) }}</div>
+            </div>
+            <div class="att-item">
+                <div class="label">Paid Leaves</div>
+                <div class="val">{{ "%.1f"|format(payslip.paid_leave_days) }}</div>
+            </div>
+            <div class="att-item">
+                <div class="label">Loss of Pay (LWP)</div>
+                <div class="val" style="color: var(--danger);">{{ "%.1f"|format(payslip.unpaid_leave_days + payslip.absent_days) }}</div>
+            </div>
+            <div class="att-item">
+                <div class="label">Overtime Hrs</div>
+                <div class="val">{{ "%.2f"|format(payslip.regular_ot_hours + payslip.holiday_ot_hours) }}</div>
+            </div>
+        </div>
+
+        <!-- 2-Column Earnings & Deductions Breakdown -->
+        <div class="salary-breakdown">
+            
+            <!-- Earnings Column -->
+            <div class="breakdown-column">
+                <div class="col-header">
+                    <span>Earnings Component</span>
+                    <span>Amount (₹)</span>
+                </div>
+                <div class="table-body">
+                    <div class="comp-row">
+                        <span class="comp-name">Basic Pay</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.basic_earned) }}</span>
+                    </div>
+                    {% if payslip.da_earned > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Dearness Allowance (DA)</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.da_earned) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.hra_earned > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">House Rent Allowance (HRA)</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.hra_earned) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.conveyance_earned > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Conveyance Allowance</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.conveyance_earned) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.medical_earned > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Medical Allowance</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.medical_earned) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.special_allowance_earned > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Special Allowance</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.special_allowance_earned) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.ot_earnings > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Overtime Pay (OT)</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.ot_earnings) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.incentives_bonus > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Performance Bonus / Incentives</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.incentives_bonus) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.other_earnings > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Other Allowances</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.other_earnings) }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-footer">
+                    <span>Gross Earnings (A)</span>
+                    <span class="total-amt">₹ {{ "{:,.2f}".format(payslip.gross_earnings) }}</span>
+                </div>
+            </div>
+
+            <!-- Deductions Column -->
+            <div class="breakdown-column">
+                <div class="col-header">
+                    <span>Deduction Component</span>
+                    <span>Amount (₹)</span>
+                </div>
+                <div class="table-body">
+                    {% if payslip.epf_employee > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Employee PF (EPF 12%)</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.epf_employee) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.esic_employee > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Employee ESIC (0.75%)</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.esic_employee) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.professional_tax > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Professional Tax (PT)</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.professional_tax) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.tds_deduction > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">TDS / Income Tax</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.tds_deduction) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.advance_loan_deduction > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Advance / Loan Recovery</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.advance_loan_deduction) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.other_deductions > 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name">Other Deductions</span>
+                        <span class="comp-amt">₹ {{ "{:,.2f}".format(payslip.other_deductions) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if payslip.total_deductions == 0 %}
+                    <div class="comp-row">
+                        <span class="comp-name" style="color: var(--text-muted); font-style: italic;">No statutory deductions applicable</span>
+                        <span class="comp-amt">₹ 0.00</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-footer">
+                    <span>Total Deductions (B)</span>
+                    <span class="total-amt" style="color: var(--danger);">₹ {{ "{:,.2f}".format(payslip.total_deductions) }}</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Net Take-Home Pay Banner -->
+        <div class="net-pay-box">
+            <div class="net-pay-left">
+                <div class="label">Net Take-Home Salary (A - B)</div>
+                <div class="words">{{ net_in_words }}</div>
+            </div>
+            <div class="net-pay-right">
+                <div class="amount">₹ {{ "{:,.2f}".format(payslip.net_salary) }}</div>
+                <div class="status">Mode: {{ payslip.payment_method }} • Status: {{ payslip.payment_status }}</div>
+            </div>
+        </div>
+
+        <!-- Employer Contribution Transparency Footer -->
+        <div class="employer-statutory-note">
+            <div>
+                <strong>Employer Statutory Contribution:</strong> 
+                EPF: ₹ {{ "{:,.2f}".format(payslip.epf_employer + payslip.eps_employer) }} | 
+                ESIC: ₹ {{ "{:,.2f}".format(payslip.esic_employer) }} | 
+                Total Monthly CTC: ₹ {{ "{:,.2f}".format(payslip.employer_total_ctc_outlay) }}
+            </div>
+        </div>
+
+        <!-- Signatures Block -->
+        <div class="signature-row">
+            <div class="sig-block">
+                <div class="sig-line"></div>
+                <div class="sig-title">Employee Signature</div>
+            </div>
+            <div class="sig-block">
+                <div class="sig-line"></div>
+                <div class="sig-title">Authorized Signatory</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">{{ branding.institution_name or current_tenant.name }}</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="confidential-footer">
+            This is a system generated salary slip and requires no physical seal if verified electronically. Confidential and for internal personnel use only.
+        </div>
+
+    </div>
+
+</body>
+</html>

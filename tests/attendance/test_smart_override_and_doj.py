@@ -108,8 +108,8 @@ class TestSmartOverrideAndDOJ(unittest.TestCase):
         self.assertEqual(res_st1.json()["next_action"], "CHECK_IN")
 
         # 2. Perform first manual override (AUTO) -> Should Check-In
-        now_ist = get_ist_now()
-        ts_in_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
+        today_date = get_ist_date()
+        ts_in_str = f"{today_date.strftime('%Y-%m-%d')} 09:30:00"
         res_ov1 = self.client.post("/api/v1/attendance/manual-override", json={
             "student_id": student_id,
             "punch_type": "AUTO",
@@ -121,13 +121,13 @@ class TestSmartOverrideAndDOJ(unittest.TestCase):
         self.assertIn("Check-In", res_ov1.json()["message"])
 
         # 3. Query employee status -> CHECKED_IN
-        res_st2 = self.client.get(f"/api/v1/attendance/employee-status/{student_id}")
+        res_st2 = self.client.get(f"/api/v1/attendance/employee-status/{student_id}?date={today_date.strftime('%Y-%m-%d')}")
         self.assertEqual(res_st2.status_code, 200)
         self.assertEqual(res_st2.json()["status"], "CHECKED_IN")
         self.assertEqual(res_st2.json()["next_action"], "CHECK_OUT")
 
         # 4. Perform second manual override (AUTO) after simulated shift time -> Should Check-Out
-        ts_out_str = (now_ist + timedelta(hours=8, minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+        ts_out_str = f"{today_date.strftime('%Y-%m-%d')} 18:00:00"
         res_ov2 = self.client.post("/api/v1/attendance/manual-override", json={
             "student_id": student_id,
             "punch_type": "AUTO",

@@ -23,10 +23,13 @@ from src.database.models import (
     LeaveBalance,
     LeaveRequest,
     SystemBranding,
+    PayrollPayslip,
+    EmployeeSalaryStructure,
 )
 from src.database.session import get_db, SessionLocal
 from src.server.tenant_middleware import resolve_tenant
 from src.server.routes.api_leave import get_or_create_leave_balance
+from src.core.payroll_engine import number_to_words_inr
 from src.utils.timezone import get_ist_now
 
 logger = logging.getLogger("api_employee_portal")
@@ -636,3 +639,110 @@ def cancel_pending_leave_request(
         "request": req.to_dict(),
         "updated_balance": balance.to_dict() if balance else None,
     }
+
+
+# --------------------------------------------------------------------------
+# Employee Payslips & Compensation Details
+# --------------------------------------------------------------------------
+
+@router.get("/payslips")
+def get_employee_payslips(
+    year: Optional[int] = None,
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns list of monthly itemized payslips generated for this employee.
+    """
+    query = (
+        db.query(PayrollPayslip)
+        .filter(
+            PayrollPayslip.tenant_id == student.tenant_id,
+            PayrollPayslip.student_id == student.id,
+        )
+    )
+    if year:
+        query = query.filter(PayrollPayslip.period_year == year)
+
+    payslips = query.order_by(PayrollPayslip.period_year.desc(), PayrollPayslip.period_month.desc()).all()
+    return {
+        "status": "success",
+        "payslips": [p.to_dict() for p in payslips],
+        "count": len(payslips),
+    }
+
+
+@router.get("/payslips/{payslip_id}")
+def get_employee_payslip_detail(
+    payslip_id: int,
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns full details of an individual itemized payslip for this employee.
+    """
+    payslip = (
+        db.query(PayrollPayslip)
+        .filter(
+            PayrollPayslip.id == payslip_id,
+            PayrollPayslip.tenant_id == student.tenant_id,
+            PayrollPayslip.student_id == student.id,
+        )
+        .first()
+    )
+    if not payslip:
+        raise HTTPException(status_code=404, detail="Payslip not found.")
+
+    data = payslip.to_dict()
+    data["net_in_words"] = number_to_words_inr(payslip.net_salary)
+    branding_dict = student.tenant.branding.to_dict() if (student.tenant and student.tenant.branding) else {}
+    data["company_name"] = branding_dict.get("institution_name") or (student.tenant.name if student.tenant else "")
+    data["company_logo"] = branding_dict.get("logo_url") or ""
+    data["currency_symbol"] = branding_dict.get("currency_symbol") or "₹"
+    return {"status": "success", "data": data}
+
+
+@router.get("/compensation")
+def get_employee_compensation(
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns active compensation structure, CTC breakdown, and statutory enrollment details.
+    """
+    current_structure = (
+        db.query(EmployeeSalaryStructure)
+        .filter(
+            EmployeeSalaryStructure.tenant_id == student.tenant_id,
+            EmployeeSalaryStructure.student_id == student.id,
+            EmployeeSalaryStructure.is_current == True,
+        )
+        .first()
+    )
+
+    branding = student.tenant.branding if (student.tenant and student.tenant.branding) else None
+    currency = branding.currency_symbol if branding and branding.currency_symbol else "₹"
+
+    return {
+        "status": "success",
+        "currency": currency,
+        "employee": {
+            "name": student.name,
+            "roll_number": student.roll_number,
+            "department": student.department or (student.department_rel.name if student.department_rel else "General"),
+            "designation": student.designation or (student.designation_rel.title if student.designation_rel else "Staff"),
+            "pan_number": student.pan_number or "",
+            "uan_number": student.uan_number or "",
+            "esic_number": student.esic_number or "",
+            "bank_name": student.bank_name or "",
+            "bank_account_number": student.bank_account_number or "",
+            "bank_ifsc_code": student.bank_ifsc_code or "",
+        },
+        "structure": current_structure.to_dict() if current_structure else {
+            "compensation_model": "HOURLY" if student.hourly_rate else "MONTHLY_FIXED",
+            "monthly_gross": float(student.monthly_base_salary or 0.0),
+            "hourly_rate": float(student.hourly_rate or 0.0),
+            "annual_ctc": float(student.monthly_base_salary or 0.0) * 12.0,
+        },
+    }
+

@@ -13,7 +13,6 @@ __pycache__/
 # Data artifacts, snapshots & runtime face crops
 data/snapshots/
 data/crops/
-data/faces/
 graphify-out/
 scratch/
 .DS_Store
@@ -24,9 +23,5 @@ scratch/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-
-# Database backups and dumps
-database/backups/
-*.sql
 
 

@@ -5,266 +5,713 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-<!-- Settings Header -->
-<div style="margin-bottom: 24px;">
-    <h3 style="font-size: 20px; font-weight: 800; color: var(--text-heading); display: flex; align-items: center; gap: 10px;">
-        <i class="fa-solid fa-gear" style="color: var(--accent-primary);"></i>
-        <span>System Settings & Institutional Branding</span>
-    </h3>
+<!-- Primary Tab Navigation Bar -->
+<div class="settings-tab-nav" style="display: flex; gap: 6px; border-bottom: 2px solid var(--border-color); margin-bottom: 24px; overflow-x: auto; padding-bottom: 2px;">
+    <button type="button" class="tab-btn active" id="tabBtnBranding" onclick="switchSettingsTab('branding')">
+        <i class="fa-solid fa-building-columns"></i>
+        <span>Organization Settings</span>
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnThemes" onclick="switchSettingsTab('themes')">
+        <i class="fa-solid fa-palette"></i>
+        <span>Themes & Appearance</span>
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnDepartments" onclick="switchSettingsTab('departments')">
+        <i class="fa-solid fa-diagram-project"></i>
+        <span>Departments & Teams</span>
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnShifts" onclick="switchSettingsTab('shifts')">
+        <i class="fa-solid fa-clock"></i>
+        <span>Shifts & Rules</span>
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnSecurity" onclick="switchSettingsTab('security')">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Attendance & Security</span>
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnGeofencing" onclick="switchSettingsTab('geofencing')">
+        <i class="fa-solid fa-location-dot"></i>
+        <span>Geofencing & Portals</span>
+    </button>
 </div>
 
-<!-- Section 1: Institutional White-Labeling & Branding -->
-<div class="card" style="margin-bottom: 28px;">
-    <div class="card-header">
-        <div>
-            <h3>
-                <i class="fa-solid fa-building-columns" style="color: var(--accent-primary);"></i>
-                <span>Institutional Profile & White-Labeling</span>
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Personalize the organization name, acronym, logo, and theme accent displayed on all web portals and audit reports.
-            </p>
-        </div>
-        <span class="badge badge-sky" style="font-size: 12px;">
-            <i class="fa-solid fa-shield-halved"></i> Institutional Master
-        </span>
-    </div>
-    <div class="card-body">
-        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px;">
-            <!-- Branding Text Details Form -->
-            <form id="brandingForm" onsubmit="saveBrandingDetails(event)">
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
-                    <div class="form-group">
-                        <label class="form-label">Institution / Organization Name *</label>
-                        <input type="text" id="brandInstName" class="form-control" value="{{ branding.institution_name if branding else 'FaceAttendance Campus' }}" placeholder="e.g. Tata Consultancy Services / Infosys Ltd" required oninput="updateBrandingLivePreview()">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Acronym / Code *</label>
-                        <input type="text" id="brandShortCode" class="form-control" value="{{ branding.short_code if branding else 'FA-HUB' }}" placeholder="e.g. TCS-MUM" required oninput="updateBrandingLivePreview()">
-                    </div>
-                </div>
+<style>
+    .settings-tab-nav .tab-btn {
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 10px 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+    }
+    .settings-tab-nav .tab-btn:hover {
+        color: var(--text-heading);
+        background: var(--bg-subtle);
+    }
+    .settings-tab-nav .tab-btn.active {
+        color: var(--accent-primary);
+        border-bottom-color: var(--accent-primary);
+        font-weight: 700;
+        background: var(--bg-subtle);
+    }
+    .settings-tab-pane {
+        display: none;
+    }
+    .settings-tab-pane.active {
+        display: block;
+        animation: fadeInTab 0.25s ease-out;
+    }
+    @keyframes fadeInTab {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 
-                <div class="form-group">
-                    <label class="form-label">Portal Tagline / Subtitle</label>
-                    <input type="text" id="brandTagline" class="form-control" value="{{ branding.tagline if branding else 'Raspberry Pi Zero Edge Nodes & Central Face Recognition' }}" placeholder="e.g. Corporate Delivery Unit & Cloud Infrastructure" oninput="updateBrandingLivePreview()">
-                </div>
+<!-- ========================================================================= -->
+<!-- MAIN SETTINGS FORM WRAPPER                                               -->
+<!-- ========================================================================= -->
+<form id="brandingForm" onsubmit="saveBrandingDetails(event)">
+    <input type="hidden" id="brandLivenessMode" value="{{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }}">
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                    <div class="form-group">
-                        <label class="form-label">Header Badge Label</label>
-                        <input type="text" id="brandBadgeText" class="form-control" value="{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}" placeholder="e.g. Bengaluru Corporate Office" oninput="updateBrandingLivePreview()">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Contact / Admin Email</label>
-                        <input type="email" id="brandContactEmail" class="form-control" value="{{ branding.contact_email if branding and branding.contact_email else '' }}" placeholder="admin@company.co.in">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Brand Primary Accent Color</label>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <input type="color" id="brandAccentColorPicker" value="{{ branding.primary_accent_color if branding and branding.primary_accent_color else '#6366f1' }}" style="width: 44px; height: 38px; border-radius: var(--radius-xs); border: 1px solid var(--border-color); cursor: pointer; background: transparent; padding: 2px;" oninput="syncColorInput(this.value)">
-                        <input type="text" id="brandAccentColorText" class="form-control" style="font-family: monospace; max-width: 140px;" value="{{ branding.primary_accent_color if branding and branding.primary_accent_color else '#6366f1' }}" oninput="syncColorPicker(this.value)">
-                        <button type="button" class="btn btn-secondary" onclick="resetBrandColor()" style="font-size: 12px; padding: 8px 12px;">
-                            Reset Color
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Configurable Institutional Cooldown Period -->
-                <div class="form-group" style="padding: 16px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                        <label class="form-label" style="margin-bottom: 0; font-weight: 700; color: var(--text-heading); font-size: 13.5px;">
-                            <i class="fa-solid fa-hourglass-half" style="color: var(--accent-primary);"></i> Attendance Check-In Cooldown Window
-                        </label>
-                        <span id="cooldownLabel" style="font-size: 12px; font-weight: 800; color: var(--accent-primary); background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); padding: 3px 10px; border-radius: 20px;">
-                            {{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Minutes ({{ "%.1f"|format((branding.cooldown_minutes if branding and branding.cooldown_minutes else 60)/60) }} Hours)
-                        </span>
-                    </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-                        Prevents duplicate attendance logging within this sliding time window across all campus edge nodes and mobile cameras.
+    <!-- ========================================================================= -->
+    <!-- TAB 1: ORGANIZATION SETTINGS                                             -->
+    <!-- ========================================================================= -->
+    <div id="tabContentBranding" class="settings-tab-pane active">
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <div>
+                    <h3>
+                        <i class="fa-solid fa-building-columns" style="color: var(--accent-primary);"></i>
+                        <span>Institutional Profile & White-Labeling</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Personalize the organization name, acronym, logo, and theme accent displayed on all web portals and audit reports.
                     </p>
-                    <div style="display: flex; align-items: center; gap: 14px;">
-                        <input type="range" id="cooldownSlider" min="1" max="720" step="1" value="{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }}" style="flex: 1; accent-color: var(--accent-primary);" oninput="updateCooldownDisplay(this.value)">
-                        <input type="number" id="brandCooldownMinutes" class="form-control" style="width: 90px; text-align: center; font-weight: 700;" min="1" max="1440" value="{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }}" oninput="updateCooldownFromInput(this.value)">
-                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Mins</span>
+                </div>
+                <span class="badge badge-sky" style="font-size: 12px;">
+                    <i class="fa-solid fa-shield-halved"></i> Institutional Master
+                </span>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px;">
+                    <!-- Branding Text Details -->
+                    <div>
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
+                            <div class="form-group">
+                                <label class="form-label">Institution / Organization Name *</label>
+                                <input type="text" id="brandInstName" class="form-control" value="{{ branding.institution_name if branding else 'FaceAttendance Campus' }}" placeholder="e.g. Tata Consultancy Services / Infosys Ltd" required oninput="updateBrandingLivePreview()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Acronym / Code *</label>
+                                <input type="text" id="brandShortCode" class="form-control" value="{{ branding.short_code if branding else 'FA-HUB' }}" placeholder="e.g. TCS-MUM" required oninput="updateBrandingLivePreview()">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Portal Tagline / Subtitle</label>
+                            <input type="text" id="brandTagline" class="form-control" value="{{ branding.tagline if branding else 'Raspberry Pi Zero Edge Nodes & Central Face Recognition' }}" placeholder="e.g. Corporate Delivery Unit & Cloud Infrastructure" oninput="updateBrandingLivePreview()">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                            <div class="form-group">
+                                <label class="form-label">Header Badge Label</label>
+                                <input type="text" id="brandBadgeText" class="form-control" value="{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}" placeholder="e.g. Bengaluru Corporate Office" oninput="updateBrandingLivePreview()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Contact / Admin Email</label>
+                                <input type="email" id="brandContactEmail" class="form-control" value="{{ branding.contact_email if branding and branding.contact_email else '' }}" placeholder="admin@company.co.in">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Brand Primary Accent Color</label>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <input type="color" id="brandAccentColorPicker" value="{{ branding.primary_accent_color if branding and branding.primary_accent_color else '#6366f1' }}" style="width: 44px; height: 38px; border-radius: var(--radius-xs); border: 1px solid var(--border-color); cursor: pointer; background: transparent; padding: 2px;" oninput="syncColorInput(this.value)">
+                                <input type="text" id="brandAccentColorText" class="form-control" style="font-family: monospace; max-width: 140px;" value="{{ branding.primary_accent_color if branding and branding.primary_accent_color else '#6366f1' }}" oninput="syncColorPicker(this.value)">
+                                <button type="button" class="btn btn-secondary" onclick="resetBrandColor()" style="font-size: 12px; padding: 8px 12px;">
+                                    Reset Color
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Organization Settings
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px;">
-                        <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(1)">1 Min (Testing)</button>
-                        <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(15)">15 Mins</button>
-                        <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(60)">1 Hour</button>
-                        <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(720)">12 Hours</button>
+
+                    <!-- Logo Upload & Live Preview Simulation -->
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                            <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                <span><i class="fa-solid fa-image" style="color: var(--accent-primary);"></i> Institute Logo</span>
+                                {% if branding and branding.logo_url %}
+                                <button type="button" onclick="resetInstituteLogo()" class="btn btn-danger" style="font-size: 11px; padding: 4px 8px;">
+                                    <i class="fa-solid fa-trash"></i> Remove Logo
+                                </button>
+                                {% endif %}
+                            </div>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                                Recommended: Square PNG, SVG, or JPG with transparent background (max 5MB).
+                            </p>
+
+                            <!-- Drag & Drop Upload Zone -->
+                            <div id="logoDropzone" class="upload-dropzone" onclick="document.getElementById('logoFileInput').click()" style="padding: 24px 16px; border: 2px dashed var(--border-hover); border-radius: var(--radius-sm); background: var(--bg-card); text-align: center; cursor: pointer; transition: all 0.2s;">
+                                <input type="file" id="logoFileInput" accept=".png, .jpg, .jpeg, .svg, .webp" style="display: none;" onchange="handleLogoFileSelect(event)">
+                                <div id="logoPreviewContainer" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                    {% if branding and branding.logo_url %}
+                                    <img id="logoPreviewImg" src="{{ branding.logo_url }}" alt="Logo" style="width: 64px; height: 64px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); padding: 4px;">
+                                    <span style="font-size: 12px; font-weight: 600; color: var(--text-heading);">Click or drag new image to replace</span>
+                                    {% else %}
+                                    <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--badge-indigo-bg); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    </div>
+                                    <span style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Click or Drag Logo File Here</span>
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">PNG, SVG, JPG, WebP up to 5MB</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div id="logoUploadAlert" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                        </div>
+
+                        <!-- Live Header Preview Simulation -->
+                        <div style="padding: 16px; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Live Navbar Simulation</span>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <div id="livePreviewIcon" style="width: 38px; height: 38px; border-radius: var(--radius-xs); background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; flex-shrink: 0;">
+                                    {% if branding and branding.logo_url %}
+                                    <img src="{{ branding.logo_url }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: inherit;">
+                                    {% else %}
+                                    <i class="fa-solid fa-graduation-cap"></i>
+                                    {% endif %}
+                                </div>
+                                <div style="overflow: hidden;">
+                                    <div id="livePreviewName" style="font-size: 14px; font-weight: 800; color: var(--text-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ branding.institution_name if branding else 'FaceAttendance Campus' }}</div>
+                                    <div id="livePreviewBadge" style="font-size: 11px; color: var(--accent-primary); font-weight: 700;">{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: THEMES & APPEARANCE                                               -->
+    <!-- ========================================================================= -->
+    <div id="tabContentThemes" class="settings-tab-pane">
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <div>
+                    <h3>
+                        <i class="fa-solid fa-palette" style="color: var(--accent-primary);"></i>
+                        <span>Visual Theme Personalization</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Select your preferred visual environment. Themes sync instantly across all pages and persist automatically.
+                    </p>
+                </div>
+                <span id="activeThemeBadge" class="badge badge-present" style="font-size: 12px;">
+                    <i class="fa-solid fa-circle-check"></i> Active: Clean Light
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="theme-card-grid">
+                    <!-- Theme 1: Clean Minimalist Light -->
+                    <div id="themeCardLight" class="theme-card" onclick="setAppTheme('light')">
+                        <div>
+                            <div class="theme-card-header">
+                                <h4>
+                                    <i class="fa-solid fa-sun" style="color: #6366f1;"></i>
+                                    <span>Clean Minimalist Light</span>
+                                </h4>
+                                <div class="theme-card-check">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                            </div>
+
+                            <div class="theme-preview-box light-preview">
+                                <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                                <div class="theme-preview-body">
+                                    <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                                    <div class="theme-preview-content" style="background: #ffffff; border: 1px solid #e2e8f0;">
+                                        <div style="height: 6px; width: 60%; background: #6366f1; border-radius: 3px;"></div>
+                                        <div style="height: 4px; width: 90%; background: #cbd5e1; border-radius: 2px;"></div>
+                                        <div style="height: 4px; width: 40%; background: #10b981; border-radius: 2px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                                Crisp off-white surfaces, modern indigo gradients, and high ambient clarity for daylight institutional workflows.
+                            </p>
+                        </div>
+
+                        <div class="theme-swatches-row">
+                            <span class="theme-swatch" style="background: #f8fafc;" title="Background: Slate-50"></span>
+                            <span class="theme-swatch" style="background: #ffffff;" title="Card: Pure White"></span>
+                            <span class="theme-swatch" style="background: #6366f1;" title="Accent: Vibrant Indigo"></span>
+                            <span class="theme-swatch" style="background: #0ea5e9;" title="Accent: Cyan"></span>
+                            <span class="theme-swatch" style="background: #10b981;" title="Accent: Emerald"></span>
+                        </div>
+                    </div>
+
+                    <!-- Theme 2: Executive Midnight Dark -->
+                    <div id="themeCardDark" class="theme-card" onclick="setAppTheme('dark')">
+                        <div>
+                            <div class="theme-card-header">
+                                <h4>
+                                    <i class="fa-solid fa-moon" style="color: #38bdf8;"></i>
+                                    <span>Executive Midnight Dark</span>
+                                </h4>
+                                <div class="theme-card-check">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                            </div>
+
+                            <div class="theme-preview-box dark-preview">
+                                <div class="theme-preview-nav" style="background: #0f172a; border: 1px solid #1e293b;"></div>
+                                <div class="theme-preview-body">
+                                    <div class="theme-preview-sidebar" style="background: #0f172a; border: 1px solid #1e293b;"></div>
+                                    <div class="theme-preview-content" style="background: #0f172a; border: 1px solid #1e293b;">
+                                        <div style="height: 6px; width: 60%; background: #38bdf8; border-radius: 3px;"></div>
+                                        <div style="height: 4px; width: 90%; background: #334155; border-radius: 2px;"></div>
+                                        <div style="height: 4px; width: 40%; background: #34d399; border-radius: 2px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                                Deep midnight charcoal surfaces, obsidian cards, and glowing electric cyan & neon emerald status indicators.
+                            </p>
+                        </div>
+
+                        <div class="theme-swatches-row">
+                            <span class="theme-swatch" style="background: #090d16;" title="Background: Deep Charcoal"></span>
+                            <span class="theme-swatch" style="background: #0f172a;" title="Card: Obsidian Slate"></span>
+                            <span class="theme-swatch" style="background: #38bdf8;" title="Accent: Electric Sky"></span>
+                            <span class="theme-swatch" style="background: #34d399;" title="Accent: Neon Emerald"></span>
+                            <span class="theme-swatch" style="background: #6366f1;" title="Accent: Violet Glow"></span>
+                        </div>
+                    </div>
+
+                    <!-- Theme 3: Warm Academic -->
+                    <div id="themeCardAcademic" class="theme-card" onclick="setAppTheme('academic')">
+                        <div>
+                            <div class="theme-card-header">
+                                <h4>
+                                    <i class="fa-solid fa-graduation-cap" style="color: #c2410c;"></i>
+                                    <span>Warm Academic</span>
+                                </h4>
+                                <div class="theme-card-check">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                            </div>
+
+                            <div class="theme-preview-box academic-preview">
+                                <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e7ded3;"></div>
+                                <div class="theme-preview-body">
+                                    <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e7ded3;"></div>
+                                    <div class="theme-preview-content" style="background: #ffffff; border: 1px solid #e7ded3;">
+                                        <div style="height: 6px; width: 60%; background: #c2410c; border-radius: 3px;"></div>
+                                        <div style="height: 4px; width: 90%; background: #d6c8b7; border-radius: 2px;"></div>
+                                        <div style="height: 4px; width: 40%; background: #15803d; border-radius: 2px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                                Warm parchment tones, classic sandstone taupe borders, and rich terracotta accents with collegiate warmth.
+                            </p>
+                        </div>
+
+                        <div class="theme-swatches-row">
+                            <span class="theme-swatch" style="background: #faf7f2;" title="Background: Eggshell Parchment"></span>
+                            <span class="theme-swatch" style="background: #ffffff;" title="Card: Warm Ivory"></span>
+                            <span class="theme-swatch" style="background: #c2410c;" title="Accent: Rich Terracotta"></span>
+                            <span class="theme-swatch" style="background: #d97706;" title="Accent: Antique Amber"></span>
+                            <span class="theme-swatch" style="background: #15803d;" title="Accent: Forest Pine"></span>
+                        </div>
+                    </div>
+
+                    <!-- Theme 4: Professional Slate (Corporate Human-Crafted) -->
+                    <div id="themeCardSlate" class="theme-card" onclick="setAppTheme('slate')">
+                        <div>
+                            <div class="theme-card-header">
+                                <h4>
+                                    <i class="fa-solid fa-briefcase" style="color: #1e40af;"></i>
+                                    <span>Professional Slate</span>
+                                </h4>
+                                <div class="theme-card-check">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                            </div>
+
+                            <div class="theme-preview-box slate-preview">
+                                <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                                <div class="theme-preview-body">
+                                    <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
+                                    <div class="theme-preview-content" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                        <div style="height: 6px; width: 60%; background: #1e40af; border-radius: 3px;"></div>
+                                        <div style="height: 4px; width: 90%; background: #cbd5e1; border-radius: 2px;"></div>
+                                        <div style="height: 4px; width: 40%; background: #059669; border-radius: 2px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                                Hand-crafted corporate slate foundation, executive steel navy accents, and refined enterprise whitespace.
+                            </p>
+                        </div>
+
+                        <div class="theme-swatches-row">
+                            <span class="theme-swatch" style="background: #f8fafc;" title="Background: Slate-50"></span>
+                            <span class="theme-swatch" style="background: #ffffff;" title="Card: Pure White"></span>
+                            <span class="theme-swatch" style="background: #1e40af;" title="Accent: Steel Navy"></span>
+                            <span class="theme-swatch" style="background: #2563eb;" title="Accent: Royal Blue"></span>
+                            <span class="theme-swatch" style="background: #059669;" title="Accent: Forest Emerald"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: DEPARTMENTS & TEAMS                                               -->
+    <!-- ========================================================================= -->
+    <div id="tabContentDepartments" class="settings-tab-pane">
+        <div id="departmentsSection" class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-diagram-project" style="color: var(--accent-primary);"></i>
+                        <span>Departments & Teams Management</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Organize staff and workforce into operational units, teams, and departments.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="openAddDepartmentModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-plus"></i> Add Department / Team
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
+                                <th style="padding: 10px 12px;">Department Name</th>
+                                <th style="padding: 10px 12px;">Code / Key</th>
+                                <th style="padding: 10px 12px;">Employees / Staff</th>
+                                <th style="padding: 10px 12px;">Description</th>
+                                <th style="padding: 10px 12px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="departmentsTableBody">
+                            {% if departments %}
+                                {% for dept in departments %}
+                                <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="deptRow-{{ dept.id }}">
+                                    <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
+                                        <i class="fa-solid fa-building" style="color: var(--accent-primary); margin-right: 8px;"></i>
+                                        {{ dept.name }}
+                                    </td>
+                                    <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                                        {{ dept.code or dept.name[:4]|upper }}
+                                    </td>
+                                    <td style="padding: 12px;">
+                                        <span class="badge badge-sky" style="font-size: 11px;">
+                                            <i class="fa-solid fa-users"></i> {{ dept.employee_count or 0 }} Members
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; color: var(--text-muted); font-size: 12px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        {{ dept.description or '—' }}
+                                    </td>
+                                    <td style="padding: 12px; text-align: right;">
+                                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditDeptModal({{ dept|tojson|safe }})' title="Edit Department">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteDepartment({{ dept.id }}, '{{ dept.name }}')" title="Delete Department">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr id="emptyDeptsRow">
+                                    <td colspan="5" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                                        <i class="fa-solid fa-diagram-project" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                        <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No departments created yet.</p>
+                                        <span style="font-size: 12px;">Click "Add Department / Team" above to create your organizational hierarchy.</span>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: SHIFTS & RULES                                                    -->
+    <!-- ========================================================================= -->
+    <div id="tabContentShifts" class="settings-tab-pane">
+        <!-- Standard Company Work Shift & Punch Rules -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <div>
+                    <h3>
+                        <i class="fa-solid fa-briefcase" style="color: var(--accent-primary);"></i>
+                        <span>Standard Company Work Shift & Punch Rules</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Dual-punch biometric tracking: 1st scan = Check-In, 2nd scan = Check-Out with automated work hours & late/early calculation.
+                    </p>
+                </div>
+                <span class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
+                    <i class="fa-solid fa-clock"></i> Corporate Engine
+                </span>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                            <i class="fa-solid fa-arrow-right-to-bracket" style="color: var(--accent-emerald);"></i> Standard Shift Check-In (Morning)
+                        </label>
+                        <input type="time" id="brandShiftCheckIn" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }}">
+                        <span style="font-size: 11px; color: var(--text-muted);">Default: 10:30 AM</span>
+                    </div>
+
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                            <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-rose);"></i> Standard Shift Check-Out (Evening)
+                        </label>
+                        <input type="time" id="brandShiftCheckOut" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="{{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}">
+                        <span style="font-size: 11px; color: var(--text-muted);">Default: 06:00 PM (18:00)</span>
                     </div>
                 </div>
 
-                <!-- Configurable Corporate Work Shift & Daily Check-In / Check-Out Settings -->
-                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); margin-top: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                        <div>
-                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-briefcase" style="color: var(--accent-primary);"></i> Standard Company Work Shift & Punch Rules
-                            </label>
-                            <span style="font-size: 11.5px; color: var(--text-muted);">
-                                Dual-punch biometric tracking: 1st scan = Check-In, 2nd scan = Check-Out with automated work hours & late/early calculation.
-                            </span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Late Arrival & Early Exit Grace Period</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" id="brandShiftGrace" class="form-control" min="0" max="120" style="font-weight: 700;" value="{{ branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not none else 15 }}">
+                            <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">Minutes (e.g. ±15m)</span>
                         </div>
-                        <span class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
-                            <i class="fa-solid fa-clock"></i> Corporate Engine
+                    </div>
+
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Minimum Checkout Double-Tap Buffer</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" id="brandMinCheckoutInterval" class="form-control" min="0" max="360" style="font-weight: 700;" value="{{ branding.min_checkout_interval_minutes if branding and branding.min_checkout_interval_minutes is not none else 15 }}">
+                            <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">Minutes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 18px;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Shift Rules
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Work Shifts & Timings Master Table -->
+        <div id="shiftsSection" class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-clock" style="color: var(--accent-primary);"></i>
+                        <span>Work Shifts & Timings Master</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Configure multiple distinct working shifts, define grace windows, break times, and designate default shifts.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="openAddShiftModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-plus"></i> Add Work Shift
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
+                                <th style="padding: 10px 12px;">Shift Name</th>
+                                <th style="padding: 10px 12px;">Code</th>
+                                <th style="padding: 10px 12px;">Work Hours</th>
+                                <th style="padding: 10px 12px;">Duration</th>
+                                <th style="padding: 10px 12px;">Grace Window</th>
+                                <th style="padding: 10px 12px;">Break</th>
+                                <th style="padding: 10px 12px;">Employees</th>
+                                <th style="padding: 10px 12px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shiftsTableBody">
+                            {% if work_shifts %}
+                                {% for s in work_shifts %}
+                                <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="shiftRow-{{ s.id }}">
+                                    <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fa-solid fa-business-time" style="color: var(--accent-primary);"></i>
+                                            <span>{{ s.name }}</span>
+                                            {% if s.is_default %}
+                                            <span class="badge badge-emerald" style="font-size: 10px; font-weight: 700; padding: 2px 6px;">
+                                                <i class="fa-solid fa-star"></i> Default
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                                        {{ s.code or '—' }}
+                                    </td>
+                                    <td style="padding: 12px; font-weight: 600; color: var(--text-heading);">
+                                        <span style="color: var(--accent-emerald);">{{ s.start_time_formatted or s.start_time }}</span>
+                                        <span style="color: var(--text-muted); margin: 0 4px;">→</span>
+                                        <span style="color: var(--accent-rose);">{{ s.end_time_formatted or s.end_time }}</span>
+                                        {% if s.is_night_shift %}
+                                        <span class="badge badge-indigo" style="font-size: 10px; margin-left: 6px;">Night (+1d)</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 12px; font-weight: 600;">
+                                        {{ s.total_shift_hours }} hrs
+                                    </td>
+                                    <td style="padding: 12px; color: var(--text-secondary);">
+                                        ±{{ s.grace_period_minutes }} mins
+                                    </td>
+                                    <td style="padding: 12px; color: var(--text-muted);">
+                                        {{ s.break_duration_minutes }} mins
+                                    </td>
+                                    <td style="padding: 12px;">
+                                        <span class="badge badge-sky" style="font-size: 11px;">
+                                            <i class="fa-solid fa-users"></i> {{ s.assigned_employees_count or 0 }} Assigned
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right;">
+                                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                            {% if not s.is_default %}
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" onclick="setDefaultShift({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" title="Set as Default Shift">
+                                                <i class="fa-solid fa-star" style="color: #f59e0b;"></i> Make Default
+                                            </button>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditShiftModal({{ s|tojson|safe }})' title="Edit Shift">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteShift({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" title="Delete Shift">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr id="emptyShiftsRow">
+                                    <td colspan="8" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                                        <i class="fa-solid fa-clock" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                        <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No custom shifts created yet.</p>
+                                        <span style="font-size: 12px;">Click "Add Work Shift" above to configure morning, evening, or night shifts.</span>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 5: ATTENDANCE & SECURITY                                             -->
+    <!-- ========================================================================= -->
+    <div id="tabContentSecurity" class="settings-tab-pane">
+        
+        <!-- Universal Employee Face-Login & Leave Portal Card -->
+        <div class="card" style="margin-bottom: 24px; border: 1.5px solid var(--accent-emerald); background: linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(99, 102, 241, 0.04) 100%);">
+            <div class="card-header" style="justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-heading);">
+                            <i class="fa-solid fa-face-smile" style="color: var(--accent-emerald);"></i>
+                            <span>Universal Employee Face-Login & Leave Portal</span>
+                        </h3>
+                        <span class="badge badge-emerald" style="font-size: 11px;">
+                            <i class="fa-solid fa-mobile-screen-button"></i> Mobile-First Portal
                         </span>
                     </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px;">
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">
-                                <i class="fa-solid fa-arrow-right-to-bracket" style="color: var(--accent-emerald);"></i> Standard Shift Check-In (Morning)
-                            </label>
-                            <input type="time" id="brandShiftCheckIn" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }}">
-                            <span style="font-size: 11px; color: var(--text-muted);">Default: 10:30 AM</span>
-                        </div>
-
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">
-                                <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-rose);"></i> Standard Shift Check-Out (Evening)
-                            </label>
-                            <input type="time" id="brandShiftCheckOut" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="{{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}">
-                            <span style="font-size: 11px; color: var(--text-muted);">Default: 06:00 PM (18:00)</span>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px;">
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Late Arrival & Early Exit Grace Period</label>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="number" id="brandShiftGrace" class="form-control" min="0" max="120" style="font-weight: 700;" value="{{ branding.shift_grace_minutes if branding and branding.shift_grace_minutes is not none else 15 }}">
-                                <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">Minutes (e.g. ±15m)</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Minimum Checkout Double-Tap Buffer</label>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="number" id="brandMinCheckoutInterval" class="form-control" min="0" max="360" style="font-weight: 700;" value="{{ branding.min_checkout_interval_minutes if branding and branding.min_checkout_interval_minutes is not none else 15 }}">
-                                <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">Minutes</span>
-                            </div>
-                        </div>
-                    </div>
+                    <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">
+                        Direct facial-recognition gateway for employees to log in without passwords, view real-time leave quotas, track transparent shift wages, and submit leave applications.
+                    </p>
                 </div>
-
-                <!-- Configurable Corporate Payroll & Wage Formula Engine -->
-                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); margin-top: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                        <div>
-                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-money-bill-wave" style="color: var(--accent-emerald);"></i> Corporate Payroll, Wages & Overtime Multipliers
-                            </label>
-                            <span style="font-size: 11.5px; color: var(--text-muted);">
-                                Wage aggregation formulas, daily shift overtime calculation (> 8.0 hrs/day @ 1.5x), and missed checkout credit policies.
-                            </span>
-                        </div>
-                        <span class="badge badge-emerald" style="font-size: 11px; font-weight: 700;">
-                            <i class="fa-solid fa-sack-dollar"></i> Payroll Engine
-                        </span>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px;">
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Payroll Structure</label>
-                            <select id="brandPayrollStructure" class="form-control" style="font-weight: 600;">
-                                <option value="HOURLY" {% if not branding or branding.payroll_structure == 'HOURLY' %}selected{% endif %}>Hourly Wage (Hours Worked + OT)</option>
-                                <option value="MONTHLY_CADRE" {% if branding and branding.payroll_structure == 'MONTHLY_CADRE' %}selected{% endif %}>Monthly Cadre Structure (Monthly Base / 22 Days + OT)</option>
-                                <option value="HYBRID" {% if branding and branding.payroll_structure == 'HYBRID' %}selected{% endif %}>Hybrid (Base Retainer + Hourly)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Default Hourly Rate (₹/hr)</label>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="number" step="0.5" min="0" id="brandDefaultHourlyRate" class="form-control" style="font-weight: 700;" value="{{ branding.default_hourly_rate if branding and branding.default_hourly_rate is not none else 15.0 }}">
-                                <span style="font-size: 11.5px; color: var(--text-muted);">₹/hr</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 12px;">
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Standard Shift Length</label>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="number" step="0.5" min="1" max="24" id="brandStdDailyHours" class="form-control" style="font-weight: 700;" value="{{ branding.standard_working_hours_per_day if branding and branding.standard_working_hours_per_day is not none else 8.0 }}">
-                                <span style="font-size: 11.5px; color: var(--text-muted);">Hrs/day</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Enable Overtime</label>
-                            <select id="brandEnableOvertime" class="form-control" style="font-weight: 600;">
-                                <option value="true" {% if not branding or branding.enable_overtime %}selected{% endif %}>Enabled (> Standard Shift)</option>
-                                <option value="false" {% if branding and not branding.enable_overtime %}selected{% endif %}>Disabled (Flat Payout)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">OT Rate Multiplier</label>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="number" step="0.1" min="1.0" max="5.0" id="brandOvertimeMultiplier" class="form-control" style="font-weight: 700;" value="{{ branding.overtime_rate_multiplier if branding and branding.overtime_rate_multiplier is not none else 1.5 }}">
-                                <span style="font-size: 11.5px; color: var(--text-muted);">x</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-top: 12px;">
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Missed Checkout Shift Policy</label>
-                            <select id="brandMissedCheckoutPolicy" class="form-control" style="font-weight: 600;">
-                                <option value="HALF_DAY" {% if not branding or branding.missed_checkout_policy == 'HALF_DAY' %}selected{% endif %}>Half-Day Credit (4.0 hrs credit + audit flag)</option>
-                                <option value="ZERO_HOURS" {% if branding and branding.missed_checkout_policy == 'ZERO_HOURS' %}selected{% endif %}>Zero Hours (0.0 hrs credit until manual admin override)</option>
-                                <option value="STANDARD_SHIFT" {% if branding and branding.missed_checkout_policy == 'STANDARD_SHIFT' %}selected{% endif %}>Full Shift Credit (8.0 hrs credit)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Currency Symbol</label>
-                            <input type="text" id="brandCurrencySymbol" class="form-control" style="font-weight: 700;" maxlength="5" value="{{ branding.currency_symbol if branding and branding.currency_symbol else '₹' }}">
-                        </div>
-                    </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="badge badge-indigo" style="font-size: 11px;"><i class="fa-solid fa-camera"></i> 1:N Facial Recognition</span>
+                    <span class="badge badge-amber" style="font-size: 11px;"><i class="fa-solid fa-calendar-check"></i> Leave Balances</span>
+                    <span class="badge badge-sky" style="font-size: 11px;"><i class="fa-solid fa-paper-plane"></i> Leave Applications</span>
                 </div>
-
-                <!-- Corporate Leave Master & Cadre Quota Policies Section -->
-                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); margin-top: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                        <div>
-                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-calendar-days" style="color: #6366f1;"></i> Leave Master, Quotas & Role-Based Balances
-                            </label>
-                            <span style="font-size: 11.5px; color: var(--text-muted);">
-                                Annual leave categories (Casual, Sick, Earned, Unpaid), default quotas, cadre overrides, and review approval workflows.
-                            </span>
+            </div>
+            <div class="card-body" style="padding-top: 14px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                    
+                    <!-- Left: URL display, Copy action & direct test -->
+                    <div style="flex: 1; min-width: 280px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <i class="fa-solid fa-link" style="color: var(--accent-emerald);"></i> Clean Employee Portal Link (Share with Workforce)
+                        </label>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 220px; background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 9px 14px; font-family: monospace; font-size: 13px; color: var(--accent-emerald); font-weight: 700; overflow-x: auto; white-space: nowrap; user-select: all;" id="universalEmployeePortalUrlSpan">
+                                /employee/{{ current_tenant.slug if current_tenant else 'default' }}
+                            </div>
+                            <button type="button" class="btn btn-primary" style="padding: 9px 16px; font-size: 12.5px; font-weight: 700; white-space: nowrap;" onclick="copyUniversalEmployeePortalLink(this)">
+                                <i class="fa-solid fa-copy"></i> Copy Portal Link
+                            </button>
+                            <a id="btnUniversalEmpPortalOpen" href="/employee/{{ current_tenant.slug if current_tenant else 'default' }}" target="_blank" class="btn btn-secondary" style="padding: 9px 14px; font-size: 12.5px; text-decoration: none; white-space: nowrap;">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Portal
+                            </a>
                         </div>
-                        <span class="badge badge-indigo" style="font-size: 11px; font-weight: 700;">
-                            <i class="fa-solid fa-user-check"></i> Leave Policy
-                        </span>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-circle-info" style="color: var(--accent-primary);"></i> Employees can open this link on mobile browsers for instant 1-tap facial authentication and leave management.
+                        </div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 14px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 10px; flex-wrap: wrap; gap: 10px;">
+                    <!-- Right: Dynamic Mobile QR Code -->
+                    <div style="display: flex; align-items: center; gap: 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; min-width: 240px;">
+                        <img id="universalEmpPortalQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data={{ (request.base_url ~ 'employee/' ~ (current_tenant.slug if current_tenant else 'default'))|urlencode }}" alt="Employee Portal QR Code" style="width: 72px; height: 72px; border-radius: 6px; border: 1px solid var(--border-color); background: white; padding: 3px; flex-shrink: 0;" loading="lazy">
                         <div>
-                            <strong style="font-size: 13px; color: var(--text-heading); display: block;">Leave Categories & Cadre Matrix</strong>
-                            <span style="font-size: 11.5px; color: var(--text-muted);">Manage default quotas and role-specific allocations in the central Leave Management portal.</span>
+                            <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">Instant Mobile QR</strong>
+                            <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px;">Scan with phone camera to open employee self-service login</span>
                         </div>
-                        <a href="/leave-management" class="btn btn-primary" style="font-size: 12px; background: #6366f1; display: flex; align-items: center; gap: 6px; padding: 8px 16px;">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            <span>Open Leave Master Portal</span>
-                        </a>
                     </div>
+
                 </div>
+            </div>
+        </div>
 
-                <!-- Configurable Anti-Spoofing & Liveness Security -->
-                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <!-- Left: Anti-Spoofing & Liveness + Parameters -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <!-- Anti-Spoofing Security Card -->
+                <div class="card">
+                    <div class="card-header">
                         <div>
-                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-shield-halved" style="color: var(--accent-emerald);"></i> Anti-Spoofing & Liveness Check
-                            </label>
-                            <span style="font-size: 11.5px; color: var(--text-muted);">
-                                2D FFT spectral texture validation, specular reflection detection, and temporal micro-motion verification
-                            </span>
+                            <h3>
+                                <i class="fa-solid fa-shield-halved" style="color: var(--accent-emerald);"></i>
+                                <span>Anti-Spoofing & Liveness Security</span>
+                            </h3>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                                2D FFT spectral texture validation, specular reflection detection, and temporal micro-motion verification.
+                            </p>
                         </div>
-                        
-                        <!-- Dynamic Anti-Spoofing Toggle Switch -->
                         <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-card); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
                             <span id="antiSpoofStatusBadge" class="badge {% if not branding or branding.enable_anti_spoofing %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 11px;">
                                 {% if not branding or branding.enable_anti_spoofing %}ENABLED{% else %}DISABLED{% endif %}
@@ -276,761 +723,445 @@
                             </label>
                         </div>
                     </div>
-
-                    <!-- Config Container (Active when Anti-Spoofing is Enabled) -->
-                    <div id="antiSpoofConfigContainer" style="transition: all 0.25s; {% if branding and not branding.enable_anti_spoofing %}opacity: 0.45; pointer-events: none;{% endif %}">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Preset Security Tier:</span>
-                            <span id="livenessModeBadge" class="badge badge-sky" style="font-size: 11px;">
-                                {{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }}
-                            </span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
-                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveStrict" onclick="setLivenessPreset('STRICT', 5)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
-                                Strict (5 Frames)
-                            </button>
-                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveBalanced" onclick="setLivenessPreset('BALANCED', 3)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
-                                Balanced (3 Frames)
-                            </button>
-                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveFast" onclick="setLivenessPreset('FAST', 1)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
-                                Fast (1 Frame)
-                            </button>
-                            <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveDisabled" onclick="setLivenessPreset('DISABLED', 1)" style="font-size: 11.5px; padding: 6px 8px; justify-content: center;">
-                                Off / Passive
-                            </button>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 14px;">
-                            <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; white-space: nowrap;">Temporal Frames Required:</label>
-                            <input type="range" id="temporalFramesSlider" min="1" max="10" step="1" value="{{ branding.temporal_frames_required if branding and branding.temporal_frames_required else 3 }}" style="flex: 1; accent-color: var(--accent-emerald);" oninput="updateTemporalFramesDisplay(this.value)">
-                            <input type="number" id="brandTemporalFrames" class="form-control" style="width: 70px; text-align: center; font-weight: 700;" min="1" max="10" value="{{ branding.temporal_frames_required if branding and branding.temporal_frames_required else 3 }}" oninput="updateTemporalFramesFromInput(this.value)">
-                        </div>
-                    </div>
-
-                    <!-- Informational notice when disabled -->
-                    <div id="antiSpoofDisabledNotice" style="display: {% if branding and not branding.enable_anti_spoofing %}block{% else %}none{% endif %}; margin-top: 10px; padding: 8px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); font-size: 11.5px; color: #f87171;">
-                        <i class="fa-solid fa-triangle-exclamation"></i> <strong>Anti-Spoofing Inactive:</strong> Frame ingestion and demo recognition will bypass spectral texture and reflection checks for frictionless matching.
-                    </div>
-                </div>
-
-                <!-- Configurable Check-In Feedback & Audio Chime Settings -->
-                <div class="form-group" style="padding: 16px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label class="form-label" style="margin-bottom: 0; font-weight: 700; color: var(--text-heading); font-size: 13.5px;">
-                            <i class="fa-solid fa-bell" style="color: var(--accent-amber);"></i> Real-Time Check-In Audio & Feedback
-                        </label>
-                    </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-                        Configure instant auditory and visual notifications when a student's attendance is verified.
-                    </p>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <div style="padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">Audio Chime</strong>
-                                <span style="font-size: 11px; color: var(--text-muted);">Play 2-tone biometric gate sound</span>
-                            </div>
-                            <input type="checkbox" id="brandAudioChime" {% if branding and branding.enable_audio_chime %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;">
-                        </div>
-                        <div style="padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">Mobile Haptics</strong>
-                                <span style="font-size: 11px; color: var(--text-muted);">Vibrate phone on check-in</span>
-                            </div>
-                            <input type="checkbox" id="brandHapticFeedback" {% if branding and branding.enable_haptic_feedback %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Configurable Self-Attendance via Personal Device & Geofencing -->
-                <div class="form-group" style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-                        <div>
-                            <label class="form-label" style="margin-bottom: 2px; font-weight: 700; color: var(--text-heading); font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-primary);"></i> Self-Attendance & Geofencing
-                            </label>
-                            <span style="font-size: 11.5px; color: var(--text-muted);">
-                                Allow students & staff to mark presence from personal smartphones with strict campus GPS validation
-                            </span>
-                        </div>
-                        
-                        <!-- Self-Attendance Toggle Switch -->
-                        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-card); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
-                            <span id="selfAttendanceStatusBadge" class="badge {% if branding and branding.enable_self_attendance %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 11px;">
-                                {% if branding and branding.enable_self_attendance %}ENABLED{% else %}DISABLED{% endif %}
-                            </span>
-                            <label style="position: relative; display: inline-block; width: 42px; height: 22px; margin-bottom: 0; cursor: pointer;">
-                                <input type="checkbox" id="brandSelfAttendanceToggle" {% if branding and branding.enable_self_attendance %}checked{% endif %} onchange="toggleSelfAttendanceControls(this.checked)" style="opacity: 0; width: 0; height: 0;">
-                                <span id="selfToggleTrack" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: {% if branding and branding.enable_self_attendance %}var(--accent-emerald){% else %}var(--border-color){% endif %}; transition: .25s; border-radius: 22px;"></span>
-                                <span id="selfToggleKnob" style="position: absolute; height: 16px; width: 16px; left: {% if branding and branding.enable_self_attendance %}22px{% else %}3px{% endif %}; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Geofencing Configuration Container -->
-                    <div id="selfAttendanceConfigContainer" style="transition: all 0.25s; {% if not branding or not branding.enable_self_attendance %}opacity: 0.45; pointer-events: none;{% endif %}">
-                        
-                        <!-- Interactive Map Location Picker -->
-                        <div style="margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                                <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 0;">
-                                    <i class="fa-solid fa-map-location-dot" style="color: var(--accent-emerald);"></i> Interactive Office Geofence Pin & Radar
-                                </label>
-                                <span id="mapPinStatusBadge" class="badge badge-subtle" style="font-size: 11px; font-weight: 600;">
-                                    <i class="fa-solid fa-satellite-dish"></i> Initializing GPS...
+                    <div class="card-body">
+                        <!-- Config Container -->
+                        <div id="antiSpoofConfigContainer" style="transition: all 0.25s; {% if branding and not branding.enable_anti_spoofing %}opacity: 0.45; pointer-events: none;{% endif %}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Preset Security Tier:</span>
+                                <span id="livenessModeBadge" class="badge badge-sky" style="font-size: 11px;">
+                                    {{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }}
                                 </span>
                             </div>
-
-                            <!-- Map Address Search -->
-                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                                <div style="position: relative; flex: 1;">
-                                    <input type="text" id="mapSearchInput" class="form-control" placeholder="Search office address, landmark, or city..." style="padding-left: 32px; font-size: 12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchMapLocation();}">
-                                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-muted);"></i>
-                                </div>
-                                <button type="button" class="btn btn-secondary" style="width: auto; font-size: 11.5px; padding: 0 14px;" onclick="searchMapLocation()">
-                                    <i class="fa-solid fa-search"></i> Search
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;">
+                                <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveStrict" onclick="setLivenessPreset('STRICT', 5)" style="font-size: 11px; padding: 6px 4px; justify-content: center;">
+                                    Strict (5F)
+                                </button>
+                                <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveBalanced" onclick="setLivenessPreset('BALANCED', 3)" style="font-size: 11px; padding: 6px 4px; justify-content: center;">
+                                    Balanced (3F)
+                                </button>
+                                <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveFast" onclick="setLivenessPreset('FAST', 1)" style="font-size: 11px; padding: 6px 4px; justify-content: center;">
+                                    Fast (1F)
+                                </button>
+                                <button type="button" class="btn btn-secondary liveness-preset-btn" id="btnLiveDisabled" onclick="setLivenessPreset('DISABLED', 1)" style="font-size: 11px; padding: 6px 4px; justify-content: center;">
+                                    Off / Passive
                                 </button>
                             </div>
-
-                            <!-- Map Container -->
-                            <div id="officeMapPicker" style="height: 250px; width: 100%; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); background: var(--bg-base); position: relative; z-index: 1;"></div>
-                        </div>
-
-                        <!-- GPS Coordinates Center Manual Entry -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                            <div>
-                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Latitude (Center)</label>
-                                <input type="number" step="0.000001" id="brandGeoLatitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_latitude if branding and branding.geo_latitude is not none else '' }}" placeholder="e.g. 19.076090" oninput="onManualCoordinateChange()">
-                            </div>
-                            <div>
-                                <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Longitude (Center)</label>
-                                <input type="number" step="0.000001" id="brandGeoLongitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_longitude if branding and branding.geo_longitude is not none else '' }}" placeholder="e.g. 72.877426" oninput="onManualCoordinateChange()">
-                            </div>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
-                            <button type="button" class="btn btn-secondary" style="font-size: 11.5px; padding: 6px 12px;" onclick="fetchAdminGpsLocation()">
-                                <i class="fa-solid fa-crosshairs" style="color: var(--accent-primary);"></i> Auto-Detect My Current GPS Location
-                            </button>
-                            <span id="gpsDetectStatus" style="font-size: 11px; color: var(--text-muted);"></span>
-                        </div>
-
-                        <!-- Geofence Radius Slider -->
-                        <div style="margin-bottom: 14px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Allowed Geofencing Radius (Live Radar Circle):</label>
-                                <span id="geoRadiusBadge" class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
-                                    {{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }} Meters
-                                </span>
-                            </div>
                             <div style="display: flex; align-items: center; gap: 14px;">
-                                <input type="range" id="geoRadiusSlider" min="10" max="2000" step="10" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" style="flex: 1; accent-color: var(--accent-primary);" oninput="updateGeoRadiusDisplay(this.value)">
-                                <input type="number" id="brandGeoRadius" class="form-control" style="width: 80px; text-align: center; font-weight: 700;" min="10" max="50000" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" oninput="updateGeoRadiusFromInput(this.value)">
-                                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">M</span>
+                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; white-space: nowrap;">Temporal Frames Required:</label>
+                                <input type="range" id="temporalFramesSlider" min="1" max="10" step="1" value="{{ branding.temporal_frames_required if branding and branding.temporal_frames_required else 3 }}" style="flex: 1; accent-color: var(--accent-emerald);" oninput="updateTemporalFramesDisplay(this.value)">
+                                <input type="number" id="brandTemporalFrames" class="form-control" style="width: 70px; text-align: center; font-weight: 700;" min="1" max="10" value="{{ branding.temporal_frames_required if branding and branding.temporal_frames_required else 3 }}" oninput="updateTemporalFramesFromInput(this.value)">
                             </div>
                         </div>
 
-                        <!-- GPS Accuracy Gate & Face Confidence Slider -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
-                            <div>
-                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Max GPS Inaccuracy Tolerance:</label>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="number" id="brandGpsAccuracy" class="form-control" style="font-weight: 700;" min="5" max="200" value="{{ branding.max_gps_accuracy_meters|round(0)|int if branding and branding.max_gps_accuracy_meters is not none else 50 }}">
-                                    <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">± Meters</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Biometric Match Threshold:</label>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="number" step="0.01" id="brandFaceThreshold" class="form-control" style="font-weight: 700;" min="0.30" max="0.70" value="{{ branding.self_attendance_face_threshold if branding and branding.self_attendance_face_threshold is not none else 0.52 }}">
-                                    <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">(0.52 Balanced)</span>
-                                </div>
-                            </div>
+                        <!-- Informational notice when disabled -->
+                        <div id="antiSpoofDisabledNotice" style="display: {% if branding and not branding.enable_anti_spoofing %}block{% else %}none{% endif %}; margin-top: 10px; padding: 8px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); font-size: 11.5px; color: #f87171;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> <strong>Anti-Spoofing Inactive:</strong> Recognition will bypass spectral texture and reflection checks for frictionless matching.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cooldown Window & Audio Feedback -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>
+                            <i class="fa-solid fa-hourglass-half" style="color: var(--accent-primary);"></i>
+                            <span>Sliding Attendance Cooldown Window</span>
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+                                Prevents duplicate attendance logging within this sliding time window across all edge nodes and mobile cameras.
+                            </p>
+                            <span id="cooldownLabel" style="font-size: 12px; font-weight: 800; color: var(--accent-primary); background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); padding: 3px 10px; border-radius: 20px;">
+                                {{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Minutes ({{ "%.1f"|format((branding.cooldown_minutes if branding and branding.cooldown_minutes else 60)/60) }} Hours)
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 14px; margin-top: 10px;">
+                            <input type="range" id="cooldownSlider" min="1" max="720" step="1" value="{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }}" style="flex: 1; accent-color: var(--accent-primary);" oninput="updateCooldownDisplay(this.value)">
+                            <input type="number" id="brandCooldownMinutes" class="form-control" style="width: 90px; text-align: center; font-weight: 700;" min="1" max="1440" value="{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }}" oninput="updateCooldownFromInput(this.value)">
+                            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Mins</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px;">
+                            <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(1)">1 Min (Testing)</button>
+                            <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(15)">15 Mins</button>
+                            <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(60)">1 Hour</button>
+                            <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px; justify-content: center;" onclick="setCooldownPreset(720)">12 Hours</button>
                         </div>
 
-                        <!-- Direct Access Link Cards -->
-                        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
-                            <!-- Permanent Self-Attendance Link -->
-                            <div style="padding: 12px 14px; background: var(--bg-card); border: 1px dashed var(--accent-emerald); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                                <div>
-                                    <strong style="font-size: 12.5px; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
-                                        <i class="fa-solid fa-mobile-screen" style="color: var(--accent-emerald);"></i> Permanent Daily Self-Attendance Check-In URL
-                                    </strong>
-                                    <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace;" id="selfAttendanceUrlSpan">
-                                        /check-in/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.attendance_slug if current_tenant and current_tenant.attendance_slug else '' }}
-                                    </span>
+                        <!-- Real-Time Check-In Audio & Feedback -->
+                        <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                            <label class="form-label" style="font-weight: 700; color: var(--text-heading); font-size: 13px; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                                <i class="fa-solid fa-bell" style="color: var(--accent-amber);"></i> Real-Time Check-In Audio & Haptics
+                            </label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div style="padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">Audio Chime</strong>
+                                        <span style="font-size: 11px; color: var(--text-muted);">Play 2-tone biometric gate sound</span>
+                                    </div>
+                                    <input type="checkbox" id="brandAudioChime" {% if branding and branding.enable_audio_chime %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;">
                                 </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px;" onclick="copyPermanentCheckinLink()">
-                                        <i class="fa-solid fa-copy"></i> Copy Link
-                                    </button>
-                                    <a id="btnCheckinPortalOpen" href="/check-in/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.attendance_slug if current_tenant and current_tenant.attendance_slug else '' }}" target="_blank" class="btn btn-primary" style="font-size: 11px; padding: 5px 10px; text-decoration: none;">
-                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- Employee Onboarding Link -->
-                            <div style="padding: 12px 14px; background: var(--bg-card); border: 1px dashed var(--accent-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                                <div>
-                                    <strong style="font-size: 12.5px; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
-                                        <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i> Employee Self-Onboarding Portal URL
-                                    </strong>
-                                    <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace;" id="employeeOnboardingUrlSpan">
-                                        /onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}
-                                    </span>
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px;" onclick="copyEmployeeOnboardLink()">
-                                        <i class="fa-solid fa-copy"></i> Copy Link
-                                    </button>
-                                    <a id="btnOnboardPortalOpen" href="/onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px; text-decoration: none;">
-                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
-                                    </a>
+                                <div style="padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <strong style="font-size: 12.5px; color: var(--text-heading); display: block;">Mobile Haptics</strong>
+                                        <span style="font-size: 11px; color: var(--text-muted);">Vibrate phone on check-in</span>
+                                    </div>
+                                    <input type="checkbox" id="brandHapticFeedback" {% if branding and branding.enable_haptic_feedback %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;">
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <input type="hidden" id="brandLivenessMode" value="{{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }}">
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Security & Attendance Settings
+                    </button>
+                </div>
+            </div>
 
-                <button type="submit" id="btnSaveBranding" class="btn btn-primary" style="margin-top: 14px;">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Institutional Settings & Security
-                </button>
-                <div id="brandingSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
-            </form>
+            <!-- Right: System Preferences & Edge Diagnostics -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>
+                            <i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i>
+                            <span>Institutional Attendance Parameters</span>
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Default Defaulter Attendance Threshold (%)</label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="number" id="prefDefaulterThreshold" class="form-control" min="10" max="100" value="75">
+                                <span style="font-weight: 700; color: var(--text-muted);">%</span>
+                            </div>
+                            <small style="font-size: 11.5px; color: var(--text-muted);">Workforce below this turnout are flagged in analytics audits.</small>
+                        </div>
 
-            <!-- Institutional Logo Upload & Preview Panel -->
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-                <div style="padding: 18px; background: var(--bg-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                        <span><i class="fa-solid fa-image" style="color: var(--accent-primary);"></i> Institute Logo</span>
-                        {% if branding and branding.logo_url %}
-                        <button type="button" onclick="resetInstituteLogo()" class="btn btn-danger" style="font-size: 11px; padding: 4px 8px;">
-                            <i class="fa-solid fa-trash"></i> Remove Logo
+                        <div class="form-group">
+                            <label class="form-label">Face Recognition Match Tolerance</label>
+                            <select id="prefMatchTolerance" class="form-control">
+                                <option value="0.55">0.55 - Strict (High Security / Low False Acceptance)</option>
+                                <option value="0.60" selected>0.60 - Standard Recommended (Balanced)</option>
+                                <option value="0.65">0.65 - Relaxed (Low False Rejection)</option>
+                            </select>
+                        </div>
+
+                        <button type="button" id="btnSavePrefs" class="btn btn-secondary" onclick="saveSystemPreferences(event)" style="width: 100%; margin-top: 8px;">
+                            <i class="fa-solid fa-save"></i> Save System Parameters
                         </button>
-                        {% endif %}
+                        <div id="prefsSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; text-align: center;"></div>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
-                        Recommended: Square PNG, SVG, or JPG with transparent background (max 5MB).
-                    </p>
-
-                    <!-- Drag & Drop Upload Zone -->
-                    <div id="logoDropzone" class="upload-dropzone" onclick="document.getElementById('logoFileInput').click()" style="padding: 24px 16px; border: 2px dashed var(--border-hover); border-radius: var(--radius-sm); background: var(--bg-card); text-align: center; cursor: pointer; transition: all 0.2s;">
-                        <input type="file" id="logoFileInput" accept=".png, .jpg, .jpeg, .svg, .webp" style="display: none;" onchange="handleLogoFileSelect(event)">
-                        <div id="logoPreviewContainer" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                            {% if branding and branding.logo_url %}
-                            <img id="logoPreviewImg" src="{{ branding.logo_url }}" alt="Logo" style="width: 64px; height: 64px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); padding: 4px;">
-                            <span style="font-size: 12px; font-weight: 600; color: var(--text-heading);">Click or drag new image to replace</span>
-                            {% else %}
-                            <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--badge-indigo-bg); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 22px;">
-                                <i class="fa-solid fa-cloud-arrow-up"></i>
-                            </div>
-                            <span style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Click or Drag Logo File Here</span>
-                            <span style="font-size: 11.5px; color: var(--text-muted);">PNG, SVG, JPG, WebP up to 5MB</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div id="logoUploadAlert" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
                 </div>
 
-                <!-- Live Header Preview Simulation -->
-                <div style="padding: 16px; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
-                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Live Navbar Simulation</span>
-                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                        <div id="livePreviewIcon" style="width: 38px; height: 38px; border-radius: var(--radius-xs); background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; flex-shrink: 0;">
-                            {% if branding and branding.logo_url %}
-                            <img src="{{ branding.logo_url }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: inherit;">
-                            {% else %}
-                            <i class="fa-solid fa-graduation-cap"></i>
-                            {% endif %}
-                        </div>
-                        <div style="overflow: hidden;">
-                            <div id="livePreviewName" style="font-size: 14px; font-weight: 800; color: var(--text-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ branding.institution_name if branding else 'FaceAttendance Campus' }}</div>
-                            <div id="livePreviewBadge" style="font-size: 11px; color: var(--accent-primary); font-weight: 700;">{{ branding.header_badge_text if branding else 'Thin-Client Hub' }}</div>
+                <!-- Edge Hardware & Database Diagnostics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>
+                            <i class="fa-solid fa-server" style="color: var(--accent-emerald);"></i>
+                            <span>Hub & Database Diagnostics</span>
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; flex-direction: column; gap: 14px;">
+                            <div style="padding: 12px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Database Engine</div>
+                                <div style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin-top: 2px;">
+                                    <i class="fa-solid fa-database" style="color: var(--accent-primary);"></i> MySQL Enterprise / SQLite Thin-Client Hub
+                                </div>
+                            </div>
+
+                            <div style="padding: 12px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Vector Cache Acceleration</div>
+                                <div style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin-top: 2px;">
+                                    <i class="fa-solid fa-microchip" style="color: var(--accent-cyan);"></i> In-Memory NumPy 128-d Euclidean Matrix
+                                </div>
+                            </div>
+
+                            <div style="padding: 12px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Mobile Web Ingestion Endpoint</div>
+                                <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); margin-top: 2px;">
+                                    <code>/api/v1/nodes/frame</code> (2.0 FPS Stream Rate)
+                                </div>
+                            </div>
+
+                            <!-- Quick Backup Export Action -->
+                            <div style="display: flex; gap: 10px; margin-top: 6px;">
+                                <a href="/api/v1/attendance/export?export_format=xlsx" class="btn btn-secondary" style="flex: 1; text-align: center; justify-content: center; font-size: 12px;">
+                                    <i class="fa-solid fa-file-excel" style="color: var(--accent-emerald);"></i> Export Logs (.xlsx)
+                                </a>
+                                <a href="/api/v1/attendance/export-compliance?export_format=xlsx" class="btn btn-secondary" style="flex: 1; text-align: center; justify-content: center; font-size: 12px;">
+                                    <i class="fa-solid fa-file-shield" style="color: var(--accent-primary);"></i> Audit Report (.xlsx)
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Section 2: Visual Theme Engine -->
-<div class="card" style="margin-bottom: 28px;">
-    <div class="card-header">
-        <div>
-            <h3>
-                <i class="fa-solid fa-palette" style="color: var(--accent-primary);"></i>
-                <span>Visual Theme Personalization</span>
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Select your preferred visual environment. Themes sync instantly across all pages and persist automatically.
-            </p>
-        </div>
-        <span id="activeThemeBadge" class="badge badge-present" style="font-size: 12px;">
-            <i class="fa-solid fa-circle-check"></i> Active: Clean Light
-        </span>
-    </div>
-    <div class="card-body">
-        <div class="theme-card-grid">
-            <!-- Theme 1: Clean Minimalist Light -->
-            <div id="themeCardLight" class="theme-card" onclick="setAppTheme('light')">
+    <!-- ========================================================================= -->
+    <!-- TAB 6: GEOFENCING & PORTALS                                              -->
+    <!-- ========================================================================= -->
+    <div id="tabContentGeofencing" class="settings-tab-pane">
+        <!-- Configurable Self-Attendance via Personal Device & Geofencing -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
                 <div>
-                    <div class="theme-card-header">
-                        <h4>
-                            <i class="fa-solid fa-sun" style="color: #6366f1;"></i>
-                            <span>Clean Minimalist Light</span>
-                        </h4>
-                        <div class="theme-card-check">
-                            <i class="fa-solid fa-check"></i>
+                    <h3>
+                        <i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-primary);"></i>
+                        <span>Self-Attendance & Campus Geofencing</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Allow employees & staff to mark presence from personal smartphones with strict campus GPS validation.
+                    </p>
+                </div>
+                
+                <!-- Self-Attendance Toggle Switch -->
+                <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-card); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <span id="selfAttendanceStatusBadge" class="badge {% if branding and branding.enable_self_attendance %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 11px;">
+                        {% if branding and branding.enable_self_attendance %}ENABLED{% else %}DISABLED{% endif %}
+                    </span>
+                    <label style="position: relative; display: inline-block; width: 42px; height: 22px; margin-bottom: 0; cursor: pointer;">
+                        <input type="checkbox" id="brandSelfAttendanceToggle" {% if branding and branding.enable_self_attendance %}checked{% endif %} onchange="toggleSelfAttendanceControls(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                        <span id="selfToggleTrack" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: {% if branding and branding.enable_self_attendance %}var(--accent-emerald){% else %}var(--border-color){% endif %}; transition: .25s; border-radius: 22px;"></span>
+                        <span id="selfToggleKnob" style="position: absolute; height: 16px; width: 16px; left: {% if branding and branding.enable_self_attendance %}22px{% else %}3px{% endif %}; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Geofencing Configuration Container -->
+                <div id="selfAttendanceConfigContainer" style="transition: all 0.25s; {% if not branding or not branding.enable_self_attendance %}opacity: 0.45; pointer-events: none;{% endif %}">
+                    
+                    <!-- Interactive Map Location Picker -->
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                            <label class="form-label" style="font-size: 12.5px; font-weight: 700; margin-bottom: 0;">
+                                <i class="fa-solid fa-map-location-dot" style="color: var(--accent-emerald);"></i> Interactive Office Geofence Pin & Radar
+                            </label>
+                            <span id="mapPinStatusBadge" class="badge badge-subtle" style="font-size: 11px; font-weight: 600;">
+                                <i class="fa-solid fa-satellite-dish"></i> Initializing GPS...
+                            </span>
+                        </div>
+
+                        <!-- Map Address Search -->
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <div style="position: relative; flex: 1;">
+                                <input type="text" id="mapSearchInput" class="form-control" placeholder="Search office address, landmark, or city..." style="padding-left: 32px; font-size: 12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchMapLocation();}">
+                                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-muted);"></i>
+                            </div>
+                            <button type="button" class="btn btn-secondary" style="width: auto; font-size: 11.5px; padding: 0 14px;" onclick="searchMapLocation()">
+                                <i class="fa-solid fa-search"></i> Search
+                            </button>
+                        </div>
+
+                        <!-- Map Container -->
+                        <div id="officeMapPicker" style="height: 280px; width: 100%; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); background: var(--bg-base); position: relative; z-index: 1;"></div>
+                    </div>
+
+                    <!-- GPS Coordinates Center Manual Entry -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Latitude (Center)</label>
+                            <input type="number" step="0.000001" id="brandGeoLatitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_latitude if branding and branding.geo_latitude is not none else '' }}" placeholder="e.g. 19.076090" oninput="onManualCoordinateChange()">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Longitude (Center)</label>
+                            <input type="number" step="0.000001" id="brandGeoLongitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_longitude if branding and branding.geo_longitude is not none else '' }}" placeholder="e.g. 72.877426" oninput="onManualCoordinateChange()">
                         </div>
                     </div>
 
-                    <!-- Mini Mockup Box -->
-                    <div class="theme-preview-box light-preview">
-                        <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
-                        <div class="theme-preview-body">
-                            <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
-                            <div class="theme-preview-content" style="background: #ffffff; border: 1px solid #e2e8f0;">
-                                <div style="height: 6px; width: 60%; background: #6366f1; border-radius: 3px;"></div>
-                                <div style="height: 4px; width: 90%; background: #cbd5e1; border-radius: 2px;"></div>
-                                <div style="height: 4px; width: 40%; background: #10b981; border-radius: 2px;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+                        <button type="button" class="btn btn-secondary" style="font-size: 11.5px; padding: 6px 12px;" onclick="fetchAdminGpsLocation()">
+                            <i class="fa-solid fa-crosshairs" style="color: var(--accent-primary);"></i> Auto-Detect My Current GPS Location
+                        </button>
+                        <span id="gpsDetectStatus" style="font-size: 11px; color: var(--text-muted);"></span>
+                    </div>
+
+                    <!-- Geofence Radius Slider -->
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Allowed Geofencing Radius (Live Radar Circle):</label>
+                            <span id="geoRadiusBadge" class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
+                                {{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }} Meters
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <input type="range" id="geoRadiusSlider" min="10" max="2000" step="10" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" style="flex: 1; accent-color: var(--accent-primary);" oninput="updateGeoRadiusDisplay(this.value)">
+                            <input type="number" id="brandGeoRadius" class="form-control" style="width: 80px; text-align: center; font-weight: 700;" min="10" max="50000" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" oninput="updateGeoRadiusFromInput(this.value)">
+                            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">M</span>
+                        </div>
+                    </div>
+
+                    <!-- GPS Accuracy Gate & Face Confidence Slider -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                        <div>
+                            <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Max GPS Inaccuracy Tolerance:</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="brandGpsAccuracy" class="form-control" style="font-weight: 700;" min="5" max="200" value="{{ branding.max_gps_accuracy_meters|round(0)|int if branding and branding.max_gps_accuracy_meters is not none else 50 }}">
+                                <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">± Meters</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Biometric Match Threshold:</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" step="0.01" id="brandFaceThreshold" class="form-control" style="font-weight: 700;" min="0.30" max="0.70" value="{{ branding.self_attendance_face_threshold if branding and branding.self_attendance_face_threshold is not none else 0.52 }}">
+                                <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">(0.52 Balanced)</span>
                             </div>
                         </div>
                     </div>
 
-                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
-                        Crisp off-white surfaces, modern indigo gradients, and high ambient clarity for daylight institutional workflows.
-                    </p>
-                </div>
-
-                <div class="theme-swatches-row">
-                    <span class="theme-swatch" style="background: #f8fafc;" title="Background: Slate-50"></span>
-                    <span class="theme-swatch" style="background: #ffffff;" title="Card: Pure White"></span>
-                    <span class="theme-swatch" style="background: #6366f1;" title="Accent: Vibrant Indigo"></span>
-                    <span class="theme-swatch" style="background: #0ea5e9;" title="Accent: Cyan"></span>
-                    <span class="theme-swatch" style="background: #10b981;" title="Accent: Emerald"></span>
-                </div>
-            </div>
-
-            <!-- Theme 2: Executive Midnight Dark -->
-            <div id="themeCardDark" class="theme-card" onclick="setAppTheme('dark')">
-                <div>
-                    <div class="theme-card-header">
-                        <h4>
-                            <i class="fa-solid fa-moon" style="color: #38bdf8;"></i>
-                            <span>Executive Midnight Dark</span>
-                        </h4>
-                        <div class="theme-card-check">
-                            <i class="fa-solid fa-check"></i>
-                        </div>
+                    <div style="margin-top: 16px;">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Geofencing & Security Settings
+                        </button>
                     </div>
-
-                    <!-- Mini Mockup Box -->
-                    <div class="theme-preview-box dark-preview">
-                        <div class="theme-preview-nav" style="background: #0f172a; border: 1px solid #1e293b;"></div>
-                        <div class="theme-preview-body">
-                            <div class="theme-preview-sidebar" style="background: #0f172a; border: 1px solid #1e293b;"></div>
-                            <div class="theme-preview-content" style="background: #0f172a; border: 1px solid #1e293b;">
-                                <div style="height: 6px; width: 60%; background: #38bdf8; border-radius: 3px;"></div>
-                                <div style="height: 4px; width: 90%; background: #334155; border-radius: 2px;"></div>
-                                <div style="height: 4px; width: 40%; background: #34d399; border-radius: 2px;"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
-                        Deep midnight charcoal surfaces, obsidian cards, and glowing electric cyan & neon emerald status indicators.
-                    </p>
-                </div>
-
-                <div class="theme-swatches-row">
-                    <span class="theme-swatch" style="background: #090d16;" title="Background: Deep Charcoal"></span>
-                    <span class="theme-swatch" style="background: #0f172a;" title="Card: Obsidian Slate"></span>
-                    <span class="theme-swatch" style="background: #38bdf8;" title="Accent: Electric Sky"></span>
-                    <span class="theme-swatch" style="background: #34d399;" title="Accent: Neon Emerald"></span>
-                    <span class="theme-swatch" style="background: #6366f1;" title="Accent: Violet Glow"></span>
-                </div>
-            </div>
-
-            <!-- Theme 3: Warm Academic -->
-            <div id="themeCardAcademic" class="theme-card" onclick="setAppTheme('academic')">
-                <div>
-                    <div class="theme-card-header">
-                        <h4>
-                            <i class="fa-solid fa-graduation-cap" style="color: #c2410c;"></i>
-                            <span>Warm Academic</span>
-                        </h4>
-                        <div class="theme-card-check">
-                            <i class="fa-solid fa-check"></i>
-                        </div>
-                    </div>
-
-                    <!-- Mini Mockup Box -->
-                    <div class="theme-preview-box academic-preview">
-                        <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e7ded3;"></div>
-                        <div class="theme-preview-body">
-                            <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e7ded3;"></div>
-                            <div class="theme-preview-content" style="background: #ffffff; border: 1px solid #e7ded3;">
-                                <div style="height: 6px; width: 60%; background: #c2410c; border-radius: 3px;"></div>
-                                <div style="height: 4px; width: 90%; background: #d6c8b7; border-radius: 2px;"></div>
-                                <div style="height: 4px; width: 40%; background: #15803d; border-radius: 2px;"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
-                        Warm parchment tones, classic sandstone taupe borders, and rich terracotta accents with collegiate warmth.
-                    </p>
-                </div>
-
-                <div class="theme-swatches-row">
-                    <span class="theme-swatch" style="background: #faf7f2;" title="Background: Eggshell Parchment"></span>
-                    <span class="theme-swatch" style="background: #ffffff;" title="Card: Warm Ivory"></span>
-                    <span class="theme-swatch" style="background: #c2410c;" title="Accent: Rich Terracotta"></span>
-                    <span class="theme-swatch" style="background: #d97706;" title="Accent: Antique Amber"></span>
-                    <span class="theme-swatch" style="background: #15803d;" title="Accent: Forest Pine"></span>
-                </div>
-            </div>
-
-            <!-- Theme 4: Professional Slate (Corporate Human-Crafted) -->
-            <div id="themeCardSlate" class="theme-card" onclick="setAppTheme('slate')">
-                <div>
-                    <div class="theme-card-header">
-                        <h4>
-                            <i class="fa-solid fa-briefcase" style="color: #1e40af;"></i>
-                            <span>Professional Slate</span>
-                        </h4>
-                        <div class="theme-card-check">
-                            <i class="fa-solid fa-check"></i>
-                        </div>
-                    </div>
-
-                    <!-- Mini Mockup Box -->
-                    <div class="theme-preview-box slate-preview">
-                        <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
-                        <div class="theme-preview-body">
-                            <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
-                            <div class="theme-preview-content" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-                                <div style="height: 6px; width: 60%; background: #1e40af; border-radius: 3px;"></div>
-                                <div style="height: 4px; width: 90%; background: #cbd5e1; border-radius: 2px;"></div>
-                                <div style="height: 4px; width: 40%; background: #059669; border-radius: 2px;"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
-                        Hand-crafted corporate slate foundation, executive steel navy accents, and refined enterprise whitespace.
-                    </p>
-                </div>
-
-                <div class="theme-swatches-row">
-                    <span class="theme-swatch" style="background: #f8fafc;" title="Background: Slate-50"></span>
-                    <span class="theme-swatch" style="background: #ffffff;" title="Card: Pure White"></span>
-                    <span class="theme-swatch" style="background: #1e40af;" title="Accent: Steel Navy"></span>
-                    <span class="theme-swatch" style="background: #2563eb;" title="Accent: Royal Blue"></span>
-                    <span class="theme-swatch" style="background: #059669;" title="Accent: Forest Emerald"></span>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Section 3: Institutional System Preferences -->
-<div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-    <!-- Core Attendance Parameters -->
-    <div class="card">
-        <div class="card-header">
-            <h3>
-                <i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i>
-                <span>Institutional Attendance Parameters</span>
-            </h3>
-        </div>
-        <div class="card-body">
-            <form id="systemSettingsForm" onsubmit="saveSystemPreferences(event)">
-                <div class="form-group">
-                    <label class="form-label">Default Defaulter Attendance Threshold (%)</label>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <input type="number" id="prefDefaulterThreshold" class="form-control" min="10" max="100" value="75" required>
-                        <span style="font-weight: 700; color: var(--text-muted);">%</span>
-                    </div>
-                    <small style="font-size: 11.5px; color: var(--text-muted);">Students below this turnout are flagged in analytics audits.</small>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Face Recognition Match Tolerance</label>
-                    <select id="prefMatchTolerance" class="form-control">
-                        <option value="0.55">0.55 - Strict (High Security / Low False Acceptance)</option>
-                        <option value="0.60" selected>0.60 - Standard Recommended (Balanced Institutional)</option>
-                        <option value="0.65">0.65 - Relaxed (Low False Rejection)</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Active Cooldown Deduplication Window</label>
-                    <div style="padding: 10px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 13px; color: var(--text-heading); font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
-                        <span><i class="fa-solid fa-hourglass-half" style="color: var(--accent-primary);"></i> Dynamic Cooldown:</span>
-                        <span class="badge badge-sky" style="font-size: 11px;">{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Mins (Configured in Section 1)</span>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Anti-Spoofing & Liveness State</label>
-                    <div style="padding: 10px 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 13px; color: var(--text-heading); font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
-                        <span><i class="fa-solid fa-shield-halved" style="color: var(--accent-emerald);"></i> Liveness Security:</span>
-                        <span class="badge {% if not branding or branding.enable_anti_spoofing %}badge-present{% else %}badge-unknown{% endif %}" style="font-size: 11px;">
-                            {{ branding.liveness_mode if branding and branding.liveness_mode else 'BALANCED' }} ({{ 'ACTIVE' if not branding or branding.enable_anti_spoofing else 'OFF' }})
-                        </span>
-                    </div>
-                </div>
-
-                <button type="submit" id="btnSavePrefs" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
-                    <i class="fa-solid fa-floppy-disk"></i> Save System Preferences
-                </button>
-                <div id="prefsSaveAlert" style="display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; text-align: center;"></div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Section: Work Shifts & Multi-Shift Timings Management -->
-    <div id="shiftsSection" class="card" style="margin-bottom: 28px;">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div>
-                <h3 style="display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-clock" style="color: var(--accent-primary);"></i>
-                    <span>Work Shifts & Timings Master</span>
+        <!-- Direct Access Link Cards -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <h3>
+                    <i class="fa-solid fa-link" style="color: var(--accent-primary);"></i>
+                    <span>Direct Access Portal URLs</span>
                 </h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                    Configure multiple distinct working shifts, define grace windows, break times, and designate default shifts.
-                </p>
             </div>
-            <button type="button" class="btn btn-primary" onclick="openAddShiftModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-plus"></i> Add Work Shift
-            </button>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive" style="overflow-x: auto;">
-                <table class="table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
-                            <th style="padding: 10px 12px;">Shift Name</th>
-                            <th style="padding: 10px 12px;">Code</th>
-                            <th style="padding: 10px 12px;">Work Hours</th>
-                            <th style="padding: 10px 12px;">Duration</th>
-                            <th style="padding: 10px 12px;">Grace Window</th>
-                            <th style="padding: 10px 12px;">Break</th>
-                            <th style="padding: 10px 12px;">Employees</th>
-                            <th style="padding: 10px 12px; text-align: right;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="shiftsTableBody">
-                        {% if work_shifts %}
-                            {% for s in work_shifts %}
-                            <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="shiftRow-{{ s.id }}">
-                                <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <i class="fa-solid fa-business-time" style="color: var(--accent-primary);"></i>
-                                        <span>{{ s.name }}</span>
-                                        {% if s.is_default %}
-                                        <span class="badge badge-emerald" style="font-size: 10px; font-weight: 700; padding: 2px 6px;">
-                                            <i class="fa-solid fa-star"></i> Default
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
-                                    {{ s.code or '—' }}
-                                </td>
-                                <td style="padding: 12px; font-weight: 600; color: var(--text-heading);">
-                                    <span style="color: var(--accent-emerald);">{{ s.start_time_formatted or s.start_time }}</span>
-                                    <span style="color: var(--text-muted); margin: 0 4px;">→</span>
-                                    <span style="color: var(--accent-rose);">{{ s.end_time_formatted or s.end_time }}</span>
-                                    {% if s.is_night_shift %}
-                                    <span class="badge badge-indigo" style="font-size: 10px; margin-left: 6px;">Night (+1d)</span>
-                                    {% endif %}
-                                </td>
-                                <td style="padding: 12px; font-weight: 600;">
-                                    {{ s.total_shift_hours }} hrs
-                                </td>
-                                <td style="padding: 12px; color: var(--text-secondary);">
-                                    ±{{ s.grace_period_minutes }} mins
-                                </td>
-                                <td style="padding: 12px; color: var(--text-muted);">
-                                    {{ s.break_duration_minutes }} mins
-                                </td>
-                                <td style="padding: 12px;">
-                                    <span class="badge badge-sky" style="font-size: 11px;">
-                                        <i class="fa-solid fa-users"></i> {{ s.assigned_employees_count or 0 }} Assigned
-                                    </span>
-                                </td>
-                                <td style="padding: 12px; text-align: right;">
-                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                                        {% if not s.is_default %}
-                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11px;" onclick="setDefaultShift({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" title="Set as Default Shift">
-                                            <i class="fa-solid fa-star" style="color: #f59e0b;"></i> Make Default
-                                        </button>
-                                        {% endif %}
-                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditShiftModal({{ s|tojson|safe }})' title="Edit Shift">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteShift({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" title="Delete Shift">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr id="emptyShiftsRow">
-                                <td colspan="8" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
-                                    <i class="fa-solid fa-clock" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
-                                    <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No custom shifts created yet.</p>
-                                    <span style="font-size: 12px;">Click "Add Work Shift" above to configure morning, evening, or night shifts.</span>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+            <div class="card-body">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Permanent Self-Attendance Link -->
+                    <div style="padding: 14px 16px; background: var(--bg-subtle); border: 1.5px dashed var(--accent-emerald); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="font-size: 13px; color: var(--text-heading); display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-mobile-screen" style="color: var(--accent-emerald);"></i> Permanent Daily Self-Attendance Check-In URL
+                            </strong>
+                            <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace; display: block; margin-top: 4px;" id="selfAttendanceUrlSpan">
+                                /check-in/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.attendance_slug if current_tenant and current_tenant.attendance_slug else '' }}
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px 12px;" onclick="copyPermanentCheckinLink(this)">
+                                <i class="fa-solid fa-copy"></i> Copy Link
+                            </button>
+                            <a id="btnCheckinPortalOpen" href="/check-in/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.attendance_slug if current_tenant and current_tenant.attendance_slug else '' }}" target="_blank" class="btn btn-primary" style="font-size: 11px; padding: 6px 12px; text-decoration: none;">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                            </a>
+                        </div>
+                    </div>
 
-    <!-- Section: Departments & Teams Management (Consolidated) -->
-    <div id="departmentsSection" class="card" style="margin-bottom: 28px;">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div>
-                <h3 style="display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-diagram-project" style="color: var(--accent-primary);"></i>
-                    <span>Departments & Teams Management</span>
-                </h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                    Organize staff and workforce into operational units, teams, and departments.
-                </p>
-            </div>
-            <button type="button" class="btn btn-primary" onclick="openAddDepartmentModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-plus"></i> Add Department / Team
-            </button>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive" style="overflow-x: auto;">
-                <table class="table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
-                            <th style="padding: 10px 12px;">Department Name</th>
-                            <th style="padding: 10px 12px;">Code / Key</th>
-                            <th style="padding: 10px 12px;">Employees / Staff</th>
-                            <th style="padding: 10px 12px;">Description</th>
-                            <th style="padding: 10px 12px; text-align: right;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="departmentsTableBody">
-                        {% if departments %}
-                            {% for dept in departments %}
-                            <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="deptRow-{{ dept.id }}">
-                                <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
-                                    <i class="fa-solid fa-building" style="color: var(--accent-primary); margin-right: 8px;"></i>
-                                    {{ dept.name }}
-                                </td>
-                                <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
-                                    {{ dept.code or dept.name[:4]|upper }}
-                                </td>
-                                <td style="padding: 12px;">
-                                    <span class="badge badge-sky" style="font-size: 11px;">
-                                        <i class="fa-solid fa-users"></i> {{ dept.employee_count or 0 }} Members
-                                    </span>
-                                </td>
-                                <td style="padding: 12px; color: var(--text-muted); font-size: 12px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    {{ dept.description or '—' }}
-                                </td>
-                                <td style="padding: 12px; text-align: right;">
-                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditDeptModal({{ dept|tojson|safe }})' title="Edit Department">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteDepartment({{ dept.id }}, '{{ dept.name }}')" title="Delete Department">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr id="emptyDeptsRow">
-                                <td colspan="5" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
-                                    <i class="fa-solid fa-diagram-project" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
-                                    <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No departments created yet.</p>
-                                    <span style="font-size: 12px;">Click "Add Department / Team" above to create your organizational hierarchy.</span>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edge Hardware & Database Diagnostics -->
-    <div class="card">
-        <div class="card-header">
-            <h3>
-                <i class="fa-solid fa-server" style="color: var(--accent-emerald);"></i>
-                <span>Hub & Database Diagnostics</span>
-            </h3>
-        </div>
-        <div class="card-body">
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-                <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                    <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Database Engine</div>
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-top: 4px;">
-                        <i class="fa-solid fa-database" style="color: var(--accent-primary);"></i> SQLite Thin-Client Hub (Thread-Safe)
+                    <!-- Employee Onboarding Link -->
+                    <div style="padding: 14px 16px; background: var(--bg-subtle); border: 1.5px dashed var(--accent-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="font-size: 13px; color: var(--text-heading); display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-user-plus" style="color: var(--accent-primary);"></i> Employee Self-Onboarding Portal URL
+                            </strong>
+                            <span style="font-size: 11.5px; color: var(--text-muted); font-family: monospace; display: block; margin-top: 4px;" id="employeeOnboardingUrlSpan">
+                                /onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 6px 12px;" onclick="copyEmployeeOnboardLink(this)">
+                                <i class="fa-solid fa-copy"></i> Copy Link
+                            </button>
+                            <a id="btnOnboardPortalOpen" href="/onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 6px 12px; text-decoration: none;">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                            </a>
+                        </div>
                     </div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                        Storage: <code>database/attendance.db</code>
-                    </div>
-                </div>
-
-                <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                    <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Vector Cache Acceleration</div>
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-top: 4px;">
-                        <i class="fa-solid fa-microchip" style="color: var(--accent-cyan);"></i> In-Memory NumPy 128-d Euclidean Matrix
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                        Optimized for CPU inference with zero GPU hardware dependencies.
-                    </div>
-                </div>
-
-                <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                    <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Mobile Web Ingestion Endpoint</div>
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-top: 4px;">
-                        <code>/api/v1/nodes/frame</code> (2.0 FPS Stream Rate)
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                        Access via mobile browser at <code>/mobile-capture</code>
-                    </div>
-                </div>
-
-                <!-- Quick Backup Export Action -->
-                <div style="display: flex; gap: 10px; margin-top: 6px;">
-                    <a href="/api/v1/attendance/export?export_format=xlsx" class="btn btn-secondary" style="flex: 1; text-align: center; justify-content: center;">
-                        <i class="fa-solid fa-file-excel" style="color: var(--accent-emerald);"></i> Export Raw Logs (.xlsx)
-                    </a>
-                    <a href="/api/v1/attendance/export-compliance?export_format=xlsx" class="btn btn-secondary" style="flex: 1; text-align: center; justify-content: center;">
-                        <i class="fa-solid fa-file-shield" style="color: var(--accent-primary);"></i> Export Audit Report (.xlsx)
-                    </a>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Live Toast / Global Alert Box -->
+    <div id="brandingSaveAlert" style="display: none; position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 13px; box-shadow: var(--shadow-lg); transition: all 0.3s ease;"></div>
+</form>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    handleInitialTabFromHash();
     updateThemeSelectionCards();
     loadSavedSystemPreferences();
-    initOfficeMap();
+
+    // Initialize Universal Employee Face-Login Portal full URL and QR
+    const empPortalSpan = document.getElementById("universalEmployeePortalUrlSpan");
+    const empPortalOpenBtn = document.getElementById("btnUniversalEmpPortalOpen");
+    const empPortalQrImg = document.getElementById("universalEmpPortalQrImg");
+    if (empPortalSpan) {
+        const slug = "{{ current_tenant.slug if current_tenant else 'default' }}";
+        const relativeUrl = `/employee/${slug}`;
+        const fullUrl = window.location.origin + relativeUrl;
+        empPortalSpan.innerText = fullUrl;
+        if (empPortalOpenBtn) empPortalOpenBtn.href = relativeUrl;
+        if (empPortalQrImg) {
+            empPortalQrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(fullUrl)}`;
+        }
+    }
 });
+
+// Tab Switcher with Deep Linking - Strict Sequence:
+// 1. Organization Settings (branding)
+// 2. Themes & Appearance (themes)
+// 3. Departments & Teams (departments)
+// 4. Shifts & Rules (shifts)
+// 5. Attendance & Security (security)
+// 6. Geofencing & Portals (geofencing)
+function switchSettingsTab(tabName) {
+    const validTabs = ['branding', 'themes', 'departments', 'shifts', 'security', 'geofencing'];
+    if (!validTabs.includes(tabName)) tabName = 'branding';
+
+    validTabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const pane = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (btn) btn.classList.remove("active");
+        if (pane) pane.classList.remove("active");
+    });
+
+    const activeBtn = document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+    const activePane = document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+    if (activeBtn) activeBtn.classList.add("active");
+    if (activePane) activePane.classList.add("active");
+
+    // Leaflet Map Invalidation on Geofencing tab display
+    if (tabName === 'geofencing') {
+        setTimeout(() => {
+            if (officeMap) {
+                officeMap.invalidateSize();
+            } else {
+                initOfficeMap();
+            }
+        }, 150);
+    }
+
+    // Update URL hash without jumping page
+    if (history.replaceState) {
+        history.replaceState(null, null, `#${tabName}`);
+    }
+}
+
+function handleInitialTabFromHash() {
+    const hash = (window.location.hash || '').toLowerCase().replace('#', '');
+    if (hash === 'departments' || hash === 'departmentssection') {
+        switchSettingsTab('departments');
+    } else if (hash === 'shifts' || hash === 'shiftssection') {
+        switchSettingsTab('shifts');
+    } else if (hash === 'themes' || hash === 'theme') {
+        switchSettingsTab('themes');
+    } else if (hash === 'security' || hash === 'liveness' || hash === 'spoofing') {
+        switchSettingsTab('security');
+    } else if (hash === 'geofencing' || hash === 'geofence' || hash === 'portals') {
+        switchSettingsTab('geofencing');
+    } else {
+        switchSettingsTab('branding');
+    }
+}
 
 function updateBrandingLivePreview() {
     const instName = document.getElementById("brandInstName").value || "FaceAttendance Campus";
@@ -1184,7 +1315,6 @@ let officeMap = null;
 let officeMarker = null;
 let officeCircle = null;
 
-// Central Gujarat, India regional fallback coordinates
 const DEFAULT_FALLBACK_LAT = 23.022505;
 const DEFAULT_FALLBACK_LON = 72.571362;
 
@@ -1199,7 +1329,6 @@ function initOfficeMap() {
     const mapContainer = document.getElementById("officeMapPicker");
     if (!mapContainer || typeof L === "undefined") return;
 
-    // Destroy existing map instance if already initialized to prevent leaks
     if (officeMap) {
         officeMap.remove();
         officeMap = null;
@@ -1216,7 +1345,6 @@ function initOfficeMap() {
     const hasSavedCoords = !isNaN(rawLat) && !isNaN(rawLon) && rawLat !== 0 && rawLon !== 0;
 
     if (hasSavedCoords) {
-        // Option A: Preserve saved office coordinates if already configured in database
         const initLat = rawLat;
         const initLon = rawLon;
 
@@ -1243,7 +1371,6 @@ function initOfficeMap() {
         bindMapEvents();
         setMapPinBadge("Saved Office Coordinates", "badge-present", '<i class="fa-solid fa-building"></i>');
     } else {
-        // Unconfigured: Initialize immediately at Gujarat regional fallback and request live GPS
         officeMap = L.map('officeMapPicker').setView([DEFAULT_FALLBACK_LAT, DEFAULT_FALLBACK_LON], 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1267,7 +1394,6 @@ function initOfficeMap() {
         bindMapEvents();
         setMapPinBadge("Detecting Live GPS...", "badge-node", '<i class="fa-solid fa-spinner fa-spin"></i>');
 
-        // Automatically query HTML5 browser geolocation to center live pin
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -1290,7 +1416,6 @@ function initOfficeMap() {
                     }
                 },
                 (err) => {
-                    // Graceful fallback to Gujarat, India default
                     if (latInput && !latInput.value) latInput.value = DEFAULT_FALLBACK_LAT.toFixed(6);
                     if (lonInput && !lonInput.value) lonInput.value = DEFAULT_FALLBACK_LON.toFixed(6);
 
@@ -1310,7 +1435,6 @@ function initOfficeMap() {
         }
     }
 
-    // Invalidate map rendering size after DOM draw
     setTimeout(() => {
         if (officeMap) officeMap.invalidateSize();
     }, 250);
@@ -1319,14 +1443,12 @@ function initOfficeMap() {
 function bindMapEvents() {
     if (!officeMarker || !officeMap) return;
 
-    // Marker Drag Event -> Live update input values & circle position
     officeMarker.on('drag', (e) => {
         const pos = e.target.getLatLng();
         updateCoordinatesFromMap(pos.lat, pos.lng);
         setMapPinBadge("Pin Position Selected", "badge-node", '<i class="fa-solid fa-hand-pointer"></i>');
     });
 
-    // Map Click Event -> Move marker to click point & update inputs
     officeMap.on('click', (e) => {
         officeMarker.setLatLng(e.latlng);
         updateCoordinatesFromMap(e.latlng.lat, e.latlng.lng);
@@ -1463,30 +1585,63 @@ function fetchAdminGpsLocation() {
     );
 }
 
-function copyPermanentCheckinLink() {
+function showCopyFeedback(btn) {
+    if (!btn) return;
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-check" style="color: var(--accent-emerald);"></i> <span style="color: var(--accent-emerald);">Copied!</span>';
+    setTimeout(() => {
+        btn.innerHTML = origHtml;
+    }, 2000);
+}
+
+function copyToClipboardWithFallback(text, btn) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopyFeedback(btn);
+        }).catch(() => {
+            fallbackExecCopy(text, btn);
+        });
+    } else {
+        fallbackExecCopy(text, btn);
+    }
+}
+
+function fallbackExecCopy(text, btn) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand("copy");
+        showCopyFeedback(btn);
+    } catch (e) {
+        prompt("Copy URL to clipboard:", text);
+    }
+    document.body.removeChild(ta);
+}
+
+function copyUniversalEmployeePortalLink(btn) {
+    const span = document.getElementById("universalEmployeePortalUrlSpan");
+    if (!span) return;
+    const text = span.innerText.trim();
+    const fullUrl = text.startsWith("http") ? text : (window.location.origin + text);
+    copyToClipboardWithFallback(fullUrl, btn);
+}
+
+function copyPermanentCheckinLink(btn) {
     const span = document.getElementById("selfAttendanceUrlSpan");
     if (!span) return;
     const fullUrl = window.location.origin + span.innerText.trim();
-    navigator.clipboard.writeText(fullUrl).then(() => {
-        alert("Permanent daily self-attendance URL copied to clipboard:\n" + fullUrl);
-    }).catch(() => {
-        prompt("Copy this URL:", fullUrl);
-    });
+    copyToClipboardWithFallback(fullUrl, btn);
 }
 
-function copyEmployeeOnboardLink() {
+function copyEmployeeOnboardLink(btn) {
     const span = document.getElementById("employeeOnboardingUrlSpan");
     if (!span) return;
     const fullUrl = window.location.origin + span.innerText.trim();
-    navigator.clipboard.writeText(fullUrl).then(() => {
-        alert("Employee self-onboarding portal URL copied to clipboard:\n" + fullUrl);
-    }).catch(() => {
-        prompt("Copy this URL:", fullUrl);
-    });
-}
-
-function copySelfAttendanceLink() {
-    copyPermanentCheckinLink();
+    copyToClipboardWithFallback(fullUrl, btn);
 }
 
 function resetBrandColor() {
@@ -1523,19 +1678,7 @@ async function saveBrandingDetails(e) {
     const shiftGrace = document.getElementById("brandShiftGrace") ? parseInt(document.getElementById("brandShiftGrace").value) || 15 : 15;
     const minCheckoutInterval = document.getElementById("brandMinCheckoutInterval") ? parseInt(document.getElementById("brandMinCheckoutInterval").value) || 15 : 15;
 
-    const payrollStructure = document.getElementById("brandPayrollStructure") ? document.getElementById("brandPayrollStructure").value : "HOURLY";
-    const defaultHourlyRate = document.getElementById("brandDefaultHourlyRate") ? parseFloat(document.getElementById("brandDefaultHourlyRate").value) || 15.0 : 15.0;
-    const stdDailyHours = document.getElementById("brandStdDailyHours") ? parseFloat(document.getElementById("brandStdDailyHours").value) || 8.0 : 8.0;
-    const enableOvertime = document.getElementById("brandEnableOvertime") ? (document.getElementById("brandEnableOvertime").value === "true") : true;
-    const overtimeMultiplier = document.getElementById("brandOvertimeMultiplier") ? parseFloat(document.getElementById("brandOvertimeMultiplier").value) || 1.5 : 1.5;
-    const missedCheckoutPolicy = document.getElementById("brandMissedCheckoutPolicy") ? document.getElementById("brandMissedCheckoutPolicy").value : "HALF_DAY";
-    const currencySymbol = document.getElementById("brandCurrencySymbol") ? document.getElementById("brandCurrencySymbol").value.trim() : "$";
-
-    const saveBtn = document.getElementById("btnSaveBranding");
     const alertBox = document.getElementById("brandingSaveAlert");
-
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
     try {
         const res = await fetch("/api/v1/branding", {
@@ -1564,13 +1707,6 @@ async function saveBrandingDetails(e) {
                 shift_check_out_time: shiftCheckOut,
                 shift_grace_minutes: shiftGrace,
                 min_checkout_interval_minutes: minCheckoutInterval,
-                payroll_structure: payrollStructure,
-                default_hourly_rate: defaultHourlyRate,
-                standard_working_hours_per_day: stdDailyHours,
-                enable_overtime: enableOvertime,
-                overtime_rate_multiplier: overtimeMultiplier,
-                missed_checkout_policy: missedCheckoutPolicy,
-                currency_symbol: currencySymbol,
             }),
         });
         const data = await res.json();
@@ -1580,9 +1716,7 @@ async function saveBrandingDetails(e) {
             alertBox.style.background = "var(--badge-emerald-bg)";
             alertBox.style.color = "var(--badge-emerald-text)";
             alertBox.style.border = "1px solid var(--badge-emerald-border)";
-            alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
+            alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || 'Settings saved successfully!');
 
             // Update live UI
             const sideName = document.getElementById("sidebarBrandName");
@@ -1597,16 +1731,16 @@ async function saveBrandingDetails(e) {
 
             setTimeout(() => {
                 alertBox.style.display = "none";
-                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Institutional Details';
-            }, 2500);
+            }, 3000);
         } else {
             alertBox.style.display = "block";
             alertBox.style.background = "var(--badge-rose-bg)";
             alertBox.style.color = "var(--badge-rose-text)";
             alertBox.style.border = "1px solid var(--badge-rose-border)";
             alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || 'Failed to save.');
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Institutional Details';
+            setTimeout(() => {
+                alertBox.style.display = "none";
+            }, 4000);
         }
     } catch (err) {
         alertBox.style.display = "block";
@@ -1614,8 +1748,9 @@ async function saveBrandingDetails(e) {
         alertBox.style.color = "var(--badge-rose-text)";
         alertBox.style.border = "1px solid var(--badge-rose-border)";
         alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to backend.';
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Institutional Details';
+        setTimeout(() => {
+            alertBox.style.display = "none";
+        }, 4000);
     }
 }
 
@@ -1689,7 +1824,7 @@ function loadSavedSystemPreferences() {
 }
 
 function saveSystemPreferences(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const threshold = document.getElementById("prefDefaulterThreshold").value;
     const tolerance = document.getElementById("prefMatchTolerance").value;
 
@@ -1702,7 +1837,7 @@ function saveSystemPreferences(e) {
         alertBox.style.background = "var(--badge-emerald-bg)";
         alertBox.style.color = "var(--badge-emerald-text)";
         alertBox.style.border = "1px solid var(--badge-emerald-border)";
-        alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> System preferences saved successfully!';
+        alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> System parameters saved successfully!';
         setTimeout(() => {
             alertBox.style.display = "none";
         }, 3000);

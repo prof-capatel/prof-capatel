@@ -256,7 +256,7 @@
                             <td>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                                     {% if s.is_active %}
-                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}', '{{ s.department|replace("'", "\\'") }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }}, {{ s.hourly_rate or 'null' }}, {{ s.monthly_base_salary or 'null' }}, '{{ s.cadre_level or '' }}', '{{ s.date_of_joining if s.date_of_joining else '' }}', {{ s.shift_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
+                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}', '{{ s.department|replace("'", "\\'") }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }}, {{ s.hourly_rate or 'null' }}, {{ s.monthly_base_salary or 'null' }}, '{{ s.date_of_joining if s.date_of_joining else '' }}', {{ s.shift_id or 'null' }}, {{ s.location_id or 'null' }}, {{ s.designation_id or 'null' }}, {{ s.salary_template_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </button>
                                     <button onclick="openTransferDepartmentModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Transfer Department / Team{% else %}Transfer Department / Class{% endif %}">
@@ -397,6 +397,26 @@
 
                 {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
                 <div class="form-group">
+                    <label class="form-label">Branch / Office Location</label>
+                    <select id="editLocationSelect" class="form-control">
+                        <option value="">-- Unassigned Location --</option>
+                        {% for loc in company_locations %}
+                        <option value="{{ loc.id }}">{{ loc.name }} ({{ loc.city or loc.state or 'HQ' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Designation / Role Title</label>
+                    <select id="editDesignationSelect" class="form-control" onchange="onEditDesignationChanged()">
+                        <option value="">-- Unassigned Designation --</option>
+                        {% for desig in designations %}
+                        <option value="{{ desig.id }}" data-title="{{ desig.title }}" data-template-id="{{ desig.salary_template_id or '' }}">{{ desig.title }}{% if desig.code %} ({{ desig.code }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Assigned Work Shift</label>
                     <select id="editShiftSelect" class="form-control">
                         <option value="">Org Default Shift</option>
@@ -422,6 +442,16 @@
                     <div style="font-size: 11.5px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">
                         <i class="fa-solid fa-money-bill-wave" style="color: var(--accent-emerald);"></i> Compensation & Wage Profile
                     </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label class="form-label" style="font-size: 11px;">Active Salary Template</label>
+                        <select id="editSalaryTemplateSelect" class="form-control">
+                            <option value="">-- Custom Individual Structure / None --</option>
+                            {% for tpl in salary_templates %}
+                            <option value="{{ tpl.id }}">{{ tpl.name }} ({{ tpl.code }} - {{ tpl.compensation_model }})</option>
+                            {% endfor %}
+                        </select>
+                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Assigning or changing template updates employee salary structure with custom overrides.</div>
+                    </div>
                     <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label" style="font-size: 11px;">Hourly Rate (₹/hr)</label>
@@ -431,17 +461,6 @@
                             <label class="form-label" style="font-size: 11px;">Monthly Base Salary (₹)</label>
                             <input type="number" step="50" min="0" id="editMonthlyBaseSalary" class="form-control" placeholder="e.g. 35000">
                         </div>
-                    </div>
-                    <div class="form-group" style="margin-top: 8px; margin-bottom: 0;">
-                        <label class="form-label" style="font-size: 11px;">Cadre / Seniority Level</label>
-                        <select id="editCadreLevel" class="form-control">
-                            <option value="">Standard Cadre</option>
-                            <option value="Executive Cadre">Executive Cadre</option>
-                            <option value="Senior Staff">Senior Staff</option>
-                            <option value="Associate Staff">Associate Staff</option>
-                            <option value="Junior / Intern">Junior / Intern</option>
-                            <option value="Contractor Cadre">Contractor Cadre</option>
-                        </select>
                     </div>
                 </div>
 
