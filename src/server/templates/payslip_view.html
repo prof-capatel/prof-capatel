@@ -1,26 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>{{ page_title or 'Employee Salary Slip' }}</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    
+    <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Base Stylesheet -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    <!-- Immediate Zero-Flicker Theme Initializer matching tenant default -->
+    <script>
+        (function() {
+            try {
+                let defaultTheme = {% if (current_tenant and current_tenant.tenant_type in ['corporate', 'company', 'enterprise']) or (target_tenant and target_tenant.tenant_type in ['corporate', 'company', 'enterprise']) %}"slate"{% else %}"academic"{% endif %};
+                const savedTheme = localStorage.getItem("app_theme") || defaultTheme;
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+
+    <!-- Dynamic Custom Accent Color if configured -->
+    {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#c2410c' and branding.primary_accent_color != '#6366f1' and branding.primary_accent_color != '#1e40af' %}
+    <style>
+        :root, [data-theme="academic"], [data-theme="light"], [data-theme="slate"], [data-theme="dark"] {
+            --accent-primary: {{ branding.primary_accent_color }};
+            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #1e40af 100%);
+            --primary: {{ branding.primary_accent_color }};
+            --primary-dark: {{ branding.primary_accent_color }};
+        }
+    </style>
+    {% endif %}
+
     <style>
         :root {
-            --primary: #4338ca;
-            --primary-dark: #312e81;
-            --primary-light: #e0e7ff;
-            --success: #059669;
-            --danger: #dc2626;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --bg-page: #f1f5f9;
-            --bg-card: #ffffff;
-            --border-color: #cbd5e1;
-            --border-dark: #94a3b8;
+            --primary: var(--accent-primary, #4338ca);
+            --primary-dark: var(--accent-primary, #312e81);
+            --primary-light: rgba(99, 102, 241, 0.12);
+            --success: var(--accent-emerald, #059669);
+            --danger: var(--accent-rose, #dc2626);
         }
 
         * {
@@ -30,48 +54,57 @@
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-page);
-            color: var(--text-main);
-            padding: 24px;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body, #f1f5f9);
+            color: var(--text-main, #0f172a);
+            padding: 20px 16px 40px 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            overflow-x: hidden;
+            transition: background 0.25s ease, color 0.25s ease;
+            -webkit-tap-highlight-color: transparent;
         }
 
+        /* Top Action Bar (Hidden on Print) */
         .no-print-bar {
             width: 100%;
-            max-width: 850px;
-            margin-bottom: 20px;
+            max-width: 860px;
+            margin-bottom: 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #ffffff;
-            padding: 14px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            border: 1px solid var(--border-color);
+            background: var(--bg-card, #ffffff);
+            padding: 12px 18px;
+            border-radius: var(--radius-md, 12px);
+            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
+            border: 1px solid var(--border-color, #cbd5e1);
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
         .no-print-bar .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            padding: 10px 18px;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 8px;
+            padding: 9px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: var(--radius-sm, 8px);
             cursor: pointer;
             transition: all 0.2s ease;
             text-decoration: none;
+            min-height: 40px;
+            user-select: none;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            background: var(--accent-gradient, linear-gradient(135deg, #4f46e5, #4338ca));
             color: #ffffff;
             border: none;
-            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
         }
 
         .btn-primary:hover {
@@ -80,50 +113,77 @@
         }
 
         .btn-outline {
-            background: #ffffff;
-            color: #475569;
-            border: 1px solid #cbd5e1;
+            background: var(--bg-card, #ffffff);
+            color: var(--text-heading, #475569);
+            border: 1px solid var(--border-color, #cbd5e1);
         }
 
         .btn-outline:hover {
-            background: #f8fafc;
-            color: #1e293b;
+            background: var(--bg-subtle, #f8fafc);
+            color: var(--text-heading, #1e293b);
+            border-color: var(--accent-primary);
         }
 
         /* Payslip Sheet Canvas */
         .payslip-sheet {
             width: 100%;
-            max-width: 850px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-dark);
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-            padding: 32px;
+            max-width: 860px;
+            background: var(--bg-card, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-md, 12px);
+            box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.06));
+            padding: 28px 32px;
             position: relative;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
         }
 
-        /* Header */
+        /* Header Box */
         .header-box {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 2px solid var(--primary);
+            border-bottom: 2px solid var(--accent-primary, #4338ca);
             padding-bottom: 18px;
             margin-bottom: 20px;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .company-meta-wrap {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .company-meta-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm, 8px);
+            background: var(--accent-gradient, linear-gradient(135deg, var(--accent-primary), #3b82f6));
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 800;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
         }
 
         .company-meta h1 {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 800;
-            color: var(--primary-dark);
+            color: var(--text-heading, #1e293b);
             letter-spacing: -0.5px;
-            margin-bottom: 4px;
+            margin: 0 0 3px 0;
         }
 
         .company-meta p {
-            font-size: 13px;
-            color: var(--text-muted);
+            font-size: 12.5px;
+            color: var(--text-muted, #64748b);
             line-height: 1.4;
+            margin: 0;
         }
 
         .slip-title-box {
@@ -132,39 +192,40 @@
 
         .slip-badge {
             display: inline-block;
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            font-size: 12px;
-            font-weight: 700;
-            padding: 4px 12px;
+            background: var(--primary-light, rgba(99, 102, 241, 0.12));
+            color: var(--accent-primary, #4338ca);
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
             border-radius: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .period-text {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-main);
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-heading, #0f172a);
         }
 
         .batch-text {
-            font-size: 12px;
-            color: var(--text-muted);
+            font-size: 11.5px;
+            color: var(--text-muted, #64748b);
             font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
         }
 
-        /* Employee Details Grid */
+        /* Employee Metadata Grid */
         .details-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            background: #f8fafc;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 20px;
+            gap: 14px 20px;
+            background: var(--bg-subtle, #f8fafc);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-sm, 8px);
+            padding: 16px 18px;
+            margin-bottom: 18px;
         }
 
         .details-col {
@@ -175,58 +236,61 @@
 
         .detail-row {
             display: flex;
-            font-size: 13px;
+            font-size: 12.5px;
             line-height: 1.4;
         }
 
         .detail-label {
-            width: 140px;
-            color: var(--text-muted);
-            font-weight: 500;
+            width: 130px;
+            color: var(--text-muted, #64748b);
+            font-weight: 600;
             flex-shrink: 0;
         }
 
         .detail-value {
-            font-weight: 600;
-            color: var(--text-main);
+            font-weight: 700;
+            color: var(--text-heading, #0f172a);
+            word-break: break-word;
         }
 
-        /* Attendance Metrics Bar */
+        /* Attendance Summary Bar */
         .attendance-bar {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
             gap: 8px;
-            border: 1px solid var(--border-color);
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 12px 14px;
-            margin-bottom: 20px;
+            border: 1px solid var(--border-color, #e2e8f0);
+            background: var(--bg-subtle, #f8fafc);
+            border-radius: var(--radius-sm, 8px);
+            padding: 12px 10px;
+            margin-bottom: 18px;
             text-align: center;
         }
 
         .att-item .label {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-muted);
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-muted, #64748b);
             text-transform: uppercase;
-            margin-bottom: 4px;
+            letter-spacing: 0.3px;
+            margin-bottom: 3px;
         }
 
         .att-item .val {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--primary-dark);
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--accent-primary, #4338ca);
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Earnings & Deductions Tables */
+        /* 2-Column Earnings & Deductions Breakdown */
         .salary-breakdown {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            border: 1px solid var(--border-dark);
-            border-radius: 8px;
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-sm, 8px);
             overflow: hidden;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
+            background: var(--bg-card, #ffffff);
         }
 
         .breakdown-column {
@@ -235,34 +299,41 @@
         }
 
         .breakdown-column:first-child {
-            border-right: 1px solid var(--border-dark);
+            border-right: 1px solid var(--border-color, #cbd5e1);
         }
 
         .col-header {
-            background: #1e293b;
-            color: #ffffff;
+            background: var(--bg-subtle, #1e293b);
+            color: var(--text-heading, #ffffff);
             padding: 10px 14px;
-            font-size: 13px;
-            font-weight: 700;
+            font-size: 12px;
+            font-weight: 800;
             display: flex;
             justify-content: space-between;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .col-header,
+        [data-theme="slate"] .col-header {
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .table-body {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            background: #ffffff;
+            background: var(--bg-card, #ffffff);
         }
 
         .comp-row {
             display: flex;
             justify-content: space-between;
             padding: 8px 14px;
-            font-size: 13px;
-            border-bottom: 1px dashed var(--border-color);
+            font-size: 12.5px;
+            border-bottom: 1px dashed var(--border-color, #e2e8f0);
+            gap: 8px;
         }
 
         .comp-row:last-child {
@@ -270,57 +341,63 @@
         }
 
         .comp-name {
-            color: #334155;
+            color: var(--text-main, #334155);
             font-weight: 500;
         }
 
         .comp-amt {
-            font-weight: 600;
-            color: var(--text-main);
+            font-weight: 700;
+            color: var(--text-heading, #0f172a);
             font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
         }
 
         .col-footer {
-            background: #f1f5f9;
-            border-top: 1px solid var(--border-dark);
+            background: var(--bg-subtle, #f1f5f9);
+            border-top: 1px solid var(--border-color, #cbd5e1);
             padding: 10px 14px;
             display: flex;
             justify-content: space-between;
-            font-weight: 700;
-            font-size: 14px;
+            font-weight: 800;
+            font-size: 13px;
+            color: var(--text-heading);
         }
 
         .col-footer .total-amt {
             font-family: 'JetBrains Mono', monospace;
-            color: var(--primary-dark);
+            color: var(--accent-primary, #4338ca);
         }
 
         /* Net Pay Banner */
         .net-pay-box {
-            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            background: var(--accent-gradient, linear-gradient(135deg, #1e1b4b, #312e81));
             color: #ffffff;
-            border-radius: 8px;
-            padding: 18px 24px;
+            border-radius: var(--radius-sm, 8px);
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
         }
 
         .net-pay-left .label {
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #a5b4fc;
-            margin-bottom: 4px;
+            letter-spacing: 0.8px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 3px;
         }
 
         .net-pay-left .words {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            color: #f8fafc;
+            color: #ffffff;
             font-style: italic;
+            line-height: 1.3;
         }
 
         .net-pay-right {
@@ -328,75 +405,186 @@
         }
 
         .net-pay-right .amount {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
             color: #34d399;
             font-family: 'JetBrains Mono', monospace;
         }
 
         .net-pay-right .status {
-            font-size: 12px;
-            color: #c7d2fe;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.85);
             margin-top: 2px;
         }
 
-        /* Employer Contribution & Note */
+        /* Employer Contribution Note */
         .employer-statutory-note {
-            background: #f8fafc;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 28px;
+            background: var(--bg-subtle, #f8fafc);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-sm, 8px);
+            padding: 11px 14px;
+            font-size: 11.5px;
+            color: var(--text-muted, #64748b);
+            margin-bottom: 22px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .employer-statutory-note strong {
-            color: var(--text-main);
+            color: var(--text-heading, #0f172a);
         }
 
         /* Signature Row */
         .signature-row {
             display: flex;
             justify-content: space-between;
-            padding-top: 40px;
-            border-top: 1px solid var(--border-color);
-            margin-top: 20px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border-color, #e2e8f0);
+            margin-top: 16px;
+            gap: 20px;
+            flex-wrap: wrap;
         }
 
         .sig-block {
             text-align: center;
-            width: 220px;
+            width: 200px;
         }
 
         .sig-line {
-            border-top: 1px dashed var(--border-dark);
+            border-top: 1px dashed var(--border-color, #94a3b8);
             margin-bottom: 8px;
         }
 
         .sig-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--text-muted, #64748b);
             text-transform: uppercase;
         }
 
         .confidential-footer {
-            margin-top: 24px;
+            margin-top: 20px;
             text-align: center;
-            font-size: 11px;
-            color: #94a3b8;
+            font-size: 10.5px;
+            color: var(--text-muted, #94a3b8);
             font-style: italic;
+            line-height: 1.4;
         }
 
-        /* Print Media Styles */
+        /* Mobile-First Responsive Breakpoints */
+        @media (max-width: 640px) {
+            body {
+                padding: 10px 8px 30px 8px;
+            }
+
+            .no-print-bar {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 12px;
+                gap: 10px;
+            }
+
+            .no-print-bar .btn {
+                width: 100%;
+            }
+
+            .payslip-sheet {
+                padding: 16px 14px;
+                border-radius: var(--radius-sm, 8px);
+            }
+
+            .header-box {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .slip-title-box {
+                text-align: left;
+                width: 100%;
+                border-top: 1px dashed var(--border-color);
+                padding-top: 10px;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+                padding: 12px 14px;
+                gap: 8px;
+            }
+
+            .detail-label {
+                width: 110px;
+                font-size: 11.5px;
+            }
+
+            .detail-value {
+                font-size: 12px;
+            }
+
+            .attendance-bar {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                padding: 10px 6px;
+            }
+
+            .att-item .label {
+                font-size: 9.5px;
+            }
+
+            .att-item .val {
+                font-size: 13px;
+            }
+
+            /* Responsive Stacked Salary Breakdown */
+            .salary-breakdown {
+                grid-template-columns: 1fr;
+            }
+
+            .breakdown-column:first-child {
+                border-right: none;
+                border-bottom: 2px solid var(--border-color);
+            }
+
+            .net-pay-box {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 14px 16px;
+                gap: 10px;
+            }
+
+            .net-pay-right {
+                text-align: left;
+                width: 100%;
+                border-top: 1px solid rgba(255, 255, 255, 0.2);
+                padding-top: 8px;
+            }
+
+            .net-pay-right .amount {
+                font-size: 22px;
+            }
+
+            .signature-row {
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+                padding-top: 20px;
+            }
+
+            .sig-block {
+                width: 100%;
+                max-width: 240px;
+            }
+        }
+
+        /* Print Media Styles: Pure Crisp Printable Output */
         @media print {
             body {
-                background: #ffffff;
-                padding: 0;
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
             }
 
             .no-print-bar {
@@ -404,10 +592,38 @@
             }
 
             .payslip-sheet {
-                box-shadow: none;
-                border: 1px solid #64748b;
-                padding: 20px;
-                max-width: 100%;
+                box-shadow: none !important;
+                border: 1px solid #64748b !important;
+                padding: 20px !important;
+                max-width: 100% !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+
+            .details-grid,
+            .attendance-bar,
+            .table-body,
+            .employer-statutory-note {
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+
+            .col-header {
+                background: #1e293b !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .net-pay-box {
+                background: #1e1b4b !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .net-pay-right .amount {
+                color: #34d399 !important;
             }
         }
     </style>
@@ -416,29 +632,54 @@
 
     <!-- Top Action Bar (Hidden on Print) -->
     <div class="no-print-bar">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <a href="/payroll" class="btn btn-outline"><i class="fa-solid fa-arrow-left"></i> Back to Payroll</a>
-            <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">
-                Generated on {{ payslip.created_at or 'IST' }}
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            {% if is_employee_portal %}
+            <a href="{{ employee_dashboard_url or ('/employee/' ~ (current_tenant.slug or target_tenant.slug) ~ '/dashboard#wages') }}" class="btn btn-outline" id="btnBackToPortal">
+                <i class="fa-solid fa-arrow-left"></i> <span>Back to Employee Portal</span>
+            </a>
+            {% else %}
+            <a href="/payroll" class="btn btn-outline" id="btnBackToPayroll">
+                <i class="fa-solid fa-arrow-left"></i> <span>Back to Payroll</span>
+            </a>
+            {% endif %}
+            
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
+                <i class="fa-regular fa-clock"></i> Generated for {{ payslip.period_label }}
             </span>
         </div>
-        <div style="display: flex; gap: 10px;">
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="themeToggleBtn" class="btn btn-outline" onclick="togglePayslipTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;">
+                <i class="fa-solid fa-moon"></i>
+            </button>
             <button onclick="window.print()" class="btn btn-primary">
-                <i class="fa-solid fa-print"></i> Print Payslip / Save PDF
+                <i class="fa-solid fa-print"></i> <span>Print / Save PDF</span>
             </button>
         </div>
     </div>
 
-    <!-- Main Printable Payslip Sheet -->
+    <!-- Main Printable & Responsive Payslip Sheet -->
     <div class="payslip-sheet">
         
         <!-- Header Banner -->
         <div class="header-box">
-            <div class="company-meta">
-                <h1>{{ branding.institution_name or current_tenant.name }}</h1>
-                <p>{{ branding.tagline or 'Corporate Workforce Management' }}</p>
-                <p>Location / Base: {{ employee.location_name or 'Corporate Head Office' }}</p>
+            <div class="company-meta-wrap">
+                {% if branding and branding.logo_url %}
+                    <img src="{{ branding.logo_url }}" alt="Logo" style="height: 48px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
+                {% else %}
+                    <div class="company-meta-avatar">
+                        {{ (branding.institution_name or current_tenant.name or 'O')[0] }}
+                    </div>
+                {% endif %}
+                <div class="company-meta">
+                    <h1>{{ branding.institution_name or current_tenant.name or target_tenant.name }}</h1>
+                    <p>{{ branding.tagline or 'Enterprise Workforce & Payroll Management' }}</p>
+                    <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                        <i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> Base: {{ employee.location_name or 'Corporate Head Office' }}
+                    </p>
+                </div>
             </div>
+
             <div class="slip-title-box">
                 <div class="slip-badge">Payslip for the Period</div>
                 <div class="period-text">{{ payslip.period_label }}</div>
@@ -451,7 +692,7 @@
             <div class="details-col">
                 <div class="detail-row">
                     <span class="detail-label">Employee Code:</span>
-                    <span class="detail-value" style="font-family: 'JetBrains Mono'; color: var(--primary);">{{ employee.roll_number or payslip.roll_number }}</span>
+                    <span class="detail-value" style="font-family: 'JetBrains Mono'; color: var(--accent-primary);">{{ employee.roll_number or payslip.roll_number }}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Employee Name:</span>
@@ -499,7 +740,7 @@
             </div>
         </div>
 
-        <!-- Attendance Summary -->
+        <!-- Attendance Summary Metrics -->
         <div class="attendance-bar">
             <div class="att-item">
                 <div class="label">Total Days</div>
@@ -518,7 +759,7 @@
                 <div class="val">{{ "%.1f"|format(payslip.paid_leave_days) }}</div>
             </div>
             <div class="att-item">
-                <div class="label">Loss of Pay (LWP)</div>
+                <div class="label">Loss of Pay</div>
                 <div class="val" style="color: var(--danger);">{{ "%.1f"|format(payslip.unpaid_leave_days + payslip.absent_days) }}</div>
             </div>
             <div class="att-item">
@@ -672,7 +913,7 @@
                 <strong>Employer Statutory Contribution:</strong> 
                 EPF: ₹ {{ "{:,.2f}".format(payslip.epf_employer + payslip.eps_employer) }} | 
                 ESIC: ₹ {{ "{:,.2f}".format(payslip.esic_employer) }} | 
-                Total Monthly CTC: ₹ {{ "{:,.2f}".format(payslip.employer_total_ctc_outlay) }}
+                Total Monthly CTC Outlay: ₹ {{ "{:,.2f}".format(payslip.employer_total_ctc_outlay) }}
             </div>
         </div>
 
@@ -685,7 +926,7 @@
             <div class="sig-block">
                 <div class="sig-line"></div>
                 <div class="sig-title">Authorized Signatory</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">{{ branding.institution_name or current_tenant.name }}</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">{{ branding.institution_name or current_tenant.name or target_tenant.name }}</div>
             </div>
         </div>
 
@@ -696,5 +937,26 @@
 
     </div>
 
+    <script>
+        function updatePayslipThemeIcon() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const icon = document.querySelector("#themeToggleBtn i");
+            if (icon) {
+                icon.className = (current === "dark" || current === "slate") ? "fa-solid fa-sun" : "fa-solid fa-moon";
+            }
+        }
+
+        function togglePayslipTheme() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const next = (current === "light" || current === "academic") ? "slate" : "light";
+            document.documentElement.setAttribute("data-theme", next);
+            localStorage.setItem("app_theme", next);
+            updatePayslipThemeIcon();
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updatePayslipThemeIcon();
+        });
+    </script>
 </body>
 </html>

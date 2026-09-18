@@ -664,11 +664,38 @@
             window.location.reload();
         }
 
-        async function initCamera() {
+        let wasStreamingBeforeHidden = false;
+
+        function stopCameraStream() {
+            if (isStreaming) {
+                wasStreamingBeforeHidden = true;
+                stopStreaming();
+            }
             if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream.getTracks().forEach(track => {
+                    try {
+                        track.stop();
+                    } catch (e) {}
+                });
                 mediaStream = null;
             }
+            if (videoEl) {
+                videoEl.srcObject = null;
+            }
+        }
+
+        async function resumeCameraStream() {
+            if (!document.hidden && !mediaStream) {
+                await initCamera();
+                if (wasStreamingBeforeHidden) {
+                    wasStreamingBeforeHidden = false;
+                    startStreaming();
+                }
+            }
+        }
+
+        async function initCamera() {
+            stopCameraStream();
 
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.warn("[!] WebRTC getUserMedia is not supported or blocked by Insecure Context (HTTP LAN).");
@@ -1396,10 +1423,31 @@
             });
         }
 
-        window.addEventListener("beforeunload", () => {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(t => t.stop());
+        // Visibility-Aware Camera Lifecycle Management
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                stopCameraStream();
+            } else {
+                resumeCameraStream();
             }
+        });
+
+        window.addEventListener("blur", () => {
+            stopCameraStream();
+        });
+
+        window.addEventListener("focus", () => {
+            if (!document.hidden) {
+                resumeCameraStream();
+            }
+        });
+
+        window.addEventListener("pagehide", () => {
+            stopCameraStream();
+        });
+
+        window.addEventListener("beforeunload", () => {
+            stopCameraStream();
         });
     </script>
 </body>

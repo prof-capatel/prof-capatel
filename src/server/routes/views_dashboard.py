@@ -85,6 +85,41 @@ def resolve_scoped_tenant_and_user(request: Request, db: Session, fallback_tenan
     return fallback_tenant, current_user
 
 
+def get_current_employee_session(request: Request, db: Session) -> Optional[Student]:
+    """Helper to decode employee session token if present."""
+    token = request.cookies.get(EMP_COOKIE_NAME)
+    if not token:
+        auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ", 1)[1]
+    if token:
+        payload = decode_employee_token(token)
+        if payload and payload.get("student_id"):
+            return db.query(Student).filter(
+                Student.id == payload.get("student_id"),
+                Student.is_active == True,
+            ).first()
+    return None
+
+
+def check_employee_portal_redirect(request: Request, db: Session) -> Optional[RedirectResponse]:
+    """
+    If the current visitor is an employee logged into their self-service portal
+    (possesses emp_session_token) but lacks an admin access_token, redirect them
+    away from privileged tenant-admin routes to their restricted employee portal.
+    """
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+    has_admin_token = bool(
+        (auth_header and auth_header.startswith("Bearer ")) or 
+        ("access_token" in request.cookies and request.cookies.get("access_token"))
+    )
+    if not has_admin_token:
+        emp = get_current_employee_session(request, db)
+        if emp and emp.tenant:
+            return RedirectResponse(url=f"/employee/{emp.tenant.slug}/dashboard", status_code=303)
+    return None
+
+
 @router.get("/", response_class=HTMLResponse)
 def page_dashboard(
     request: Request,
@@ -92,6 +127,10 @@ def page_dashboard(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Main Admin Overview Dashboard."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
 
     # If logged in as Teacher, redirect to their workspace
@@ -205,6 +244,10 @@ def page_students(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Student & Employee Directory & Profile Management."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     is_super_admin = bool(current_user and current_user.role == "SUPER_ADMIN")
 
@@ -276,6 +319,10 @@ def page_enroll(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Interactive Browser & Guided Face Enrollment."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     is_corporate = bool(current_tenant and current_tenant.tenant_type == "corporate")
     departments = db.query(Department).filter(Department.tenant_id == current_tenant.id).order_by(Department.name.asc()).all()
@@ -321,6 +368,10 @@ def page_logs(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Full Attendance Log Audit & Export."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     today_str = date.today().isoformat()
     branding = get_branding_dict(db, current_tenant.id)
@@ -399,6 +450,10 @@ def page_nodes(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Connected Edge Nodes / Pi Zero Monitor."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     nodes = db.query(NodeDevice).filter(NodeDevice.tenant_id == current_tenant.id).all()
     branding = get_branding_dict(db, current_tenant.id)
@@ -426,6 +481,10 @@ def page_analytics(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Institutional / Corporate Attendance Analytics & Defaulter Reports."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
@@ -457,6 +516,10 @@ def page_settings(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Visual Theme Engine & System Preferences Settings with Consolidated Departments."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
@@ -513,6 +576,10 @@ def page_payroll(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Corporate Payroll & Wage Management Dashboard."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     is_super_admin = bool(current_user and current_user.role == "SUPER_ADMIN")
 
@@ -568,11 +635,26 @@ def page_payslip_view(
 ):
     """Printable & Downloadable Indian Salary Payslip View."""
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
+    current_employee = get_current_employee_session(request, db)
+
     payslip = db.query(PayrollPayslip).filter(PayrollPayslip.id == payslip_id).first()
     if not payslip:
         return HTMLResponse("<h2>Payslip not found</h2>", status_code=404)
 
     target_tenant = payslip.tenant or current_tenant
+
+    # Enforce strict role and employee-scoping boundaries:
+    if current_employee:
+        if current_employee.id != payslip.student_id or current_employee.tenant_id != payslip.tenant_id:
+            return HTMLResponse("<div style='padding:40px;font-family:sans-serif;text-align:center;'><h2>403 Forbidden</h2><p>You do not have permission to view this employee payslip.</p></div>", status_code=403)
+        is_employee_portal = True
+        employee_dashboard_url = f"/employee/{target_tenant.slug}/dashboard#wages"
+    else:
+        if current_user and current_user.role != "SUPER_ADMIN" and current_user.tenant_id != payslip.tenant_id:
+            return HTMLResponse("<div style='padding:40px;font-family:sans-serif;text-align:center;'><h2>403 Forbidden</h2><p>You do not have permission to view payslips from another organization.</p></div>", status_code=403)
+        is_employee_portal = False
+        employee_dashboard_url = None
+
     branding = get_branding_dict(db, target_tenant.id)
     payslip_data = payslip.to_dict()
     net_in_words = number_to_words_inr(payslip.net_salary)
@@ -584,10 +666,14 @@ def page_payslip_view(
             "page_title": f"Payslip - {payslip.student.name if payslip.student else 'Employee'} ({payslip_data.get('period_label')})",
             "branding": branding,
             "current_tenant": target_tenant.to_dict(),
+            "target_tenant": target_tenant.to_dict(),
             "payslip": payslip_data,
             "employee": payslip.student.to_dict() if payslip.student else {},
             "net_in_words": net_in_words,
             "current_user": current_user.to_dict() if current_user else None,
+            "current_employee": current_employee.to_dict() if current_employee else None,
+            "is_employee_portal": is_employee_portal,
+            "employee_dashboard_url": employee_dashboard_url,
         },
     )
 
@@ -1125,6 +1211,10 @@ def page_academic_management(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Tenant Admin Academic Structure / Corporate Departments & Teams Engine."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     
     # Super Admin scope cleanup: redirect Super Admin away from tenant-only academic management
@@ -1174,6 +1264,10 @@ def page_teacher_portal(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Tenant Teacher Classroom Attendance Workspace."""
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
@@ -1439,6 +1533,10 @@ def page_leave_management(
     """
     Tenant Admin Leave Review, Quotas Master, and Approval Dashboard.
     """
+    emp_redirect = check_employee_portal_redirect(request, db)
+    if emp_redirect:
+        return emp_redirect
+
     current_user = get_current_user_optional(request, db)
     if not current_user:
         return RedirectResponse(url=f"/portal/{current_tenant.slug}", status_code=303)

@@ -1217,6 +1217,45 @@ function fallbackEnrollCopy(text, btn) {
     }
     document.body.removeChild(ta);
 }
+
+// Visibility-Aware Camera Lifecycle Management
+    let wasWebcamActiveBeforeHidden = false;
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            if (videoStream) {
+                wasWebcamActiveBeforeHidden = true;
+                stopWebcam();
+            }
+        } else {
+            if (wasWebcamActiveBeforeHidden) {
+                wasWebcamActiveBeforeHidden = false;
+                startWebcam(selectedCameraDeviceId);
+            }
+        }
+    });
+
+    window.addEventListener("blur", () => {
+        if (videoStream) {
+            wasWebcamActiveBeforeHidden = true;
+            stopWebcam();
+        }
+    });
+
+    window.addEventListener("focus", () => {
+        if (!document.hidden && wasWebcamActiveBeforeHidden) {
+            wasWebcamActiveBeforeHidden = false;
+            startWebcam(selectedCameraDeviceId);
+        }
+    });
+
+    window.addEventListener("pagehide", () => {
+        stopWebcam();
+    });
+
+    window.addEventListener("beforeunload", () => {
+        stopWebcam();
+    });
 </script>
 {% endblock %}
 

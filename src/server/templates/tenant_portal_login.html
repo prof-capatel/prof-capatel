@@ -391,16 +391,35 @@
         }
 
         // ----------------------------------------------------------------------
-        // Camera Engine
+        // Camera Engine & Lifecycle Management
         // ----------------------------------------------------------------------
+        function stopCameraStream() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => {
+                    try {
+                        track.stop();
+                    } catch (e) {}
+                });
+                videoStream = null;
+            }
+            const video = document.getElementById("faceVideo");
+            if (video) {
+                video.srcObject = null;
+            }
+        }
+
+        async function resumeCameraStream() {
+            if (isCorporate && !videoStream && !document.hidden) {
+                await startCamera();
+            }
+        }
+
         async function startCamera() {
             const video = document.getElementById("faceVideo");
             const statusTag = document.getElementById("camStatusTag");
             if (!video) return;
 
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-            }
+            stopCameraStream();
 
             const constraints = {
                 video: {
@@ -680,6 +699,33 @@
                 }
             }
         }
+
+        // Visibility-Aware Camera Lifecycle Management
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                stopCameraStream();
+            } else {
+                resumeCameraStream();
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            stopCameraStream();
+        });
+
+        window.addEventListener("focus", () => {
+            if (!document.hidden) {
+                resumeCameraStream();
+            }
+        });
+
+        window.addEventListener("pagehide", () => {
+            stopCameraStream();
+        });
+
+        window.addEventListener("beforeunload", () => {
+            stopCameraStream();
+        });
     </script>
 </body>
 </html>

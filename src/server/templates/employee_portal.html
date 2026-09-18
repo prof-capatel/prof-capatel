@@ -50,6 +50,7 @@
             flex-direction: column;
             overflow-x: hidden;
             transition: background 0.25s ease, color 0.25s ease;
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* Top Brand Navigation Bar */
@@ -64,47 +65,56 @@
             top: 0;
             z-index: 50;
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: background 0.25s ease, border-color 0.25s ease;
         }
 
         .portal-brand {
             display: flex;
             align-items: center;
             gap: 12px;
+            min-width: 0;
         }
 
         .portal-brand-avatar {
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: var(--radius-sm);
             background: var(--accent-gradient, linear-gradient(135deg, var(--accent-primary), #3b82f6));
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 800;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .portal-brand-title {
-            font-size: 1rem;
+            font-size: 0.98rem;
             font-weight: 800;
             color: var(--text-heading);
             line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .portal-brand-subtitle {
-            font-size: 0.75rem;
+            font-size: 0.74rem;
             color: var(--text-muted);
             display: flex;
             align-items: center;
             gap: 6px;
+            margin-top: 2px;
         }
 
         .portal-container {
-            max-width: 740px;
+            max-width: 760px;
             width: 100%;
             margin: 0 auto;
-            padding: 20px 16px 40px 16px;
+            padding: 18px 16px 40px 16px;
             box-sizing: border-box;
             flex: 1;
         }
@@ -114,22 +124,22 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
-            padding: 20px 24px;
-            margin-bottom: 18px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
             box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
             transition: all 0.3s ease;
         }
 
         .emp-avatar {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             background: var(--accent-gradient, var(--accent-primary));
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 19px;
             font-weight: 800;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             flex-shrink: 0;
@@ -143,13 +153,19 @@
             padding: 4px;
             border-radius: var(--radius-md);
             gap: 4px;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             border: 1px solid var(--border-color);
+            position: sticky;
+            top: 62px;
+            z-index: 40;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
         }
 
         .emp-tab-btn {
-            padding: 10px 6px;
-            font-size: 12px;
+            padding: 9px 4px;
+            font-size: 11.5px;
             font-weight: 700;
             border: none;
             background: transparent;
@@ -159,8 +175,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            gap: 4px;
+            min-height: 44px;
             transition: all 0.2s ease;
+            user-select: none;
         }
 
         .emp-tab-btn i {
@@ -175,7 +194,7 @@
         .emp-tab-btn.active {
             background: var(--accent-gradient, var(--accent-primary));
             color: #ffffff;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
         }
 
         .tab-content-pane {
@@ -197,7 +216,7 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            padding: 20px;
+            padding: 18px 20px;
             margin-bottom: 16px;
             box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
         }
@@ -206,14 +225,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             padding-bottom: 12px;
             border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .clean-card-header h3 {
             margin: 0;
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 700;
             color: var(--text-heading);
             display: flex;
@@ -253,10 +274,79 @@
         .footer-bar {
             padding: 16px 20px;
             text-align: center;
-            font-size: 12px;
+            font-size: 11.5px;
             color: var(--text-muted);
             border-top: 1px solid var(--border-color);
             margin-top: auto;
+            background: var(--bg-card);
+        }
+
+        /* Mobile-First Responsive Breakpoints */
+        @media (max-width: 640px) {
+            .portal-topbar {
+                padding: 10px 12px;
+            }
+            .portal-brand-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 0.95rem;
+            }
+            .portal-brand-title {
+                font-size: 0.88rem;
+                max-width: 170px;
+            }
+            .portal-brand-subtitle {
+                font-size: 0.68rem;
+            }
+            .portal-container {
+                padding: 12px 10px 36px 10px;
+            }
+            .emp-profile-card {
+                padding: 14px;
+                margin-bottom: 12px;
+                border-radius: var(--radius-md);
+            }
+            .emp-avatar {
+                width: 42px;
+                height: 42px;
+                font-size: 17px;
+            }
+            .emp-nav-grid {
+                top: 54px;
+                margin-bottom: 12px;
+                padding: 3px;
+                gap: 2px;
+            }
+            .emp-tab-btn {
+                padding: 7px 2px;
+                font-size: 10.5px;
+                min-height: 42px;
+            }
+            .emp-tab-btn i {
+                font-size: 13px;
+            }
+            .clean-card {
+                padding: 14px 12px;
+                margin-bottom: 12px;
+            }
+            .timeline-row {
+                padding: 10px 12px;
+            }
+            #leaveBalancesGrid {
+                grid-template-columns: 1fr !important;
+            }
+            .form-control {
+                font-size: 16px !important; /* Prevents auto-zoom on iOS safari */
+            }
+        }
+
+        @media (max-width: 380px) {
+            .emp-tab-btn span {
+                font-size: 9.5px;
+            }
+            .portal-brand-title {
+                max-width: 130px;
+            }
         }
     </style>
 </head>
@@ -597,6 +687,12 @@
             loadMyPayroll();
             loadMyBalances();
             loadMyLeaveRequests();
+
+            // Support direct tab linking via URL hash (e.g. #wages, #punches, #apply, #leaves)
+            const hash = window.location.hash.replace("#", "").toLowerCase();
+            if (hash && ["punches", "wages", "apply", "leaves"].includes(hash)) {
+                switchEmpTab(hash);
+            }
         });
 
         function toggleTheme() {

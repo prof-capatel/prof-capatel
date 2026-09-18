@@ -757,11 +757,33 @@
             if (scanRing) scanRing.className = "scan-ring invalid";
         }
 
+        // Camera Lifecycle Management with Page Visibility API
+        function stopCameraStream() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => {
+                    try {
+                        track.stop();
+                    } catch (e) {}
+                });
+                mediaStream = null;
+            }
+            const video = document.getElementById("cameraVideo");
+            if (video) {
+                video.srcObject = null;
+            }
+        }
+
+        async function resumeCameraStream() {
+            {% if is_self_attendance_enabled and is_geofence_configured %}
+            if (!mediaStream && !document.hidden) {
+                await startCamera();
+            }
+            {% endif %}
+        }
+
         // Start Camera Stream
         async function startCamera() {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-            }
+            stopCameraStream();
 
             const video = document.getElementById("cameraVideo");
             if (!video) return;
@@ -930,13 +952,35 @@
         }
 
         window.addEventListener("DOMContentLoaded", initPage);
+
+        // Visibility-Aware Camera Shutdown & Wakeup Lifecycle
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                stopCameraStream();
+            } else {
+                resumeCameraStream();
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            stopCameraStream();
+        });
+
+        window.addEventListener("focus", () => {
+            if (!document.hidden) {
+                resumeCameraStream();
+            }
+        });
+
+        window.addEventListener("pagehide", () => {
+            stopCameraStream();
+        });
+
         window.addEventListener("beforeunload", () => {
             if (locationWatchId !== null && navigator.geolocation) {
                 navigator.geolocation.clearWatch(locationWatchId);
             }
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-            }
+            stopCameraStream();
         });
     </script>
 </body>

@@ -26,6 +26,7 @@ SUITES = {
         "auth/test_tokenized_gateways.py",
         "auth/test_tenant_scoped_employee_edit.py",
         "auth/test_tenant_portal_face_login_and_relieve.py",
+        "auth/test_employee_auth_and_camera_visibility.py",
     ],
     "ui": [
         "ui/test_corporate_dashboard_layout.py",

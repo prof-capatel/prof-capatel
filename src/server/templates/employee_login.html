@@ -452,6 +452,60 @@
             }
         }
 
+        let isCameraPausedByVisibility = false;
+
+        function stopCameraStream() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+                videoStream = null;
+            }
+            const video = document.getElementById("webcamVideo");
+            if (video) {
+                video.srcObject = null;
+            }
+            const statusOverlay = document.getElementById("scanStatusOverlay");
+            if (statusOverlay) {
+                statusOverlay.innerHTML = '<i class="fa-solid fa-pause" style="color: var(--accent-amber, #f59e0b);"></i> Camera Paused (Window Inactive)';
+            }
+            isCameraPausedByVisibility = true;
+        }
+
+        async function resumeCameraStream() {
+            if (isCameraPausedByVisibility && !document.hidden) {
+                isCameraPausedByVisibility = false;
+                await initCamera();
+            }
+        }
+
+        // Visibility & Window Focus Lifecycle Listeners (Alt+Tab / Tab Switch Detection)
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                stopCameraStream();
+            } else {
+                resumeCameraStream();
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            stopCameraStream();
+        });
+
+        window.addEventListener("focus", () => {
+            if (!document.hidden) {
+                resumeCameraStream();
+            }
+        });
+
+        window.addEventListener("pagehide", () => {
+            stopCameraStream();
+        });
+
+        window.addEventListener("beforeunload", () => {
+            stopCameraStream();
+        });
+
         function showAlert(msg, type) {
             const box = document.getElementById("loginAlertBox");
             if (!box) return;

@@ -1122,5 +1122,44 @@
 
         if (resetBtn) resetBtn.style.display = "none";
     }
+
+    // Visibility-Aware Camera Shutdown & Wakeup Lifecycle
+    let wasContinuousActiveBeforeHidden = false;
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            if (isContinuousActive) {
+                wasContinuousActiveBeforeHidden = true;
+                stopContinuousCapture();
+            }
+        } else {
+            if (wasContinuousActiveBeforeHidden) {
+                wasContinuousActiveBeforeHidden = false;
+                startContinuousCapture();
+            }
+        }
+    });
+
+    window.addEventListener("blur", () => {
+        if (isContinuousActive) {
+            wasContinuousActiveBeforeHidden = true;
+            stopContinuousCapture();
+        }
+    });
+
+    window.addEventListener("focus", () => {
+        if (!document.hidden && wasContinuousActiveBeforeHidden) {
+            wasContinuousActiveBeforeHidden = false;
+            startContinuousCapture();
+        }
+    });
+
+    window.addEventListener("pagehide", () => {
+        stopContinuousCapture();
+    });
+
+    window.addEventListener("beforeunload", () => {
+        stopContinuousCapture();
+    });
 </script>
 {% endblock %}

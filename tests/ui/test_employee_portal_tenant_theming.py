@@ -87,3 +87,76 @@ class TestEmployeePortalTenantTheming(unittest.TestCase):
         self.assertIn("Compensation & CTC Structure", html)
         self.assertIn("Submit Leave Application", html)
         self.assertIn("Annual Leave Quotas", html)
+
+    def test_payslip_view_renders_theme_and_mobile_first_layout(self):
+        """Verify /payroll/payslip/{id} dynamically inherits tenant theme and renders mobile-first layout."""
+        # Find corporate tenant and student with payslip or create test fixture
+        from src.database.models import PayrollPayslip, PayrollBatch
+        from datetime import date
+
+        corp_tenant = self.db.query(Tenant).filter(
+            Tenant.tenant_type.in_(["corporate", "company", "enterprise"]),
+            Tenant.is_active == True
+        ).first()
+        emp = self.db.query(Student).filter(Student.tenant_id == corp_tenant.id, Student.is_active == True).first()
+
+        batch = self.db.query(PayrollBatch).filter(PayrollBatch.tenant_id == corp_tenant.id).first()
+        if not batch:
+            batch = PayrollBatch(
+                tenant_id=corp_tenant.id,
+                batch_number="TEST-THEME-BATCH",
+                period_month=9,
+                period_year=2026,
+                start_date=date(2026, 9, 1),
+                end_date=date(2026, 9, 30),
+                status="APPROVED",
+            )
+            self.db.add(batch)
+            self.db.commit()
+            self.db.refresh(batch)
+
+        payslip = self.db.query(PayrollPayslip).filter(PayrollPayslip.tenant_id == corp_tenant.id).first()
+        if not payslip:
+            payslip = PayrollPayslip(
+                tenant_id=corp_tenant.id,
+                batch_id=batch.id,
+                student_id=emp.id,
+                period_month=9,
+                period_year=2026,
+                calendar_days=30,
+                working_days=26.0,
+                present_days=26.0,
+                gross_earnings=60000.0,
+                net_salary=58000.0,
+                payment_status="PAID",
+            )
+            self.db.add(payslip)
+            self.db.commit()
+            self.db.refresh(payslip)
+
+        # Authenticate as employee
+        token = create_employee_token(emp.id, corp_tenant.id, emp.roll_number, emp.name)
+        self.client.cookies.set(EMP_COOKIE_NAME, token)
+
+        res = self.client.get(f"/payroll/payslip/{payslip.id}")
+        self.assertEqual(res.status_code, 200)
+        html = res.text
+
+        # 1. Theme CSS and data-theme
+        self.assertIn("/static/css/dashboard.css", html)
+        self.assertIn("data-theme", html)
+        self.assertIn("themeToggleBtn", html)
+
+        # 2. Mobile-first responsive tokens & sheet
+        self.assertIn("payslip-sheet", html)
+        self.assertIn("no-print-bar", html)
+        self.assertIn("salary-breakdown", html)
+        self.assertIn("net-pay-box", html)
+        self.assertIn("details-grid", html)
+        self.assertIn("attendance-bar", html)
+        self.assertIn("@media (max-width: 640px)", html)
+
+        # 3. Dynamic Back button
+        self.assertIn("Back to Employee Portal", html)
+        self.assertIn(f"/employee/{corp_tenant.slug}/dashboard#wages", html)
+
