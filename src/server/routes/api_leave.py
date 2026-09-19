@@ -18,7 +18,7 @@ from src.database.models import (
 )
 from src.database.session import get_db, seed_default_leave_types
 from src.server.tenant_middleware import get_current_tenant
-from src.server.rbac_middleware import check_tenant_operational_access, get_current_user_optional
+from src.server.rbac_middleware import check_tenant_operational_access, check_tenant_leave_access, get_current_user_optional
 from src.utils.timezone import get_ist_now
 
 logger = logging.getLogger("api_leave")
@@ -88,6 +88,7 @@ def list_leave_types(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Lists all configured leave categories for the tenant."""
+    check_tenant_leave_access(current_tenant)
     from src.services.leave_service import LeaveService
     service = LeaveService(db)
     types = service.list_leave_types(current_tenant.id, include_inactive)
@@ -106,6 +107,7 @@ def save_leave_type(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Creates or updates a leave type."""
+    check_tenant_leave_access(current_tenant)
     check_tenant_operational_access(current_tenant)
     from src.services.leave_service import LeaveService
     service = LeaveService(db)
@@ -126,6 +128,7 @@ def delete_leave_type(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Soft-deactivates a leave type category."""
+    check_tenant_leave_access(current_tenant)
     check_tenant_operational_access(current_tenant)
     from src.services.leave_service import LeaveService
     service = LeaveService(db)
@@ -144,6 +147,7 @@ def list_leave_requests(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Lists leave applications for administrative review with multi-parameter filtering."""
+    check_tenant_leave_access(current_tenant)
     query = (
         db.query(LeaveRequest)
         .join(Student, LeaveRequest.student_id == Student.id)
@@ -214,6 +218,7 @@ def review_leave_request(
     Approves or rejects a pending employee leave request.
     Automatically updates the employee's LeaveBalance (deducting used_days on approval, releasing pending_days).
     """
+    check_tenant_leave_access(current_tenant)
     check_tenant_operational_access(current_tenant)
     req = (
         db.query(LeaveRequest)
@@ -293,6 +298,7 @@ def list_employee_balances(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Lists current leave balances across all employees or a specific employee."""
+    check_tenant_leave_access(current_tenant)
     target_year = year or get_ist_now().year
     query = (
         db.query(LeaveBalance)
@@ -323,6 +329,7 @@ def get_single_employee_leave_balances(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Retrieves all active leave balances for a specific employee, auto-initializing balances if not yet created."""
+    check_tenant_leave_access(current_tenant)
     target_year = year or get_ist_now().year
     student = db.query(Student).filter(Student.id == student_id, Student.tenant_id == current_tenant.id).first()
     if not student:
@@ -351,6 +358,7 @@ def get_leave_summary_stats(
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
     """Returns 4 dashboard KPI metrics for the corporate leave management portal."""
+    check_tenant_leave_access(current_tenant)
     today = get_ist_now().date()
     start_month = today.replace(day=1)
 

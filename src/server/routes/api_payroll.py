@@ -30,7 +30,7 @@ from src.database.models import (
 )
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
-from src.server.rbac_middleware import require_roles, check_tenant_operational_access, get_current_user
+from src.server.rbac_middleware import require_roles, check_tenant_operational_access, check_tenant_payroll_access, get_current_user
 from src.utils.timezone import get_ist_now, get_ist_date
 from src.core.payroll_engine import (
     calculate_employee_payroll,
@@ -42,6 +42,12 @@ from src.services.organization_service import OrganizationService
 
 logger = logging.getLogger("api_payroll")
 router = APIRouter(prefix="/api/v1/payroll", tags=["Payroll & Compensation"])
+
+
+def get_current_payroll_tenant(tenant: Tenant = Depends(get_current_tenant)) -> Tenant:
+    check_tenant_payroll_access(tenant)
+    return tenant
+
 
 
 # ==============================================================================
@@ -226,7 +232,7 @@ class PayrollSettingsUpdateRequest(BaseModel):
 @router.get("/masters/locations")
 def list_locations(
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -237,7 +243,7 @@ def list_locations(
 def get_location(
     loc_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -248,7 +254,7 @@ def get_location(
 def create_location(
     payload: LocationCreateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -261,7 +267,7 @@ def update_location(
     loc_id: int,
     payload: LocationUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -273,7 +279,7 @@ def update_location(
 def delete_location(
     loc_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -284,7 +290,7 @@ def delete_location(
 @router.get("/masters/designations")
 def list_designations(
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -295,7 +301,7 @@ def list_designations(
 def get_designation(
     desig_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -306,7 +312,7 @@ def get_designation(
 def create_designation(
     payload: DesignationCreateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -319,7 +325,7 @@ def update_designation(
     desig_id: int,
     payload: DesignationUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -331,7 +337,7 @@ def update_designation(
 def delete_designation(
     desig_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -342,7 +348,7 @@ def delete_designation(
 @router.get("/masters/components")
 def list_salary_components(
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -353,7 +359,7 @@ def list_salary_components(
 def get_salary_component(
     comp_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -364,7 +370,7 @@ def get_salary_component(
 def create_salary_component(
     payload: SalaryComponentCreateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -377,7 +383,7 @@ def update_salary_component(
     comp_id: int,
     payload: SalaryComponentUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -389,7 +395,7 @@ def update_salary_component(
 def delete_salary_component(
     comp_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -400,7 +406,7 @@ def delete_salary_component(
 @router.get("/masters/templates")
 def list_salary_templates(
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -411,7 +417,7 @@ def list_salary_templates(
 def get_salary_template(
     tpl_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -422,7 +428,7 @@ def get_salary_template(
 def create_salary_template(
     payload: SalaryTemplateCreateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -435,7 +441,7 @@ def update_salary_template(
     tpl_id: int,
     payload: SalaryTemplateUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -447,7 +453,7 @@ def update_salary_template(
 def delete_salary_template(
     tpl_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -463,7 +469,7 @@ def delete_salary_template(
 def list_employee_structures(
     department_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)
@@ -476,7 +482,7 @@ def list_employee_structures(
 def get_employee_structure(
     student_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)
@@ -487,7 +493,7 @@ def get_employee_structure(
 def assign_employee_salary_structure(
     payload: EmployeeStructureAssignRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
     current_user: User = Depends(get_current_user),
 ):
     check_tenant_operational_access(current_tenant)
@@ -500,7 +506,7 @@ def update_employee_statutory_banking(
     student_id: int,
     payload: EmployeeStatutoryBankingRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)
@@ -516,7 +522,7 @@ def list_payroll_batches(
     year: Optional[int] = Query(None),
     status_filter: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)
@@ -527,7 +533,7 @@ def list_payroll_batches(
 def generate_payroll_batch(
     payload: BatchGenerateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
     current_user: User = Depends(get_current_user),
 ):
     check_tenant_operational_access(current_tenant)
@@ -539,7 +545,7 @@ def generate_payroll_batch(
 def get_payroll_batch_details(
     batch_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)
@@ -551,7 +557,7 @@ def verify_payroll_batch(
     batch_id: int,
     payload: BatchStatusUpdateRequest = None,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
     current_user: User = Depends(get_current_user),
 ):
     check_tenant_operational_access(current_tenant)
@@ -564,7 +570,7 @@ def approve_payroll_batch(
     batch_id: int,
     payload: BatchStatusUpdateRequest = None,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
     current_user: User = Depends(get_current_user),
 ):
     check_tenant_operational_access(current_tenant)
@@ -577,7 +583,7 @@ def disburse_payroll_batch(
     batch_id: int,
     payload: BatchStatusUpdateRequest = None,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
     current_user: User = Depends(get_current_user),
 ):
     check_tenant_operational_access(current_tenant)
@@ -589,7 +595,7 @@ def disburse_payroll_batch(
 def delete_payroll_batch(
     batch_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)
@@ -601,7 +607,7 @@ def export_bank_disbursement_advice(
     batch_id: int,
     export_format: str = Query("xlsx", pattern="^(csv|xlsx)$"),
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     batch = (
@@ -687,7 +693,7 @@ def export_bank_disbursement_advice(
 def get_payslip_details(
     payslip_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)
@@ -701,7 +707,7 @@ def get_payslip_details(
 @router.get("/settings")
 def get_payroll_settings(
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     branding = current_tenant.branding
@@ -739,7 +745,7 @@ def get_payroll_settings(
 def update_payroll_settings(
     payload: PayrollSettingsUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     branding = current_tenant.branding
@@ -824,7 +830,7 @@ def get_payroll_summary_api(
     user_role: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     now = get_ist_now()
@@ -861,7 +867,7 @@ def export_payroll_api(
     end_date: Optional[str] = Query(None),
     export_format: str = Query("xlsx", pattern="^(csv|xlsx)$"),
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     now = get_ist_now()
@@ -894,7 +900,7 @@ def export_payroll_api(
 def update_employee_rate_api(
     payload: EmployeeRateUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
+    current_tenant: Tenant = Depends(get_current_payroll_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     payroll_service = PayrollService(db)

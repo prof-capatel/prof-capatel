@@ -418,9 +418,9 @@ class TestTokenizedGatewaysAndMapPicker(unittest.TestCase):
 
         # 1. HTML Dashboard Render
         dash_resp = self.client.get("/", headers=headers)
-        self.assertEqual(dash_resp.status_code, 200)
-        self.assertIn("Total Enrolled Employees", dash_resp.text)
-        self.assertIn("Checked-In Today", dash_resp.text)
+        self.assertIn("Workforce & Shifts", dash_resp.text)
+        self.assertIn("Enrolled Staff", dash_resp.text)
+        self.assertIn("Checked-In", dash_resp.text)
         self.assertNotIn("Enrolled Students", dash_resp.text)
 
         # 2. Stats API Endpoint

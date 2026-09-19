@@ -1115,9 +1115,12 @@ function closeRetakeModal() {
     const modal = document.getElementById("retakePhotosModal");
     if (modal) modal.classList.remove("active");
     stopRetakeWebcam();
+    if (typeof window.resumeFromSecondaryCamera === "function") {
+        window.resumeFromSecondaryCamera();
+    }
 }
 
-function switchRetakeMode(mode) {
+async function switchRetakeMode(mode) {
     const tabUpload = document.getElementById("tabRetakeUpload");
     const tabWebcam = document.getElementById("tabRetakeWebcam");
     const secUpload = document.getElementById("secRetakeUpload");
@@ -1129,12 +1132,28 @@ function switchRetakeMode(mode) {
         if (secUpload) secUpload.style.display = "block";
         if (secWebcam) secWebcam.style.display = "none";
         stopRetakeWebcam();
+        if (typeof window.resumeFromSecondaryCamera === "function") {
+            window.resumeFromSecondaryCamera();
+        }
     } else {
+        // Camera Arbitration: Prompt admin if live attendance feed is active
+        if (window.isContinuousActive && typeof window.pauseForSecondaryCamera === "function") {
+            const proceed = confirm("Live Attendance Feed is currently capturing attendance.\n\nWould you like to temporarily pause the live attendance feed to use the webcam for taking reference photos?");
+            if (!proceed) {
+                if (tabUpload) tabUpload.classList.add("active");
+                if (tabWebcam) tabWebcam.classList.remove("active");
+                if (secUpload) secUpload.style.display = "block";
+                if (secWebcam) secWebcam.style.display = "none";
+                return;
+            }
+            window.pauseForSecondaryCamera();
+        }
+
         if (tabWebcam) tabWebcam.classList.add("active");
         if (tabUpload) tabUpload.classList.remove("active");
         if (secWebcam) secWebcam.style.display = "block";
         if (secUpload) secUpload.style.display = "none";
-        startRetakeWebcam();
+        await startRetakeWebcam();
     }
 }
 
@@ -1642,8 +1661,10 @@ function updateThemeDropdown(theme) {
     if (current === "academic") current = "warm";
     if (current === "corporate") current = "slate";
     const select = document.getElementById("appThemeSelect");
+    const mobileSelect = document.getElementById("mobileAppThemeSelect");
     const icon = document.getElementById("themeIconIndicator");
     if (select) select.value = current;
+    if (mobileSelect) mobileSelect.value = current;
     if (icon) {
         if (current === "dark") {
             icon.className = "fa-solid fa-moon";

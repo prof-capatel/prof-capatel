@@ -47,11 +47,15 @@ class TestDesignationAndPayrollWorkflow(unittest.TestCase):
                 name="Test Designation & Payroll Org",
                 slug="test-desig-payroll-org",
                 tenant_type="corporate",
+                subscription_plan="PRO",
                 is_active=True,
             )
             cls.db.add(cls.tenant)
             cls.db.commit()
             cls.db.refresh(cls.tenant)
+        else:
+            cls.tenant.subscription_plan = "PRO"
+            cls.db.commit()
 
         # 2. Create test admin user
         cls.admin_user = cls.db.query(User).filter(User.username == "test_desig_admin").first()

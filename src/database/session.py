@@ -90,6 +90,30 @@ def seed_default_subscription_plans(db: Session):
     """Seeds default standard SaaS subscription plans if not existing."""
     default_plans = [
         {
+            "plan_code": "BASIC",
+            "name": "Basic Edition (Attendance Only)",
+            "max_face_encodings": 100,
+            "max_nodes": 2,
+            "price_monthly": 0.0,
+            "description": "Core facial recognition biometric attendance and staff directory management.",
+        },
+        {
+            "plan_code": "SMART",
+            "name": "Smart Edition (Attendance + Leaves)",
+            "max_face_encodings": 500,
+            "max_nodes": 10,
+            "price_monthly": 29.0,
+            "description": "Biometric attendance, multi-shift scheduling, and complete statutory leave management.",
+        },
+        {
+            "plan_code": "PRO",
+            "name": "Pro Edition (Full Platform)",
+            "max_face_encodings": 5000,
+            "max_nodes": 50,
+            "price_monthly": 79.0,
+            "description": "Full enterprise suite with attendance, leaves, and Indian statutory payroll & CTC.",
+        },
+        {
             "plan_code": "FREE",
             "name": "Starter Free Tier",
             "max_face_encodings": 50,

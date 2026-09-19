@@ -15,7 +15,7 @@ from src.config import EXPORTS_DIR
 from src.core.attendance_manager import attendance_manager
 from src.core.camera_utils import decode_image_bytes
 from src.core.face_engine import face_engine
-from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant, WorkShift
+from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant, WorkShift, LeaveRequest
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
 from src.server.rbac_middleware import check_tenant_operational_access, create_access_token
@@ -300,6 +300,29 @@ def get_attendance_stats(
         .count()
     )
 
+    today_leaves_count = 0
+    pending_leaves_count = 0
+    if current_tenant.has_leave_module:
+        today_leaves_count = (
+            db.query(LeaveRequest)
+            .filter(
+                LeaveRequest.tenant_id == current_tenant.id,
+                LeaveRequest.status == "APPROVED",
+                LeaveRequest.start_date <= today,
+                LeaveRequest.end_date >= today,
+            )
+            .count()
+        )
+        pending_leaves_count = (
+            db.query(LeaveRequest)
+            .filter(
+                LeaveRequest.tenant_id == current_tenant.id,
+                LeaveRequest.status == "PENDING",
+            )
+            .count()
+        )
+
+    absent_today = max(0, total_members - present_today)
     attendance_pct = round((present_today / total_members * 100), 1) if total_members > 0 else 0.0
 
     return {
@@ -312,6 +335,9 @@ def get_attendance_stats(
         "present_today": present_today,
         "checked_in_today": checked_in_today,
         "checked_out_today": checked_out_today,
+        "absent_today": absent_today,
+        "today_leaves_count": today_leaves_count,
+        "pending_leaves_count": pending_leaves_count,
         "missed_checkout_today": missed_checkout_today,
         "shift_check_in_time": shift_in_str,
         "shift_check_out_time": shift_out_str,

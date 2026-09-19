@@ -354,6 +354,12 @@ def get_employee_payroll_summary(
     Returns transparent breakdown of the employee's work hours, overtime,
     approved paid leave credits, and estimated gross earnings for the period.
     """
+    if not student.tenant or not student.tenant.has_payroll_module:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Payroll & Compensation is not enabled for your organization's subscription edition.",
+        )
+
     now_ist = get_ist_now()
     if not start_date or not end_date:
         # Default to current calendar month
@@ -469,6 +475,12 @@ def get_my_leave_balances(
     db: Session = Depends(get_db),
 ):
     """Returns the employee's current annual leave balances and category quotas."""
+    if not student.tenant or not student.tenant.has_leave_module:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Leave Management is not enabled for your organization's subscription edition.",
+        )
+
     current_year = get_ist_now().year
     leave_types = db.query(LeaveType).filter(LeaveType.tenant_id == student.tenant_id, LeaveType.is_active == True).all()
 
@@ -493,6 +505,12 @@ def get_my_leave_requests(
     db: Session = Depends(get_db),
 ):
     """Returns the authenticated employee's leave applications and approval statuses."""
+    if not student.tenant or not student.tenant.has_leave_module:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Leave Management is not enabled for your organization's subscription edition.",
+        )
+
     requests = (
         db.query(LeaveRequest)
         .filter(
@@ -521,6 +539,12 @@ def apply_for_leave(
     Submits a new leave request.
     Verifies quota availability and increments balance pending_days.
     """
+    if not student.tenant or not student.tenant.has_leave_module:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Leave Management is not enabled for your organization's subscription edition.",
+        )
+
     if not payload.reason or not payload.reason.strip():
         raise HTTPException(status_code=400, detail="Please provide a valid reason for the leave application.")
 
@@ -598,6 +622,12 @@ def cancel_pending_leave_request(
     Allows an employee to cancel an erroneously submitted leave application BEFORE it is approved/reviewed.
     Releases the reserved pending quota back to the employee's available balance.
     """
+    if not student.tenant or not student.tenant.has_leave_module:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Leave Management is not enabled for your organization's subscription edition.",
+        )
+
     req = (
         db.query(LeaveRequest)
         .filter(

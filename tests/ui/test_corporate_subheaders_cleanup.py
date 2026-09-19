@@ -21,6 +21,8 @@ class TestCorporateSubheadersCleanup(unittest.TestCase):
             Tenant.is_deleted == False
         ).first()
         assert cls.corp_tenant is not None, "Active corporate tenant required"
+        cls.corp_tenant.subscription_plan = "PRO"
+        cls.db.commit()
 
         cls.corp_admin = cls.db.query(User).filter(User.tenant_id == cls.corp_tenant.id, User.role == "TENANT_ADMIN").first()
         if not cls.corp_admin:

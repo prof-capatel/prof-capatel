@@ -314,13 +314,13 @@ class TestEmployeeAuthAndCameraVisibility(unittest.TestCase):
         self.assertIn("resumeCameraStream", content)
 
     def test_dashboard_template_has_visibility_listeners(self):
-        """Verify dashboard.html includes visibilitychange and blur/focus inline camera controls."""
+        """Verify dashboard.html includes lifecycle camera cleanup listeners (pagehide/beforeunload)."""
         tmpl_path = BASE_DIR / "src" / "server" / "templates" / "dashboard.html"
         self.assertTrue(tmpl_path.exists())
         content = tmpl_path.read_text(encoding="utf-8")
-        self.assertIn("visibilitychange", content)
+        self.assertIn("pagehide", content)
+        self.assertIn("beforeunload", content)
         self.assertIn("stopContinuousCapture", content)
-        self.assertIn("wasContinuousActiveBeforeHidden", content)
 
     def test_employee_portal_supports_url_hash_tab_routing(self):
         """Verify employee_portal.html parses window.location.hash for tab navigation (e.g. #wages)."""

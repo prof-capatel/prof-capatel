@@ -46,14 +46,16 @@ class TestCorporatePayrollAndDateRanges(unittest.TestCase):
                 db.commit()
 
             ssec = db.query(Tenant).filter(Tenant.slug == "ssec").first()
-            if ssec and ssec.branding:
-                ssec.branding.payroll_structure = "HOURLY"
-                ssec.branding.default_hourly_rate = 15.0
-                ssec.branding.standard_working_hours_per_day = 8.0
-                ssec.branding.enable_overtime = True
-                ssec.branding.overtime_rate_multiplier = 1.5
-                ssec.branding.missed_checkout_policy = "HALF_DAY"
-                ssec.branding.currency_symbol = "$"
+            if ssec:
+                ssec.subscription_plan = "PRO"
+                if ssec.branding:
+                    ssec.branding.payroll_structure = "HOURLY"
+                    ssec.branding.default_hourly_rate = 15.0
+                    ssec.branding.standard_working_hours_per_day = 8.0
+                    ssec.branding.enable_overtime = True
+                    ssec.branding.overtime_rate_multiplier = 1.5
+                    ssec.branding.missed_checkout_policy = "HALF_DAY"
+                    ssec.branding.currency_symbol = "$"
                 db.commit()
 
     def tearDown(self):

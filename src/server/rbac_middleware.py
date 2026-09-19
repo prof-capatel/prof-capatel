@@ -187,3 +187,30 @@ def check_tenant_subscription_active(tenant: Tenant):
     """Alias for operational check."""
     check_tenant_operational_access(tenant)
 
+
+def check_tenant_leave_access(tenant: Tenant):
+    """
+    Verifies that the tenant's modular SaaS edition has Leave Management enabled (Smart or Pro).
+    """
+    if not tenant:
+        return
+    if not getattr(tenant, "has_leave_module", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Leave Management is not included in the {tenant.saas_edition} edition. Upgrade to Smart or Pro to access this module.",
+        )
+
+
+def check_tenant_payroll_access(tenant: Tenant):
+    """
+    Verifies that the tenant's modular SaaS edition has Indian Statutory Payroll & CTC enabled (Pro only).
+    """
+    if not tenant:
+        return
+    if not getattr(tenant, "has_payroll_module", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Payroll & Compensation is not included in the {tenant.saas_edition} edition. Upgrade to Pro to access this module.",
+        )
+
+

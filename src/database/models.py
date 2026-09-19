@@ -126,6 +126,27 @@ class Tenant(Base):
     payroll_batches = relationship("PayrollBatch", back_populates="tenant", cascade="all, delete-orphan")
     payroll_payslips = relationship("PayrollPayslip", back_populates="tenant", cascade="all, delete-orphan")
 
+    @property
+    def saas_edition(self) -> str:
+        """Returns normalized SaaS edition tier: 'BASIC', 'SMART', or 'PRO'."""
+        plan = (self.subscription_plan or "PRO").strip().upper()
+        if plan in ["BASIC", "FREE"]:
+            return "BASIC"
+        elif plan == "SMART":
+            return "SMART"
+        else:
+            return "PRO"  # PRO, STANDARD, ENTERPRISE default to PRO
+
+    @property
+    def has_leave_module(self) -> bool:
+        """Determines if the tenant edition includes Leave Management (Smart and Pro)."""
+        return self.saas_edition in ["SMART", "PRO"]
+
+    @property
+    def has_payroll_module(self) -> bool:
+        """Determines if the tenant edition includes Indian Statutory Payroll & CTC (Pro only)."""
+        return self.saas_edition == "PRO"
+
     def to_dict(self):
         t_uuid = self.uuid or self.slug
         admin_login_path = f"/auth/token-login/{t_uuid}/{self.admin_token}" if (t_uuid and self.admin_token) else None
@@ -142,7 +163,10 @@ class Tenant(Base):
             "is_active": self.is_active,
             "is_deleted": bool(self.is_deleted),
             "deleted_at": self.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if self.deleted_at else None,
-            "subscription_plan": self.subscription_plan or "STANDARD",
+            "subscription_plan": self.subscription_plan or "PRO",
+            "saas_edition": self.saas_edition,
+            "has_leave_module": self.has_leave_module,
+            "has_payroll_module": self.has_payroll_module,
             "subscription_status": self.subscription_status or "ACTIVE",
             "max_face_encodings": self.max_face_encodings or 500,
             "max_nodes": self.max_nodes or 10,

@@ -55,6 +55,7 @@ class TestIndianPayrollSystem(unittest.TestCase):
             name="Apex Tech India Pvt Ltd",
             slug="apex-tech-test",
             tenant_type="corporate",
+            subscription_plan="PRO",
             is_active=True,
         )
         self.db.add(self.tenant)

@@ -110,6 +110,9 @@
 
                 <select id="tenantPlanFilter" class="form-control" onchange="filterTenantsGrid()" style="font-size: 12.5px; width: 130px;">
                     <option value="ALL">All Plans</option>
+                    <option value="BASIC">Basic</option>
+                    <option value="SMART">Smart</option>
+                    <option value="PRO">Pro</option>
                     <option value="FREE">Free</option>
                     <option value="STANDARD">Standard</option>
                     <option value="ENTERPRISE">Enterprise</option>
@@ -866,8 +869,9 @@
 
             // Tier styling
             let planBadgeClass = 'badge-sky';
-            if (t.subscription_plan === 'ENTERPRISE') planBadgeClass = 'badge-emerald';
-            else if (t.subscription_plan === 'FREE') planBadgeClass = 'badge-slate';
+            if (t.subscription_plan === 'ENTERPRISE' || t.subscription_plan === 'PRO') planBadgeClass = 'badge-emerald';
+            else if (t.subscription_plan === 'SMART') planBadgeClass = 'badge-indigo';
+            else if (t.subscription_plan === 'FREE' || t.subscription_plan === 'BASIC') planBadgeClass = 'badge-slate';
 
             // Lifecycle Badge
             let statusPillHtml = '';

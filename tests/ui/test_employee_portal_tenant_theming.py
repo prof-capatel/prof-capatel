@@ -53,6 +53,8 @@ class TestEmployeePortalTenantTheming(unittest.TestCase):
             Tenant.tenant_type.in_(["corporate", "company", "enterprise"]),
             Tenant.is_active == True
         ).first()
+        corp_tenant.subscription_plan = "PRO"
+        self.db.commit()
         emp = self.db.query(Student).filter(Student.tenant_id == corp_tenant.id, Student.is_active == True).first()
         self.assertIsNotNone(emp, "Must have employee in corporate tenant")
 

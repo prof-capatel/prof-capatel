@@ -284,7 +284,7 @@
         /* Mobile-First Responsive Breakpoints */
         @media (max-width: 640px) {
             .portal-topbar {
-                padding: 10px 12px;
+                padding: 8px 12px;
             }
             .portal-brand-avatar {
                 width: 32px;
@@ -299,28 +299,28 @@
                 font-size: 0.68rem;
             }
             .portal-container {
-                padding: 12px 10px 36px 10px;
+                padding: 10px 10px 32px 10px;
             }
             .emp-profile-card {
-                padding: 14px;
-                margin-bottom: 12px;
+                padding: 12px;
+                margin-bottom: 10px;
                 border-radius: var(--radius-md);
             }
             .emp-avatar {
-                width: 42px;
-                height: 42px;
-                font-size: 17px;
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
             }
             .emp-nav-grid {
-                top: 54px;
-                margin-bottom: 12px;
+                top: 50px;
+                margin-bottom: 10px;
                 padding: 3px;
                 gap: 2px;
             }
             .emp-tab-btn {
                 padding: 7px 2px;
                 font-size: 10.5px;
-                min-height: 42px;
+                min-height: 44px;
             }
             .emp-tab-btn i {
                 font-size: 13px;
@@ -334,9 +334,35 @@
             }
             #leaveBalancesGrid {
                 grid-template-columns: 1fr !important;
+                gap: 8px !important;
             }
-            .form-control {
+            #empStructureBreakdownGrid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+            }
+            .form-control,
+            input[type="text"],
+            input[type="date"],
+            select,
+            textarea {
                 font-size: 16px !important; /* Prevents auto-zoom on iOS safari */
+                min-height: 44px;
+            }
+            .btn {
+                min-height: 42px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            div[style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+            #empStructureBreakdownGrid {
+                grid-template-columns: 1fr !important;
+            }
+            .emp-profile-card h2 {
+                font-size: 16px !important;
             }
         }
 
@@ -356,7 +382,7 @@
     <header class="portal-topbar">
         <div class="portal-brand">
             {% if branding and branding.logo_url %}
-                <img src="{{ branding.logo_url }}" alt="Logo" style="height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
+                <img src="{{ branding.logo_url }}" alt="Logo" style="height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
             {% else %}
                 <div class="portal-brand-avatar">
                     {{ tenant.name[0] if tenant else 'O' }}
@@ -365,18 +391,16 @@
             <div>
                 <div class="portal-brand-title">{{ branding.institution_name if branding else tenant.name }}</div>
                 <div class="portal-brand-subtitle">
-                    <span><i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-primary);"></i> Self-Service Portal</span>
-                    <span>&bull;</span>
-                    <code>{{ tenant.slug }}</code>
+                    <span><i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-primary);"></i> Employee Portal</span>
                 </div>
             </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
-            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;">
+            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;">
                 <i class="fa-solid fa-moon"></i>
             </button>
-            <button onclick="employeeLogout()" class="btn btn-secondary btn-sm" style="padding: 7px 12px; font-size: 12px; color: var(--accent-rose, #ef4444); border-color: var(--border-color);" title="Sign Out">
+            <button onclick="employeeLogout()" class="btn btn-secondary btn-sm" style="padding: 6px 11px; font-size: 11.5px; color: var(--accent-rose, #ef4444); border-color: var(--border-color);" title="Sign Out">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 <span style="margin-left: 4px;">Sign Out</span>
             </button>
@@ -387,17 +411,17 @@
         
         <!-- Employee Profile Header Card -->
         <div class="emp-profile-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 12px;">
                     <div class="emp-avatar">
                         {{ employee.name[0] }}
                     </div>
                     <div>
-                        <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-heading);">{{ employee.name }}</h2>
-                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 6px;">
+                        <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--text-heading);">{{ employee.name }}</h2>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; gap: 6px;">
                             <code style="background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-weight: 700; color: var(--text-heading);">{{ employee.roll_number }}</code>
                             <span>&bull;</span>
-                            <span>{{ employee.department }}</span>
+                            <span>{{ employee.department or 'Operations' }}</span>
                         </div>
                     </div>
                 </div>
@@ -410,22 +434,25 @@
                         <i class="fa-solid fa-face-smile"></i> Biometric Active
                     </span>
                     <span class="badge badge-sky" style="font-size: 11px;">
-                        <i class="fa-solid fa-building"></i> {{ tenant.name }}
+                        <i class="fa-solid fa-layer-group"></i> {{ employee.department or 'General' }}
                     </span>
                 </div>
             </div>
         </div>
 
-        <!-- 4 Sub-Tabs Navigation Grid -->
-        <div class="emp-nav-grid">
+        <!-- Dynamic Sub-Tabs Navigation Grid (1 tab for Basic, 3 tabs for Smart, 4 tabs for Pro) -->
+        <div class="emp-nav-grid" style="grid-template-columns: repeat({{ 1 + (1 if tenant.has_payroll_module else 0) + (2 if tenant.has_leave_module else 0) }}, 1fr);">
             <button type="button" class="emp-tab-btn active" id="tabBtnPunches" onclick="switchEmpTab('punches')">
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>Punches</span>
             </button>
+            {% if tenant.has_payroll_module %}
             <button type="button" class="emp-tab-btn" id="tabBtnWages" onclick="switchEmpTab('wages')">
                 <i class="fa-solid fa-file-invoice-dollar"></i>
                 <span>Wages</span>
             </button>
+            {% endif %}
+            {% if tenant.has_leave_module %}
             <button type="button" class="emp-tab-btn" id="tabBtnApply" onclick="switchEmpTab('apply')">
                 <i class="fa-solid fa-calendar-plus"></i>
                 <span>Apply Leave</span>
@@ -434,6 +461,7 @@
                 <i class="fa-solid fa-calendar-check"></i>
                 <span>My Quotas</span>
             </button>
+            {% endif %}
         </div>
 
         <!-- ========================================================= -->
@@ -461,6 +489,7 @@
         <!-- ========================================================= -->
         <!-- TAB 2: WAGES, CTC & MONTHLY PAYSLIPS                       -->
         <!-- ========================================================= -->
+        {% if tenant.has_payroll_module %}
         <div id="sectionWages" class="tab-content-pane">
             <!-- Active CTC & Salary Structure Card -->
             <div class="clean-card">
@@ -551,10 +580,12 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- ========================================================= -->
         <!-- TAB 3: APPLY FOR LEAVE                                     -->
         <!-- ========================================================= -->
+        {% if tenant.has_leave_module %}
         <div id="sectionApply" class="tab-content-pane">
             <div class="clean-card">
                 <div class="clean-card-header">
@@ -661,6 +692,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
     </main>
 
@@ -684,9 +716,13 @@
             if (endInput) endInput.value = tomStr;
 
             loadMyAttendance();
-            loadMyPayroll();
-            loadMyBalances();
-            loadMyLeaveRequests();
+            if (document.getElementById("sectionWages")) {
+                loadMyPayroll();
+            }
+            if (document.getElementById("sectionLeaves")) {
+                loadMyBalances();
+                loadMyLeaveRequests();
+            }
 
             // Support direct tab linking via URL hash (e.g. #wages, #punches, #apply, #leaves)
             const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -712,23 +748,25 @@
         }
 
         function switchEmpTab(tabKey) {
+            let targetBtn = document.getElementById("tabBtn" + tabKey.charAt(0).toUpperCase() + tabKey.slice(1));
+            let targetSec = document.getElementById("section" + tabKey.charAt(0).toUpperCase() + tabKey.slice(1));
+            if (!targetBtn || !targetSec) {
+                tabKey = "punches";
+                targetBtn = document.getElementById("tabBtnPunches");
+                targetSec = document.getElementById("sectionPunches");
+            }
+
             document.querySelectorAll(".emp-tab-btn").forEach(b => b.classList.remove("active"));
             document.querySelectorAll(".tab-content-pane").forEach(s => s.classList.remove("active"));
 
+            if (targetBtn) targetBtn.classList.add("active");
+            if (targetSec) targetSec.classList.add("active");
+
             if (tabKey === "punches") {
-                document.getElementById("tabBtnPunches").classList.add("active");
-                document.getElementById("sectionPunches").classList.add("active");
                 loadMyAttendance();
             } else if (tabKey === "wages") {
-                document.getElementById("tabBtnWages").classList.add("active");
-                document.getElementById("sectionWages").classList.add("active");
                 loadMyPayroll();
-            } else if (tabKey === "apply") {
-                document.getElementById("tabBtnApply").classList.add("active");
-                document.getElementById("sectionApply").classList.add("active");
             } else if (tabKey === "leaves") {
-                document.getElementById("tabBtnLeaves").classList.add("active");
-                document.getElementById("sectionLeaves").classList.add("active");
                 loadMyBalances();
                 loadMyLeaveRequests();
             }

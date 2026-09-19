@@ -318,6 +318,9 @@ class TestOffboardingAndLeaveManagement(unittest.TestCase):
         """Verify admin leave approval and automatic 8.0 hrs paid leave wage credit in payroll."""
         with get_db_context() as db:
             ssec = db.query(Tenant).filter(Tenant.slug == "ssec").first()
+            if ssec:
+                ssec.subscription_plan = "PRO"
+                db.commit()
             ssec_id = str(ssec.id)
 
             seed_default_leave_types(db, int(ssec_id))

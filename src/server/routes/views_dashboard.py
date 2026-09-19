@@ -171,6 +171,30 @@ def page_dashboard(
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
 
+    # Modular SaaS leave metrics
+    today_date = get_ist_now().date()
+    today_leaves_count = 0
+    pending_leaves_count = 0
+    if current_tenant.has_leave_module:
+        today_leaves_count = (
+            db.query(LeaveRequest)
+            .filter(
+                LeaveRequest.tenant_id == current_tenant.id,
+                LeaveRequest.status == "APPROVED",
+                LeaveRequest.start_date <= today_date,
+                LeaveRequest.end_date >= today_date,
+            )
+            .count()
+        )
+        pending_leaves_count = (
+            db.query(LeaveRequest)
+            .filter(
+                LeaveRequest.tenant_id == current_tenant.id,
+                LeaveRequest.status == "PENDING",
+            )
+            .count()
+        )
+
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -180,6 +204,8 @@ def page_dashboard(
             "total_students": total_students,
             "is_corporate": is_corporate,
             "member_label": member_label,
+            "today_leaves_count": today_leaves_count,
+            "pending_leaves_count": pending_leaves_count,
             "recent_logs": [r.to_dict() for r in recent_logs],
             "nodes": [n.to_dict() for n in nodes],
             "branding": branding,
@@ -588,6 +614,13 @@ def page_payroll(
         custom_t = db.query(Tenant).filter(Tenant.id == tenant_id).first()
         if custom_t:
             selected_tenant = custom_t
+
+    # Modular SaaS Edition Protection (Pro only)
+    if not selected_tenant.has_payroll_module and not is_super_admin:
+        return RedirectResponse(
+            url="/?notice=The+Payroll+module+is+available+on+the+Pro+edition.+Please+contact+your+Super+Admin+to+upgrade.",
+            status_code=303,
+        )
 
     departments = db.query(Department).filter(Department.tenant_id == selected_tenant.id).order_by(Department.name.asc()).all()
     locations = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == selected_tenant.id).order_by(CompanyLocation.name.asc()).all()
@@ -1543,6 +1576,13 @@ def page_leave_management(
 
     if current_user.role not in ["SUPER_ADMIN", "TENANT_ADMIN"]:
         return RedirectResponse(url="/", status_code=303)
+
+    # Modular SaaS Edition Protection (Smart and Pro)
+    if not current_tenant.has_leave_module and current_user.role != "SUPER_ADMIN":
+        return RedirectResponse(
+            url="/?notice=The+Leave+Management+module+is+available+on+Smart+and+Pro+editions.+Please+contact+your+Super+Admin+to+upgrade.",
+            status_code=303,
+        )
 
     seed_default_leave_types(db, current_tenant.id)
     db.commit()

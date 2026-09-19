@@ -49,10 +49,12 @@ class TestCorporateDashboardLayout(unittest.TestCase):
         self.assertIn('id="statShiftHours"', html)
 
         # 2. Verify corporate terminology in metrics strip
-        self.assertIn("Checked-In Today", html)
-        self.assertIn("Checked-Out Today", html)
-        self.assertIn("Total Enrolled Employees", html)
-        self.assertIn("Standard Shift Hours", html)
+        self.assertIn("Today's Attendance", html)
+        self.assertIn("Checked-In", html)
+        self.assertIn("Checked-Out", html)
+        self.assertIn("Workforce & Shifts", html)
+        self.assertIn("Enrolled Staff", html)
+        self.assertIn("Shift Hours", html)
 
         # 3. Verify side-by-side hero command grid and live camera + recognition feed
         self.assertIn("dash-hero-grid", html)

@@ -32,6 +32,9 @@ router = APIRouter(
 
 # Fallback limits if database is initializing
 DEFAULT_TIER_LIMITS = {
+    "BASIC": {"max_faces": 100, "max_nodes": 2, "name": "Basic Edition (Attendance Only)"},
+    "SMART": {"max_faces": 500, "max_nodes": 10, "name": "Smart Edition (Attendance + Leaves)"},
+    "PRO": {"max_faces": 5000, "max_nodes": 50, "name": "Pro Edition (Full Platform)"},
     "FREE": {"max_faces": 50, "max_nodes": 2, "name": "Starter Free Tier"},
     "STANDARD": {"max_faces": 500, "max_nodes": 10, "name": "Standard Campus Tier"},
     "ENTERPRISE": {"max_faces": 5000, "max_nodes": 50, "name": "Enterprise Multi-Campus"},
@@ -327,7 +330,7 @@ def create_tenant(
         max_faces = plan_record.max_face_encodings
         max_nodes = plan_record.max_nodes
     else:
-        fallback = DEFAULT_TIER_LIMITS.get(plan_clean, DEFAULT_TIER_LIMITS["STANDARD"])
+        fallback = DEFAULT_TIER_LIMITS.get(plan_clean, DEFAULT_TIER_LIMITS["PRO"])
         max_faces = fallback["max_faces"]
         max_nodes = fallback["max_nodes"]
 

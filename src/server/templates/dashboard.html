@@ -1,103 +1,230 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- TOP SECTION: Summary Metrics KPI Cards (4-Column Full-Width Grid) -->
-<div class="stats-grid" style="margin-bottom: 20px;">
-    <!-- Card 1: Checked In / Present Today -->
-    <div class="stat-card">
+<!-- TOP NOTICE BANNER: Direct URL access notification -->
+{% if request.query_params.get('notice') %}
+<div id="noticeBannerContainer" style="margin-bottom: 16px;">
+    <div class="alert-banner" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border: 1.5px solid var(--accent-amber); border-radius: var(--radius-md); padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; align-items: center; gap: 10px; color: var(--text-heading); font-size: 13.5px; font-weight: 600;">
+            <i class="fa-solid fa-circle-info" style="color: var(--accent-amber); font-size: 17px; flex-shrink: 0;"></i>
+            <span>{{ request.query_params.get('notice') }}</span>
+        </div>
+        <button type="button" onclick="this.closest('#noticeBannerContainer').remove(); window.history.replaceState({}, document.title, window.location.pathname);" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Dismiss">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- TOP SECTION: Consolidated Summary Metrics KPI Cards (3-Column Clickable Cards) -->
+<div class="stats-grid dashboard-3card-grid" style="margin-bottom: 20px;">
+    
+    <!-- CARD 1: Attendance Activity (Check-In & Check-Out) -> Routes to /logs -->
+    <div class="stat-card stat-card-clickable" 
+         id="cardAttendanceSummary"
+         role="link" 
+         tabindex="0" 
+         onclick="window.location.href='/logs'" 
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/logs';}"
+         title="Click to view Attendance Logs">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
             <div class="stat-info">
-                <span>{% if is_corporate %}Checked-In Today{% else %}Present Today{% endif %}</span>
-                <h3 id="statPresentCount">0</h3>
+                <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">{% if is_corporate %}Today's Attendance{% else %}Daily Attendance{% endif %}</span>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">Live Activity & Logs</div>
             </div>
             <div class="stat-icon emerald">
-                <i class="fa-solid fa-user-check"></i>
+                <i class="fa-solid fa-clipboard-user"></i>
             </div>
         </div>
-        {% if not is_corporate %}
-        <div style="font-size: 10.5px; color: var(--accent-emerald); display: flex; align-items: center; gap: 4px; font-weight: 600; margin-top: 6px;">
-            <span class="pulse-dot" style="width: 5px; height: 5px;"></span>
-            <span>Live Real-Time Sync</span>
+
+        <div class="stat-split-row">
+            <div class="stat-split-col">
+                <span class="stat-sublabel">{% if is_corporate %}Checked-In{% else %}Present{% endif %}</span>
+                <h3 id="statPresentCount" style="color: var(--accent-emerald, #10b981);">0</h3>
+                <div class="stat-footnote" style="color: var(--accent-emerald, #10b981);">
+                    <span class="pulse-dot" style="width: 5px; height: 5px; background: var(--accent-emerald, #10b981);"></span>
+                    <span>Active Today</span>
+                </div>
+            </div>
+            <div class="stat-split-divider"></div>
+            <div class="stat-split-col" style="padding-left: 10px;">
+                {% if is_corporate %}
+                <span class="stat-sublabel">Checked-Out</span>
+                <h3 id="statCheckedOutCount" style="color: var(--accent-cyan, #0284c7);">0</h3>
+                <div class="stat-footnote" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 10px;"></i>
+                    <span>Clocked Out</span>
+                </div>
+                {% else %}
+                <span class="stat-sublabel">Absent</span>
+                <h3 id="statAbsentCount" style="color: var(--accent-rose, #ef4444);">0</h3>
+                <div class="stat-footnote" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-user-xmark" style="font-size: 10px;"></i>
+                    <span>Not Reported</span>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
+
+        <div class="stat-card-footer">
+            <span style="color: var(--text-muted); font-size: 11px;">Real-time feed</span>
+            <span class="card-action-link" style="color: var(--accent-primary); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                View Logs <i class="fa-solid fa-arrow-right" style="font-size: 10px;"></i>
+            </span>
+        </div>
     </div>
 
-    <!-- Card 2: Checked Out / Absent Today -->
-    {% if is_corporate %}
-    <div class="stat-card">
+    <!-- CARD 2: Workforce & Shifts (Organization) -> Routes to /employees or /students -->
+    {% set org_target_url = '/employees' if is_corporate else '/students' %}
+    <div class="stat-card stat-card-clickable" 
+         id="cardOrganizationSummary"
+         role="link" 
+         tabindex="0" 
+         onclick="window.location.href='{{ org_target_url }}'" 
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='{{ org_target_url }}';}"
+         title="Click to view {% if is_corporate %}Employee Directory{% else %}Student Roster{% endif %}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
             <div class="stat-info">
-                <span>Checked-Out Today</span>
-                <h3 id="statCheckedOutCount">0</h3>
-            </div>
-            <div class="stat-icon cyan">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i>
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <div class="stat-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-            <div class="stat-info">
-                <span>Absent Today</span>
-                <h3 id="statAbsentCount">0</h3>
-            </div>
-            <div class="stat-icon rose">
-                <i class="fa-solid fa-user-xmark"></i>
-            </div>
-        </div>
-        <div style="font-size: 10.5px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 6px;">
-            <span>Daily Attendance</span>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Card 3: Total Enrolled Employees / Students -->
-    <div class="stat-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-            <div class="stat-info">
-                <span>{% if is_corporate %}Total Enrolled Employees{% else %}Enrolled Students{% endif %}</span>
-                <h3 id="statTotalStudents">{{ total_students }}</h3>
+                <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">{% if is_corporate %}Workforce & Shifts{% else %}Roster & Schedule{% endif %}</span>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">{% if is_corporate %}Staff Directory & Operating Hours{% else %}Registered Roster & Timing{% endif %}</div>
             </div>
             <div class="stat-icon purple">
                 <i class="fa-solid {% if is_corporate %}fa-users-gear{% else %}fa-users{% endif %}"></i>
             </div>
         </div>
-        {% if not is_corporate %}
-        <div style="font-size: 10.5px; color: var(--accent-primary); display: flex; align-items: center; gap: 4px; font-weight: 600; margin-top: 6px;">
-            <i class="fa-solid fa-id-badge" style="font-size: 9.5px;"></i>
-            <span>Registered Roster</span>
+
+        <div class="stat-split-row">
+            <div class="stat-split-col">
+                <span class="stat-sublabel">{% if is_corporate %}Enrolled Staff{% else %}Enrolled Roster{% endif %}</span>
+                <h3 id="statTotalStudents" style="color: #8b5cf6;">{{ total_students }}</h3>
+                <div class="stat-footnote" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-id-badge" style="font-size: 10px;"></i>
+                    <span>Profiles</span>
+                </div>
+            </div>
+            <div class="stat-split-divider"></div>
+            <div class="stat-split-col" style="padding-left: 10px;">
+                {% if is_corporate %}
+                <span class="stat-sublabel">Shift Hours</span>
+                <h3 id="statShiftHours" style="font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px; color: var(--accent-amber, #f59e0b);">{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }} - {{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}</h3>
+                <div class="stat-footnote" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-clock" style="font-size: 10px;"></i>
+                    <span>Standard Window</span>
+                </div>
+                {% else %}
+                <span class="stat-sublabel">Cooldown</span>
+                <h3 id="statCooldownWindow" style="font-size: 18px; font-weight: 800; color: var(--accent-amber, #f59e0b);">{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Mins</h3>
+                <div class="stat-footnote" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-shield-halved" style="font-size: 10px;"></i>
+                    <span>Anti-passback</span>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
+
+        <div class="stat-card-footer">
+            <span style="color: var(--text-muted); font-size: 11px;">{% if is_corporate %}Staff directory{% else %}Student roster{% endif %}</span>
+            <span class="card-action-link" style="color: var(--accent-primary); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                {% if is_corporate %}Manage Staff{% else %}Manage Roster{% endif %} <i class="fa-solid fa-arrow-right" style="font-size: 10px;"></i>
+            </span>
+        </div>
     </div>
 
-    <!-- Card 4: Standard Shift Hours / Cooldown Window -->
-    {% if is_corporate %}
-    <div class="stat-card">
+    <!-- CARD 3: Leave & Approvals -> Routes to /leave-management (or /nodes on Basic edition) -->
+    {% if current_tenant.has_leave_module %}
+    <div class="stat-card stat-card-clickable" 
+         id="cardLeaveSummary"
+         role="link" 
+         tabindex="0" 
+         onclick="window.location.href='/leave-management'" 
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/leave-management';}"
+         title="Click to view Leave Management">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-            <div class="stat-info" style="overflow: hidden; padding-right: 4px;">
-                <span>Standard Shift Hours</span>
-                <h3 id="statShiftHours" style="font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px;">{{ branding.shift_check_in_time if branding and branding.shift_check_in_time else '10:30' }} - {{ branding.shift_check_out_time if branding and branding.shift_check_out_time else '18:00' }}</h3>
+            <div class="stat-info">
+                <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">Leaves & Approvals</span>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">Absence Tracking & Requests</div>
             </div>
-            <div class="stat-icon amber" style="flex-shrink: 0;">
-                <i class="fa-solid fa-briefcase"></i>
+            <div class="stat-icon indigo">
+                <i class="fa-solid fa-plane-departure"></i>
             </div>
+        </div>
+
+        <div class="stat-split-row">
+            <div class="stat-split-col">
+                <span class="stat-sublabel">On Leave Today</span>
+                <h3 id="statTodayLeavesCount" style="color: #6366f1;">{{ today_leaves_count or 0 }}</h3>
+                <div class="stat-footnote" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-calendar-check" style="font-size: 10px; color: #6366f1;"></i>
+                    <span>Approved Active</span>
+                </div>
+            </div>
+            <div class="stat-split-divider"></div>
+            <div class="stat-split-col" style="padding-left: 10px;">
+                <span class="stat-sublabel">Pending Approvals</span>
+                <h3 id="statPendingLeavesCount" style="color: {% if pending_leaves_count and pending_leaves_count > 0 %}var(--accent-rose, #ef4444){% else %}var(--text-heading){% endif %};">{{ pending_leaves_count or 0 }}</h3>
+                <div class="stat-footnote" style="color: {% if pending_leaves_count and pending_leaves_count > 0 %}var(--accent-rose, #ef4444){% else %}var(--text-muted){% endif %};">
+                    {% if pending_leaves_count and pending_leaves_count > 0 %}
+                    <span class="pulse-dot" style="width: 5px; height: 5px; background: var(--accent-rose, #ef4444);"></span>
+                    <span style="font-weight: 700;">Needs Review</span>
+                    {% else %}
+                    <i class="fa-solid fa-circle-check" style="font-size: 10px; color: var(--accent-emerald);"></i>
+                    <span>All Clear</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card-footer">
+            <span style="color: var(--text-muted); font-size: 11px;">Absence requests</span>
+            <span class="card-action-link" style="color: var(--accent-primary); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                Manage Leaves <i class="fa-solid fa-arrow-right" style="font-size: 10px;"></i>
+            </span>
         </div>
     </div>
     {% else %}
-    <div class="stat-card">
+    <!-- Basic Edition Fallback: Hardware Nodes & Status -->
+    <div class="stat-card stat-card-clickable" 
+         id="cardNodesSummary"
+         role="link" 
+         tabindex="0" 
+         onclick="window.location.href='/nodes'" 
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/nodes';}"
+         title="Click to view Hardware Nodes">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
             <div class="stat-info">
-                <span>Cooldown Window</span>
-                <h3 id="statCooldownWindow" style="font-size: 20px; font-weight: 800;">{{ branding.cooldown_minutes if branding and branding.cooldown_minutes else 60 }} Mins</h3>
+                <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">Devices & Stations</span>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">Biometric Hardware Gateways</div>
             </div>
-            <div class="stat-icon amber">
-                <i class="fa-solid fa-hourglass-half"></i>
+            <div class="stat-icon indigo">
+                <i class="fa-solid fa-server"></i>
             </div>
         </div>
-        <div style="font-size: 10.5px; color: var(--accent-amber); display: flex; align-items: center; gap: 4px; font-weight: 600; margin-top: 6px;">
-            <i class="fa-solid fa-shield-halved" style="font-size: 9.5px;"></i>
-            <span>Deduplication Window</span>
+
+        <div class="stat-split-row">
+            <div class="stat-split-col">
+                <span class="stat-sublabel">Connected Nodes</span>
+                <h3 id="statActiveNodes" style="color: var(--accent-primary);">{{ nodes|length }}</h3>
+                <div class="stat-footnote" style="color: var(--accent-emerald);">
+                    <i class="fa-solid fa-wifi" style="font-size: 10px;"></i>
+                    <span>Online Devices</span>
+                </div>
+            </div>
+            <div class="stat-split-divider"></div>
+            <div class="stat-split-col" style="padding-left: 10px;">
+                <span class="stat-sublabel">SaaS Edition</span>
+                <h3 style="font-size: 16px; font-weight: 800; color: var(--text-heading);">{{ current_tenant.saas_tier or 'BASIC' }}</h3>
+                <div class="stat-footnote" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-cube" style="font-size: 10px;"></i>
+                    <span>Core Attendance</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card-footer">
+            <span style="color: var(--text-muted); font-size: 11px;">Hardware station</span>
+            <span class="card-action-link" style="color: var(--accent-primary); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                Manage Nodes <i class="fa-solid fa-arrow-right" style="font-size: 10px;"></i>
+            </span>
         </div>
     </div>
     {% endif %}
@@ -545,6 +672,9 @@
                 if (data.present_today !== undefined && document.getElementById('statPresentCount')) document.getElementById('statPresentCount').innerText = data.present_today;
                 if (data.total_students !== undefined && document.getElementById('statTotalStudents')) document.getElementById('statTotalStudents').innerText = data.total_students;
                 if (data.checked_out_today !== undefined && document.getElementById('statCheckedOutCount')) document.getElementById('statCheckedOutCount').innerText = data.checked_out_today;
+                if (data.absent_today !== undefined && document.getElementById('statAbsentCount')) document.getElementById('statAbsentCount').innerText = data.absent_today;
+                if (data.today_leaves_count !== undefined && document.getElementById('statTodayLeavesCount')) document.getElementById('statTodayLeavesCount').innerText = data.today_leaves_count;
+                if (data.pending_leaves_count !== undefined && document.getElementById('statPendingLeavesCount')) document.getElementById('statPendingLeavesCount').innerText = data.pending_leaves_count;
                 if (data.shift_hours_display && document.getElementById('statShiftHours')) document.getElementById('statShiftHours').innerText = data.shift_hours_display;
             }
         } catch (e) {}
@@ -598,8 +728,15 @@
     let captureIntervalTimer = null;
     let isCaptureIngesting = false;
     let isContinuousActive = false;
+    let isInterruptedState = false;
+    let pausedForSecondaryCamera = false;
+    let consecutiveIngestErrors = 0;
     let captureToastTimer = null;
     let soundEnabled = true;
+
+    // Expose on window for arbitration & modal integration
+    window.isContinuousActive = false;
+    window.isInterruptedState = false;
 
     // Configurable client-side debounce cooldown (3 seconds per employee)
     const CLIENT_DEBOUNCE_MS = 3000;
@@ -644,10 +781,15 @@
     }
 
     async function startContinuousCapture() {
+        isInterruptedState = false;
+        window.isInterruptedState = false;
+        consecutiveIngestErrors = 0;
+
         const success = await initCaptureCamera();
         if (!success) return;
 
         isContinuousActive = true;
+        window.isContinuousActive = true;
         updateScannerUIState(true);
 
         // Capture frame loop at ~2.5 FPS (every 400ms)
@@ -661,13 +803,16 @@
 
     function stopContinuousCapture() {
         isContinuousActive = false;
+        window.isContinuousActive = false;
         if (captureIntervalTimer) {
             clearInterval(captureIntervalTimer);
             captureIntervalTimer = null;
         }
 
         if (captureMediaStream) {
-            captureMediaStream.getTracks().forEach(t => t.stop());
+            try {
+                captureMediaStream.getTracks().forEach(t => t.stop());
+            } catch(e) {}
             captureMediaStream = null;
         }
 
@@ -680,9 +825,73 @@
         updateScannerUIState(false);
     }
 
-    function updateScannerUIState(isActive) {
+    function pauseForSecondaryCamera() {
+        if (isContinuousActive) {
+            pausedForSecondaryCamera = true;
+            isContinuousActive = false;
+            window.isContinuousActive = false;
+            if (captureIntervalTimer) {
+                clearInterval(captureIntervalTimer);
+                captureIntervalTimer = null;
+            }
+            if (captureMediaStream) {
+                try {
+                    captureMediaStream.getTracks().forEach(t => t.stop());
+                } catch(e) {}
+                captureMediaStream = null;
+            }
+            updateScannerUIState(false, false, "", true);
+            return true;
+        }
+        return false;
+    }
+
+    async function resumeFromSecondaryCamera() {
+        if (pausedForSecondaryCamera) {
+            pausedForSecondaryCamera = false;
+            await startContinuousCapture();
+        }
+    }
+
+    // Expose control functions globally
+    window.startContinuousCapture = startContinuousCapture;
+    window.stopContinuousCapture = stopContinuousCapture;
+    window.pauseForSecondaryCamera = pauseForSecondaryCamera;
+    window.resumeFromSecondaryCamera = resumeFromSecondaryCamera;
+
+    function handleCaptureInterrupted(reason) {
+        if (!isContinuousActive && isInterruptedState) return;
+        isContinuousActive = false;
+        window.isContinuousActive = false;
+        isInterruptedState = true;
+        window.isInterruptedState = true;
+
+        if (captureIntervalTimer) {
+            clearInterval(captureIntervalTimer);
+            captureIntervalTimer = null;
+        }
+
+        if (captureMediaStream) {
+            try {
+                captureMediaStream.getTracks().forEach(t => t.stop());
+            } catch (e) {}
+            captureMediaStream = null;
+        }
+
+        const canvas = document.getElementById("captureCanvas");
+        if (canvas) {
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        updateScannerUIState(false, true, reason);
+    }
+
+    function updateScannerUIState(isActive, isInterrupted = false, interruptReason = "", isPaused = false) {
         const card = document.getElementById("inlineCameraCard");
         const standbyOverlay = document.getElementById("captureStandbyOverlay");
+        const standbyTitle = document.getElementById("captureStandbyTitle");
+        const standbyDesc = document.getElementById("captureStandbyDesc");
         const radarLine = document.getElementById("scannerRadarLine");
         const hudTag = document.getElementById("hudLiveTag");
         const pill = document.getElementById("cameraStatusPill");
@@ -693,7 +902,10 @@
         const cardText = document.getElementById("btnCardText");
 
         if (isActive) {
-            if (card) card.classList.add("scanner-active-glow");
+            if (card) {
+                card.classList.add("scanner-active-glow");
+                card.style.borderColor = "var(--accent-primary)";
+            }
             if (standbyOverlay) standbyOverlay.style.display = "none";
             if (radarLine) radarLine.style.display = "block";
             if (hudTag) hudTag.style.display = "flex";
@@ -708,9 +920,68 @@
                 if (cardIcon) cardIcon.className = "fa-solid fa-stop";
                 if (cardText) cardText.innerText = "Stop Attendance Capture";
             }
-        } else {
-            if (card) card.classList.remove("scanner-active-glow");
+        } else if (isInterrupted) {
+            if (card) {
+                card.classList.remove("scanner-active-glow");
+                card.style.borderColor = "var(--accent-rose, #ef4444)";
+            }
             if (standbyOverlay) standbyOverlay.style.display = "flex";
+            if (standbyTitle) {
+                standbyTitle.innerHTML = '<span style="color: #ef4444; display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-triangle-exclamation"></i> Feed Interrupted</span>';
+            }
+            if (standbyDesc) {
+                standbyDesc.innerText = interruptReason || "Camera capture was interrupted. Click below to restart.";
+            }
+            if (radarLine) radarLine.style.display = "none";
+            if (hudTag) hudTag.style.display = "none";
+
+            if (pill) {
+                pill.className = "badge badge-absent";
+                pill.innerHTML = '<span class="pulse-dot" style="background: #ef4444;"></span> ⚠️ INTERRUPTED';
+            }
+
+            if (cardBtn) {
+                cardBtn.className = "btn btn-primary";
+                if (cardIcon) cardIcon.className = "fa-solid fa-rotate-right";
+                if (cardText) cardText.innerText = "Restart Attendance Feed";
+            }
+        } else if (isPaused) {
+            if (card) {
+                card.classList.remove("scanner-active-glow");
+                card.style.borderColor = "var(--accent-amber, #f59e0b)";
+            }
+            if (standbyOverlay) standbyOverlay.style.display = "flex";
+            if (standbyTitle) {
+                standbyTitle.innerHTML = '<span style="color: #f59e0b; display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-pause"></i> Feed Paused</span>';
+            }
+            if (standbyDesc) {
+                standbyDesc.innerText = "Camera in use for photo capture. Will resume automatically when completed.";
+            }
+            if (radarLine) radarLine.style.display = "none";
+            if (hudTag) hudTag.style.display = "none";
+
+            if (pill) {
+                pill.className = "badge badge-amber";
+                pill.innerHTML = '● PAUSED';
+            }
+
+            if (cardBtn) {
+                cardBtn.className = "btn btn-primary";
+                if (cardIcon) cardIcon.className = "fa-solid fa-play";
+                if (cardText) cardText.innerText = "Resume Attendance Feed";
+            }
+        } else {
+            if (card) {
+                card.classList.remove("scanner-active-glow");
+                card.style.borderColor = "var(--border-color)";
+            }
+            if (standbyOverlay) standbyOverlay.style.display = "flex";
+            if (standbyTitle) {
+                standbyTitle.innerText = "Camera Scanner Standby";
+            }
+            if (standbyDesc) {
+                standbyDesc.innerText = "Click below to activate continuous face recognition for employee check-ins.";
+            }
             if (radarLine) radarLine.style.display = "none";
             if (hudTag) hudTag.style.display = "none";
 
@@ -734,7 +1005,9 @@
         const video = document.getElementById("captureVideo");
 
         if (captureMediaStream) {
-            captureMediaStream.getTracks().forEach(t => t.stop());
+            try {
+                captureMediaStream.getTracks().forEach(t => t.stop());
+            } catch(e) {}
             captureMediaStream = null;
         }
 
@@ -753,14 +1026,25 @@
             video.srcObject = captureMediaStream;
             await video.play();
 
+            // Track hardware interruption / disconnect events
+            const videoTrack = captureMediaStream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.onended = () => {
+                    console.warn("[Camera] Live capture video track ended / disconnected.");
+                    handleCaptureInterrupted("Camera connection was closed or disconnected by the system.");
+                };
+                videoTrack.onmute = () => {
+                    console.warn("[Camera] Live capture video track muted / locked.");
+                    handleCaptureInterrupted("Camera feed is muted or in exclusive use by another application.");
+                };
+            }
+
             if (standbyOverlay) standbyOverlay.style.display = "none";
             await enumerateCaptureDevices();
             return true;
         } catch (err) {
             console.error("Camera access failed:", err);
-            if (standbyOverlay) standbyOverlay.style.display = "flex";
-            if (standbyTitle) standbyTitle.innerText = "Camera Permission Denied";
-            if (standbyDesc) standbyDesc.innerText = "Please allow webcam access in your browser to start biometric attendance scanning.";
+            handleCaptureInterrupted("Webcam access failed or permission was denied.");
             return false;
         }
     }
@@ -832,11 +1116,21 @@
                 });
 
                 if (res.ok) {
+                    consecutiveIngestErrors = 0;
                     const data = await res.json();
                     renderCaptureDetections(data.detections || [], canvas, tempCanvas.width, tempCanvas.height);
+                } else {
+                    consecutiveIngestErrors++;
+                    if (consecutiveIngestErrors >= 8) {
+                        handleCaptureInterrupted("Recognition backend server error.");
+                    }
                 }
             } catch (err) {
                 console.warn("Frame transmission error:", err);
+                consecutiveIngestErrors++;
+                if (consecutiveIngestErrors >= 8) {
+                    handleCaptureInterrupted("Network connection to recognition server interrupted.");
+                }
             } finally {
                 isCaptureIngesting = false;
             }
@@ -1039,7 +1333,7 @@
     window.showCaptureToast = showCaptureToast;
 
     // ==========================================================
-    // DRAGGABLE CAMERA CARD IMPLEMENTATION
+    // DRAGGABLE CAMERA CARD IMPLEMENTATION (Desktop-Only Dragging)
     // ==========================================================
     function initDraggableCameraCard() {
         const card = document.getElementById("inlineCameraCard");
@@ -1050,7 +1344,12 @@
         let isDragging = false;
         let startX, startY, initialLeft, initialTop;
 
+        const isTouchOrMobile = () => window.innerWidth <= 1024 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
         header.addEventListener("mousedown", (e) => {
+            // Disable dragging on mobile/tablet/touch screens
+            if (isTouchOrMobile()) return;
+
             // Don't drag if clicking buttons or controls
             if (e.target.closest("button") || e.target.closest("select") || e.target.closest("input")) {
                 return;
@@ -1106,6 +1405,12 @@
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
         }
+
+        window.addEventListener("resize", () => {
+            if (isTouchOrMobile()) {
+                resetCameraCardDock();
+            }
+        });
     }
 
     function resetCameraCardDock() {
@@ -1123,37 +1428,9 @@
         if (resetBtn) resetBtn.style.display = "none";
     }
 
-    // Visibility-Aware Camera Shutdown & Wakeup Lifecycle
-    let wasContinuousActiveBeforeHidden = false;
-
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-            if (isContinuousActive) {
-                wasContinuousActiveBeforeHidden = true;
-                stopContinuousCapture();
-            }
-        } else {
-            if (wasContinuousActiveBeforeHidden) {
-                wasContinuousActiveBeforeHidden = false;
-                startContinuousCapture();
-            }
-        }
-    });
-
-    window.addEventListener("blur", () => {
-        if (isContinuousActive) {
-            wasContinuousActiveBeforeHidden = true;
-            stopContinuousCapture();
-        }
-    });
-
-    window.addEventListener("focus", () => {
-        if (!document.hidden && wasContinuousActiveBeforeHidden) {
-            wasContinuousActiveBeforeHidden = false;
-            startContinuousCapture();
-        }
-    });
-
+    // Continuous Background Attendance Feed Lifecycle:
+    // Live attendance feed continues running seamlessly across window focus, blur, and tab switching.
+    // Cleanup is only triggered when navigating away from the page or closing the window.
     window.addEventListener("pagehide", () => {
         stopContinuousCapture();
     });
