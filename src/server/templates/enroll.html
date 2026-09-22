@@ -1,49 +1,37 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Quick Self-Enrollment Link Banner -->
-<div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.05)); border: 1px dashed var(--accent-primary); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-    <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-primary); font-size: 16px;">
+<!-- Quick Self-Enrollment Link Banner (Streamlined Compact Height) -->
+<div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.05)); border: 1px dashed var(--accent-primary); border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-primary); font-size: 14px;">
             <i class="fa-solid fa-user-plus"></i>
         </div>
         <div>
-            <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 8px;">
+            <div style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
                 <span>{% if is_corporate or (current_tenant and current_tenant.tenant_type == 'corporate') %}Employee Self-Enrollment Portal{% else %}Student Self-Registration Portal{% endif %}</span>
-                <span class="badge badge-sky" style="font-size: 10.5px;">Public Link</span>
+                <span class="badge badge-sky" style="font-size: 10px; padding: 2px 6px;">Public Link</span>
             </div>
-            <div style="font-size: 11.5px; color: var(--text-muted); font-family: monospace; margin-top: 2px;" id="enrollSelfOnboardUrl">
+            <div style="font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 1px;" id="enrollSelfOnboardUrl">
                 /onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}
             </div>
         </div>
     </div>
-    <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn btn-secondary" style="font-size: 11.5px; padding: 6px 14px;" onclick="copyEnrollOnboardLink(this)">
+    <div style="display: flex; gap: 6px;">
+        <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="copyEnrollOnboardLink(this)">
             <i class="fa-solid fa-copy"></i> Copy Link
         </button>
-        <a href="/onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}" target="_blank" class="btn btn-primary" style="font-size: 11.5px; padding: 6px 14px; text-decoration: none;">
+        <a href="/onboard/{{ current_tenant.uuid if current_tenant and current_tenant.uuid else (current_tenant.slug if current_tenant else 'default') }}/{{ current_tenant.onboarding_token if current_tenant and current_tenant.onboarding_token else '' }}" target="_blank" class="btn btn-primary" style="font-size: 11px; padding: 4px 10px; text-decoration: none;">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
         </a>
     </div>
 </div>
 
-<!-- Mode Switcher Tabs -->
-<div class="enroll-tabs">
-    <button id="tabBtnWebcam" class="enroll-tab-btn active" onclick="switchEnrollMode('webcam')">
-        <i class="fa-solid fa-video"></i>
-        <span>Live Webcam Guided Capture</span>
-    </button>
-    <button id="tabBtnBatch" class="enroll-tab-btn" onclick="switchEnrollMode('batch')">
-        <i class="fa-solid fa-images"></i>
-        <span>Batch Photo Upload (Exactly 3 Photos)</span>
-    </button>
-</div>
-
 <!-- ========================================================= -->
-<!-- MODE 1: LIVE WEBCAM ENROLLMENT                            -->
+<!-- MODE 1: LIVE WEBCAM ENROLLMENT (2-Column Grid)            -->
 <!-- ========================================================= -->
-<div id="modeWebcamSection" class="dashboard-grid">
-    <!-- Enrollment Form & Stepper -->
+<div id="modeWebcamSection" class="dashboard-grid" style="align-items: start;">
+    <!-- LEFT CARD: Employee / Staff Information Form -->
     <div class="card">
         <div class="card-header">
             <h3>
@@ -53,6 +41,7 @@
         </div>
         <div class="card-body">
             <form id="enrollStudentForm">
+                {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
                 <div class="form-group">
                     <label class="form-label">User Role *</label>
                     <select id="userRole" class="form-control" required onchange="onEnrollRoleChanged('webcam')">
@@ -61,25 +50,29 @@
                             <option value="{{ r.value }}" {% if loop.first %}selected{% endif %}>{{ r.label }}</option>
                             {% endfor %}
                         {% else %}
-                            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
-                            <option value="employee" selected>Employee / Staff Member</option>
-                            <option value="manager">Manager / Team Lead</option>
-                            <option value="admin_staff">Administrative Staff</option>
-                            <option value="contractor">Contractor / External</option>
-                            <option value="intern">Intern / Trainee</option>
-                            {% else %}
                             <option value="student" selected>Student</option>
                             <option value="teacher">Teacher / Faculty</option>
                             <option value="admin_staff">Administrative Staff</option>
                             <option value="other">Other Institutional Member</option>
-                            {% endif %}
                         {% endif %}
                     </select>
                 </div>
+                {% else %}
+                <input type="hidden" id="userRole" value="employee">
+                {% endif %}
 
+                <!-- Auto-Generated Employee ID with Inline Refresh -->
                 <div class="form-group">
-                    <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID / Staff Code *{% else %}Roll Number / Staff ID *{% endif %}</label>
-                    <input type="text" id="rollNumber" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. EMP-101 or ENG-402{% else %}e.g. CS2026-001 or EMP-101{% endif %}" required>
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID / Staff Code *{% else %}Roll Number / Staff ID *{% endif %}</span>
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">Auto-Generated (Editable)</span>
+                    </label>
+                    <div class="auto-code-group">
+                        <input type="text" id="rollNumber" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. EMP-101 or ENG-402{% else %}e.g. CS2026-001 or EMP-101{% endif %}" required>
+                        <button type="button" class="btn btn-secondary auto-code-refresh-btn" onclick="regenerateEmployeeCode('webcam')" title="Generate New Code">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -134,7 +127,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Designation / Role Title</label>
+                    <label class="form-label">Designation</label>
                     <select id="enrollDesignationSelect" class="form-control" onchange="onDesignationChanged('webcam')">
                         <option value="">-- Select Designation (Optional) --</option>
                         {% for desig in designations %}
@@ -144,7 +137,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Compensation Salary Template (Optional)</label>
+                    <label class="form-label">Salary Structure (Optional)</label>
                     <select id="enrollSalaryTemplateSelect" class="form-control">
                         <option value="">-- Custom / No Template --</option>
                         {% for tpl in salary_templates %}
@@ -166,7 +159,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Assigned Work Shift *</label>
+                    <label class="form-label">Work shift *</label>
                     <select id="enrollShiftSelect" class="form-control" required>
                         {% if work_shifts %}
                             {% for s in work_shifts %}
@@ -196,74 +189,44 @@
                     <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Register Employee & Start Face Capture{% else %}Register Profile & Start Face Capture{% endif %}</span>
                 </button>
             </form>
-
-            <div id="enrollProgressSection" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-                <h4 style="font-size: 14px; font-weight: 700; color: var(--accent-primary); margin-bottom: 12px;">
-                    <i class="fa-solid fa-camera"></i> Step 2: Multi-Angle Face Samples
-                </h4>
-
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div id="stepFrontal" style="padding: 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <strong style="font-size: 13px; color: var(--text-heading);">1. Frontal Pose</strong>
-                            <div style="font-size: 12px; color: var(--text-muted);">Look directly into the camera.</div>
-                        </div>
-                        <button onclick="captureSample('frontal')" id="btnCapFrontal" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;">
-                            Capture
-                        </button>
-                    </div>
-
-                    <div id="stepLeft" style="padding: 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <strong style="font-size: 13px; color: var(--text-heading);">2. Slight Left (~15°)</strong>
-                            <div style="font-size: 12px; color: var(--text-muted);">Turn head slightly to your left.</div>
-                        </div>
-                        <button onclick="captureSample('left')" id="btnCapLeft" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;" disabled>
-                            Capture
-                        </button>
-                    </div>
-
-                    <div id="stepRight" style="padding: 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <strong style="font-size: 13px; color: var(--text-heading);">3. Slight Right (~15°)</strong>
-                            <div style="font-size: 12px; color: var(--text-muted);">Turn head slightly to your right.</div>
-                        </div>
-                        <button onclick="captureSample('right')" id="btnCapRight" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;" disabled>
-                            Capture
-                        </button>
-                    </div>
-                </div>
-
-                <div id="enrollmentCompleteBox" style="display: none; margin-top: 16px; padding: 16px; background: var(--badge-emerald-bg); border: 1px solid var(--badge-emerald-border); border-radius: var(--radius-sm); text-align: center;">
-                    <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald); font-size: 26px; margin-bottom: 6px;"></i>
-                    <h5 style="color: var(--badge-emerald-text); font-size: 15px; font-weight: 700;">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Registration Completed!{% else %}Enrollment Completed!{% endif %}</h5>
-                    <p style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 14px;">3-angle embeddings cached into recognition engine.</p>
-                    <a href="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}/employees{% else %}/students{% endif %}" class="btn btn-primary" style="padding: 7px 18px; font-size: 12.5px;">
-                        <i class="fa-solid fa-users"></i> {% if current_tenant and current_tenant.tenant_type == 'corporate' %}View in Employee Directory{% else %}View in Student Directory{% endif %}
-                    </a>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Live Webcam Capture Feed -->
-    <div class="card">
-        <div class="card-header" style="flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-video" style="color: var(--accent-cyan);"></i>
-                <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Live Employee Face Capture{% else %}Live Enrollment View{% endif %}</span>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <select id="cameraSourceSelect" class="form-control" style="max-width: 170px; font-size: 11px; padding: 4px 8px; height: 30px; display: none;" onchange="onCameraSourceChanged(this.value)">
-                    <option value="">Default Front Camera</option>
-                </select>
-                <span id="camStatusBadge" class="badge badge-node">Camera Idle</span>
-                <button id="btnToggleCam" onclick="toggleWebcam()" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;">
-                    <i class="fa-solid fa-power-off"></i> Start Camera
+    <!-- RIGHT CARD: Live Webcam Capture Feed & Multi-Angle Samples -->
+    <div class="card" id="enrollCaptureHubCard">
+        <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 10px; padding-bottom: 12px;">
+            <!-- Mode Switcher Action Buttons placed directly above camera window -->
+            <div class="enroll-tabs">
+                <button id="tabBtnWebcam" class="enroll-tab-btn active" onclick="switchEnrollMode('webcam')">
+                    <i class="fa-solid fa-video"></i>
+                    <span>Live Webcam Guided</span>
+                </button>
+                <button id="tabBtnBatch" class="enroll-tab-btn" onclick="switchEnrollMode('batch')">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Batch 3-Photo Upload</span>
                 </button>
             </div>
+
+            <!-- Header Controls Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-video" style="color: var(--accent-cyan);"></i>
+                    <span style="font-weight: 700; font-size: 13.5px; color: var(--text-heading);">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Live Employee Face Capture{% else %}Live Enrollment View{% endif %}</span>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <select id="cameraSourceSelect" class="form-control" style="max-width: 150px; font-size: 11px; padding: 3px 6px; height: 28px; display: none;" onchange="onCameraSourceChanged(this.value)">
+                        <option value="">Default Front Camera</option>
+                    </select>
+                    <span id="camStatusBadge" class="badge badge-node" style="font-size: 11px;">Camera Idle</span>
+                    <button id="btnToggleCam" onclick="toggleWebcam()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;">
+                        <i class="fa-solid fa-power-off"></i> Start Camera
+                    </button>
+                </div>
+            </div>
         </div>
+
         <div class="card-body">
+            <!-- Camera Preview Box -->
             <div class="camera-box" style="position: relative;">
                 <video id="webcamVideo" autoplay playsinline webkit-playsinline muted style="width: 100%; border-radius: var(--radius-sm); background: #000;"></video>
                 <canvas id="captureCanvas" style="display: none;"></canvas>
@@ -272,28 +235,76 @@
             <!-- Native Camera Shutter Input Fallback (Mobile / Insecure Origin) -->
             <input type="file" id="mobileNativeCaptureInput" accept="image/*" capture="user" style="display: none;" onchange="handleNativeCapturedFile(this)">
 
-            <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
                 <button type="button" id="btnNativeCameraFallback" class="btn btn-secondary" onclick="triggerNativeMobileCapture()" style="flex: 1; font-size: 12px; display: none; align-items: center; justify-content: center; gap: 6px;">
                     <i class="fa-solid fa-camera"></i>
                     <span>Take Photo via Mobile Camera</span>
                 </button>
             </div>
 
-            <div id="camFeedback" style="margin-top: 14px; padding: 12px 16px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px;">
+            <!-- 3 Face-Angle Capture Buttons (Relocated Directly Underneath Camera) -->
+            <div id="enrollProgressSection" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                <h4 style="font-size: 13.5px; font-weight: 700; color: var(--accent-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-camera"></i> Step 2: Multi-Angle Face Samples
+                </h4>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div id="stepFrontal" style="padding: 10px 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="font-size: 12.5px; color: var(--text-heading);">1. Frontal Pose</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Look directly into the camera.</div>
+                        </div>
+                        <button onclick="captureSample('frontal')" id="btnCapFrontal" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;">
+                            Capture
+                        </button>
+                    </div>
+
+                    <div id="stepLeft" style="padding: 10px 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="font-size: 12.5px; color: var(--text-heading);">2. Slight Left (~15°)</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Turn head slightly to your left.</div>
+                        </div>
+                        <button onclick="captureSample('left')" id="btnCapLeft" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;" disabled>
+                            Capture
+                        </button>
+                    </div>
+
+                    <div id="stepRight" style="padding: 10px 14px; border: 1px solid var(--border-color); background: var(--bg-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="font-size: 12.5px; color: var(--text-heading);">3. Slight Right (~15°)</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Turn head slightly to your right.</div>
+                        </div>
+                        <button onclick="captureSample('right')" id="btnCapRight" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;" disabled>
+                            Capture
+                        </button>
+                    </div>
+                </div>
+
+                <div id="enrollmentCompleteBox" style="display: none; margin-top: 14px; padding: 14px; background: var(--badge-emerald-bg); border: 1px solid var(--badge-emerald-border); border-radius: var(--radius-sm); text-align: center;">
+                    <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald); font-size: 24px; margin-bottom: 4px;"></i>
+                    <h5 style="color: var(--badge-emerald-text); font-size: 14px; font-weight: 700;">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee Registration Completed!{% else %}Enrollment Completed!{% endif %}</h5>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 10px;">3-angle embeddings cached into recognition engine.</p>
+                    <a href="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}/employees{% else %}/students{% endif %}" class="btn btn-primary" style="padding: 6px 16px; font-size: 12px;">
+                        <i class="fa-solid fa-users"></i> {% if current_tenant and current_tenant.tenant_type == 'corporate' %}View in Employee Directory{% else %}View in Student Directory{% endif %}
+                    </a>
+                </div>
+            </div>
+
+            <div id="camFeedback" style="margin-top: 12px; padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-circle-info" style="color: var(--accent-cyan);"></i>
-                <span id="camFeedbackText">Click "Start Camera" or register profile to begin face capture.</span>
+                <span id="camFeedbackText">Click "Start Camera" or register profile on the left to begin face capture.</span>
             </div>
 
             <!-- Mobile Troubleshooting Tips -->
-            <div id="mobileCamTroubleshooting" style="display: none; margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); font-size: 11.5px; color: var(--text-secondary);">
-                <strong style="color: var(--accent-rose); display: block; margin-bottom: 4px;">
+            <div id="mobileCamTroubleshooting" style="display: none; margin-top: 10px; padding: 10px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); font-size: 11.5px; color: var(--text-secondary);">
+                <strong style="color: var(--accent-rose); display: block; margin-bottom: 2px;">
                     <i class="fa-solid fa-triangle-exclamation"></i> Mobile Camera Troubleshooting:
                 </strong>
                 If camera streaming is blocked by your browser, ensure you grant camera permissions or use the <strong>Take Photo via Mobile Camera</strong> button above.
             </div>
 
-            <!-- Alternative CLI helper notice -->
-            <div style="margin-top: 14px; padding: 12px 14px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-sm); font-size: 11.5px; color: var(--text-secondary);">
+            <!-- Camera Lock Management Notice -->
+            <div style="margin-top: 12px; padding: 10px 12px; background: var(--badge-indigo-bg); border: 1px solid var(--badge-indigo-border); border-radius: var(--radius-sm); font-size: 11px; color: var(--text-secondary);">
                 <span style="color: var(--accent-primary); font-weight: 700;"><i class="fa-solid fa-shield-halved"></i> Camera Lock Management:</span>
                 The browser will automatically release the webcam hardware once all 3 samples are captured.
             </div>
@@ -302,10 +313,10 @@
 </div>
 
 <!-- ========================================================= -->
-<!-- MODE 2: BATCH 3-PHOTO FILE UPLOAD                         -->
+<!-- MODE 2: BATCH 3-PHOTO FILE UPLOAD (2-Column Grid)         -->
 <!-- ========================================================= -->
 <div id="modeBatchSection" style="display: none;">
-    <div class="dashboard-grid">
+    <div class="dashboard-grid" style="align-items: start;">
         <!-- Batch Upload Form -->
         <div class="card">
             <div class="card-header">
@@ -316,6 +327,7 @@
             </div>
             <div class="card-body">
                 <form id="batchUploadForm">
+                    {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
                     <div class="form-group">
                         <label class="form-label">User Role *</label>
                         <select id="batchUserRole" class="form-control" required onchange="onEnrollRoleChanged('batch')">
@@ -324,25 +336,29 @@
                                 <option value="{{ r.value }}" {% if loop.first %}selected{% endif %}>{{ r.label }}</option>
                                 {% endfor %}
                             {% else %}
-                                {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
-                                <option value="employee" selected>Employee / Staff Member</option>
-                                <option value="manager">Manager / Team Lead</option>
-                                <option value="admin_staff">Administrative Staff</option>
-                                <option value="contractor">Contractor / External</option>
-                                <option value="intern">Intern / Trainee</option>
-                                {% else %}
                                 <option value="student" selected>Student</option>
                                 <option value="teacher">Teacher / Faculty</option>
                                 <option value="admin_staff">Administrative Staff</option>
                                 <option value="other">Other Institutional Member</option>
-                                {% endif %}
                             {% endif %}
                         </select>
                     </div>
+                    {% else %}
+                    <input type="hidden" id="batchUserRole" value="employee">
+                    {% endif %}
 
+                    <!-- Auto-Generated Employee ID with Inline Refresh -->
                     <div class="form-group">
-                        <label class="form-label">{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID / Staff Code *{% else %}Roll Number / Staff ID *{% endif %}</label>
-                        <input type="text" id="batchRollNumber" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. EMP-102 or ENG-501{% else %}e.g. CS2026-002 or EMP-102{% endif %}" required>
+                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Employee ID / Staff Code *{% else %}Roll Number / Staff ID *{% endif %}</span>
+                            <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">Auto-Generated (Editable)</span>
+                        </label>
+                        <div class="auto-code-group">
+                            <input type="text" id="batchRollNumber" class="form-control" placeholder="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}e.g. EMP-102 or ENG-501{% else %}e.g. CS2026-002 or EMP-102{% endif %}" required>
+                            <button type="button" class="btn btn-secondary auto-code-refresh-btn" onclick="regenerateEmployeeCode('batch')" title="Generate New Code">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -397,7 +413,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Designation / Role Title</label>
+                        <label class="form-label">Designation</label>
                         <select id="batchEnrollDesignationSelect" class="form-control" onchange="onDesignationChanged('batch')">
                             <option value="">-- Select Designation (Optional) --</option>
                             {% for desig in designations %}
@@ -407,7 +423,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Compensation Salary Template (Optional)</label>
+                        <label class="form-label">Salary Structure (Optional)</label>
                         <select id="batchEnrollSalaryTemplateSelect" class="form-control">
                             <option value="">-- Custom / No Template --</option>
                             {% for tpl in salary_templates %}
@@ -429,7 +445,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Assigned Work Shift *</label>
+                        <label class="form-label">Work shift *</label>
                         <select id="batchEnrollShiftSelect" class="form-control" required>
                             {% if work_shifts %}
                                 {% for s in work_shifts %}
@@ -466,12 +482,26 @@
 
         <!-- 3-Photo Dropzone & Live Thumbnails -->
         <div class="card">
-            <div class="card-header">
-                <h3>
-                    <i class="fa-solid fa-images" style="color: var(--accent-cyan);"></i>
-                    <span>Select Exactly 3 Face Photos</span>
-                </h3>
-                <span id="photoCountBadge" class="badge badge-node">0 / 3 Selected</span>
+            <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 10px; padding-bottom: 12px;">
+                <!-- Mode Switcher Action Buttons placed directly above dropzone -->
+                <div class="enroll-tabs">
+                    <button class="enroll-tab-btn" onclick="switchEnrollMode('webcam')">
+                        <i class="fa-solid fa-video"></i>
+                        <span>Live Webcam Guided</span>
+                    </button>
+                    <button class="enroll-tab-btn active" onclick="switchEnrollMode('batch')">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Batch 3-Photo Upload</span>
+                    </button>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-images" style="color: var(--accent-cyan);"></i>
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-heading);">Select Exactly 3 Face Photos</span>
+                    </div>
+                    <span id="photoCountBadge" class="badge badge-node" style="font-size: 11px;">0 / 3 Selected</span>
+                </div>
             </div>
             <div class="card-body">
                 <!-- Dropzone -->
@@ -532,6 +562,23 @@ const ENROLL_CLASSES = {{ classes | tojson | safe }};
 const ENROLL_DIVISIONS = {{ divisions | tojson | safe }};
 
 // ==========================================================
+// Employee Code Auto-Generation & Refresh
+// ==========================================================
+function generateRandomEmployeeCode() {
+    const prefix = isCorporateTenant ? "EMP" : "STU";
+    const num = Math.floor(1000 + Math.random() * 9000);
+    return `${prefix}-${num}`;
+}
+
+function regenerateEmployeeCode(mode) {
+    const code = generateRandomEmployeeCode();
+    const input = document.getElementById(mode === "batch" ? "batchRollNumber" : "rollNumber");
+    if (input) {
+        input.value = code;
+    }
+}
+
+// ==========================================================
 // Cascading Dropdown Handlers
 // ==========================================================
 function onEnrollDeptChanged(mode) {
@@ -588,8 +635,6 @@ function onEnrollRoleChanged(mode) {
     }
 }
 
-
-
 function onDesignationChanged(mode) {
     const isBatch = mode === "batch";
     const desigSelect = document.getElementById(isBatch ? "batchEnrollDesignationSelect" : "enrollDesignationSelect");
@@ -619,32 +664,36 @@ function escapeHtml(text) {
 // Mode Switching (Webcam vs Batch Upload)
 // ==========================================================
 function switchEnrollMode(mode) {
-    const tabWebcam = document.getElementById("tabBtnWebcam");
-    const tabBatch = document.getElementById("tabBtnBatch");
     const secWebcam = document.getElementById("modeWebcamSection");
     const secBatch = document.getElementById("modeBatchSection");
 
     if (mode === "webcam") {
-        tabWebcam.classList.add("active");
-        tabBatch.classList.remove("active");
         secWebcam.style.display = "grid";
         secBatch.style.display = "none";
     } else {
-        tabBatch.classList.add("active");
-        tabWebcam.classList.remove("active");
         secBatch.style.display = "block";
         secWebcam.style.display = "none";
         stopWebcam();
     }
 }
 
-// Auto-fill today's date for Date of Joining
+// Auto-fill today's date for Date of Joining & Auto-fill Employee Code on Load
 document.addEventListener("DOMContentLoaded", () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const doj1 = document.getElementById("dateOfJoining");
     const doj2 = document.getElementById("batchDateOfJoining");
     if (doj1 && !doj1.value) doj1.value = todayStr;
     if (doj2 && !doj2.value) doj2.value = todayStr;
+
+    // Auto-populate employee codes on load if empty
+    const rollInput = document.getElementById("rollNumber");
+    const batchRollInput = document.getElementById("batchRollNumber");
+    if (rollInput && !rollInput.value) {
+        rollInput.value = generateRandomEmployeeCode();
+    }
+    if (batchRollInput && !batchRollInput.value) {
+        batchRollInput.value = generateRandomEmployeeCode();
+    }
 });
 
 // ==========================================================
@@ -1219,43 +1268,42 @@ function fallbackEnrollCopy(text, btn) {
 }
 
 // Visibility-Aware Camera Lifecycle Management
-    let wasWebcamActiveBeforeHidden = false;
+let wasWebcamActiveBeforeHidden = false;
 
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-            if (videoStream) {
-                wasWebcamActiveBeforeHidden = true;
-                stopWebcam();
-            }
-        } else {
-            if (wasWebcamActiveBeforeHidden) {
-                wasWebcamActiveBeforeHidden = false;
-                startWebcam(selectedCameraDeviceId);
-            }
-        }
-    });
-
-    window.addEventListener("blur", () => {
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
         if (videoStream) {
             wasWebcamActiveBeforeHidden = true;
             stopWebcam();
         }
-    });
-
-    window.addEventListener("focus", () => {
-        if (!document.hidden && wasWebcamActiveBeforeHidden) {
+    } else {
+        if (wasWebcamActiveBeforeHidden) {
             wasWebcamActiveBeforeHidden = false;
             startWebcam(selectedCameraDeviceId);
         }
-    });
+    }
+});
 
-    window.addEventListener("pagehide", () => {
+window.addEventListener("blur", () => {
+    if (videoStream) {
+        wasWebcamActiveBeforeHidden = true;
         stopWebcam();
-    });
+    }
+});
 
-    window.addEventListener("beforeunload", () => {
-        stopWebcam();
-    });
+window.addEventListener("focus", () => {
+    if (!document.hidden && wasWebcamActiveBeforeHidden) {
+        wasWebcamActiveBeforeHidden = false;
+        startWebcam(selectedCameraDeviceId);
+    }
+});
+
+window.addEventListener("pagehide", () => {
+    stopWebcam();
+});
+
+window.addEventListener("beforeunload", () => {
+    stopWebcam();
+});
 </script>
 {% endblock %}
-

@@ -54,6 +54,23 @@ def get_current_tenant(
         if tenant:
             return tenant
 
+    # 3.5. Authenticated JWT token resolution
+    auth_token = request.cookies.get("access_token")
+    if not auth_token:
+        auth_header = request.headers.get("Authorization") or ""
+        if auth_header.startswith("Bearer "):
+            auth_token = auth_header[7:].strip()
+    if auth_token:
+        try:
+            from src.server.rbac_middleware import decode_access_token
+            payload = decode_access_token(auth_token)
+            if payload and payload.get("tenant_id"):
+                tenant = resolve_tenant(db, str(payload["tenant_id"]))
+                if tenant:
+                    return tenant
+        except Exception:
+            pass
+
     # 4. Fallback to default tenant
     default_tenant = db.query(Tenant).filter(Tenant.id == DEFAULT_TENANT_ID).first()
     if not default_tenant:

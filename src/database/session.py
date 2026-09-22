@@ -1031,6 +1031,11 @@ def run_schema_migrations():
                 conn.execute(text("ALTER TABLE system_branding ADD COLUMN pt_monthly_default FLOAT DEFAULT 200.0 NOT NULL"))
                 logger.info("Migrated system_branding table: added pt_monthly_default column.")
 
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'epf_admin_charges_pct'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN epf_admin_charges_pct FLOAT DEFAULT 0.50 NOT NULL"))
+                logger.info("Migrated system_branding table: added epf_admin_charges_pct column.")
+
             # 6. Attendance Records checkin / checkout and shift tracking columns
             res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'punch_type'")).fetchall()
             if not res:

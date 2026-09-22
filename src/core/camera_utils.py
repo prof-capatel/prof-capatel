@@ -67,19 +67,23 @@ def resize_with_aspect_ratio(
 def evaluate_image_quality(frame_bgr: np.ndarray) -> Tuple[bool, str]:
     """
     Validates image brightness and blurriness for face recognition enrollment.
+    Calibrated for standard laptop and USB webcams against typical office backgrounds.
     """
+    if frame_bgr is None or frame_bgr.size == 0:
+        return False, "Invalid or empty image frame."
+
     gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
     
     # 1. Check brightness
-    mean_brightness = np.mean(gray)
-    if mean_brightness < 40:
+    mean_brightness = float(np.mean(gray))
+    if mean_brightness < 30.0:
         return False, "Frame is too dark. Increase ambient lighting."
-    if mean_brightness > 225:
+    if mean_brightness > 235.0:
         return False, "Frame is overexposed / too bright."
 
     # 2. Check blurriness via Laplacian variance
-    laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-    if laplacian_var < 50.0:
+    laplacian_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    if laplacian_var < 15.0:
         return False, "Image is blurry or out of focus. Hold camera steady."
 
     return True, "Image quality is acceptable."

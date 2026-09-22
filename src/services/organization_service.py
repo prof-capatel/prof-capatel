@@ -187,22 +187,32 @@ class OrganizationService:
         if not desig:
             raise HTTPException(status_code=404, detail="Designation not found.")
 
-        fields_set = getattr(payload, "model_fields_set", None) or getattr(payload, "__fields_set__", set())
-        if payload.title is not None:
+        if hasattr(payload, "model_fields_set") and payload.model_fields_set:
+            fields_set = set(payload.model_fields_set)
+        elif hasattr(payload, "__fields_set__") and payload.__fields_set__:
+            fields_set = set(payload.__fields_set__)
+        elif isinstance(payload, dict):
+            fields_set = set(payload.keys())
+        else:
+            fields_set = getattr(payload, "model_fields_set", None) or getattr(payload, "__fields_set__", None) or set()
+
+        if getattr(payload, "title", None) is not None:
             desig.title = payload.title.strip()
-        if payload.code is not None:
+        if getattr(payload, "code", None) is not None:
             desig.code = payload.code.strip().upper()
         if "department_id" in fields_set:
-            desig.department_id = payload.department_id if (payload.department_id and payload.department_id > 0) else None
+            dept_id = getattr(payload, "department_id", None) if not isinstance(payload, dict) else payload.get("department_id")
+            desig.department_id = dept_id if (dept_id and dept_id > 0) else None
         if "salary_template_id" in fields_set:
-            if payload.salary_template_id and payload.salary_template_id > 0:
-                tpl = self.db.query(SalaryTemplate).filter(SalaryTemplate.id == payload.salary_template_id, SalaryTemplate.tenant_id == tenant_id).first()
+            tpl_id = getattr(payload, "salary_template_id", None) if not isinstance(payload, dict) else payload.get("salary_template_id")
+            if tpl_id and tpl_id > 0:
+                tpl = self.db.query(SalaryTemplate).filter(SalaryTemplate.id == tpl_id, SalaryTemplate.tenant_id == tenant_id).first()
                 desig.salary_template_id = tpl.id if tpl else None
             else:
                 desig.salary_template_id = None
-        if payload.description is not None:
+        if getattr(payload, "description", None) is not None:
             desig.description = payload.description.strip()
-        if payload.is_active is not None:
+        if getattr(payload, "is_active", None) is not None:
             desig.is_active = payload.is_active
 
         self.db.commit()

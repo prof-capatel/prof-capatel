@@ -17,7 +17,11 @@
     </button>
     <button type="button" class="tab-btn" id="tabBtnDepartments" onclick="switchSettingsTab('departments')">
         <i class="fa-solid fa-diagram-project"></i>
-        <span>Departments & Teams</span>
+        <span>Departments</span>
+    </button>
+    <button type="button" class="tab-btn" id="tabBtnDesignations" onclick="switchSettingsTab('designations')">
+        <i class="fa-solid fa-user-tag"></i>
+        <span>Designations</span>
     </button>
     <button type="button" class="tab-btn" id="tabBtnShifts" onclick="switchSettingsTab('shifts')">
         <i class="fa-solid fa-clock"></i>
@@ -88,7 +92,7 @@
                 <div>
                     <h3>
                         <i class="fa-solid fa-building-columns" style="color: var(--accent-primary);"></i>
-                        <span>Institutional Profile & White-Labeling</span>
+                        <span>Institutional Profile</span>
                     </h3>
                     <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                         Personalize the organization name, acronym, logo, and theme accent displayed on all web portals and audit reports.
@@ -199,6 +203,100 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Office Locations & Branches Card -->
+        <div id="locationsSection" class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i>
+                        <span>Office Locations & Branches</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Register and manage organizational branches, physical offices, campuses, and geolocated premises.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="openAddLocationModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-plus"></i> Add Location
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
+                                <th style="padding: 10px 12px;">Location / Branch</th>
+                                <th style="padding: 10px 12px;">Code</th>
+                                <th style="padding: 10px 12px;">City / State</th>
+                                <th style="padding: 10px 12px;">Contact & Address</th>
+                                <th style="padding: 10px 12px;">Workforce</th>
+                                <th style="padding: 10px 12px;">Status</th>
+                                <th style="padding: 10px 12px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settingsLocationsTableBody">
+                            {% if company_locations %}
+                                {% for loc in company_locations %}
+                                <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="settingsLocRow-{{ loc.id }}">
+                                    <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fa-solid fa-building" style="color: var(--accent-primary);"></i>
+                                            <span>{{ loc.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                                        {{ loc.code or '—' }}
+                                    </td>
+                                    <td style="padding: 12px; color: var(--text-secondary); font-size: 12px;">
+                                        {{ (loc.city ~ ', ' if loc.city else '') ~ (loc.state or 'Maharashtra') }}
+                                    </td>
+                                    <td style="padding: 12px; color: var(--text-secondary); font-size: 12px; max-width: 200px;">
+                                        {% if loc.contact_number %}
+                                        <div><i class="fa-solid fa-phone" style="font-size: 10px; margin-right: 4px; color: var(--text-muted);"></i>{{ loc.contact_number }}</div>
+                                        {% endif %}
+                                        {% if loc.address %}
+                                        <div style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ loc.address }}">{{ loc.address }}</div>
+                                        {% endif %}
+                                        {% if not loc.contact_number and not loc.address %}—{% endif %}
+                                    </td>
+                                    <td style="padding: 12px;">
+                                        <span class="badge {{ 'badge-indigo' if loc.employee_count and loc.employee_count > 0 else 'badge-node' }}" style="font-size: 11px;">
+                                            <i class="fa-solid fa-users"></i> {{ loc.employee_count or 0 }} Employees
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px;">
+                                        {% if loc.is_active %}
+                                        <span class="badge badge-present" style="font-size: 11px;">Active</span>
+                                        {% else %}
+                                        <span class="badge badge-unknown" style="font-size: 11px;">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 12px; text-align: right;">
+                                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick="openEditLocationModal({{ loc.id }})" title="Edit Office Location">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteSettingsLocation({{ loc.id }}, '{{ loc.name|replace("'", "\\'") }}')" title="Delete Office Location">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr id="emptyLocationsRow">
+                                    <td colspan="7" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                                        <i class="fa-solid fa-map-location-dot" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                        <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No office locations configured yet.</p>
+                                        <span style="font-size: 12px;">Click "Add Location" above to register company branches.</span>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -342,44 +440,6 @@
                         </div>
                     </div>
 
-                    <!-- Theme 4: Professional Slate (Corporate Human-Crafted) -->
-                    <div id="themeCardSlate" class="theme-card" onclick="setAppTheme('slate')">
-                        <div>
-                            <div class="theme-card-header">
-                                <h4>
-                                    <i class="fa-solid fa-briefcase" style="color: #1e40af;"></i>
-                                    <span>Professional Slate</span>
-                                </h4>
-                                <div class="theme-card-check">
-                                    <i class="fa-solid fa-check"></i>
-                                </div>
-                            </div>
-
-                            <div class="theme-preview-box slate-preview">
-                                <div class="theme-preview-nav" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
-                                <div class="theme-preview-body">
-                                    <div class="theme-preview-sidebar" style="background: #ffffff; border: 1px solid #e2e8f0;"></div>
-                                    <div class="theme-preview-content" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-                                        <div style="height: 6px; width: 60%; background: #1e40af; border-radius: 3px;"></div>
-                                        <div style="height: 4px; width: 90%; background: #cbd5e1; border-radius: 2px;"></div>
-                                        <div style="height: 4px; width: 40%; background: #059669; border-radius: 2px;"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
-                                Hand-crafted corporate slate foundation, executive steel navy accents, and refined enterprise whitespace.
-                            </p>
-                        </div>
-
-                        <div class="theme-swatches-row">
-                            <span class="theme-swatch" style="background: #f8fafc;" title="Background: Slate-50"></span>
-                            <span class="theme-swatch" style="background: #ffffff;" title="Card: Pure White"></span>
-                            <span class="theme-swatch" style="background: #1e40af;" title="Accent: Steel Navy"></span>
-                            <span class="theme-swatch" style="background: #2563eb;" title="Accent: Royal Blue"></span>
-                            <span class="theme-swatch" style="background: #059669;" title="Accent: Forest Emerald"></span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -394,14 +454,14 @@
                 <div>
                     <h3 style="display: flex; align-items: center; gap: 8px;">
                         <i class="fa-solid fa-diagram-project" style="color: var(--accent-primary);"></i>
-                        <span>Departments & Teams Management</span>
+                        <span>Departments Management</span>
                     </h3>
                     <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                         Organize staff and workforce into operational units, teams, and departments.
                     </p>
                 </div>
                 <button type="button" class="btn btn-primary" onclick="openAddDepartmentModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
-                    <i class="fa-solid fa-plus"></i> Add Department / Team
+                    <i class="fa-solid fa-plus"></i> Add Department
                 </button>
             </div>
             <div class="card-body">
@@ -437,10 +497,10 @@
                                     </td>
                                     <td style="padding: 12px; text-align: right;">
                                         <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditDeptModal({{ dept|tojson|safe }})' title="Edit Department">
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick="openEditDeptModal({{ dept.id }})" title="Edit Department">
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </button>
-                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteDepartment({{ dept.id }}, '{{ dept.name }}')" title="Delete Department">
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteDepartment({{ dept.id }}, '{{ dept.name|replace("'", "\\'") }}')" title="Delete Department">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </div>
@@ -453,6 +513,92 @@
                                         <i class="fa-solid fa-diagram-project" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
                                         <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No departments created yet.</p>
                                         <span style="font-size: 12px;">Click "Add Department / Team" above to create your organizational hierarchy.</span>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB: DESIGNATIONS & ROLES                                                -->
+    <!-- ========================================================================= -->
+    <div id="tabContentDesignations" class="settings-tab-pane">
+        <div id="designationsSection" class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i>
+                        <span>Designations Management</span>
+                    </h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Define company job titles, role classifications, and operational designations.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="openAddDesignationModal()" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-plus"></i> Add Designation
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">
+                                <th style="padding: 10px 12px;">Designation Title</th>
+                                <th style="padding: 10px 12px;">Code</th>
+                                <th style="padding: 10px 12px;">Department</th>
+                                <th style="padding: 10px 12px;">Employees / Staff</th>
+                                <th style="padding: 10px 12px;">Status</th>
+                                <th style="padding: 10px 12px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settingsDesignationsTableBody">
+                            {% if designations %}
+                                {% for desig in designations %}
+                                <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="settingsDesigRow-{{ desig.id }}">
+                                    <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
+                                        <i class="fa-solid fa-user-tag" style="color: var(--accent-primary); margin-right: 8px;"></i>
+                                        {{ desig.title }}
+                                    </td>
+                                    <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                                        {{ desig.code or desig.title[:4]|upper }}
+                                    </td>
+                                    <td style="padding: 12px; color: var(--text-secondary); font-size: 12px;">
+                                        {{ desig.department_name or '—' }}
+                                    </td>
+                                    <td style="padding: 12px;">
+                                        <span class="badge badge-sky" style="font-size: 11px;">
+                                            <i class="fa-solid fa-users"></i> {{ desig.employee_count or 0 }} Members
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px;">
+                                        {% if desig.is_active %}
+                                        <span class="badge badge-present" style="font-size: 11px;">Active</span>
+                                        {% else %}
+                                        <span class="badge badge-unknown" style="font-size: 11px;">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 12px; text-align: right;">
+                                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick="openEditDesignationModal({{ desig.id }})" title="Edit Designation">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteSettingsDesignation({{ desig.id }}, '{{ desig.title|replace("'", "\\'") }}')" title="Delete Designation">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr id="emptyDesignationsRow">
+                                    <td colspan="6" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                                        <i class="fa-solid fa-user-tag" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                        <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No designations created yet.</p>
+                                        <span style="font-size: 12px;">Click "Add Designation" above to define company titles & roles.</span>
                                     </td>
                                 </tr>
                             {% endif %}
@@ -606,7 +752,7 @@
                                                 <i class="fa-solid fa-star" style="color: #f59e0b;"></i> Make Default
                                             </button>
                                             {% endif %}
-                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditShiftModal({{ s|tojson|safe }})' title="Edit Shift">
+                                            <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick="openEditShiftModal({{ s.id }})" title="Edit Shift">
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </button>
                                             <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteShift({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" title="Delete Shift">
@@ -637,27 +783,19 @@
     <!-- ========================================================================= -->
     <div id="tabContentSecurity" class="settings-tab-pane">
         
-        <!-- Universal Employee Face-Login & Leave Portal Card -->
+        <!-- Employee Portal Card -->
         <div class="card" style="margin-bottom: 24px; border: 1.5px solid var(--accent-emerald); background: linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(99, 102, 241, 0.04) 100%);">
             <div class="card-header" style="justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-heading);">
                             <i class="fa-solid fa-face-smile" style="color: var(--accent-emerald);"></i>
-                            <span>Universal Employee Face-Login & Leave Portal</span>
+                            <span>Employee Portal</span>
                         </h3>
-                        <span class="badge badge-emerald" style="font-size: 11px;">
-                            <i class="fa-solid fa-mobile-screen-button"></i> Mobile-First Portal
-                        </span>
                     </div>
                     <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">
                         Direct facial-recognition gateway for employees to log in without passwords, view real-time leave quotas, track transparent shift wages, and submit leave applications.
                     </p>
-                </div>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <span class="badge badge-indigo" style="font-size: 11px;"><i class="fa-solid fa-camera"></i> 1:N Facial Recognition</span>
-                    <span class="badge badge-amber" style="font-size: 11px;"><i class="fa-solid fa-calendar-check"></i> Leave Balances</span>
-                    <span class="badge badge-sky" style="font-size: 11px;"><i class="fa-solid fa-paper-plane"></i> Leave Applications</span>
                 </div>
             </div>
             <div class="card-body" style="padding-top: 14px;">
@@ -666,7 +804,7 @@
                     <!-- Left: URL display, Copy action & direct test -->
                     <div style="flex: 1; min-width: 280px;">
                         <label class="form-label" style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-link" style="color: var(--accent-emerald);"></i> Clean Employee Portal Link (Share with Workforce)
+                            <i class="fa-solid fa-link" style="color: var(--accent-emerald);"></i> Clean Employee Portal Link (Share with Employees)
                         </label>
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 220px; background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 9px 14px; font-family: monospace; font-size: 13px; color: var(--accent-emerald); font-weight: 700; overflow-x: auto; white-space: nowrap; user-select: all;" id="universalEmployeePortalUrlSpan">
@@ -1085,12 +1223,26 @@
 
 {% block scripts %}
 <script>
+window.allTenantDepartments = {{ departments|tojson|safe }};
+window.allTenantDesignations = {{ designations|tojson|safe }};
+window.allTenantShifts = {{ work_shifts|tojson|safe }};
+
+function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     handleInitialTabFromHash();
     updateThemeSelectionCards();
     loadSavedSystemPreferences();
 
-    // Initialize Universal Employee Face-Login Portal full URL and QR
+    // Initialize Employee Portal full URL and QR
     const empPortalSpan = document.getElementById("universalEmployeePortalUrlSpan");
     const empPortalOpenBtn = document.getElementById("btnUniversalEmpPortalOpen");
     const empPortalQrImg = document.getElementById("universalEmpPortalQrImg");
@@ -1110,11 +1262,12 @@ document.addEventListener("DOMContentLoaded", () => {
 // 1. Organization Settings (branding)
 // 2. Themes & Appearance (themes)
 // 3. Departments & Teams (departments)
-// 4. Shifts & Rules (shifts)
-// 5. Attendance & Security (security)
-// 6. Geofencing & Portals (geofencing)
+// 4. Designations & Roles (designations)
+// 5. Shifts & Rules (shifts)
+// 6. Attendance & Security (security)
+// 7. Geofencing & Portals (geofencing)
 function switchSettingsTab(tabName) {
-    const validTabs = ['branding', 'themes', 'departments', 'shifts', 'security', 'geofencing'];
+    const validTabs = ['branding', 'themes', 'departments', 'designations', 'shifts', 'security', 'geofencing'];
     if (!validTabs.includes(tabName)) tabName = 'branding';
 
     validTabs.forEach(t => {
@@ -1150,6 +1303,8 @@ function handleInitialTabFromHash() {
     const hash = (window.location.hash || '').toLowerCase().replace('#', '');
     if (hash === 'departments' || hash === 'departmentssection') {
         switchSettingsTab('departments');
+    } else if (hash === 'designations' || hash === 'roles' || hash === 'designation') {
+        switchSettingsTab('designations');
     } else if (hash === 'shifts' || hash === 'shiftssection') {
         switchSettingsTab('shifts');
     } else if (hash === 'themes' || hash === 'theme') {
@@ -1844,7 +1999,85 @@ function saveSystemPreferences(e) {
     }
 }
 
-// --- Consolidated Departments Modal & CRUD Functions ---
+// --- Consolidated Departments Modal & Live Async CRUD Functions ---
+async function fetchAndRenderDepartmentsTable() {
+    try {
+        const res = await fetch("/api/v1/academic/departments");
+        if (!res.ok) return;
+        const data = await res.json();
+        const depts = data.departments || [];
+        renderDepartmentsTable(depts);
+        updateDepartmentDropdowns(depts);
+    } catch (err) {
+        console.error("Failed to fetch departments:", err);
+    }
+}
+
+function renderDepartmentsTable(depts) {
+    const tbody = document.getElementById("departmentsTableBody");
+    if (!tbody) return;
+
+    if (!depts || depts.length === 0) {
+        tbody.innerHTML = `
+            <tr id="emptyDeptsRow">
+                <td colspan="5" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                    <i class="fa-solid fa-diagram-project" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                    <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No departments created yet.</p>
+                    <span style="font-size: 12px;">Click "Add Department / Team" above to create your organizational hierarchy.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = depts.map(dept => {
+        const deptJson = JSON.stringify(dept).replace(/'/g, "&#39;");
+        const empCount = dept.employee_count != null ? dept.employee_count : (dept.students_count || 0);
+        return `
+            <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 13px;" id="deptRow-${dept.id}">
+                <td style="padding: 12px; font-weight: 700; color: var(--text-heading);">
+                    <i class="fa-solid fa-building" style="color: var(--accent-primary); margin-right: 8px;"></i>
+                    ${escapeHtml(dept.name)}
+                </td>
+                <td style="padding: 12px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                    ${escapeHtml(dept.code || (dept.name ? dept.name.slice(0, 4).toUpperCase() : 'DEPT'))}
+                </td>
+                <td style="padding: 12px;">
+                    <span class="badge badge-sky" style="font-size: 11px;">
+                        <i class="fa-solid fa-users"></i> ${empCount} Members
+                    </span>
+                </td>
+                <td style="padding: 12px; color: var(--text-muted); font-size: 12px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(dept.description || '—')}
+                </td>
+                <td style="padding: 12px; text-align: right;">
+                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px;" onclick='openEditDeptModal(${deptJson})' title="Edit Department">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button type="button" class="btn btn-secondary" style="padding: 5px 9px; font-size: 11.5px; color: var(--accent-rose);" onclick="deleteDepartment(${dept.id}, '${escapeHtml(dept.name).replace(/'/g, "\\'")}')" title="Delete Department">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+function updateDepartmentDropdowns(depts) {
+    const desigDeptSelect = document.getElementById("modalSettingsDesigDept");
+    if (desigDeptSelect) {
+        const curVal = desigDeptSelect.value;
+        let html = '<option value="">-- All / General Department --</option>';
+        depts.forEach(d => {
+            html += `<option value="${d.id}">${escapeHtml(d.name)}</option>`;
+        });
+        desigDeptSelect.innerHTML = html;
+        desigDeptSelect.value = curVal;
+    }
+}
+
 function openAddDepartmentModal() {
     document.getElementById("modalDeptId").value = "";
     document.getElementById("modalDeptName").value = "";
@@ -1855,13 +2088,17 @@ function openAddDepartmentModal() {
     document.getElementById("deptModal").style.display = "flex";
 }
 
-function openEditDeptModal(dept) {
+function openEditDeptModal(deptOrId) {
+    let dept = deptOrId;
+    if (typeof deptOrId === "number" || typeof deptOrId === "string") {
+        dept = (window.allTenantDepartments || []).find(d => Number(d.id) === Number(deptOrId)) || { id: deptOrId };
+    }
     if (!dept) return;
-    document.getElementById("modalDeptId").value = dept.id;
+    document.getElementById("modalDeptId").value = dept.id || "";
     document.getElementById("modalDeptName").value = dept.name || "";
     document.getElementById("modalDeptCode").value = dept.code || "";
     document.getElementById("modalDeptDesc").value = dept.description || "";
-    document.getElementById("deptModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Department: ' + dept.name + '</span>';
+    document.getElementById("deptModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Department: ' + escapeHtml(dept.name || '') + '</span>';
     document.getElementById("deptModalAlert").style.display = "none";
     document.getElementById("deptModal").style.display = "flex";
 }
@@ -1877,6 +2114,7 @@ async function saveDepartmentModal(e) {
     const code = document.getElementById("modalDeptCode").value.trim();
     const description = document.getElementById("modalDeptDesc").value.trim();
     const alertBox = document.getElementById("deptModalAlert");
+    const saveBtn = document.getElementById("btnSaveDeptModal");
 
     if (!name) {
         alertBox.style.display = "block";
@@ -1884,6 +2122,11 @@ async function saveDepartmentModal(e) {
         alertBox.style.color = "#f87171";
         alertBox.innerText = "Department name is required.";
         return;
+    }
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
     }
 
     const isEdit = !!deptId;
@@ -1902,21 +2145,36 @@ async function saveDepartmentModal(e) {
             alertBox.style.background = "var(--badge-emerald-bg)";
             alertBox.style.color = "var(--badge-emerald-text)";
             alertBox.innerText = data.message || "Department saved successfully!";
+
+            // Live asynchronous refresh of department table and dropdowns
+            await fetchAndRenderDepartmentsTable();
+
             setTimeout(() => {
                 closeDeptModal();
-                window.location.reload();
-            }, 600);
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Department';
+                }
+            }, 400);
         } else {
             alertBox.style.display = "block";
             alertBox.style.background = "rgba(239, 68, 68, 0.1)";
             alertBox.style.color = "#f87171";
             alertBox.innerText = data.detail || "Failed to save department.";
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Department';
+            }
         }
     } catch (err) {
         alertBox.style.display = "block";
         alertBox.style.background = "rgba(239, 68, 68, 0.1)";
         alertBox.style.color = "#f87171";
         alertBox.innerText = "Network error: " + err.message;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Department';
+        }
     }
 }
 
@@ -1928,9 +2186,7 @@ async function deleteDepartment(deptId, deptName) {
         });
         const data = await res.json();
         if (res.ok) {
-            const row = document.getElementById(`deptRow-${deptId}`);
-            if (row) row.remove();
-            window.location.reload();
+            await fetchAndRenderDepartmentsTable();
         } else {
             alert(data.detail || "Failed to delete department.");
         }
@@ -1957,9 +2213,14 @@ function openAddShiftModal() {
     document.getElementById("shiftModal").style.display = "flex";
 }
 
-function openEditShiftModal(shift) {
+function openEditShiftModal(shiftOrId) {
+    let shift = shiftOrId;
+    if (typeof shiftOrId === "number" || typeof shiftOrId === "string") {
+        shift = (window.allTenantShifts || []).find(s => Number(s.id) === Number(shiftOrId)) || { id: shiftOrId };
+    }
+    if (!shift) return;
     document.getElementById("shiftModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Work Shift</span>';
-    document.getElementById("modalShiftId").value = shift.id;
+    document.getElementById("modalShiftId").value = shift.id || "";
     document.getElementById("modalShiftName").value = shift.name || "";
     document.getElementById("modalShiftCode").value = shift.code || "";
     document.getElementById("modalShiftStartTime").value = shift.start_time || "10:30";
@@ -2074,7 +2335,313 @@ async function deleteShift(shiftId, shiftName) {
         alert("Network error while deleting shift.");
     }
 }
+
+// Designation Modal Handlers (Settings - General Title & Role Creation)
+function openAddDesignationModal() {
+    document.getElementById("settingsDesigModalTitle").innerHTML = '<i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i> <span>Add Designation</span>';
+    document.getElementById("modalSettingsDesigId").value = "";
+    document.getElementById("modalSettingsDesigTitle").value = "";
+    document.getElementById("modalSettingsDesigCode").value = "";
+    document.getElementById("modalSettingsDesigDept").value = "";
+    document.getElementById("modalSettingsDesigDesc").value = "";
+    document.getElementById("modalSettingsDesigIsActive").value = "true";
+    document.getElementById("settingsDesigModalAlert").style.display = "none";
+    document.getElementById("settingsDesignationModal").style.display = "flex";
+}
+
+function openEditDesignationModal(desigOrId) {
+    let desig = desigOrId;
+    if (typeof desigOrId === "number" || typeof desigOrId === "string") {
+        desig = (window.allTenantDesignations || []).find(d => Number(d.id) === Number(desigOrId)) || { id: desigOrId };
+    }
+    if (!desig) return;
+    document.getElementById("settingsDesigModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Designation</span>';
+    document.getElementById("modalSettingsDesigId").value = desig.id || "";
+    document.getElementById("modalSettingsDesigTitle").value = desig.title || "";
+    document.getElementById("modalSettingsDesigCode").value = desig.code || "";
+    document.getElementById("modalSettingsDesigDept").value = desig.department_id || "";
+    document.getElementById("modalSettingsDesigDesc").value = desig.description || "";
+    document.getElementById("modalSettingsDesigIsActive").value = desig.is_active ? "true" : "false";
+    document.getElementById("settingsDesigModalAlert").style.display = "none";
+    document.getElementById("settingsDesignationModal").style.display = "flex";
+}
+
+function closeSettingsDesignationModal() {
+    document.getElementById("settingsDesignationModal").style.display = "none";
+}
+
+async function saveSettingsDesignationModal(e) {
+    e.preventDefault();
+    const id = document.getElementById("modalSettingsDesigId").value;
+    const title = document.getElementById("modalSettingsDesigTitle").value.trim();
+    const code = document.getElementById("modalSettingsDesigCode").value.trim();
+    const deptId = document.getElementById("modalSettingsDesigDept").value;
+    const desc = document.getElementById("modalSettingsDesigDesc").value.trim();
+    const isActive = document.getElementById("modalSettingsDesigIsActive").value === "true";
+    const alertBox = document.getElementById("settingsDesigModalAlert");
+    const saveBtn = document.getElementById("btnSaveSettingsDesigModal");
+
+    if (!title) return;
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+    const payload = {
+        title: title,
+        code: code || null,
+        department_id: deptId ? parseInt(deptId) : null,
+        description: desc || null,
+        is_active: isActive
+    };
+
+    try {
+        const url = id ? `/api/v1/payroll/masters/designations/${id}` : "/api/v1/payroll/masters/designations";
+        const method = id ? "PUT" : "POST";
+        const res = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.border = "1px solid var(--badge-emerald-border)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || 'Designation saved successfully.');
+            setTimeout(() => {
+                closeSettingsDesignationModal();
+                window.location.hash = "designations";
+                window.location.reload();
+            }, 600);
+        } else {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || 'Failed to save designation.');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Designation';
+        }
+    } catch (err) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "var(--badge-rose-bg)";
+        alertBox.style.border = "1px solid var(--badge-rose-border)";
+        alertBox.style.color = "var(--badge-rose-text)";
+        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.';
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Designation';
+    }
+}
+
+async function deleteSettingsDesignation(desigId, title) {
+    if (!confirm(`Are you sure you want to delete designation "${title}"?`)) return;
+    try {
+        const res = await fetch(`/api/v1/payroll/masters/designations/${desigId}`, {
+            method: "DELETE"
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const row = document.getElementById(`settingsDesigRow-${desigId}`);
+            if (row) row.remove();
+            window.location.hash = "designations";
+            window.location.reload();
+        } else {
+            alert(data.detail || "Failed to delete designation.");
+        }
+    } catch (e) {
+        alert("Network error while deleting designation.");
+    }
+}
+// =========================================================================
+// OFFICE LOCATIONS & BRANCHES HANDLERS (Organization Settings)
+// =========================================================================
+function openAddLocationModal() {
+    document.getElementById("modalSettingsLocId").value = "";
+    document.getElementById("settingsLocModalTitle").innerHTML = '<i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i> <span>Add Office Location</span>';
+    document.getElementById("settingsLocModalForm").reset();
+    document.getElementById("modalSettingsLocState").value = "Maharashtra";
+    document.getElementById("modalSettingsLocIsActive").value = "true";
+    const alertBox = document.getElementById("settingsLocModalAlert");
+    if (alertBox) alertBox.style.display = "none";
+    const modal = document.getElementById("settingsLocationModal");
+    if (modal) modal.style.display = "flex";
+}
+
+function openEditLocationModal(locId) {
+    document.getElementById("modalSettingsLocId").value = locId;
+    document.getElementById("settingsLocModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Office Location</span>';
+    const alertBox = document.getElementById("settingsLocModalAlert");
+    if (alertBox) alertBox.style.display = "none";
+
+    fetch(`/api/v1/payroll/masters/locations/${locId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success" && data.data) {
+                const loc = data.data;
+                document.getElementById("modalSettingsLocName").value = loc.name || "";
+                document.getElementById("modalSettingsLocCode").value = loc.code || "";
+                document.getElementById("modalSettingsLocCity").value = loc.city || "";
+                document.getElementById("modalSettingsLocState").value = loc.state || "Maharashtra";
+                document.getElementById("modalSettingsLocContact").value = loc.contact_number || "";
+                document.getElementById("modalSettingsLocAddress").value = loc.address || "";
+                document.getElementById("modalSettingsLocIsActive").value = loc.is_active ? "true" : "false";
+                const modal = document.getElementById("settingsLocationModal");
+                if (modal) modal.style.display = "flex";
+            }
+        })
+        .catch(err => {
+            alert("Failed to load location details.");
+        });
+}
+
+function closeSettingsLocationModal() {
+    const modal = document.getElementById("settingsLocationModal");
+    if (modal) modal.style.display = "none";
+}
+
+async function saveSettingsLocationModal(e) {
+    e.preventDefault();
+    const id = document.getElementById("modalSettingsLocId").value;
+    const name = document.getElementById("modalSettingsLocName").value.trim();
+    const code = document.getElementById("modalSettingsLocCode").value.trim().toUpperCase();
+    const city = document.getElementById("modalSettingsLocCity").value.trim();
+    const state = document.getElementById("modalSettingsLocState").value.trim();
+    const contact = document.getElementById("modalSettingsLocContact").value.trim();
+    const address = document.getElementById("modalSettingsLocAddress").value.trim();
+    const isActive = document.getElementById("modalSettingsLocIsActive").value === "true";
+
+    const saveBtn = document.getElementById("btnSaveSettingsLocModal");
+    const alertBox = document.getElementById("settingsLocModalAlert");
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+    const payload = {
+        name: name,
+        code: code || null,
+        city: city || null,
+        state: state || "Maharashtra",
+        contact_number: contact || null,
+        address: address || null,
+        is_active: isActive
+    };
+
+    try {
+        const url = id ? `/api/v1/payroll/masters/locations/${id}` : "/api/v1/payroll/masters/locations";
+        const method = id ? "PUT" : "POST";
+        const res = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-emerald-bg)";
+            alertBox.style.border = "1px solid var(--badge-emerald-border)";
+            alertBox.style.color = "var(--badge-emerald-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || 'Office location saved successfully.');
+            setTimeout(() => {
+                closeSettingsLocationModal();
+                window.location.hash = "branding";
+                window.location.reload();
+            }, 600);
+        } else {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || 'Failed to save location.');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Location';
+        }
+    } catch (err) {
+        alertBox.style.display = "block";
+        alertBox.style.background = "var(--badge-rose-bg)";
+        alertBox.style.border = "1px solid var(--badge-rose-border)";
+        alertBox.style.color = "var(--badge-rose-text)";
+        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.';
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Location';
+    }
+}
+
+async function deleteSettingsLocation(locId, name) {
+    if (!confirm(`Are you sure you want to delete office location "${name}"?`)) return;
+    try {
+        const res = await fetch(`/api/v1/payroll/masters/locations/${locId}`, {
+            method: "DELETE"
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const row = document.getElementById(`settingsLocRow-${locId}`);
+            if (row) row.remove();
+            window.location.hash = "branding";
+            window.location.reload();
+        } else {
+            alert(data.detail || "Failed to delete office location.");
+        }
+    } catch (e) {
+        alert("Network error while deleting location.");
+    }
+}
 </script>
+
+<!-- Designation Modal (Create / Edit in Settings - No Mandatory Salary Structure) -->
+<div id="settingsDesignationModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+            <h3 id="settingsDesigModalTitle" style="font-size: 15px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i>
+                <span>Add Designation</span>
+            </h3>
+            <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeSettingsDesignationModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 18px;">
+            <form id="settingsDesigModalForm" onsubmit="saveSettingsDesignationModal(event)">
+                <input type="hidden" id="modalSettingsDesigId" value="">
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Designation Title *</label>
+                    <input type="text" id="modalSettingsDesigTitle" class="form-control" placeholder="e.g. Senior Software Engineer, Store Manager" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Designation Code</label>
+                    <input type="text" id="modalSettingsDesigCode" class="form-control" placeholder="e.g. SSE, MGR" maxlength="20" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Department / Team (Optional)</label>
+                    <select id="modalSettingsDesigDept" class="form-control">
+                        <option value="">-- All / General Department --</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Description / Responsibilities</label>
+                    <textarea id="modalSettingsDesigDesc" class="form-control" rows="2" placeholder="Overview of role, responsibilities, or band..."></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Status</label>
+                    <select id="modalSettingsDesigIsActive" class="form-control">
+                        <option value="true">Active Designation</option>
+                        <option value="false">Inactive / Deprecated</option>
+                    </select>
+                </div>
+                <div id="settingsDesigModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeSettingsDesignationModal()">Cancel</button>
+                    <button type="submit" id="btnSaveSettingsDesigModal" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> Save Designation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Work Shift Modal (Create / Edit) -->
 <div id="shiftModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
@@ -2190,6 +2757,74 @@ async function deleteShift(shiftId, shiftName) {
                     <button type="button" class="btn btn-secondary" onclick="closeDeptModal()">Cancel</button>
                     <button type="submit" id="btnSaveDeptModal" class="btn btn-primary">
                         <i class="fa-solid fa-check"></i> Save Department
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Office Location Modal (Create / Edit in Settings) -->
+<div id="settingsLocationModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 520px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+            <h3 id="settingsLocModalTitle" style="font-size: 15px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i>
+                <span>Add Office Location</span>
+            </h3>
+            <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeSettingsLocationModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 18px;">
+            <form id="settingsLocModalForm" onsubmit="saveSettingsLocationModal(event)">
+                <input type="hidden" id="modalSettingsLocId" value="">
+                
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 14px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Location / Branch Name *</label>
+                        <input type="text" id="modalSettingsLocName" class="form-control" placeholder="e.g. Pune Tech Park / Mumbai HQ" required>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Location Code</label>
+                        <input type="text" id="modalSettingsLocCode" class="form-control" placeholder="e.g. PN-01" maxlength="20" style="text-transform: uppercase;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">City</label>
+                        <input type="text" id="modalSettingsLocCity" class="form-control" placeholder="e.g. Pune">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">State</label>
+                        <input type="text" id="modalSettingsLocState" class="form-control" value="Maharashtra" placeholder="e.g. Maharashtra">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Contact Number (Optional)</label>
+                    <input type="text" id="modalSettingsLocContact" class="form-control" placeholder="e.g. +91 9876543210">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Address (Optional)</label>
+                    <textarea id="modalSettingsLocAddress" class="form-control" rows="2" placeholder="Full office address or landmark..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Status</label>
+                    <select id="modalSettingsLocIsActive" class="form-control">
+                        <option value="true">Active Location</option>
+                        <option value="false">Inactive / Closed</option>
+                    </select>
+                </div>
+
+                <div id="settingsLocModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeSettingsLocationModal()">Cancel</button>
+                    <button type="submit" id="btnSaveSettingsLocModal" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> Save Location
                     </button>
                 </div>
             </form>

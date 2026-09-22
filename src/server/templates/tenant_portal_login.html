@@ -14,7 +14,7 @@
     <script>
         (function() {
             try {
-                let defaultTheme = {{ '"slate"' if is_corporate else '"light"' }};
+                let defaultTheme = {{ '"warm"' if is_corporate else '"light"' }};
                 const savedTheme = localStorage.getItem("app_theme") || defaultTheme;
                 document.documentElement.setAttribute("data-theme", savedTheme);
             } catch (e) {}

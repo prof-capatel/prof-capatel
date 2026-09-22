@@ -140,17 +140,23 @@ class TestUiRefinementsAndLocationFix(unittest.TestCase):
         self.assertIn("Monthly Payroll", payroll_html)
         self.assertNotIn("Monthly Payroll Batches Lifecycle", payroll_html)
 
-        # 2. Location Modal presence
-        self.assertIn('id="locationModal"', payroll_html)
-        self.assertIn('id="locModalName"', payroll_html)
-        self.assertIn('id="locModalCode"', payroll_html)
-        self.assertIn('id="locModalCity"', payroll_html)
-        self.assertIn('id="locModalState"', payroll_html)
-        self.assertIn('id="locModalContact"', payroll_html)
-        self.assertIn('id="locModalAddress"', payroll_html)
-        self.assertIn('id="btnSaveLocation"', payroll_html)
+        # 2. Location removed from payroll.html and present in settings.html
+        self.assertNotIn('id="locationsTableBody"', payroll_html)
 
-        # 3. Conditional breakdown section
+        with open("src/server/templates/settings.html", "r", encoding="utf-8") as f:
+            settings_html = f.read()
+        self.assertIn('id="locationsSection"', settings_html)
+        self.assertIn('id="settingsLocationsTableBody"', settings_html)
+        self.assertIn('id="settingsLocationModal"', settings_html)
+        self.assertIn('id="modalSettingsLocName"', settings_html)
+        self.assertIn('id="modalSettingsLocCode"', settings_html)
+        self.assertIn('id="modalSettingsLocCity"', settings_html)
+        self.assertIn('id="modalSettingsLocState"', settings_html)
+        self.assertIn('id="modalSettingsLocContact"', settings_html)
+        self.assertIn('id="modalSettingsLocAddress"', settings_html)
+        self.assertIn('id="btnSaveSettingsLocModal"', settings_html)
+
+        # 3. Conditional breakdown section in payroll.html
         self.assertIn('id="tplComponentBreakdownSection"', payroll_html)
         self.assertIn('toggleTemplateComponentVisibility()', payroll_html)
 

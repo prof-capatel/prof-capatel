@@ -49,12 +49,15 @@ class TestSettingsUniversalEmployeePortalLink(unittest.TestCase):
         self.assertIn('id="tabContentSecurity"', html)
         self.assertIn('id="tabBtnSecurity"', html)
 
-        # 2. Verify Universal Employee Face-Login & Leave Portal Card
-        self.assertIn("Universal Employee Face-Login & Leave Portal", html)
-        self.assertIn("Mobile-First Portal", html)
-        self.assertIn("1:N Facial Recognition", html)
-        self.assertIn("Leave Balances", html)
-        self.assertIn("Leave Applications", html)
+        # 2. Verify Employee Portal Card & Refined Text
+        self.assertIn("Employee Portal", html)
+        self.assertNotIn("Universal Employee Face-Login & Leave Portal", html)
+        self.assertNotIn("Mobile-First Portal", html)
+        self.assertNotIn("1:N Facial Recognition", html)
+        self.assertNotIn("Leave Balances", html)
+        self.assertNotIn("Leave Applications", html)
+        self.assertIn("Clean Employee Portal Link (Share with Employees)", html)
+        self.assertNotIn("(Share with Workforce)", html)
 
         # 3. Verify clean URL span and Open Portal Button
         self.assertIn('id="universalEmployeePortalUrlSpan"', html)

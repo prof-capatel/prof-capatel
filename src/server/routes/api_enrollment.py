@@ -760,6 +760,29 @@ async def batch_upload_enrollment(
     }
 
 
+@router.get("/student/{student_id}")
+def get_student_profile(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Retrieves full student/employee details including enrolled face sample crops scoped to the tenant."""
+    check_tenant_operational_access(current_tenant)
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.tenant_id == current_tenant.id,
+    ).first()
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Student / Employee profile not found in this institution.")
+
+    return {
+        "status": "success",
+        "tenant_id": current_tenant.id,
+        "student": student.to_dict(),
+    }
+
+
 @router.put("/student/{student_id}")
 def update_student_profile(
     student_id: int,
@@ -827,36 +850,42 @@ def update_student_profile(
         student.academic_year_id = payload.academic_year_id
     student.email = payload.email.strip() if payload.email else None
     student.user_role = payload.user_role.strip().lower() if payload.user_role else "student"
-    if payload.hourly_rate is not None:
+    fields_set = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
+
+    if "hourly_rate" in fields_set:
         student.hourly_rate = payload.hourly_rate
-    if payload.monthly_base_salary is not None:
+    elif payload.hourly_rate is not None:
+        student.hourly_rate = payload.hourly_rate
+
+    if "monthly_base_salary" in fields_set:
         student.monthly_base_salary = payload.monthly_base_salary
-    if payload.shift_id is not None:
-        if payload.shift_id > 0:
+    elif payload.monthly_base_salary is not None:
+        student.monthly_base_salary = payload.monthly_base_salary
+
+    if "shift_id" in fields_set or payload.shift_id is not None:
+        if payload.shift_id and payload.shift_id > 0:
             s_obj = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id, WorkShift.id == payload.shift_id).first()
-            if s_obj:
-                student.shift_id = s_obj.id
+            student.shift_id = s_obj.id if s_obj else None
         else:
             student.shift_id = None
-    if payload.date_of_joining is not None:
-        if payload.date_of_joining.strip():
+
+    if "date_of_joining" in fields_set or payload.date_of_joining is not None:
+        if payload.date_of_joining and payload.date_of_joining.strip():
             try:
                 student.date_of_joining = datetime.strptime(payload.date_of_joining.strip()[:10], "%Y-%m-%d").date()
             except Exception:
-                pass
+                student.date_of_joining = None
         else:
             student.date_of_joining = None
 
-    fields_set = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
-
-    if "location_id" in fields_set:
+    if "location_id" in fields_set or payload.location_id is not None:
         if payload.location_id and payload.location_id > 0:
             loc_obj = db.query(CompanyLocation).filter(CompanyLocation.tenant_id == current_tenant.id, CompanyLocation.id == payload.location_id).first()
             student.location_id = loc_obj.id if loc_obj else None
         else:
             student.location_id = None
 
-    if "designation_id" in fields_set:
+    if "designation_id" in fields_set or payload.designation_id is not None:
         if payload.designation_id and payload.designation_id > 0:
             desig_obj = db.query(DesignationMaster).filter(DesignationMaster.tenant_id == current_tenant.id, DesignationMaster.id == payload.designation_id).first()
             if desig_obj:

@@ -790,6 +790,7 @@ class SystemBranding(Base):
     esic_employee_pct = Column(Float, default=0.75, nullable=False)
     esic_employer_pct = Column(Float, default=3.25, nullable=False)
     pt_monthly_default = Column(Float, default=200.0, nullable=False)
+    epf_admin_charges_pct = Column(Float, default=0.50, nullable=False)
 
     updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
 
@@ -840,6 +841,7 @@ class SystemBranding(Base):
             "esic_employee_pct": float(self.esic_employee_pct if self.esic_employee_pct is not None else 0.75),
             "esic_employer_pct": float(self.esic_employer_pct if self.esic_employer_pct is not None else 3.25),
             "pt_monthly_default": float(self.pt_monthly_default if self.pt_monthly_default is not None else 200.0),
+            "epf_admin_charges_pct": float(self.epf_admin_charges_pct if getattr(self, "epf_admin_charges_pct", None) is not None else 0.50),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
         }
 

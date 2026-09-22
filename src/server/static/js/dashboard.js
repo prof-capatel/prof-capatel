@@ -2,6 +2,16 @@
    Face Recognition Attendance System - Client JavaScript
    ========================================================== */
 
+function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initThemeSwitcher();
     initLiveStream();
@@ -606,8 +616,21 @@ function openRelieveModal(studentId, studentName, rollNumber) {
     const modal = document.getElementById("relieveEmployeeModal");
     if (!modal) return;
 
-    document.getElementById("relieveStudentId").value = studentId;
-    document.getElementById("relieveStudentName").value = `${studentName} (${rollNumber})`;
+    let sName = studentName;
+    let sRoll = rollNumber;
+    if ((!sName || !sRoll) && window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
+        const found = window.allTenantStudents.find(x => Number(x.id) === Number(studentId));
+        if (found) {
+            sName = sName || found.name;
+            sRoll = sRoll || found.roll_number;
+        }
+    }
+
+    const idInput = document.getElementById("relieveStudentId");
+    if (idInput) idInput.value = studentId;
+
+    const nameInput = document.getElementById("relieveStudentName");
+    if (nameInput) nameInput.value = sRoll ? `${sName || ''} (${sRoll})` : (sName || '');
     
     // Set default date to today
     const todayStr = new Date().toISOString().split("T")[0];
@@ -621,16 +644,20 @@ function openRelieveModal(studentId, studentName, rollNumber) {
     if (alertBox) alertBox.style.display = "none";
 
     modal.classList.add("active");
+    modal.style.display = "flex";
 }
 
 function closeRelieveModal() {
     const modal = document.getElementById("relieveEmployeeModal");
-    if (modal) modal.classList.remove("active");
+    if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+    }
 }
 
 async function submitRelieveEmployee(e) {
-    e.preventDefault();
-    const studentId = document.getElementById("relieveStudentId").value;
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    const studentId = document.getElementById("relieveStudentId")?.value;
     const statusVal = document.getElementById("relieveExitStatus")?.value || "RELIEVED";
     const dateVal = document.getElementById("relieveDateInput")?.value || "";
     const reasonVal = document.getElementById("relieveReasonInput")?.value || "";
@@ -693,7 +720,12 @@ async function submitRelieveEmployee(e) {
 }
 
 async function reinstateEmployee(studentId, studentName) {
-    if (!confirm(`Are you sure you want to reinstate "${studentName}" back to active employee status?`)) {
+    let sName = studentName;
+    if (!sName && window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
+        const found = window.allTenantStudents.find(x => Number(x.id) === Number(studentId));
+        if (found) sName = found.name;
+    }
+    if (!confirm(`Are you sure you want to reinstate "${sName || 'Employee'}" back to active employee status?`)) {
         return;
     }
 
@@ -706,7 +738,7 @@ async function reinstateEmployee(studentId, studentName) {
         const data = await res.json();
 
         if (res.ok) {
-            alert(data.message || `"${studentName}" has been reinstated successfully!`);
+            alert(data.message || `"${sName || 'Employee'}" has been reinstated successfully!`);
             window.location.reload();
         } else {
             alert(data.detail || "Failed to reinstate employee.");
@@ -717,10 +749,15 @@ async function reinstateEmployee(studentId, studentName) {
 }
 
 /**
- * Delete Student
+ * Delete Student / Employee
  */
 async function deleteStudent(studentId, studentName) {
-    if (!confirm(`Are you sure you want to delete profile "${studentName}" and all associated face embeddings?`)) {
+    let sName = studentName;
+    if (!sName && window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
+        const found = window.allTenantStudents.find(x => Number(x.id) === Number(studentId));
+        if (found) sName = found.name;
+    }
+    if (!confirm(`Are you sure you want to delete profile "${sName || 'Employee'}" and all associated face embeddings?`)) {
         return;
     }
 
@@ -728,13 +765,198 @@ async function deleteStudent(studentId, studentName) {
         const res = await fetch(`/api/v1/enroll/student/${studentId}`, { method: "DELETE" });
         const data = await res.json();
         if (res.ok) {
-            alert(`Profile "${studentName}" deleted successfully.`);
+            alert(`Profile "${sName || 'Employee'}" deleted successfully.`);
             window.location.reload();
         } else {
             alert(`Error: ${data.detail || 'Could not delete profile'}`);
         }
     } catch (e) {
         alert("Failed to delete profile.");
+    }
+}
+
+/* ==========================================================
+   Department / Team Transfer Handlers
+   ========================================================== */
+function openTransferDepartmentModal(idOrObj, name, deptId, classId, divId) {
+    const modal = document.getElementById("transferEmployeeModal");
+    if (!modal) return;
+
+    let s = {};
+    let studentId = null;
+
+    if (typeof idOrObj === "object" && idOrObj !== null) {
+        s = idOrObj;
+        studentId = s.id;
+    } else if (idOrObj !== undefined && idOrObj !== null && String(idOrObj).trim() !== "") {
+        studentId = Number(idOrObj);
+        const cached = (window.allTenantStudents && Array.isArray(window.allTenantStudents))
+            ? window.allTenantStudents.find(x => Number(x.id) === Number(studentId))
+            : null;
+        if (cached) {
+            s = Object.assign({}, cached);
+        } else {
+            s = {
+                id: studentId,
+                name: name || "",
+                department_id: deptId,
+                class_id: classId,
+                division_id: divId
+            };
+        }
+    }
+
+    const idInput = document.getElementById("transferStudentId");
+    if (idInput) idInput.value = s.id || studentId || "";
+
+    const nameInput = document.getElementById("transferStudentName");
+    if (nameInput) nameInput.value = s.name || name || "";
+    
+    const deptSelect = document.getElementById("transferTargetDept");
+    if (deptSelect) {
+        deptSelect.value = s.department_id || deptId || "";
+        if (typeof onTransferDeptChanged === "function") onTransferDeptChanged();
+    }
+
+    const classSelect = document.getElementById("transferTargetClass");
+    if (classSelect) {
+        classSelect.value = s.class_id || classId || "";
+        if (typeof onTransferClassChanged === "function") onTransferClassChanged();
+    }
+
+    const divSelect = document.getElementById("transferTargetDiv");
+    if (divSelect) {
+        divSelect.value = s.division_id || divId || "";
+    }
+
+    const alertBox = document.getElementById("transferResultAlert");
+    if (alertBox) alertBox.style.display = "none";
+
+    const saveBtn = document.getElementById("btnConfirmTransfer") || document.getElementById("btnSaveTransfer");
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+    }
+
+    modal.classList.add("active");
+    modal.style.display = "flex";
+}
+
+function closeTransferDepartmentModal() {
+    const modal = document.getElementById("transferEmployeeModal");
+    if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+    }
+}
+
+function onTransferDeptChanged() {
+    const deptId = document.getElementById("transferTargetDept")?.value;
+    const classSelect = document.getElementById("transferTargetClass");
+    if (classSelect) {
+        Array.from(classSelect.options).forEach((opt, idx) => {
+            if (idx === 0) return;
+            const dId = opt.getAttribute("data-dept-id");
+            opt.style.display = (!deptId || !dId || dId === deptId) ? "" : "none";
+        });
+    }
+}
+
+function onTransferClassChanged() {
+    const classId = document.getElementById("transferTargetClass")?.value;
+    const divSelect = document.getElementById("transferTargetDiv");
+    if (divSelect) {
+        Array.from(divSelect.options).forEach((opt, idx) => {
+            if (idx === 0) return;
+            const cId = opt.getAttribute("data-class-id");
+            opt.style.display = (!classId || !cId || cId === classId) ? "" : "none";
+        });
+    }
+}
+
+async function submitDepartmentTransfer(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    const studentId = document.getElementById("transferStudentId")?.value;
+    const deptSelect = document.getElementById("transferTargetDept");
+    const deptId = deptSelect?.value;
+    const classId = document.getElementById("transferTargetClass")?.value || null;
+    const divId = document.getElementById("transferTargetDiv")?.value || null;
+
+    if (!studentId || !deptId) {
+        alert("Please select a target department.");
+        return;
+    }
+
+    const saveBtn = document.getElementById("btnConfirmTransfer") || document.getElementById("btnSaveTransfer");
+    const alertBox = document.getElementById("transferResultAlert");
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Transferring...';
+    }
+
+    try {
+        const res = await fetch(`/api/v1/enroll/student/${studentId}/transfer-department`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                department_id: parseInt(deptId),
+                class_id: classId ? parseInt(classId) : null,
+                division_id: divId ? parseInt(divId) : null,
+            }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-emerald-bg)";
+                alertBox.style.color = "var(--badge-emerald-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Transferred successfully!");
+            }
+
+            if (window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
+                const sIdx = window.allTenantStudents.findIndex(x => Number(x.id) === Number(studentId));
+                if (sIdx !== -1) {
+                    const targetDeptName = deptSelect.options[deptSelect.selectedIndex]?.text || "";
+                    window.allTenantStudents[sIdx].department_id = parseInt(deptId);
+                    window.allTenantStudents[sIdx].department = targetDeptName;
+                    if (classId) window.allTenantStudents[sIdx].class_id = parseInt(classId);
+                    if (divId) window.allTenantStudents[sIdx].division_id = parseInt(divId);
+                }
+            }
+
+            setTimeout(() => {
+                closeTransferDepartmentModal();
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+                }
+                window.location.reload();
+            }, 600);
+        } else {
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Transfer failed.");
+            }
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+            }
+        }
+    } catch (err) {
+        if (alertBox) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+        }
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+        }
     }
 }
 
@@ -821,147 +1043,206 @@ function onEditDesignationChanged() {
     const tplSelect = document.getElementById("editSalaryTemplateSelect");
     if (!desigSelect || !tplSelect) return;
 
-    const opt = desigSelect.options[desigSelect.selectedIndex];
-    if (opt) {
-        const tplId = opt.getAttribute("data-template-id");
-        if (tplId) {
-            tplSelect.value = tplId;
+    if (desigSelect.selectedIndex >= 0) {
+        const opt = desigSelect.options[desigSelect.selectedIndex];
+        if (opt && opt.value) {
+            const tplId = opt.getAttribute("data-template-id");
+            if (tplId) {
+                tplSelect.value = tplId;
+            }
         }
     }
 }
 
-function onEditDesignationChanged() {
-    const desigSelect = document.getElementById("editDesignationSelect");
-    const tplSelect = document.getElementById("editSalaryTemplateSelect");
-    if (!desigSelect || !tplSelect) return;
-
-    const opt = desigSelect.options[desigSelect.selectedIndex];
-    if (opt) {
-        const tplId = opt.getAttribute("data-template-id");
-        if (tplId && !tplSelect.value) {
-            tplSelect.value = tplId;
-        }
-    }
-}
-
-function openEditModal(id, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, doj, shiftId, locationId, designationId, salaryTemplateId) {
-    const modal = document.getElementById("editStudentModal");
-    if (!modal) return;
-
-    document.getElementById("editStudentId").value = id;
-    document.getElementById("editStudentName").value = name;
-    document.getElementById("editRollNumber").value = roll;
-    document.getElementById("editEmail").value = email || "";
-    const roleSelect = document.getElementById("editUserRole");
-    if (roleSelect) {
-        let targetRole = role || "";
-        const isCorp = window.IS_CORPORATE || (document.getElementById("statShiftHours") !== null) || (window.location.pathname.includes('/employees'));
-        
-        if (isCorp && (targetRole === "student" || targetRole === "teacher" || !targetRole)) {
-            targetRole = "employee";
-        } else if (!targetRole) {
-            targetRole = "student";
+function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, doj, shiftId, locationId, designationId, salaryTemplateId) {
+    try {
+        const modal = document.getElementById("editStudentModal");
+        if (!modal) {
+            console.error("Modal #editStudentModal element not found in DOM");
+            return;
         }
 
-        let hasOption = false;
-        for (let i = 0; i < roleSelect.options.length; i++) {
-            if (roleSelect.options[i].value === targetRole) {
-                hasOption = true;
-                break;
+        let s = {};
+        let studentId = null;
+
+        if (typeof idOrObj === "object" && idOrObj !== null) {
+            s = idOrObj;
+            studentId = s.id;
+        } else if (idOrObj !== undefined && idOrObj !== null && String(idOrObj).trim() !== "") {
+            studentId = Number(idOrObj);
+            const cached = (window.allTenantStudents && Array.isArray(window.allTenantStudents))
+                ? window.allTenantStudents.find(x => Number(x.id) === Number(studentId))
+                : null;
+            if (cached) {
+                s = Object.assign({}, cached);
+            } else {
+                s = {
+                    id: studentId,
+                    name: name || "",
+                    roll_number: roll || "",
+                    department: dept || "",
+                    email: email || "",
+                    user_role: role || "",
+                    class_semester: classSem || "",
+                    department_id: deptId,
+                    class_id: classId,
+                    division_id: divId,
+                    hourly_rate: hourlyRate,
+                    monthly_base_salary: monthlySalary,
+                    date_of_joining: doj || "",
+                    shift_id: shiftId,
+                    location_id: locationId,
+                    designation_id: designationId,
+                    salary_template_id: salaryTemplateId
+                };
             }
         }
 
-        if (!hasOption && targetRole) {
-            const opt = document.createElement("option");
-            opt.value = targetRole;
-            opt.text = targetRole.replace(/_/g, ' ').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            roleSelect.appendChild(opt);
-        }
+        function populateFields(data) {
+            if (!data) return;
+            const idInput = document.getElementById("editStudentId");
+            if (idInput) idInput.value = data.id || "";
 
-        roleSelect.value = targetRole;
-    }
+            const nameInput = document.getElementById("editStudentName");
+            if (nameInput && data.name !== undefined) nameInput.value = data.name || "";
 
-    if (document.getElementById("editDateOfJoining")) {
-        document.getElementById("editDateOfJoining").value = doj || "";
-    }
+            const rollInput = document.getElementById("editRollNumber");
+            if (rollInput && data.roll_number !== undefined) rollInput.value = data.roll_number || "";
 
-    if (document.getElementById("editShiftSelect")) {
-        document.getElementById("editShiftSelect").value = (shiftId !== undefined && shiftId !== null) ? shiftId : "";
-    }
+            const emailInput = document.getElementById("editEmail");
+            if (emailInput) emailInput.value = data.email || "";
 
-    if (document.getElementById("editLocationSelect")) {
-        document.getElementById("editLocationSelect").value = (locationId !== undefined && locationId !== null) ? locationId : "";
-    }
-
-    if (document.getElementById("editDesignationSelect")) {
-        document.getElementById("editDesignationSelect").value = (designationId !== undefined && designationId !== null) ? designationId : "";
-    }
-
-    if (document.getElementById("editSalaryTemplateSelect")) {
-        document.getElementById("editSalaryTemplateSelect").value = (salaryTemplateId !== undefined && salaryTemplateId !== null) ? salaryTemplateId : "";
-    }
-
-    if (document.getElementById("editHourlyRate")) {
-        document.getElementById("editHourlyRate").value = (hourlyRate !== undefined && hourlyRate !== null) ? hourlyRate : "";
-    }
-
-    if (document.getElementById("editMonthlyBaseSalary")) {
-        document.getElementById("editMonthlyBaseSalary").value = (monthlySalary !== undefined && monthlySalary !== null) ? monthlySalary : "";
-    }
-
-    const deptSelect = document.getElementById("editDepartmentSelect");
-    if (deptSelect) {
-        if (deptId) {
-            deptSelect.value = deptId;
-        } else {
-            // Find by text
-            for (let i = 0; i < deptSelect.options.length; i++) {
-                if (deptSelect.options[i].text.toLowerCase() === (dept || "").toLowerCase()) {
-                    deptSelect.selectedIndex = i;
-                    break;
+            const roleSelect = document.getElementById("editUserRole");
+            if (roleSelect) {
+                let targetRole = data.user_role || data.role || "";
+                const isCorp = window.IS_CORPORATE || (document.getElementById("statShiftHours") !== null) || (window.location.pathname.includes('/employees'));
+                if (isCorp && (targetRole === "student" || targetRole === "teacher" || !targetRole)) {
+                    targetRole = "employee";
+                } else if (!targetRole) {
+                    targetRole = "student";
                 }
+
+                if (roleSelect.tagName === "SELECT" && roleSelect.options) {
+                    let hasOption = false;
+                    for (let i = 0; i < roleSelect.options.length; i++) {
+                        if (roleSelect.options[i].value === targetRole) {
+                            hasOption = true;
+                            break;
+                        }
+                    }
+                    if (!hasOption && targetRole) {
+                        const opt = document.createElement("option");
+                        opt.value = targetRole;
+                        opt.text = targetRole.replace(/_/g, ' ').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        roleSelect.appendChild(opt);
+                    }
+                }
+                roleSelect.value = targetRole;
             }
+
+            const dojInput = document.getElementById("editDateOfJoining");
+            if (dojInput && data.date_of_joining !== undefined) dojInput.value = data.date_of_joining || "";
+
+            const shiftSelect = document.getElementById("editShiftSelect");
+            if (shiftSelect && data.shift_id !== undefined) shiftSelect.value = (data.shift_id !== null && data.shift_id !== undefined) ? data.shift_id : "";
+
+            const locSelect = document.getElementById("editLocationSelect");
+            if (locSelect && data.location_id !== undefined) locSelect.value = (data.location_id !== null && data.location_id !== undefined) ? data.location_id : "";
+
+            const desigSelect = document.getElementById("editDesignationSelect");
+            if (desigSelect && data.designation_id !== undefined) desigSelect.value = (data.designation_id !== null && data.designation_id !== undefined) ? data.designation_id : "";
+
+            const tplSelect = document.getElementById("editSalaryTemplateSelect");
+            if (tplSelect && data.salary_template_id !== undefined) tplSelect.value = (data.salary_template_id !== null && data.salary_template_id !== undefined) ? data.salary_template_id : "";
+
+            const hourlyInput = document.getElementById("editHourlyRate");
+            if (hourlyInput && data.hourly_rate !== undefined) hourlyInput.value = (data.hourly_rate !== null && data.hourly_rate !== undefined) ? data.hourly_rate : "";
+
+            const monthlyInput = document.getElementById("editMonthlyBaseSalary");
+            if (monthlyInput && data.monthly_base_salary !== undefined) monthlyInput.value = (data.monthly_base_salary !== null && data.monthly_base_salary !== undefined) ? data.monthly_base_salary : "";
+
+            const deptSelect = document.getElementById("editDepartmentSelect");
+            if (deptSelect) {
+                if (data.department_id) {
+                    deptSelect.value = data.department_id;
+                } else if (data.department) {
+                    for (let i = 0; i < deptSelect.options.length; i++) {
+                        if (deptSelect.options[i].text.toLowerCase() === data.department.toLowerCase()) {
+                            deptSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+                try { if (typeof onEditDeptSelectChanged === "function") onEditDeptSelectChanged(); } catch (e) {}
+            }
+
+            const classSelect = document.getElementById("editClassSelect");
+            if (classSelect) {
+                classSelect.value = data.class_id || "";
+                try { if (typeof onEditClassSelectChanged === "function") onEditClassSelectChanged(); } catch (e) {}
+            }
+
+            const divSelect = document.getElementById("editDivisionSelect");
+            if (divSelect) {
+                divSelect.value = data.division_id || "";
+            }
+
+            try { if (typeof onEditRoleChanged === "function") onEditRoleChanged(); } catch (e) {}
         }
-        onEditDeptSelectChanged();
-    }
 
-    const classSelect = document.getElementById("editClassSelect");
-    if (classSelect) {
-        if (classId) {
-            classSelect.value = classId;
-        } else {
-            classSelect.value = "";
+        // 1. Populate immediately with local cache / arguments
+        populateFields(s);
+
+        const alertBox = document.getElementById("editResultAlert");
+        if (alertBox) alertBox.style.display = "none";
+
+        // 2. Open Modal Immediately
+        modal.classList.add("active");
+        modal.style.display = "flex";
+
+        // 3. Trigger photo loading and async fetch for full profile
+        if (studentId) {
+            if (typeof loadStudentPhotosPreview === "function") {
+                loadStudentPhotosPreview(studentId, "editStudentPhotosPreview");
+            }
+            fetch(`/api/v1/enroll/student/${studentId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.student) {
+                        populateFields(data.student);
+                    }
+                })
+                .catch(err => {
+                    console.warn("Could not fetch remote student details:", err);
+                });
         }
-        onEditClassSelectChanged();
-    }
-
-    const divSelect = document.getElementById("editDivisionSelect");
-    if (divSelect) {
-        if (divId) {
-            divSelect.value = divId;
-        } else {
-            divSelect.value = "";
+    } catch (err) {
+        console.error("Error opening edit modal:", err);
+        const modal = document.getElementById("editStudentModal");
+        if (modal) {
+            modal.classList.add("active");
+            modal.style.display = "flex";
         }
     }
-
-    onEditRoleChanged();
-
-    const alertBox = document.getElementById("editResultAlert");
-    if (alertBox) alertBox.style.display = "none";
-
-    loadStudentPhotosPreview(id, "editStudentPhotosPreview");
-
-    modal.classList.add("active");
 }
 
 function closeEditModal() {
     const modal = document.getElementById("editStudentModal");
-    if (modal) modal.classList.remove("active");
+    if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+    }
 }
 
 async function loadStudentPhotosPreview(studentId, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    const countBadge = document.getElementById("editPhotosCountBadge");
+    if (countBadge) {
+        countBadge.innerText = "Loading...";
+        countBadge.className = "badge badge-node";
+    }
 
     container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 14px; font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading enrolled photos...</div>';
 
@@ -969,16 +1250,29 @@ async function loadStudentPhotosPreview(studentId, containerId) {
         const res = await fetch(`/api/v1/enroll/student/${studentId}`);
         const data = await res.json();
         if (res.ok && data.student && data.student.photos && data.student.photos.length > 0) {
+            const count = data.student.photos.length;
+            if (countBadge) {
+                countBadge.innerText = `${count} ${count === 1 ? 'Photo' : 'Photos'}`;
+                countBadge.className = "badge badge-present";
+            }
             container.innerHTML = data.student.photos.map(p => `
-                <div class="photo-preview-card" style="cursor: pointer;" onclick="openLightbox('${p.url}', '${data.student.name} (${p.angle || 'Sample'})')" title="Click to view full image">
+                <div class="photo-preview-card" style="cursor: pointer;" onclick="openLightbox('${p.url}', '${escapeHtml(data.student.name)} (${p.angle || 'Sample'})')" title="Click to view full image">
                     <img class="photo-preview-img" src="${p.url}" alt="${p.angle}" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:20px;\'><i class=\'fa-regular fa-image\'></i></div><div class=\'photo-preview-label\'>Crop Missing</div>';">
                     <div class="photo-preview-label">${p.angle ? p.angle.replace('_', ' ').toUpperCase() : 'FACE CROP'}</div>
                 </div>
             `).join("");
         } else {
+            if (countBadge) {
+                countBadge.innerText = "0 Photos";
+                countBadge.className = "badge badge-node";
+            }
             container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 16px; font-size: 12px; color: var(--text-muted); background: #ffffff; border: 1px dashed var(--border-color); border-radius: var(--radius-sm);"><i class="fa-regular fa-image" style="margin-right: 6px;"></i> No photo crops saved on server yet.</div>';
         }
     } catch (e) {
+        if (countBadge) {
+            countBadge.innerText = "Error";
+            countBadge.className = "badge badge-amber";
+        }
         container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 10px; font-size: 12px; color: var(--accent-rose);">Could not load registered photos.</div>';
     }
 }
@@ -993,11 +1287,11 @@ async function submitStudentEdit(e) {
 
     const deptSelect = document.getElementById("editDepartmentSelect");
     const deptId = deptSelect?.value ? parseInt(deptSelect.value) : null;
-    const deptName = deptSelect && deptSelect.selectedIndex >= 0 ? deptSelect.options[deptSelect.selectedIndex].text : "Computer Science";
+    const deptName = (deptSelect && deptSelect.selectedIndex >= 0) ? deptSelect.options[deptSelect.selectedIndex].text : "General";
 
     const classSelect = document.getElementById("editClassSelect");
     const classId = classSelect?.value ? parseInt(classSelect.value) : null;
-    const className = classSelect && classSelect.selectedIndex > 0 ? classSelect.options[classSelect.selectedIndex].text : "General";
+    const className = (classSelect && classSelect.selectedIndex > 0) ? classSelect.options[classSelect.selectedIndex].text : "General";
 
     const divSelect = document.getElementById("editDivisionSelect");
     const divId = divSelect?.value ? parseInt(divSelect.value) : null;
@@ -1010,8 +1304,8 @@ async function submitStudentEdit(e) {
 
     const desigSelect = document.getElementById("editDesignationSelect");
     const desigId = (desigSelect && desigSelect.value) ? parseInt(desigSelect.value) : null;
-    const desigOption = (desigSelect && desigSelect.selectedIndex >= 0) ? desigSelect.options[desigSelect.selectedIndex] : null;
-    const desigTitle = desigOption ? (desigOption.getAttribute("data-title") || desigOption.text) : null;
+    const desigOption = (desigSelect && desigSelect.selectedIndex > 0) ? desigSelect.options[desigSelect.selectedIndex] : null;
+    const desigTitle = (desigId && desigOption) ? (desigOption.getAttribute("data-title") || desigOption.text) : null;
 
     const tplSelect = document.getElementById("editSalaryTemplateSelect");
     const tplId = (tplSelect && tplSelect.value) ? parseInt(tplSelect.value) : null;
@@ -1053,18 +1347,22 @@ async function submitStudentEdit(e) {
         const data = await res.json();
 
         if (res.ok) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-emerald-bg)";
-            alertBox.style.color = "var(--badge-emerald-text)";
-            alertBox.style.border = "1px solid var(--badge-emerald-border)";
-            alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Profile updated successfully!';
+            const updatedStudent = data.student || {};
+            // Sync cache
+            if (window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
+                const idx = window.allTenantStudents.findIndex(x => x.id === updatedStudent.id);
+                if (idx >= 0) {
+                    window.allTenantStudents[idx] = Object.assign({}, window.allTenantStudents[idx], updatedStudent);
+                }
+            }
+            // Instantly update the DOM table row dynamically without full page reload
+            updateStudentTableRowInDOM(updatedStudent);
 
-            setTimeout(() => {
-                closeEditModal();
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
-                window.location.reload();
-            }, 700);
+            closeEditModal();
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+
+            showFloatingToast(`Profile for '${name}' updated successfully.`, "success");
         } else {
             alertBox.style.display = "block";
             alertBox.style.background = "var(--badge-rose-bg)";
@@ -1083,6 +1381,72 @@ async function submitStudentEdit(e) {
     }
 }
 
+function updateStudentTableRowInDOM(student) {
+    if (!student || !student.id) return;
+    const sId = student.id;
+
+    // Update labels
+    const nameLabel = document.getElementById(`stdNameLabel${sId}`);
+    if (nameLabel) nameLabel.innerText = student.name;
+
+    const emailLabel = document.getElementById(`stdEmailLabel${sId}`);
+    if (emailLabel) emailLabel.innerText = student.email || "No email registered";
+
+    const rollLabel = document.getElementById(`stdRollLabel${sId}`);
+    if (rollLabel) rollLabel.innerText = student.roll_number;
+
+    const deptLabel = document.getElementById(`stdDeptLabel${sId}`);
+    if (deptLabel) deptLabel.innerText = student.department || "—";
+
+    const dojLabel = document.getElementById(`stdDojLabel${sId}`);
+    if (dojLabel) dojLabel.innerText = student.date_of_joining || "—";
+
+    const shiftBadge = document.getElementById(`stdShiftBadge${sId}`);
+    if (shiftBadge) {
+        if (student.shift_name) {
+            shiftBadge.className = "badge";
+            shiftBadge.style.background = "rgba(99, 102, 241, 0.12)";
+            shiftBadge.style.color = "var(--accent-primary)";
+            shiftBadge.style.border = "1px solid rgba(99, 102, 241, 0.25)";
+            shiftBadge.innerHTML = `<i class="fa-solid fa-clock"></i> ${escapeHtml(student.shift_name)}`;
+            shiftBadge.title = student.shift_display || student.shift_name;
+        } else {
+            shiftBadge.className = "";
+            shiftBadge.style = "font-size: 11.5px; color: var(--text-light); font-style: italic;";
+            shiftBadge.innerText = "Default Shift";
+        }
+    }
+
+    const row = document.getElementById(`studentRow${sId}`);
+    if (row) {
+        row.setAttribute("data-name", (student.name || "").toLowerCase());
+        row.setAttribute("data-roll", (student.roll_number || "").toLowerCase());
+        row.setAttribute("data-dept-id", student.department_id || "");
+        row.setAttribute("data-dept", student.department || "");
+        row.setAttribute("data-shift-id", student.shift_id || "");
+        row.setAttribute("data-role", student.user_role || "");
+    }
+}
+
+function showFloatingToast(message, type = "success") {
+    let toast = document.getElementById("floatingToastAlert");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "floatingToastAlert";
+        toast.style.cssText = "position: fixed; bottom: 24px; right: 24px; z-index: 99999; padding: 12px 20px; border-radius: var(--radius-sm, 6px); font-size: 13px; box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1)); transition: all 0.3s ease; display: none; align-items: center; gap: 8px;";
+        document.body.appendChild(toast);
+    }
+    const isSuccess = type === "success";
+    toast.style.background = isSuccess ? "var(--badge-emerald-bg, #ecfdf5)" : "var(--badge-rose-bg, #fff1f2)";
+    toast.style.color = isSuccess ? "var(--badge-emerald-text, #065f46)" : "var(--badge-rose-text, #9f1239)";
+    toast.style.border = isSuccess ? "1px solid var(--badge-emerald-border, #a7f3d0)" : "1px solid var(--badge-rose-border, #fecdd3)";
+    toast.innerHTML = `<i class="fa-solid ${isSuccess ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i> <span>${escapeHtml(message)}</span>`;
+    toast.style.display = "flex";
+    setTimeout(() => {
+        toast.style.display = "none";
+    }, 3500);
+}
+
 /* ==========================================================
    Retake / Update Reference Photos Modal
    ========================================================== */
@@ -1094,10 +1458,25 @@ function openRetakeModal(id, name, roll) {
     const modal = document.getElementById("retakePhotosModal");
     if (!modal) return;
 
+    let sName = name;
+    let sRoll = roll;
+    if ((!sName || !sRoll) && window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
+        const found = window.allTenantStudents.find(x => Number(x.id) === Number(id));
+        if (found) {
+            sName = sName || found.name;
+            sRoll = sRoll || found.roll_number;
+        }
+    }
+
     retakeStudentId = id;
-    document.getElementById("retakeStudentId").value = id;
-    document.getElementById("retakeModalTitle").innerText = `Update Photos: ${name}`;
-    document.getElementById("retakeModalSubtitle").innerText = `Roll Number: ${roll} | Overwrite with 3 fresh reference images`;
+    const idInput = document.getElementById("retakeStudentId");
+    if (idInput) idInput.value = id;
+
+    const titleEl = document.getElementById("retakeModalTitle");
+    if (titleEl) titleEl.innerText = `Update Photos: ${sName || ''}`;
+
+    const subEl = document.getElementById("retakeModalSubtitle");
+    if (subEl) subEl.innerText = `Roll Number: ${sRoll || ''} | Overwrite with 3 fresh reference images`;
 
     retakeFiles = [];
     updateRetakePreviews();
@@ -1109,11 +1488,15 @@ function openRetakeModal(id, name, roll) {
 
     switchRetakeMode("upload");
     modal.classList.add("active");
+    modal.style.display = "flex";
 }
 
 function closeRetakeModal() {
     const modal = document.getElementById("retakePhotosModal");
-    if (modal) modal.classList.remove("active");
+    if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+    }
     stopRetakeWebcam();
     if (typeof window.resumeFromSecondaryCamera === "function") {
         window.resumeFromSecondaryCamera();
@@ -1382,7 +1765,10 @@ async function populateStudentDropdown() {
 
 function openManualOverrideModal() {
     const modal = document.getElementById("manualOverrideModal");
-    if (modal) modal.classList.add("active");
+    if (modal) {
+        modal.classList.add("active");
+        modal.style.display = "flex";
+    }
     const alertBox = document.getElementById("overrideResultAlert");
     if (alertBox) alertBox.style.display = "none";
     const statusBanner = document.getElementById("overrideStudentStatusBanner");
@@ -1413,7 +1799,10 @@ function openManualOverrideForStudent(studentId) {
 
 function closeManualOverrideModal() {
     const modal = document.getElementById("manualOverrideModal");
-    if (modal) modal.classList.remove("active");
+    if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+    }
 }
 
 async function onOverrideStudentChanged() {
@@ -1632,8 +2021,8 @@ function initThemeSwitcher() {
 function setAppTheme(themeName) {
     let normalized = themeName;
     if (normalized === "academic") normalized = "warm";
-    if (normalized === "corporate") normalized = "slate";
-    if (!["light", "dark", "warm", "slate"].includes(normalized)) {
+    if (normalized === "corporate" || normalized === "slate") normalized = "warm";
+    if (!["light", "dark", "warm"].includes(normalized)) {
         normalized = "light";
     }
     document.documentElement.setAttribute("data-theme", normalized);
@@ -1650,7 +2039,6 @@ function cycleAppTheme() {
     let nextTheme = "light";
     if (currentTheme === "light") nextTheme = "dark";
     else if (currentTheme === "dark") nextTheme = "warm";
-    else if (currentTheme === "warm" || currentTheme === "academic") nextTheme = "slate";
     else nextTheme = "light";
 
     setAppTheme(nextTheme);
@@ -1658,8 +2046,7 @@ function cycleAppTheme() {
 
 function updateThemeDropdown(theme) {
     let current = theme || document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
-    if (current === "academic") current = "warm";
-    if (current === "corporate") current = "slate";
+    if (current === "academic" || current === "corporate" || current === "slate") current = "warm";
     const select = document.getElementById("appThemeSelect");
     const mobileSelect = document.getElementById("mobileAppThemeSelect");
     const icon = document.getElementById("themeIconIndicator");
@@ -1672,9 +2059,6 @@ function updateThemeDropdown(theme) {
         } else if (current === "warm") {
             icon.className = "fa-solid fa-fire-flame-curved";
             icon.style.color = "#ea580c";
-        } else if (current === "slate") {
-            icon.className = "fa-solid fa-briefcase";
-            icon.style.color = "#1e40af";
         } else {
             icon.className = "fa-solid fa-sun";
             icon.style.color = "#f59e0b";
@@ -1684,18 +2068,15 @@ function updateThemeDropdown(theme) {
 
 function updateThemeSelectionCards(theme) {
     let current = theme || document.documentElement.getAttribute("data-theme") || "light";
-    if (current === "academic") current = "warm";
-    if (current === "corporate") current = "slate";
+    if (current === "academic" || current === "corporate" || current === "slate") current = "warm";
     const cardLight = document.getElementById("themeCardLight");
     const cardDark = document.getElementById("themeCardDark");
     const cardWarm = document.getElementById("themeCardWarm") || document.getElementById("themeCardAcademic");
-    const cardSlate = document.getElementById("themeCardSlate") || document.getElementById("themeCardCorporate");
     const badge = document.getElementById("activeThemeBadge");
 
     if (cardLight) cardLight.classList.toggle("active", current === "light");
     if (cardDark) cardDark.classList.toggle("active", current === "dark");
     if (cardWarm) cardWarm.classList.toggle("active", current === "warm");
-    if (cardSlate) cardSlate.classList.toggle("active", current === "slate");
 
     if (badge) {
         if (current === "dark") {
@@ -1704,9 +2085,6 @@ function updateThemeSelectionCards(theme) {
         } else if (current === "warm") {
             badge.className = "badge badge-amber";
             badge.innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i> Active: Warm';
-        } else if (current === "slate") {
-            badge.className = "badge badge-indigo";
-            badge.innerHTML = '<i class="fa-solid fa-briefcase"></i> Active: Professional Slate';
         } else {
             badge.className = "badge badge-present";
             badge.innerHTML = '<i class="fa-solid fa-sun"></i> Active: Clean Light';

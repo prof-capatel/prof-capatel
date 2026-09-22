@@ -574,8 +574,53 @@ def page_settings(
         )
         d_dict["employee_count"] = emp_count
         dept_list.append(d_dict)
-
     work_shifts = db.query(WorkShift).filter(WorkShift.tenant_id == current_tenant.id).order_by(WorkShift.is_default.desc(), WorkShift.name.asc()).all()
+
+    # Fetch designations and calculate employee/staff counts for the designations tab
+    designations = (
+        db.query(DesignationMaster)
+        .filter(DesignationMaster.tenant_id == current_tenant.id)
+        .order_by(DesignationMaster.title.asc())
+        .all()
+    )
+    desig_list = []
+    for des in designations:
+        des_dict = des.to_dict()
+        emp_count = (
+            db.query(func.count(Student.id))
+            .filter(
+                Student.tenant_id == current_tenant.id,
+                (Student.designation_id == des.id) | (Student.designation == des.title),
+                Student.is_active == True,
+            )
+            .scalar()
+            or 0
+        )
+        des_dict["employee_count"] = emp_count
+        desig_list.append(des_dict)
+
+    # Fetch company locations / branches and calculate assigned workforce count
+    locations = (
+        db.query(CompanyLocation)
+        .filter(CompanyLocation.tenant_id == current_tenant.id)
+        .order_by(CompanyLocation.name.asc())
+        .all()
+    )
+    loc_list = []
+    for loc in locations:
+        loc_dict = loc.to_dict()
+        emp_count = (
+            db.query(func.count(Student.id))
+            .filter(
+                Student.tenant_id == current_tenant.id,
+                Student.location_id == loc.id,
+                Student.is_active == True,
+            )
+            .scalar()
+            or 0
+        )
+        loc_dict["employee_count"] = emp_count
+        loc_list.append(loc_dict)
 
     return templates.TemplateResponse(
         "settings.html",
@@ -588,6 +633,8 @@ def page_settings(
             "all_tenants": all_tenants,
             "current_user": current_user.to_dict() if current_user else None,
             "departments": dept_list,
+            "designations": desig_list,
+            "company_locations": loc_list,
             "work_shifts": [ws.to_dict() for ws in work_shifts],
             "is_corporate": is_corporate,
         },
@@ -1269,7 +1316,7 @@ def page_academic_management(
     batches = db.query(StudentBatchUpload).filter(StudentBatchUpload.tenant_id == current_tenant.id).order_by(StudentBatchUpload.id.desc()).all()
 
     active_page_tag = "departments" if (is_corporate or any(request.url.path.startswith(p) for p in ["/departments", "/teams"])) else "academic"
-    page_title = "Departments & Teams" if is_corporate else "Academic Management & Progression"
+    page_title = "Departments" if is_corporate else "Academic Management & Progression"
 
     return templates.TemplateResponse(
         "academic_management.html",

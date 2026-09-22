@@ -232,7 +232,7 @@ class PayrollSettingsUpdateRequest(BaseModel):
 @router.get("/masters/locations")
 def list_locations(
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -243,7 +243,7 @@ def list_locations(
 def get_location(
     loc_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -254,7 +254,7 @@ def get_location(
 def create_location(
     payload: LocationCreateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -267,7 +267,7 @@ def update_location(
     loc_id: int,
     payload: LocationUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -279,7 +279,7 @@ def update_location(
 def delete_location(
     loc_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -290,7 +290,7 @@ def delete_location(
 @router.get("/masters/designations")
 def list_designations(
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -301,7 +301,7 @@ def list_designations(
 def get_designation(
     desig_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -312,7 +312,7 @@ def get_designation(
 def create_designation(
     payload: DesignationCreateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -325,7 +325,7 @@ def update_designation(
     desig_id: int,
     payload: DesignationUpdateRequest,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -337,7 +337,7 @@ def update_designation(
 def delete_designation(
     desig_id: int,
     db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_payroll_tenant),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ):
     check_tenant_operational_access(current_tenant)
     org_service = OrganizationService(db)
@@ -731,7 +731,7 @@ def get_payroll_settings(
             "epf_employee_pct": float(branding.epf_employee_pct or 12.0),
             "epf_employer_pct": float(branding.epf_employer_pct or 12.0),
             "epf_wage_ceiling": float(branding.epf_ceiling_limit or 15000.0),
-            "epf_admin_charges_pct": float(branding.epf_admin_charges_pct or 0.50),
+            "epf_admin_charges_pct": float(getattr(branding, "epf_admin_charges_pct", 0.50) if getattr(branding, "epf_admin_charges_pct", 0.50) is not None else 0.50),
             "esi_employee_pct": float(branding.esic_employee_pct or 0.75),
             "esi_employer_pct": float(branding.esic_employer_pct or 3.25),
             "esi_gross_threshold": float(branding.esi_gross_threshold or 21000.0),
@@ -808,7 +808,7 @@ def update_payroll_settings(
             "epf_employee_pct": float(branding.epf_employee_pct or 12.0),
             "epf_employer_pct": float(branding.epf_employer_pct or 12.0),
             "epf_wage_ceiling": float(branding.epf_ceiling_limit or 15000.0),
-            "epf_admin_charges_pct": float(branding.epf_admin_charges_pct or 0.50),
+            "epf_admin_charges_pct": float(getattr(branding, "epf_admin_charges_pct", 0.50) if getattr(branding, "epf_admin_charges_pct", 0.50) is not None else 0.50),
             "esi_employee_pct": float(branding.esic_employee_pct or 0.75),
             "esi_employer_pct": float(branding.esic_employer_pct or 3.25),
             "esi_gross_threshold": float(branding.esi_gross_threshold or 21000.0),

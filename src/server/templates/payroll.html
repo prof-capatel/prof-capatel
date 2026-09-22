@@ -293,66 +293,34 @@
 <!-- ========================================================================= -->
 <div id="tabContentMasters" class="tab-content">
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-        
-        <!-- Locations Master -->
-        <div class="card">
-            <div class="card-header" style="justify-content: space-between;">
-                <div>
-                    <h3><i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i> Company Locations / Branches</h3>
-                </div>
-                <button onclick="openCreateLocationModal()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
-                    <i class="fa-solid fa-plus"></i> Add Location
-                </button>
+    <!-- Designations & Salary Structure Mapping Master -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h3><i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i> Designation &amp; Salary Structure Mappings</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Map organizational designations to default salary structures and compensation templates.</p>
             </div>
-            <div class="card-body">
-                <div class="table-container">
-                    <table class="custom-table">
-                        <thead>
-                            <tr>
-                                <th>Name & Code</th>
-                                <th>City / State</th>
-                                <th>Employees</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="locationsTableBody">
-                            <tr><td colspan="4" style="text-align: center; padding: 18px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <button onclick="openCreateDesignationModal()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                <i class="fa-solid fa-plus"></i> Add Mapping
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Designation &amp; Code</th>
+                            <th>Mapped Salary Structure</th>
+                            <th>Assigned Staff</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="designationsTableBody">
+                        <tr><td colspan="4" style="text-align: center; padding: 18px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        <!-- Designations Master -->
-        <div class="card">
-            <div class="card-header" style="justify-content: space-between;">
-                <div>
-                    <h3><i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i> Designations & Roles</h3>
-                </div>
-                <button onclick="openCreateDesignationModal()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
-                    <i class="fa-solid fa-plus"></i> Add Designation
-                </button>
-            </div>
-            <div class="card-body">
-                <div class="table-container">
-                    <table class="custom-table">
-                        <thead>
-                            <tr>
-                                <th>Title & Code</th>
-                                <th>Salary Template</th>
-                                <th>Employees</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="designationsTableBody">
-                            <tr><td colspan="4" style="text-align: center; padding: 18px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <!-- Indian Statutory Compliance Rules Card -->
@@ -843,78 +811,9 @@
     </div>
 </div>
 
-<!-- ========================================================================= -->
-<!-- MODAL: CREATE / EDIT COMPANY LOCATION                                     -->
-<!-- ========================================================================= -->
-<div id="locationModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 520px;">
-        <div class="modal-header">
-            <div>
-                <h3 id="locationModalTitle">
-                    <i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i>
-                    <span>Add Office Location</span>
-                </h3>
-                <p id="locationModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Register physical branch, campus, or office location</p>
-            </div>
-            <button class="modal-close" onclick="closeLocationModal()"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <form id="locationForm" onsubmit="submitLocationForm(event)">
-            <div class="modal-body">
-                <input type="hidden" id="locModalId">
-                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                        <label class="form-label">Location / Branch Name *</label>
-                        <input type="text" id="locModalName" class="form-control" placeholder="e.g. Pune Tech Park / Mumbai HQ" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Location Code</label>
-                        <input type="text" id="locModalCode" class="form-control" placeholder="e.g. PN-01" maxlength="20" style="text-transform: uppercase;">
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                        <label class="form-label">City</label>
-                        <input type="text" id="locModalCity" class="form-control" placeholder="e.g. Pune">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">State</label>
-                        <input type="text" id="locModalState" class="form-control" value="Maharashtra" placeholder="e.g. Maharashtra">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Contact Number (Optional)</label>
-                    <input type="text" id="locModalContact" class="form-control" placeholder="e.g. +91 9876543210">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Address (Optional)</label>
-                    <textarea id="locModalAddress" class="form-control" rows="2" placeholder="Full office address or landmark..."></textarea>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Status</label>
-                    <select id="locModalIsActive" class="form-control">
-                        <option value="true">Active Location</option>
-                        <option value="false">Inactive / Closed</option>
-                    </select>
-                </div>
-
-                <div id="locationModalAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeLocationModal()">Cancel</button>
-                <button type="submit" id="btnSaveLocation" class="btn btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Location
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <!-- ========================================================================= -->
-<!-- MODAL: CREATE / EDIT DESIGNATION & ROLE                                    -->
+<!-- MODAL: MAP DESIGNATION TO SALARY STRUCTURE                                -->
 <!-- ========================================================================= -->
 <div id="designationModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 520px;">
@@ -922,9 +821,9 @@
             <div>
                 <h3 id="designationModalTitle">
                     <i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i>
-                    <span>Add Designation</span>
+                    <span>Map Designation to Salary Structure</span>
                 </h3>
-                <p id="designationModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Job title, department, and salary template assignment</p>
+                <p id="designationModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Assign default salary template and compensation blueprint to designation</p>
             </div>
             <button class="modal-close" onclick="closeDesignationModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -932,46 +831,51 @@
             <div class="modal-body">
                 <input type="hidden" id="desigModalId">
                 <div class="form-group">
-                    <label class="form-label">Designation / Role Title *</label>
-                    <input type="text" id="desigModalTitle" class="form-control" placeholder="e.g. Senior Software Engineer" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Designation Code</label>
-                    <input type="text" id="desigModalCode" class="form-control" placeholder="e.g. SSE-01" maxlength="20" style="text-transform: uppercase;">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Department / Business Unit</label>
-                    <select id="desigModalDept" class="form-control">
-                        <option value="">-- All / General Department --</option>
-                        {% for d in departments %}
-                        <option value="{{ d.id }}">{{ d.name }}</option>
+                    <label class="form-label">Select Designation *</label>
+                    <select id="desigModalSelect" class="form-control" onchange="onMappingDesignationSelected()" required>
+                        <option value="">-- Choose Designation from Settings --</option>
+                        {% for d in designations %}
+                        <option value="{{ d.id }}" data-code="{{ d.code or '' }}" data-dept="{{ d.department_name or 'All Departments' }}" data-template-id="{{ d.salary_template_id or '' }}" data-active="{{ 'true' if d.is_active else 'false' }}">{{ d.title }} ({{ d.code or 'N/A' }})</option>
                         {% endfor %}
                     </select>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        To register new designations or change role names, visit <a href="/settings#designations" target="_blank" style="color: var(--accent-primary); font-weight: 600; text-decoration: underline;">Settings &gt; Designations &amp; Roles</a>.
+                    </div>
                 </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Designation Code</label>
+                        <input type="text" id="desigModalCode" class="form-control" readonly style="background: var(--bg-subtle); font-family: monospace;" placeholder="Auto-populated">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Department / Unit</label>
+                        <input type="text" id="desigModalDeptName" class="form-control" readonly style="background: var(--bg-subtle);" placeholder="Auto-populated">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label class="form-label">Default Salary Template (Optional)</label>
+                    <label class="form-label">Mapped Salary Structure Blueprint</label>
                     <select id="desigModalSalaryTemplate" class="form-control">
-                        <option value="">-- No Default Template --</option>
+                        <option value="">-- No Default Template / Clear Mapping --</option>
+                        {% for st in salary_templates %}
+                        <option value="{{ st.id }}">{{ st.name }} ({{ st.code }}) - {{ st.compensation_model.replace('_', ' ') }}</option>
+                        {% endfor %}
                     </select>
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Automatically suggested/assigned when onboarding employees with this designation.</div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Role Description (Optional)</label>
-                    <textarea id="desigModalDescription" class="form-control" rows="2" placeholder="Key responsibilities or band details..."></textarea>
-                </div>
+
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Status</label>
-                    <select id="desigModalIsActive" class="form-control">
-                        <option value="true">Active Role</option>
-                        <option value="false">Inactive / Deprecated</option>
-                    </select>
+                    <label class="form-label">Role Status</label>
+                    <input type="text" id="desigModalStatusDisplay" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 600;" value="Active">
                 </div>
+
                 <div id="designationModalAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeDesignationModal()">Cancel</button>
                 <button type="submit" id="btnSaveDesignation" class="btn btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Designation
+                    <i class="fa-solid fa-floppy-disk"></i> Save Salary Mapping
                 </button>
             </div>
         </form>
@@ -1099,6 +1003,18 @@
 
 {% block scripts %}
 <script>
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    let globalDesignations = [];
+    let globalLocations = [];
     let globalTemplates = [];
     let globalEmployees = [];
     let globalBatches = [];
@@ -1815,9 +1731,6 @@
         if (modal) modal.classList.remove("active");
     }
 
-    let globalLocations = [];
-    let globalDesignations = [];
-
     // =========================================================================
     // 3. SALARY TEMPLATES CRUD
     // =========================================================================
@@ -2085,44 +1998,6 @@
 
     async function loadOrganizationMasters() {
         try {
-            const locRes = await fetch("/api/v1/payroll/masters/locations");
-            const locData = await locRes.json();
-            if (locRes.ok) {
-                globalLocations = locData.data || [];
-                const locBody = document.getElementById("locationsTableBody");
-                if (locBody) {
-                    if (globalLocations.length === 0) {
-                        locBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--text-muted);">No locations added yet. Click "+ Add Location" to register one.</td></tr>';
-                    } else {
-                        locBody.innerHTML = globalLocations.map(l => {
-                            const safeName = (l.name || "").replace(/'/g, "\\'");
-                            const statusBadge = l.is_active ? '<span class="badge badge-present">Active</span>' : '<span class="badge badge-node">Inactive</span>';
-                            return `
-                                <tr>
-                                    <td>
-                                        <strong>${l.name}</strong>
-                                        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">Code: ${l.code || 'N/A'}</div>
-                                    </td>
-                                    <td>${l.city ? l.city + ', ' : ''}${l.state || 'Maharashtra'}</td>
-                                    <td><span class="badge ${l.assigned_employees_count > 0 ? 'badge-indigo' : 'badge-node'}">${l.assigned_employees_count} Employees</span></td>
-                                    <td>
-                                        <div style="display: flex; gap: 6px; align-items: center;">
-                                            ${statusBadge}
-                                            <button onclick="openEditLocationModal(${l.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" title="Edit Location">
-                                                <i class="fa-solid fa-pen-to-square"></i>
-                                            </button>
-                                            <button onclick="deleteLocation(${l.id}, '${safeName}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" title="Delete Location">
-                                                <i class="fa-solid fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join("");
-                    }
-                }
-            }
-
             const desigRes = await fetch("/api/v1/payroll/masters/designations");
             const desigData = await desigRes.json();
             if (desigRes.ok) {
@@ -2130,28 +2005,26 @@
                 const desigBody = document.getElementById("designationsTableBody");
                 if (desigBody) {
                     if (globalDesignations.length === 0) {
-                        desigBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--text-muted);">No designations added yet. Click "+ Add Designation" to register one.</td></tr>';
+                        desigBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--text-muted);">No designations found. Register designations in Settings &gt; Designations.</td></tr>';
                     } else {
                         desigBody.innerHTML = globalDesignations.map(d => {
-                            const safeTitle = (d.title || "").replace(/'/g, "\\'");
                             const statusBadge = d.is_active ? '<span class="badge badge-present">Active</span>' : '<span class="badge badge-node">Inactive</span>';
-                            const tplBadge = d.salary_template_name ? `<span class="badge badge-indigo" title="Template Code: ${d.salary_template_code || 'N/A'}"><i class="fa-solid fa-layer-group"></i> ${d.salary_template_name}</span>` : '<span class="badge badge-node">No Template</span>';
+                            const tplBadge = d.salary_template_name 
+                                ? `<span class="badge badge-indigo" title="Template Code: ${escapeHtml(d.salary_template_code || 'N/A')}"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(d.salary_template_name)}</span>` 
+                                : '<span class="badge badge-node">No Template</span>';
                             return `
                                 <tr>
                                     <td>
-                                        <strong>${d.title}</strong>
-                                        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">Code: ${d.code || 'N/A'}</div>
+                                        <strong>${escapeHtml(d.title)}</strong>
+                                        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">Code: ${escapeHtml(d.code || 'N/A')}</div>
                                     </td>
                                     <td>${tplBadge}</td>
                                     <td><span class="badge ${d.assigned_employees_count > 0 ? 'badge-indigo' : 'badge-node'}">${d.assigned_employees_count} Employees</span></td>
                                     <td>
                                         <div style="display: flex; gap: 6px; align-items: center;">
                                             ${statusBadge}
-                                            <button onclick="openEditDesignationModal(${d.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" title="Edit Designation">
-                                                <i class="fa-solid fa-pen-to-square"></i>
-                                            </button>
-                                            <button onclick="deleteDesignation(${d.id}, '${safeTitle}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" title="Delete Designation">
-                                                <i class="fa-solid fa-trash"></i>
+                                            <button onclick="openEditDesignationModal(${d.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" title="Edit Salary Structure Mapping">
+                                                <i class="fa-solid fa-pen-to-square"></i> Map Structure
                                             </button>
                                         </div>
                                     </td>
@@ -2166,165 +2039,110 @@
         }
     }
 
-    // --- Locations CRUD Handlers ---
-    function openCreateLocationModal() {
-        document.getElementById("locModalId").value = "";
-        document.getElementById("locationModalTitle").innerHTML = '<i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i> <span>Add Office Location</span>';
-        document.getElementById("locationForm").reset();
-        document.getElementById("locModalState").value = "Maharashtra";
-        document.getElementById("locModalIsActive").value = "true";
-        const alertBox = document.getElementById("locationModalAlert");
-        if (alertBox) alertBox.style.display = "none";
-        const modal = document.getElementById("locationModal");
-        if (modal) modal.classList.add("active");
+    // --- Designations & Salary Structure Mapping Handlers ---
+    function populateDesignationSelectOptions(selectedDesigId) {
+        const sel = document.getElementById("desigModalSelect");
+        if (!sel) return;
+        let html = '<option value="">-- Choose Designation from Settings --</option>';
+        (globalDesignations || []).forEach(d => {
+            const isSelected = selectedDesigId && parseInt(selectedDesigId) === parseInt(d.id) ? ' selected' : '';
+            html += `<option value="${d.id}" data-code="${escapeHtml(d.code || '')}" data-dept="${escapeHtml(d.department_name || 'All Departments')}" data-template-id="${d.salary_template_id || ''}" data-active="${d.is_active ? 'true' : 'false'}"${isSelected}>${escapeHtml(d.title)} (${escapeHtml(d.code || 'N/A')})</option>`;
+        });
+        sel.innerHTML = html;
+        if (selectedDesigId) {
+            sel.value = selectedDesigId;
+        }
     }
 
-    async function openEditLocationModal(locId) {
-        let loc = globalLocations.find(l => l.id === locId);
-        if (!loc) {
-            try {
-                const res = await fetch(`/api/v1/payroll/masters/locations/${locId}`);
-                const data = await res.json();
-                if (res.ok && data.data) loc = data.data;
-            } catch (e) {}
-        }
-        if (!loc) {
-            alert("Location details could not be loaded.");
+    function onMappingDesignationSelected() {
+        const sel = document.getElementById("desigModalSelect");
+        if (!sel) return;
+        const desigId = parseInt(sel.value);
+        const codeInput = document.getElementById("desigModalCode");
+        const deptInput = document.getElementById("desigModalDeptName");
+        const tplSelect = document.getElementById("desigModalSalaryTemplate");
+        const statusInput = document.getElementById("desigModalStatusDisplay");
+        const idHidden = document.getElementById("desigModalId");
+
+        if (!desigId) {
+            if (idHidden) idHidden.value = "";
+            if (codeInput) codeInput.value = "";
+            if (deptInput) deptInput.value = "";
+            if (tplSelect) tplSelect.value = "";
+            if (statusInput) statusInput.value = "Active";
             return;
         }
 
-        document.getElementById("locModalId").value = loc.id;
-        document.getElementById("locationModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Office Location</span>';
-        document.getElementById("locModalName").value = loc.name || "";
-        document.getElementById("locModalCode").value = loc.code || "";
-        document.getElementById("locModalCity").value = loc.city || "";
-        document.getElementById("locModalState").value = loc.state || "Maharashtra";
-        document.getElementById("locModalContact").value = loc.contact_number || "";
-        document.getElementById("locModalAddress").value = loc.address || "";
-        document.getElementById("locModalIsActive").value = loc.is_active ? "true" : "false";
-
-        const alertBox = document.getElementById("locationModalAlert");
-        if (alertBox) alertBox.style.display = "none";
-        const modal = document.getElementById("locationModal");
-        if (modal) modal.classList.add("active");
-    }
-
-    function closeLocationModal() {
-        const modal = document.getElementById("locationModal");
-        if (modal) modal.classList.remove("active");
-    }
-
-    async function submitLocationForm(e) {
-        e.preventDefault();
-        const locId = document.getElementById("locModalId").value;
-        const name = document.getElementById("locModalName").value.trim();
-        const code = document.getElementById("locModalCode").value.trim().toUpperCase();
-        const city = document.getElementById("locModalCity").value.trim();
-        const state = document.getElementById("locModalState").value.trim();
-        const contact = document.getElementById("locModalContact").value.trim();
-        const address = document.getElementById("locModalAddress").value.trim();
-        const isActive = document.getElementById("locModalIsActive").value === "true";
-
-        const payload = {
-            name: name,
-            code: code || null,
-            city: city || null,
-            state: state || "Maharashtra",
-            contact_number: contact || null,
-            address: address || null,
-            is_active: isActive,
-        };
-
-        const saveBtn = document.getElementById("btnSaveLocation");
-        const alertBox = document.getElementById("locationModalAlert");
-
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-
-        const url = locId ? `/api/v1/payroll/masters/locations/${locId}` : "/api/v1/payroll/masters/locations";
-        const method = locId ? "PUT" : "POST";
-
-        try {
-            const res = await fetch(url, {
-                method: method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-emerald-bg)";
-                alertBox.style.color = "var(--badge-emerald-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Location saved successfully!");
-
-                setTimeout(() => {
-                    closeLocationModal();
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Location';
-                    loadOrganizationMasters();
-                }, 600);
-            } else {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-rose-bg)";
-                alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Save failed.");
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Location';
+        if (idHidden) idHidden.value = desigId;
+        const desig = (globalDesignations || []).find(d => d.id === desigId);
+        if (desig) {
+            if (codeInput) codeInput.value = desig.code || "";
+            if (deptInput) deptInput.value = desig.department_name || "All Departments";
+            if (tplSelect) tplSelect.value = desig.salary_template_id || "";
+            if (statusInput) statusInput.value = desig.is_active ? "Active" : "Inactive";
+        } else {
+            const opt = sel.options[sel.selectedIndex];
+            if (opt) {
+                if (codeInput) codeInput.value = opt.getAttribute("data-code") || "";
+                if (deptInput) deptInput.value = opt.getAttribute("data-dept") || "All Departments";
+                if (tplSelect) tplSelect.value = opt.getAttribute("data-template-id") || "";
+                if (statusInput) statusInput.value = opt.getAttribute("data-active") === "false" ? "Inactive" : "Active";
             }
-        } catch (e) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-rose-bg)";
-            alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Location';
         }
     }
 
-    async function deleteLocation(locId, name) {
-        if (!confirm(`Are you sure you want to delete location '${name}'?`)) return;
-
-        try {
-            const res = await fetch(`/api/v1/payroll/masters/locations/${locId}`, {
-                method: "DELETE",
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                alert(data.message || "Location deleted successfully.");
-                loadOrganizationMasters();
-            } else {
-                alert("Cannot delete location: " + (data.detail || "Action failed"));
-            }
-        } catch (e) {
-            alert("Network error deleting location.");
-        }
-    }
-
-    // --- Designations CRUD Handlers ---
     function populateDesignationTemplateSelect(selectedId) {
         const sel = document.getElementById("desigModalSalaryTemplate");
         if (!sel) return;
-        sel.innerHTML = '<option value="">-- No Default Template --</option>' +
-            (globalTemplates || []).map(t => `<option value="${t.id}">${t.name} (${t.code})</option>`).join("");
-        sel.value = selectedId || "";
+        let html = '<option value="">-- No Default Template / Clear Mapping --</option>';
+        (globalTemplates || []).forEach(t => {
+            const isSelected = selectedId && parseInt(selectedId) === parseInt(t.id) ? ' selected' : '';
+            const modelLabel = (t.compensation_model || '').replace(/_/g, ' ');
+            html += `<option value="${t.id}"${isSelected}>${escapeHtml(t.name)} (${escapeHtml(t.code || '')}) - ${escapeHtml(modelLabel)}</option>`;
+        });
+        sel.innerHTML = html;
+        if (selectedId !== undefined && selectedId !== null) {
+            sel.value = selectedId;
+        }
     }
 
     function openCreateDesignationModal() {
-        document.getElementById("desigModalId").value = "";
-        document.getElementById("designationModalTitle").innerHTML = '<i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i> <span>Add Designation</span>';
-        document.getElementById("designationForm").reset();
-        document.getElementById("desigModalIsActive").value = "true";
+        const idHidden = document.getElementById("desigModalId");
+        if (idHidden) idHidden.value = "";
+        
+        const titleEl = document.getElementById("designationModalTitle");
+        if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i> <span>Map Designation to Salary Structure</span>';
+        
+        const form = document.getElementById("designationForm");
+        if (form) form.reset();
+
+        const desigSelect = document.getElementById("desigModalSelect");
+        if (desigSelect) {
+            desigSelect.disabled = false;
+            populateDesignationSelectOptions("");
+        }
         populateDesignationTemplateSelect("");
+
+        const codeInput = document.getElementById("desigModalCode");
+        if (codeInput) codeInput.value = "";
+        const deptInput = document.getElementById("desigModalDeptName");
+        if (deptInput) deptInput.value = "";
+        const statusInput = document.getElementById("desigModalStatusDisplay");
+        if (statusInput) statusInput.value = "Active";
+
         const alertBox = document.getElementById("designationModalAlert");
         if (alertBox) alertBox.style.display = "none";
+        const saveBtn = document.getElementById("btnSaveDesignation");
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Salary Mapping';
+        }
         const modal = document.getElementById("designationModal");
         if (modal) modal.classList.add("active");
     }
 
     async function openEditDesignationModal(desigId) {
-        let desig = globalDesignations.find(d => d.id === desigId);
+        let desig = (globalDesignations || []).find(d => d.id === desigId);
         if (!desig) {
             try {
                 const res = await fetch(`/api/v1/payroll/masters/designations/${desigId}`);
@@ -2337,17 +2155,34 @@
             return;
         }
 
-        document.getElementById("desigModalId").value = desig.id;
-        document.getElementById("designationModalTitle").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Designation</span>';
-        document.getElementById("desigModalTitle").value = desig.title || "";
-        document.getElementById("desigModalCode").value = desig.code || "";
-        document.getElementById("desigModalDept").value = desig.department_id || "";
+        const idHidden = document.getElementById("desigModalId");
+        if (idHidden) idHidden.value = desig.id;
+        
+        const titleEl = document.getElementById("designationModalTitle");
+        if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> <span>Edit Designation Salary Mapping</span>';
+
+        populateDesignationSelectOptions(desig.id);
+        const desigSelect = document.getElementById("desigModalSelect");
+        if (desigSelect) {
+            desigSelect.value = desig.id;
+            desigSelect.disabled = true;
+        }
+
+        const codeInput = document.getElementById("desigModalCode");
+        if (codeInput) codeInput.value = desig.code || "";
+        const deptInput = document.getElementById("desigModalDeptName");
+        if (deptInput) deptInput.value = desig.department_name || "All Departments";
         populateDesignationTemplateSelect(desig.salary_template_id || "");
-        document.getElementById("desigModalDescription").value = desig.description || "";
-        document.getElementById("desigModalIsActive").value = desig.is_active ? "true" : "false";
+        const statusInput = document.getElementById("desigModalStatusDisplay");
+        if (statusInput) statusInput.value = desig.is_active ? "Active" : "Inactive";
 
         const alertBox = document.getElementById("designationModalAlert");
         if (alertBox) alertBox.style.display = "none";
+        const saveBtn = document.getElementById("btnSaveDesignation");
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Salary Mapping';
+        }
         const modal = document.getElementById("designationModal");
         if (modal) modal.classList.add("active");
     }
@@ -2359,87 +2194,78 @@
 
     async function submitDesignationForm(e) {
         e.preventDefault();
-        const desigId = document.getElementById("desigModalId").value;
-        const title = document.getElementById("desigModalTitle").value.trim();
-        const code = document.getElementById("desigModalCode").value.trim().toUpperCase();
-        const deptId = document.getElementById("desigModalDept").value ? parseInt(document.getElementById("desigModalDept").value) : null;
-        const tplId = document.getElementById("desigModalSalaryTemplate")?.value ? parseInt(document.getElementById("desigModalSalaryTemplate").value) : null;
-        const desc = document.getElementById("desigModalDescription").value.trim();
-        const isActive = document.getElementById("desigModalIsActive").value === "true";
+        const idHiddenVal = document.getElementById("desigModalId")?.value;
+        const selectVal = document.getElementById("desigModalSelect")?.value;
+        const desigId = parseInt(idHiddenVal) || parseInt(selectVal);
+        if (!desigId) {
+            alert("Please select a designation to map.");
+            return;
+        }
+
+        const tplVal = document.getElementById("desigModalSalaryTemplate")?.value;
+        const tplId = tplVal ? parseInt(tplVal) : null;
 
         const payload = {
-            title: title,
-            code: code || null,
-            department_id: deptId,
-            salary_template_id: tplId,
-            description: desc || null,
-            is_active: isActive,
+            salary_template_id: tplId
         };
 
         const saveBtn = document.getElementById("btnSaveDesignation");
         const alertBox = document.getElementById("designationModalAlert");
 
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        }
 
-        const url = desigId ? `/api/v1/payroll/masters/designations/${desigId}` : "/api/v1/payroll/masters/designations";
-        const method = desigId ? "PUT" : "POST";
+        const url = `/api/v1/payroll/masters/designations/${desigId}`;
 
         try {
             const res = await fetch(url, {
-                method: method,
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
 
             if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-emerald-bg)";
-                alertBox.style.color = "var(--badge-emerald-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Designation saved successfully!");
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-emerald-bg)";
+                    alertBox.style.color = "var(--badge-emerald-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Salary structure mapping saved successfully!");
+                }
 
                 setTimeout(() => {
                     closeDesignationModal();
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Designation';
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Salary Mapping';
+                    }
                     loadOrganizationMasters();
                 }, 600);
             } else {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Save failed.");
+                }
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Salary Mapping';
+                }
+            }
+        } catch (e) {
+            if (alertBox) {
                 alertBox.style.display = "block";
                 alertBox.style.background = "var(--badge-rose-bg)";
                 alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Save failed.");
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            }
+            if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Designation';
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Salary Mapping';
             }
-        } catch (e) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-rose-bg)";
-            alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Designation';
-        }
-    }
-
-    async function deleteDesignation(desigId, title) {
-        if (!confirm(`Are you sure you want to delete designation '${title}'?`)) return;
-
-        try {
-            const res = await fetch(`/api/v1/payroll/masters/designations/${desigId}`, {
-                method: "DELETE",
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                alert(data.message || "Designation deleted successfully.");
-                loadOrganizationMasters();
-            } else {
-                alert("Cannot delete designation: " + (data.detail || "Action failed"));
-            }
-        } catch (e) {
-            alert("Network error deleting designation.");
         }
     }
 

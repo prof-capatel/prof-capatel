@@ -186,67 +186,6 @@
              radial-gradient(at 50% 100%, rgba(21, 128, 61, 0.03) 0px, transparent 50%);
 }
 
-/* ----------------------------------------------------------
-   THEME 4: Professional Slate (Corporate Human-Crafted)
-   ---------------------------------------------------------- */
-[data-theme="slate"],
-[data-theme="corporate"] {
-  /* Surfaces & Backgrounds */
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-subtle: #f1f5f9;
-  --bg-card: #ffffff;
-  --bg-card-hover: #fcfdfe;
-  --topbar-bg: rgba(255, 255, 255, 0.92);
-  
-  /* Borders & Dividers */
-  --border-color: #e2e8f0;
-  --border-subtle: #edf2f7;
-  --border-focus: #1e40af;
-  --border-hover: #cbd5e1;
-  
-  /* Typography */
-  --text-heading: #0f172a;
-  --text-primary: #1e293b;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-light: #94a3b8;
-  
-  /* Accents & Gradients */
-  --accent-primary: #1e40af;
-  --accent-primary-hover: #1d4ed8;
-  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-  --accent-cyan: #0284c7;
-  --accent-emerald: #059669;
-  --accent-amber: #d97706;
-  --accent-rose: #e11d48;
-  
-  /* Badges & Status Pills */
-  --badge-emerald-bg: #ecfdf5;
-  --badge-emerald-text: #047857;
-  --badge-emerald-border: #a7f3d0;
-  
-  --badge-sky-bg: #f0f9ff;
-  --badge-sky-text: #0369a1;
-  --badge-sky-border: #bae6fd;
-  
-  --badge-amber-bg: #fffbeb;
-  --badge-amber-text: #b45309;
-  --badge-amber-border: #fde68a;
-  
-  --badge-rose-bg: #fff1f2;
-  --badge-rose-text: #be123c;
-  --badge-rose-border: #fecdd3;
-  
-  --badge-indigo-bg: #eff6ff;
-  --badge-indigo-text: #1e40af;
-  --badge-indigo-border: #bfdbfe;
-
-  --bg-mesh: radial-gradient(at 0% 0%, rgba(30, 64, 175, 0.04) 0px, transparent 40%),
-             radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.03) 0px, transparent 40%),
-             radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.02) 0px, transparent 50%);
-}
 
 /* Common System Dimensions & Transitions */
 :root {
@@ -1086,16 +1025,16 @@ code {
 }
 
 /* ==========================================================
-   Enrollment Dual-Mode Tabs
+   Enrollment Dual-Mode Tabs & Action Placement
    ========================================================== */
 .enroll-tabs {
   display: flex;
-  gap: 8px;
-  background: #ffffff;
-  padding: 6px;
-  border-radius: var(--radius-md);
+  gap: 6px;
+  background: var(--bg-card);
+  padding: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1104,13 +1043,13 @@ code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 18px;
-  border-radius: var(--radius-sm);
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-secondary);
   border: none;
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -1126,6 +1065,28 @@ code {
   background: var(--accent-gradient);
   color: #ffffff;
   box-shadow: var(--shadow-primary);
+}
+
+.auto-code-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.auto-code-group input {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.auto-code-refresh-btn {
+  padding: 8px 12px;
+  font-size: 12px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
 }
 
 /* ==========================================================
@@ -1248,22 +1209,23 @@ code {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  z-index: 999999;
   opacity: 0;
   visibility: hidden;
-  transition: all var(--transition-normal);
+  transition: opacity var(--transition-normal);
   padding: 20px;
 }
 
 .modal-overlay.active {
-  opacity: 1;
-  visibility: visible;
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .modal-content {
@@ -1574,11 +1536,6 @@ code {
   border-color: #e7ded3;
 }
 
-.theme-preview-box.slate-preview,
-.theme-preview-box.corporate-preview {
-  background: #f8fafc;
-  border-color: #e2e8f0;
-}
 
 .theme-preview-nav {
   height: 14px;

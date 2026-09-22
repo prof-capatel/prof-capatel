@@ -19,7 +19,7 @@
     <div style="display: flex; gap: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; flex-wrap: wrap;">
         <button class="btn btn-primary tab-btn" id="tabBtnDepartments" onclick="switchAcademicTab('departments')">
             <i class="fa-solid fa-building-columns"></i>
-            <span>{{ 'Departments & Teams' if current_tenant and current_tenant.tenant_type == 'corporate' else 'Departments' }}</span>
+            <span>Departments</span>
         </button>
         {% if not (current_tenant and current_tenant.tenant_type == 'corporate') %}
         <button class="btn btn-secondary tab-btn" id="tabBtnClasses" onclick="switchAcademicTab('classes')">

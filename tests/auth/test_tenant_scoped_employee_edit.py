@@ -16,7 +16,7 @@ class TestTenantScopedEmployeeEdit(unittest.TestCase):
         cls.db = next(get_db())
 
     def test_corporate_tenant_edit_modal_roles_and_labels(self):
-        """Test that corporate tenant employee directory renders corporate roles in edit modal without school roles."""
+        """Test that corporate tenant employee directory renders corporate edit modal with hidden userRole and designation selector."""
         corp_tenant = self.db.query(Tenant).filter(
             Tenant.tenant_type.in_(["corporate", "company", "enterprise"]),
             Tenant.is_active == True,
@@ -49,24 +49,15 @@ class TestTenantScopedEmployeeEdit(unittest.TestCase):
         self.assertIn('id="editStudentModal"', html)
         self.assertIn("Edit Employee Profile", html)
 
-        # 2. Check editUserRole contains corporate options and excludes student/teacher
-        self.assertIn('id="editUserRole"', html)
-        self.assertIn('value="employee"', html)
-        self.assertIn('value="manager"', html)
-        self.assertIn('value="admin_staff"', html)
-        self.assertIn('value="contractor"', html)
-        self.assertIn('value="intern"', html)
+        # 2. Check editUserRole is hidden for corporate tenant to prevent redundancy
+        self.assertIn('<input type="hidden" id="editUserRole" value="employee">', html)
 
-        # Extract editUserRole block
-        start_idx = html.find('id="editUserRole"')
-        end_idx = html.find('</select>', start_idx)
-        role_select_html = html[start_idx:end_idx]
-
-        self.assertNotIn('value="student"', role_select_html, "Corporate tenant editUserRole must not contain 'student'")
-        self.assertNotIn('value="teacher"', role_select_html, "Corporate tenant editUserRole must not contain 'teacher'")
+        # 3. Check designation and salary structure fields are present
+        self.assertIn('id="editDesignationSelect"', html)
+        self.assertIn('id="editSalaryTemplateSelect"', html)
 
     def test_corporate_registration_page_labels_and_roles(self):
-        """Test that /enroll route renders 'Register New Employee' and corporate-specific labels for corporate tenant."""
+        """Test that /enroll route renders 'Register New Employee' and hidden userRole for corporate tenant."""
         corp_tenant = self.db.query(Tenant).filter(
             Tenant.tenant_type.in_(["corporate", "company", "enterprise"]),
             Tenant.is_active == True,
@@ -92,15 +83,10 @@ class TestTenantScopedEmployeeEdit(unittest.TestCase):
         self.assertIn("Register Employee & Start Face Capture", html)
         self.assertIn("Employee Details & Batch Upload", html)
 
-        # Verify userRole select block in enroll.html
-        start_idx = html.find('id="userRole"')
-        end_idx = html.find('</select>', start_idx)
-        user_role_html = html[start_idx:end_idx]
-
-        self.assertIn('value="employee"', user_role_html)
-        self.assertIn('value="manager"', user_role_html)
-        self.assertNotIn('value="student"', user_role_html)
-        self.assertNotIn('value="teacher"', user_role_html)
+        # Verify hidden userRole input for corporate deduplication
+        self.assertIn('<input type="hidden" id="userRole" value="employee">', html)
+        self.assertIn('<input type="hidden" id="batchUserRole" value="employee">', html)
+        self.assertIn('id="enrollDesignationSelect"', html)
 
     def test_educational_tenant_edit_modal_and_enroll(self):
         """Test that educational tenant edit modal and enroll page retain student/teacher options."""
@@ -139,5 +125,62 @@ class TestTenantScopedEmployeeEdit(unittest.TestCase):
         self.assertIn("Enroll New Student", html_enroll)
         self.assertIn("1. Student / Member Information", html_enroll)
 
+    def test_get_student_profile_endpoint(self):
+        """Test GET /api/v1/enroll/student/{id} returns profile dict and photo previews."""
+        corp_tenant = self.db.query(Tenant).filter(
+            Tenant.tenant_type.in_(["corporate", "company", "enterprise"]),
+            Tenant.is_active == True,
+            Tenant.is_deleted == False
+        ).first()
+        self.assertIsNotNone(corp_tenant)
+
+        corp_admin = self.db.query(User).filter(User.tenant_id == corp_tenant.id, User.role == "TENANT_ADMIN").first()
+        token = create_access_token(
+            user_id=corp_admin.id, role="TENANT_ADMIN", tenant_id=corp_tenant.id, username=corp_admin.username
+        )
+        self.client.cookies.set("access_token", token)
+
+        student = self.db.query(Student).filter(Student.tenant_id == corp_tenant.id).first()
+        if student:
+            res = self.client.get(f"/api/v1/enroll/student/{student.id}")
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(data["status"], "success")
+            self.assertIn("student", data)
+            self.assertEqual(data["student"]["id"], student.id)
+            self.assertIn("photos", data["student"])
+
+    def test_image_quality_evaluation_tolerance(self):
+        """Test evaluate_image_quality allows normal webcam frames and rejects severe blur/darkness."""
+        import numpy as np
+        import cv2
+        from src.core.camera_utils import evaluate_image_quality
+
+        # 1. Clear frame with moderate texture (simulating normal webcam face frame)
+        img = np.zeros((480, 640, 3), dtype=np.uint8) + 128
+        # Add high-contrast facial features / edges
+        cv2.rectangle(img, (200, 150), (440, 380), (80, 80, 80), -1)
+        cv2.circle(img, (260, 220), 25, (220, 220, 220), -1)
+        cv2.circle(img, (380, 220), 25, (220, 220, 220), -1)
+        cv2.line(img, (320, 240), (320, 300), (20, 20, 20), 4)
+        cv2.ellipse(img, (320, 340), (45, 20), 0, 0, 180, (20, 20, 20), 4)
+
+        is_good, msg = evaluate_image_quality(img)
+        self.assertTrue(is_good, f"Should accept standard sharp webcam frame: {msg}")
+
+        # 2. Heavily blurred frame (Laplacian variance < 10)
+        blurred = cv2.GaussianBlur(img, (51, 51), 0)
+        is_blurred, blur_msg = evaluate_image_quality(blurred)
+        self.assertFalse(is_blurred, "Should reject severely out-of-focus frame")
+        self.assertIn("blurry", blur_msg.lower())
+
+        # 3. Completely dark frame
+        dark = np.zeros((480, 640, 3), dtype=np.uint8) + 10
+        is_dark, dark_msg = evaluate_image_quality(dark)
+        self.assertFalse(is_dark, "Should reject dark frame")
+        self.assertIn("dark", dark_msg.lower())
+
+
 if __name__ == "__main__":
     unittest.main()
+

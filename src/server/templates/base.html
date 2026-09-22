@@ -11,14 +11,14 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.7.2">
     
     <!-- Dynamic Custom Accent Color if configured -->
     {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#c2410c' and branding.primary_accent_color != '#6366f1' and branding.primary_accent_color != '#1e40af' %}
     <style>
-        :root, [data-theme="academic"], [data-theme="light"], [data-theme="slate"] {
+        :root, [data-theme="academic"], [data-theme="light"], [data-theme="warm"] {
             --accent-primary: {{ branding.primary_accent_color }};
-            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #1e40af 100%);
+            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #ea580c 100%);
         }
     </style>
     {% endif %}
@@ -27,7 +27,7 @@
     <script>
         (function() {
             try {
-                let defaultTheme = {% if current_tenant and current_tenant.tenant_type == 'corporate' %}"slate"{% else %}"academic"{% endif %};
+                let defaultTheme = {% if current_tenant and current_tenant.tenant_type == 'corporate' %}"warm"{% else %}"academic"{% endif %};
                 const savedTheme = localStorage.getItem("app_theme") || defaultTheme;
                 document.documentElement.setAttribute("data-theme", savedTheme);
             } catch (e) {}
@@ -314,7 +314,6 @@
                     <option value="light">☀️ Light</option>
                     <option value="dark">🌙 Dark</option>
                     <option value="warm">🔥 Academic</option>
-                    <option value="slate">🏢 Slate</option>
                 </select>
             </div>
 
@@ -413,7 +412,6 @@
                         <option value="light">☀️ Clean Light</option>
                         <option value="dark">🌙 Midnight Dark</option>
                         <option value="warm">🔥 Warm Academic</option>
-                        <option value="slate">🏢 Professional Slate</option>
                     </select>
                 </div>
 
@@ -438,7 +436,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/static/js/dashboard.js?v=2.5.0"></script>
+    <script src="/static/js/dashboard.js?v=2.7.2"></script>
     <script>
         function switchActiveTenant(tenantId) {
             document.cookie = "active_tenant_id=" + tenantId + "; path=/; max-age=31536000";

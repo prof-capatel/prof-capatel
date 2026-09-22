@@ -21,7 +21,7 @@
     <script>
         (function() {
             try {
-                let defaultTheme = {% if tenant and tenant.tenant_type in ['corporate', 'company', 'enterprise'] %}"slate"{% else %}"academic"{% endif %};
+                let defaultTheme = {% if tenant and tenant.tenant_type in ['corporate', 'company', 'enterprise'] %}"warm"{% else %}"academic"{% endif %};
                 const savedTheme = localStorage.getItem("app_theme") || defaultTheme;
                 document.documentElement.setAttribute("data-theme", savedTheme);
             } catch (e) {}
@@ -31,9 +31,9 @@
     <!-- Dynamic Custom Accent Color if configured -->
     {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#c2410c' and branding.primary_accent_color != '#6366f1' and branding.primary_accent_color != '#1e40af' %}
     <style>
-        :root, [data-theme="academic"], [data-theme="light"], [data-theme="slate"], [data-theme="dark"] {
+        :root, [data-theme="academic"], [data-theme="light"], [data-theme="warm"], [data-theme="dark"] {
             --accent-primary: {{ branding.primary_accent_color }};
-            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #1e40af 100%);
+            --accent-gradient: linear-gradient(135deg, {{ branding.primary_accent_color }} 0%, #ea580c 100%);
         }
     </style>
     {% endif %}
@@ -230,7 +230,7 @@
             border: 1px solid rgba(16, 185, 129, 0.35);
             color: #059669;
         }
-        [data-theme="dark"] .feedback-alert.success, [data-theme="slate"] .feedback-alert.success {
+        [data-theme="dark"] .feedback-alert.success {
             color: #34d399;
         }
 
@@ -240,7 +240,7 @@
             border: 1px solid rgba(239, 68, 68, 0.35);
             color: #dc2626;
         }
-        [data-theme="dark"] .feedback-alert.error, [data-theme="slate"] .feedback-alert.error {
+        [data-theme="dark"] .feedback-alert.error {
             color: #f87171;
         }
 
@@ -406,7 +406,7 @@
 
         function toggleTheme() {
             const current = document.documentElement.getAttribute("data-theme") || "light";
-            const next = (current === "dark" || current === "slate") ? "light" : "slate";
+            const next = (current === "dark") ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", next);
             localStorage.setItem("app_theme", next);
             updateThemeIcon();
@@ -416,7 +416,7 @@
             const current = document.documentElement.getAttribute("data-theme") || "light";
             const icon = document.querySelector("#themeToggleBtn i");
             if (icon) {
-                icon.className = (current === "dark" || current === "slate") ? "fa-solid fa-sun" : "fa-solid fa-moon";
+                icon.className = (current === "dark") ? "fa-solid fa-sun" : "fa-solid fa-moon";
             }
         }
 

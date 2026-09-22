@@ -57,7 +57,7 @@ def purge_test_records():
 
         # 3. Identify test students to purge in core tenants
         test_students = db.query(Student).filter(
-            Student.name.ilike("%test%") | Student.name.ilike("Alice%") | Student.name.ilike("Bob%") | Student.name.ilike("Jane%") | Student.name.ilike("Charles%") | Student.name.ilike("Alex%") | Student.name.ilike("%Xavier%") | Student.name.ilike("Temporary%"),
+            Student.name.ilike("%test%") | Student.name.ilike("Alice%") | Student.name.ilike("Bob%") | Student.name.ilike("Jane%") | Student.name.ilike("Charles%") | Student.name.ilike("Alex%") | Student.name.ilike("%Xavier%") | Student.name.ilike("Temporary%") | Student.name.in_(["a", "b", "c", "temp"]),
         ).all()
 
         purged_student_ids = []

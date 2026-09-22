@@ -256,24 +256,24 @@
                             <td>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                                     {% if s.is_active %}
-                                    <button onclick="openEditModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}', '{{ s.department|replace("'", "\\'") }}', '{{ s.email or '' }}', '{{ s.user_role }}', '{{ s.class_name or s.class_semester or 'General' }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }}, {{ s.hourly_rate or 'null' }}, {{ s.monthly_base_salary or 'null' }}, '{{ s.date_of_joining if s.date_of_joining else '' }}', {{ s.shift_id or 'null' }}, {{ s.location_id or 'null' }}, {{ s.designation_id or 'null' }}, {{ s.salary_template_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
+                                    <button type="button" onclick="openEditModal({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px;" title="Edit Profile Details">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </button>
-                                    <button onclick="openTransferDepartmentModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', {{ s.department_id or 'null' }}, {{ s.class_id or 'null' }}, {{ s.division_id or 'null' }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Transfer Department / Team{% else %}Transfer Department / Class{% endif %}">
+                                    <button type="button" onclick="openTransferDepartmentModal({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-indigo);" title="{% if current_tenant and current_tenant.tenant_type == 'corporate' %}Transfer Department / Team{% else %}Transfer Department / Class{% endif %}">
                                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
                                     </button>
-                                    <button onclick="openRetakeModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
+                                    <button type="button" onclick="openRetakeModal({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: var(--accent-primary);" title="Retake or Upload 3 New Photos">
                                         <i class="fa-solid fa-camera-rotate"></i>
                                     </button>
-                                    <button onclick="openRelieveModal({{ s.id }}, '{{ s.name|replace("'", "\\'") }}', '{{ s.roll_number }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: #ef4444;" title="Relieve Employee (Preserve History)">
+                                    <button type="button" onclick="openRelieveModal({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: #ef4444;" title="Relieve Employee (Preserve History)">
                                         <i class="fa-solid fa-user-slash"></i> Relieve
                                     </button>
                                     {% else %}
-                                    <button onclick="reinstateEmployee({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: #10b981;" title="Reinstate Employee to Active Service">
+                                    <button type="button" onclick="reinstateEmployee({{ s.id }})" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11.5px; color: #10b981;" title="Reinstate Employee to Active Service">
                                         <i class="fa-solid fa-rotate-left"></i> Reinstate
                                     </button>
                                     {% endif %}
-                                    <button onclick="deleteStudent({{ s.id }}, '{{ s.name|replace("'", "\\'") }}')" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Purge Record">
+                                    <button type="button" onclick="deleteStudent({{ s.id }})" class="btn btn-danger" style="padding: 6px 10px; font-size: 11.5px;" title="Purge Record">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </div>
@@ -327,6 +327,7 @@
                     </div>
                 </div>
 
+                {% if not current_tenant or current_tenant.tenant_type != 'corporate' %}
                 <div class="form-group">
                     <label class="form-label">User Role *</label>
                     <select id="editUserRole" class="form-control" required onchange="onEditRoleChanged()">
@@ -335,21 +336,16 @@
                             <option value="{{ r.value }}">{{ r.label }}</option>
                             {% endfor %}
                         {% else %}
-                            {% if current_tenant and current_tenant.tenant_type == 'corporate' %}
-                            <option value="employee">Employee / Staff Member</option>
-                            <option value="manager">Manager / Team Lead</option>
-                            <option value="admin_staff">Administrative Staff</option>
-                            <option value="contractor">Contractor / External</option>
-                            <option value="intern">Intern / Trainee</option>
-                            {% else %}
                             <option value="student">Student</option>
                             <option value="teacher">Teacher / Faculty</option>
                             <option value="admin_staff">Administrative Staff</option>
                             <option value="other">Other Institutional Member</option>
-                            {% endif %}
                         {% endif %}
                     </select>
                 </div>
+                {% else %}
+                <input type="hidden" id="editUserRole" value="employee">
+                {% endif %}
 
                 <div class="form-group">
                     <label class="form-label">Full Name *</label>
@@ -407,7 +403,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Designation / Role Title</label>
+                    <label class="form-label">Designation</label>
                     <select id="editDesignationSelect" class="form-control" onchange="onEditDesignationChanged()">
                         <option value="">-- Unassigned Designation --</option>
                         {% for desig in designations %}
@@ -417,7 +413,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Assigned Work Shift</label>
+                    <label class="form-label">Work shift</label>
                     <select id="editShiftSelect" class="form-control">
                         <option value="">Org Default Shift</option>
                         {% for ws in work_shifts %}
@@ -443,7 +439,7 @@
                         <i class="fa-solid fa-money-bill-wave" style="color: var(--accent-emerald);"></i> Compensation & Wage Profile
                     </div>
                     <div class="form-group" style="margin-bottom: 10px;">
-                        <label class="form-label" style="font-size: 11px;">Active Salary Template</label>
+                        <label class="form-label" style="font-size: 11px;">Salary Structure</label>
                         <select id="editSalaryTemplateSelect" class="form-control">
                             <option value="">-- Custom Individual Structure / None --</option>
                             {% for tpl in salary_templates %}
@@ -823,32 +819,258 @@
     window.allTenantClasses = {{ classes | tojson | safe }};
     window.allTenantDivisions = {{ divisions | tojson | safe }};
     window.allTenantDepartments = {{ departments | tojson | safe }};
+    window.allTenantStudents = {{ students | tojson | safe }};
 
-    function openTransferDepartmentModal(id, name, deptId, classId, divId) {
+    function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, doj, shiftId, locationId, designationId, salaryTemplateId) {
+        try {
+            const modal = document.getElementById("editStudentModal");
+            if (!modal) {
+                console.error("Modal #editStudentModal element not found in DOM");
+                return;
+            }
+
+            let s = {};
+            let studentId = null;
+
+            if (typeof idOrObj === "object" && idOrObj !== null) {
+                s = idOrObj;
+                studentId = s.id;
+            } else if (idOrObj !== undefined && idOrObj !== null && String(idOrObj).trim() !== "") {
+                studentId = Number(idOrObj);
+                const cached = (window.allTenantStudents && Array.isArray(window.allTenantStudents))
+                    ? window.allTenantStudents.find(x => Number(x.id) === Number(studentId))
+                    : null;
+                if (cached) {
+                    s = Object.assign({}, cached);
+                } else {
+                    s = {
+                        id: studentId,
+                        name: name || "",
+                        roll_number: roll || "",
+                        department: dept || "",
+                        email: email || "",
+                        user_role: role || "",
+                        class_semester: classSem || "",
+                        department_id: deptId,
+                        class_id: classId,
+                        division_id: divId,
+                        hourly_rate: hourlyRate,
+                        monthly_base_salary: monthlySalary,
+                        date_of_joining: doj || "",
+                        shift_id: shiftId,
+                        location_id: locationId,
+                        designation_id: designationId,
+                        salary_template_id: salaryTemplateId
+                    };
+                }
+            }
+
+            function populateFields(data) {
+                if (!data) return;
+                const idInput = document.getElementById("editStudentId");
+                if (idInput) idInput.value = data.id || "";
+
+                const nameInput = document.getElementById("editStudentName");
+                if (nameInput && data.name !== undefined) nameInput.value = data.name || "";
+
+                const rollInput = document.getElementById("editRollNumber");
+                if (rollInput && data.roll_number !== undefined) rollInput.value = data.roll_number || "";
+
+                const emailInput = document.getElementById("editEmail");
+                if (emailInput) emailInput.value = data.email || "";
+
+                const roleSelect = document.getElementById("editUserRole");
+                if (roleSelect) {
+                    let targetRole = data.user_role || data.role || "";
+                    const isCorp = window.IS_CORPORATE || (document.getElementById("statShiftHours") !== null) || (window.location.pathname.includes('/employees'));
+                    if (isCorp && (targetRole === "student" || targetRole === "teacher" || !targetRole)) {
+                        targetRole = "employee";
+                    } else if (!targetRole) {
+                        targetRole = "student";
+                    }
+
+                    if (roleSelect.tagName === "SELECT" && roleSelect.options) {
+                        let hasOption = false;
+                        for (let i = 0; i < roleSelect.options.length; i++) {
+                            if (roleSelect.options[i].value === targetRole) {
+                                hasOption = true;
+                                break;
+                            }
+                        }
+                        if (!hasOption && targetRole) {
+                            const opt = document.createElement("option");
+                            opt.value = targetRole;
+                            opt.text = targetRole.replace(/_/g, ' ').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            roleSelect.appendChild(opt);
+                        }
+                    }
+                    roleSelect.value = targetRole;
+                }
+
+                const dojInput = document.getElementById("editDateOfJoining");
+                if (dojInput && data.date_of_joining !== undefined) dojInput.value = data.date_of_joining || "";
+
+                const shiftSelect = document.getElementById("editShiftSelect");
+                if (shiftSelect && data.shift_id !== undefined) shiftSelect.value = (data.shift_id !== null && data.shift_id !== undefined) ? data.shift_id : "";
+
+                const locSelect = document.getElementById("editLocationSelect");
+                if (locSelect && data.location_id !== undefined) locSelect.value = (data.location_id !== null && data.location_id !== undefined) ? data.location_id : "";
+
+                const desigSelect = document.getElementById("editDesignationSelect");
+                if (desigSelect && data.designation_id !== undefined) desigSelect.value = (data.designation_id !== null && data.designation_id !== undefined) ? data.designation_id : "";
+
+                const tplSelect = document.getElementById("editSalaryTemplateSelect");
+                if (tplSelect && data.salary_template_id !== undefined) tplSelect.value = (data.salary_template_id !== null && data.salary_template_id !== undefined) ? data.salary_template_id : "";
+
+                const hourlyInput = document.getElementById("editHourlyRate");
+                if (hourlyInput && data.hourly_rate !== undefined) hourlyInput.value = (data.hourly_rate !== null && data.hourly_rate !== undefined) ? data.hourly_rate : "";
+
+                const monthlyInput = document.getElementById("editMonthlyBaseSalary");
+                if (monthlyInput && data.monthly_base_salary !== undefined) monthlyInput.value = (data.monthly_base_salary !== null && data.monthly_base_salary !== undefined) ? data.monthly_base_salary : "";
+
+                const deptSelect = document.getElementById("editDepartmentSelect");
+                if (deptSelect) {
+                    if (data.department_id) {
+                        deptSelect.value = data.department_id;
+                    } else if (data.department) {
+                        for (let i = 0; i < deptSelect.options.length; i++) {
+                            if (deptSelect.options[i].text.toLowerCase() === data.department.toLowerCase()) {
+                                deptSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                    try { if (typeof onEditDeptSelectChanged === "function") onEditDeptSelectChanged(); } catch (e) {}
+                }
+
+                const classSelect = document.getElementById("editClassSelect");
+                if (classSelect) {
+                    classSelect.value = data.class_id || "";
+                    try { if (typeof onEditClassSelectChanged === "function") onEditClassSelectChanged(); } catch (e) {}
+                }
+
+                const divSelect = document.getElementById("editDivisionSelect");
+                if (divSelect) {
+                    divSelect.value = data.division_id || "";
+                }
+
+                try { if (typeof onEditRoleChanged === "function") onEditRoleChanged(); } catch (e) {}
+            }
+
+            // 1. Populate immediately from cache / arguments
+            populateFields(s);
+
+            const alertBox = document.getElementById("editResultAlert");
+            if (alertBox) alertBox.style.display = "none";
+
+            // 2. Open Modal Immediately
+            modal.classList.add("active");
+            modal.style.display = "flex";
+
+            // 3. Trigger photo loading and async fetch for full profile
+            if (studentId) {
+                if (typeof loadStudentPhotosPreview === "function") {
+                    loadStudentPhotosPreview(studentId, "editStudentPhotosPreview");
+                }
+                fetch(`/api/v1/enroll/student/${studentId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.student) {
+                            populateFields(data.student);
+                        }
+                    })
+                    .catch(err => {
+                        console.warn("Could not fetch remote student details:", err);
+                    });
+            }
+        } catch (err) {
+            console.error("Error opening edit modal:", err);
+            const modal = document.getElementById("editStudentModal");
+            if (modal) {
+                modal.classList.add("active");
+                modal.style.display = "flex";
+            }
+        }
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById("editStudentModal");
+        if (modal) {
+            modal.classList.remove("active");
+            modal.style.display = "none";
+        }
+    }
+
+    function openTransferDepartmentModal(idOrObj, name, deptId, classId, divId) {
         const modal = document.getElementById("transferEmployeeModal");
         if (!modal) return;
 
-        document.getElementById("transferStudentId").value = id;
-        document.getElementById("transferStudentName").value = name;
+        let s = {};
+        let studentId = null;
+
+        if (typeof idOrObj === "object" && idOrObj !== null) {
+            s = idOrObj;
+            studentId = s.id;
+        } else if (idOrObj !== undefined && idOrObj !== null && String(idOrObj).trim() !== "") {
+            studentId = Number(idOrObj);
+            const cached = (window.allTenantStudents && Array.isArray(window.allTenantStudents))
+                ? window.allTenantStudents.find(x => Number(x.id) === Number(studentId))
+                : null;
+            if (cached) {
+                s = Object.assign({}, cached);
+            } else {
+                s = {
+                    id: studentId,
+                    name: name || "",
+                    department_id: deptId,
+                    class_id: classId,
+                    division_id: divId
+                };
+            }
+        }
+
+        const idInput = document.getElementById("transferStudentId");
+        if (idInput) idInput.value = s.id || studentId || "";
+
+        const nameInput = document.getElementById("transferStudentName");
+        if (nameInput) nameInput.value = s.name || name || "";
         
         const deptSelect = document.getElementById("transferTargetDept");
-        if (deptSelect) deptSelect.value = deptId || "";
+        if (deptSelect) {
+            deptSelect.value = s.department_id || deptId || "";
+            if (typeof onTransferDeptChanged === "function") onTransferDeptChanged();
+        }
 
         const classSelect = document.getElementById("transferTargetClass");
-        if (classSelect) classSelect.value = classId || "";
+        if (classSelect) {
+            classSelect.value = s.class_id || classId || "";
+            if (typeof onTransferClassChanged === "function") onTransferClassChanged();
+        }
 
         const divSelect = document.getElementById("transferTargetDiv");
-        if (divSelect) divSelect.value = divId || "";
+        if (divSelect) {
+            divSelect.value = s.division_id || divId || "";
+        }
 
         const alertBox = document.getElementById("transferResultAlert");
         if (alertBox) alertBox.style.display = "none";
 
+        const saveBtn = document.getElementById("btnConfirmTransfer") || document.getElementById("btnSaveTransfer");
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+        }
+
         modal.classList.add("active");
+        modal.style.display = "flex";
     }
 
     function closeTransferDepartmentModal() {
         const modal = document.getElementById("transferEmployeeModal");
-        if (modal) modal.classList.remove("active");
+        if (modal) {
+            modal.classList.remove("active");
+            modal.style.display = "none";
+        }
     }
 
     function onTransferDeptChanged() {
@@ -876,17 +1098,25 @@
     }
 
     async function submitDepartmentTransfer(e) {
-        e.preventDefault();
-        const studentId = document.getElementById("transferStudentId").value;
-        const deptId = document.getElementById("transferTargetDept").value;
+        if (e && typeof e.preventDefault === "function") e.preventDefault();
+        const studentId = document.getElementById("transferStudentId")?.value;
+        const deptSelect = document.getElementById("transferTargetDept");
+        const deptId = deptSelect?.value;
         const classId = document.getElementById("transferTargetClass")?.value || null;
         const divId = document.getElementById("transferTargetDiv")?.value || null;
 
-        const saveBtn = document.getElementById("btnSaveTransfer");
+        if (!studentId || !deptId) {
+            alert("Please select a target department.");
+            return;
+        }
+
+        const saveBtn = document.getElementById("btnConfirmTransfer") || document.getElementById("btnSaveTransfer");
         const alertBox = document.getElementById("transferResultAlert");
 
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Transferring...';
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Transferring...';
+        }
 
         try {
             const res = await fetch(`/api/v1/enroll/student/${studentId}/transfer-department`, {
@@ -901,32 +1131,55 @@
             const data = await res.json();
 
             if (res.ok) {
-                alertBox.style.display = "block";
-                alertBox.style.background = "var(--badge-emerald-bg)";
-                alertBox.style.color = "var(--badge-emerald-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Transferred successfully!");
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-emerald-bg)";
+                    alertBox.style.color = "var(--badge-emerald-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || "Transferred successfully!");
+                }
+
+                if (window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
+                    const sIdx = window.allTenantStudents.findIndex(x => Number(x.id) === Number(studentId));
+                    if (sIdx !== -1) {
+                        const targetDeptName = deptSelect.options[deptSelect.selectedIndex]?.text || "";
+                        window.allTenantStudents[sIdx].department_id = parseInt(deptId);
+                        window.allTenantStudents[sIdx].department = targetDeptName;
+                        if (classId) window.allTenantStudents[sIdx].class_id = parseInt(classId);
+                        if (divId) window.allTenantStudents[sIdx].division_id = parseInt(divId);
+                    }
+                }
 
                 setTimeout(() => {
                     closeTransferDepartmentModal();
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
+                    }
+                    window.location.reload();
+                }, 600);
+            } else {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Transfer failed.");
+                }
+                if (saveBtn) {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
-                    window.location.reload();
-                }, 700);
-            } else {
+                }
+            }
+        } catch (err) {
+            if (alertBox) {
                 alertBox.style.display = "block";
                 alertBox.style.background = "var(--badge-rose-bg)";
                 alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Transfer failed.");
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            }
+            if (saveBtn) {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
             }
-        } catch (e) {
-            alertBox.style.display = "block";
-            alertBox.style.background = "var(--badge-rose-bg)";
-            alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-arrow-right-arrow-left"></i> Confirm Transfer';
         }
     }
 </script>

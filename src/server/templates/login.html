@@ -97,6 +97,7 @@
             {% endif %}
 
             <!-- Quick-Login Profiles (Scored per Tenant or Global) -->
+            {% if not is_corporate %}
             <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
@@ -150,6 +151,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
 
             <!-- Login Form -->
             <form onsubmit="submitLogin(event)">
@@ -158,7 +160,9 @@
                 <div class="form-group">
                     <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
                         <span><i class="fa-solid fa-id-badge" style="color: var(--accent-primary);"></i> Select Role</span>
+                        {% if not is_corporate %}
                         <span id="roleBadgeHelp" style="font-size: 10px; color: var(--text-muted);">Filtered for {{ tenant.name if is_tenant_scoped else 'All Roles' }}</span>
+                        {% endif %}
                     </label>
                     <select id="loginRole" class="form-control" onchange="onRoleChanged()" style="font-weight: 600;">
                         {% if is_tenant_scoped %}

@@ -102,7 +102,7 @@ class TestCorporateSubheadersCleanup(unittest.TestCase):
         self.assertNotIn("System Settings &amp; Institutional Branding", html.replace("&", "&amp;"))
         self.assertNotIn("Configure core system parameters, department trees, multi-factor attendance policies", html)
         self.assertIn("Organization Settings", html)
-        self.assertIn("Institutional Profile &amp; White-Labeling", html.replace("&", "&amp;"))
+        self.assertIn("Institutional Profile", html)
 
 if __name__ == "__main__":
     unittest.main()

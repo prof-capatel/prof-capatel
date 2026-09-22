@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Query, U
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from src.database.models import (
     Tenant,
@@ -154,7 +154,21 @@ def list_departments(
         .order_by(Department.name.asc())
         .all()
     )
-    return {"status": "success", "departments": [d.to_dict() for d in departments]}
+    res = []
+    for d in departments:
+        d_dict = d.to_dict()
+        emp_count = (
+            db.query(func.count(Student.id))
+            .filter(
+                Student.tenant_id == tenant.id,
+                (Student.department_id == d.id) | (Student.department == d.name),
+            )
+            .scalar()
+            or 0
+        )
+        d_dict["employee_count"] = emp_count
+        res.append(d_dict)
+    return {"status": "success", "departments": res}
 
 
 @router.post("/departments")

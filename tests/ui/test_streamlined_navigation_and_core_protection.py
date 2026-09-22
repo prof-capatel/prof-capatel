@@ -161,8 +161,8 @@ class TestStreamlinedNavigationAndCoreProtection(unittest.TestCase):
         html = res.text
 
         self.assertIn('id="departmentsSection"', html)
-        self.assertIn("Departments & Teams Management", html)
-        self.assertIn("Add Department / Team", html)
+        self.assertIn("Departments Management", html)
+        self.assertIn("Add Department", html)
         self.assertIn('id="deptModal"', html)
 
     def test_live_dashboard_attendance_capture_modal_and_button(self):
