@@ -16,6 +16,13 @@ document.addEventListener("DOMContentLoaded", () => {
     initThemeSwitcher();
     initLiveStream();
     initFilters();
+
+    // Prevent accidental mouse-wheel adjustment on focused numeric inputs
+    document.addEventListener("wheel", (e) => {
+        if (document.activeElement && document.activeElement.type === "number") {
+            document.activeElement.blur();
+        }
+    }, { passive: true });
 });
 
 /**
@@ -59,11 +66,25 @@ function initLiveStream() {
     };
 }
 
+const seenFeedRecordIds = new Set();
+
 /**
  * Inserts new face attendance item into the live feed
  */
 function handleNewAttendanceEvent(data) {
+    if (!data) return;
+    const recordId = data.id || `${data.student_id || data.roll_number}_${data.timestamp}`;
+    if (seenFeedRecordIds.has(recordId)) {
+        return; // Suppress duplicate display
+    }
+    seenFeedRecordIds.add(recordId);
+    if (seenFeedRecordIds.size > 250) {
+        const firstKey = seenFeedRecordIds.values().next().value;
+        seenFeedRecordIds.delete(firstKey);
+    }
+
     const liveFeed = document.getElementById("liveFeedContainer");
+    if (!liveFeed) return;
     const emptyState = document.getElementById("emptyFeedState");
     if (emptyState) emptyState.remove();
 
@@ -278,14 +299,15 @@ async function applyLogFilters() {
     const deptInput = document.getElementById("filterDept")?.value;
     const roleInput = document.getElementById("filterRole")?.value;
     const overrideInput = document.getElementById("filterOverride")?.value;
+    const viewModeInput = document.getElementById("filterViewMode")?.value || "active";
     const tableBody = document.getElementById("logsTableBody");
 
     if (!tableBody) return;
 
-    const colSpan = window.IS_CORPORATE ? 10 : 9;
+    const colSpan = window.IS_CORPORATE ? 11 : 10;
     tableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 24px; color: var(--text-muted); font-weight: 500;"><i class="fa-solid fa-spinner fa-spin"></i> Loading attendance audit records...</td></tr>`;
 
-    let url = `/api/v1/attendance/records?limit=300`;
+    let url = `/api/v1/attendance/records?limit=300&view_mode=${encodeURIComponent(viewModeInput)}`;
     if (startDate && endDate) {
         url += `&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
     } else if (startDate) {
@@ -339,7 +361,7 @@ function renderLogsTable(records) {
     if (!tableBody) return;
 
     const isCorp = window.IS_CORPORATE || false;
-    const colSpan = isCorp ? 10 : 9;
+    const colSpan = isCorp ? 11 : 10;
 
     if (!records || records.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 36px; color: var(--text-muted);">No attendance records found matching filters.</td></tr>`;
@@ -372,6 +394,29 @@ function renderLogsTable(records) {
             nodeBadge = `<span class="badge badge-emerald" title="GPS Geofenced Check-in"><i class="fa-solid fa-mobile-screen"></i> ${r.geo_distance_meters !== null ? r.geo_distance_meters + 'm from Campus' : 'Self-Mobile'}</span>`;
         }
 
+        // Action button (Soft delete or Restore)
+        let actionBtnHtml = '';
+        if (r.is_deleted) {
+            actionBtnHtml = `
+                <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+                    <span class="badge badge-rose" style="font-size: 10px; padding: 2px 6px;"><i class="fa-solid fa-trash-can"></i> Deleted</span>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; color: var(--accent-emerald); cursor: pointer;" title="Restore / Undelete attendance record" onclick="restoreAttendanceRecord(${r.id}, '${escapeHtml(r.student_name || 'Member')}')">
+                        <i class="fa-solid fa-rotate-left"></i> Restore
+                    </button>
+                </div>
+            `;
+        } else {
+            const timeForModal = (isCorp ? (r.check_in_time || r.timestamp) : r.timestamp) || 'N/A';
+            const detailForModal = isCorp ? (r.punch_type || 'CHECK_IN') : (r.node_id || 'NODE');
+            actionBtnHtml = `
+                <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; color: var(--accent-rose); border-color: rgba(239, 68, 68, 0.25); cursor: pointer;" title="Soft delete record" onclick="openDeleteAttendanceModal(${r.id}, '${escapeHtml(r.student_name || 'Member')}', '${escapeHtml(timeForModal)}', '${escapeHtml(detailForModal)}')">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `;
+        }
+
         if (isCorp) {
             // Corporate check-in/out presentation: Calendar Date + Precise Timestamp (DD-MM-YYYY HH:MM:SS)
             let formattedIn = formatAttendanceDateTime(r.check_in_time || r.timestamp);
@@ -400,8 +445,10 @@ function renderLogsTable(records) {
                 statusBadge = `<span class="badge badge-node">${r.shift_status}</span>`;
             }
 
+            let desigBadge = `<span class="badge badge-sky"><i class="fa-solid fa-id-badge"></i> ${escapeHtml(r.designation || 'Staff')}</span>`;
+
             return `
-                <tr>
+                <tr style="${r.is_deleted ? 'opacity: 0.65; background: rgba(239, 68, 68, 0.04);' : ''}">
                     <td>#${r.id}</td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -412,19 +459,20 @@ function renderLogsTable(records) {
                         </div>
                     </td>
                     <td><code>${r.roll_number || 'N/A'}</code></td>
-                    <td>${roleBadge}</td>
+                    <td>${desigBadge}</td>
                     <td>${r.department || 'N/A'}</td>
                     <td>${nodeBadge}</td>
                     <td><strong style="color: var(--text-heading); font-family: monospace; font-size: 12px;">${inTime}</strong></td>
                     <td><strong style="color: var(--text-heading); font-family: monospace; font-size: 12px;">${outTime}</strong></td>
                     <td>${durationHtml}</td>
                     <td>${statusBadge}</td>
+                    <td style="text-align: right;">${actionBtnHtml}</td>
                 </tr>
             `;
         }
 
         return `
-            <tr>
+            <tr style="${r.is_deleted ? 'opacity: 0.65; background: rgba(239, 68, 68, 0.04);' : ''}">
                 <td>#${r.id}</td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -441,9 +489,87 @@ function renderLogsTable(records) {
                 <td>${nodeBadge}</td>
                 <td><span style="font-family: monospace; font-size: 12px;">${formatAttendanceDateTime(r.timestamp) || r.timestamp || '--'}</span></td>
                 <td>${verificationBadge}</td>
+                <td style="text-align: right;">${actionBtnHtml}</td>
             </tr>
         `;
     }).join("");
+}
+
+function openDeleteAttendanceModal(recordId, memberName, timestamp, punchDetails) {
+    const modal = document.getElementById("deleteAttendanceModal");
+    if (!modal) return;
+    document.getElementById("deleteTargetRecordId").value = recordId;
+    const idEl = document.getElementById("deleteModalRecordId");
+    if (idEl) idEl.textContent = `#${recordId}`;
+    const nameEl = document.getElementById("deleteModalMemberName");
+    if (nameEl) nameEl.textContent = memberName;
+    const timeEl = document.getElementById("deleteModalTimestamp");
+    if (timeEl) timeEl.textContent = timestamp;
+    const detEl = document.getElementById("deleteModalDetails");
+    if (detEl) detEl.textContent = punchDetails;
+    modal.classList.add("active");
+}
+
+function closeDeleteAttendanceModal() {
+    const modal = document.getElementById("deleteAttendanceModal");
+    if (modal) modal.classList.remove("active");
+}
+
+async function executeDeleteAttendanceRecord() {
+    const recordId = document.getElementById("deleteTargetRecordId")?.value;
+    if (!recordId) return;
+
+    const btn = document.getElementById("btnConfirmDeleteAttendance");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
+    }
+
+    try {
+        const res = await fetch(`/api/v1/attendance/records/${recordId}`, {
+            method: "DELETE",
+        });
+        const data = await res.json();
+        if (res.ok && data.status === "success") {
+            closeDeleteAttendanceModal();
+            if (typeof showToast === "function") {
+                showToast(data.message || `Record #${recordId} soft-deleted`, "success");
+            }
+            await applyLogFilters();
+        } else {
+            alert(data.detail || data.message || "Failed to delete attendance record.");
+        }
+    } catch (e) {
+        alert("Network or server error while deleting record.");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> <span>Confirm Delete</span>';
+        }
+    }
+}
+
+async function restoreAttendanceRecord(recordId, memberName) {
+    if (!confirm(`Restore attendance log #${recordId} for ${memberName}? It will be reactivated and included in reports and payroll.`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/v1/attendance/records/${recordId}/restore`, {
+            method: "POST",
+        });
+        const data = await res.json();
+        if (res.ok && data.status === "success") {
+            if (typeof showToast === "function") {
+                showToast(data.message || `Record #${recordId} restored`, "success");
+            }
+            await applyLogFilters();
+        } else {
+            alert(data.detail || data.message || "Failed to restore record.");
+        }
+    } catch (e) {
+        alert("Network error while restoring record.");
+    }
 }
 
 function exportData(format) {
@@ -476,6 +602,7 @@ function onDirDeptFilterChanged() {
     const deptId = document.getElementById("dirDeptFilter")?.value || "";
     const classSelect = document.getElementById("dirClassFilter");
     const divSelect = document.getElementById("dirDivFilter");
+    const desigSelect = document.getElementById("dirDesigFilter");
 
     if (classSelect) {
         Array.from(classSelect.options).forEach((opt, idx) => {
@@ -495,6 +622,22 @@ function onDirDeptFilterChanged() {
 
     if (divSelect) {
         divSelect.value = "";
+    }
+
+    if (desigSelect) {
+        Array.from(desigSelect.options).forEach((opt, idx) => {
+            if (idx === 0) {
+                opt.style.display = "";
+                return;
+            }
+            const optDeptId = opt.getAttribute("data-dept-id");
+            if (!deptId || !optDeptId || optDeptId === deptId) {
+                opt.style.display = "";
+            } else {
+                opt.style.display = "none";
+            }
+        });
+        desigSelect.value = "";
     }
 
     applyDirectoryFilters();
@@ -547,6 +690,9 @@ function applyDirectoryFilters() {
     const deptIdVal = deptFilterEl?.value || "";
     const deptTextVal = deptIdVal && deptFilterEl ? (deptFilterEl.options[deptFilterEl.selectedIndex]?.text || "").toLowerCase().trim() : "";
 
+    const desigFilterEl = document.getElementById("dirDesigFilter");
+    const desigIdVal = desigFilterEl?.value || "";
+
     const shiftFilterEl = document.getElementById("dirShiftFilter");
     const shiftIdVal = shiftFilterEl?.value || "";
 
@@ -563,21 +709,23 @@ function applyDirectoryFilters() {
         const roll = (row.getAttribute("data-roll") || "").toLowerCase();
         const rowDeptId = row.getAttribute("data-dept-id") || "";
         const rowDept = (row.getAttribute("data-dept") || "").toLowerCase();
+        const rowDesigId = row.getAttribute("data-desig-id") || "";
+        const rowShiftId = row.getAttribute("data-shift-id") || "";
         const rowClassId = row.getAttribute("data-class-id") || "";
         const rowDivId = row.getAttribute("data-div-id") || "";
-        const rowShiftId = row.getAttribute("data-shift-id") || "";
         const rowRole = row.getAttribute("data-role") || "student";
         const rowStatus = row.getAttribute("data-status") || "active";
 
         let matchSearch = !searchVal || name.includes(searchVal) || roll.includes(searchVal);
         let matchDept = !deptIdVal || rowDeptId === deptIdVal || (rowDept && rowDept === deptTextVal);
+        let matchDesig = !desigIdVal || rowDesigId === desigIdVal;
         let matchShift = !shiftIdVal || rowShiftId === shiftIdVal;
         let matchClass = !classIdVal || rowClassId === classIdVal;
         let matchDiv = !divIdVal || rowDivId === divIdVal;
         let matchRole = !roleVal || rowRole === roleVal;
         let matchStatus = (statusVal === "all") || (rowStatus === statusVal);
 
-        if (matchSearch && matchDept && matchShift && matchClass && matchDiv && matchRole && matchStatus) {
+        if (matchSearch && matchDept && matchDesig && matchShift && matchClass && matchDiv && matchRole && matchStatus) {
             row.style.display = "";
             visibleCount++;
         } else {
@@ -597,6 +745,12 @@ function resetDirectoryFilters() {
     if (document.getElementById("dirShiftFilter")) document.getElementById("dirShiftFilter").value = "";
     if (document.getElementById("dirRoleFilter")) document.getElementById("dirRoleFilter").value = "";
     
+    const desigSelect = document.getElementById("dirDesigFilter");
+    if (desigSelect) {
+        Array.from(desigSelect.options).forEach(opt => opt.style.display = "");
+        desigSelect.value = "";
+    }
+
     const classSelect = document.getElementById("dirClassFilter");
     if (classSelect) {
         Array.from(classSelect.options).forEach(opt => opt.style.display = "");
@@ -624,6 +778,12 @@ function openRelieveModal(studentId, studentName, rollNumber) {
             sName = sName || found.name;
             sRoll = sRoll || found.roll_number;
         }
+    }
+    if (!sName) {
+        sName = document.getElementById(`stdNameLabel${studentId}`)?.innerText.trim() || "";
+    }
+    if (!sRoll) {
+        sRoll = document.getElementById(`stdRollLabel${studentId}`)?.innerText.trim() || "";
     }
 
     const idInput = document.getElementById("relieveStudentId");
@@ -725,6 +885,9 @@ async function reinstateEmployee(studentId, studentName) {
         const found = window.allTenantStudents.find(x => Number(x.id) === Number(studentId));
         if (found) sName = found.name;
     }
+    if (!sName) {
+        sName = document.getElementById(`stdNameLabel${studentId}`)?.innerText.trim() || "";
+    }
     if (!confirm(`Are you sure you want to reinstate "${sName || 'Employee'}" back to active employee status?`)) {
         return;
     }
@@ -756,6 +919,9 @@ async function deleteStudent(studentId, studentName) {
     if (!sName && window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
         const found = window.allTenantStudents.find(x => Number(x.id) === Number(studentId));
         if (found) sName = found.name;
+    }
+    if (!sName) {
+        sName = document.getElementById(`stdNameLabel${studentId}`)?.innerText.trim() || "";
     }
     if (!confirm(`Are you sure you want to delete profile "${sName || 'Employee'}" and all associated face embeddings?`)) {
         return;
@@ -796,12 +962,15 @@ function openTransferDepartmentModal(idOrObj, name, deptId, classId, divId) {
         if (cached) {
             s = Object.assign({}, cached);
         } else {
+            const domName = document.getElementById(`stdNameLabel${studentId}`)?.innerText.trim();
+            const domRow = document.getElementById(`studentRow${studentId}`);
             s = {
                 id: studentId,
-                name: name || "",
-                department_id: deptId,
-                class_id: classId,
-                division_id: divId
+                name: name || domName || "",
+                department_id: deptId || (domRow?.getAttribute("data-dept-id") ? Number(domRow.getAttribute("data-dept-id")) : null),
+                designation_id: domRow?.getAttribute("data-desig-id") ? Number(domRow.getAttribute("data-desig-id")) : null,
+                class_id: classId || (domRow?.getAttribute("data-class-id") ? Number(domRow.getAttribute("data-class-id")) : null),
+                division_id: divId || (domRow?.getAttribute("data-div-id") ? Number(domRow.getAttribute("data-div-id")) : null)
             };
         }
     }
@@ -815,18 +984,23 @@ function openTransferDepartmentModal(idOrObj, name, deptId, classId, divId) {
     const deptSelect = document.getElementById("transferTargetDept");
     if (deptSelect) {
         deptSelect.value = s.department_id || deptId || "";
-        if (typeof onTransferDeptChanged === "function") onTransferDeptChanged();
+        if (typeof onTransferDeptChanged === "function") onTransferDeptChanged(s.class_id || classId, s.designation_id);
     }
 
     const classSelect = document.getElementById("transferTargetClass");
     if (classSelect) {
         classSelect.value = s.class_id || classId || "";
-        if (typeof onTransferClassChanged === "function") onTransferClassChanged();
+        if (typeof onTransferClassChanged === "function") onTransferClassChanged(s.division_id || divId);
     }
 
     const divSelect = document.getElementById("transferTargetDiv");
     if (divSelect) {
         divSelect.value = s.division_id || divId || "";
+    }
+
+    const desigSelect = document.getElementById("transferTargetDesignation");
+    if (desigSelect && s.designation_id) {
+        desigSelect.value = s.designation_id;
     }
 
     const alertBox = document.getElementById("transferResultAlert");
@@ -850,26 +1024,82 @@ function closeTransferDepartmentModal() {
     }
 }
 
-function onTransferDeptChanged() {
-    const deptId = document.getElementById("transferTargetDept")?.value;
+function onTransferDeptChanged(targetClassId = null, targetDesigId = null) {
+    const deptVal = document.getElementById("transferTargetDept")?.value;
+    const deptId = deptVal ? parseInt(deptVal) : null;
+
+    // 1. Cascading Designations for Corporate Tenants
+    const desigSelect = document.getElementById("transferTargetDesignation");
+    if (desigSelect) {
+        if (window.allTenantDesignations && Array.isArray(window.allTenantDesignations)) {
+            const filteredDesigs = deptId 
+                ? window.allTenantDesignations.filter(d => !d.department_id || Number(d.department_id) === Number(deptId))
+                : window.allTenantDesignations;
+            let desigHtml = '<option value="">-- Choose New Designation --</option>';
+            let stillValid = false;
+            filteredDesigs.forEach(d => {
+                const isSel = targetDesigId && Number(d.id) === Number(targetDesigId);
+                if (isSel) stillValid = true;
+                const codeTxt = d.code ? ` (${escapeHtml(d.code)})` : '';
+                desigHtml += `<option value="${d.id}" data-dept-id="${d.department_id || ''}" data-title="${escapeHtml(d.title)}" ${isSel ? 'selected' : ''}>${escapeHtml(d.title)}${codeTxt}</option>`;
+            });
+            desigSelect.innerHTML = desigHtml;
+            if (!stillValid && !targetDesigId) desigSelect.value = "";
+        } else {
+            Array.from(desigSelect.options).forEach((opt, idx) => {
+                if (idx === 0) return;
+                const dId = opt.getAttribute("data-dept-id");
+                opt.hidden = (!deptVal || !dId || dId === deptVal) ? false : true;
+            });
+            if (desigSelect.selectedOptions[0]?.hidden) {
+                desigSelect.value = "";
+            }
+        }
+    }
+
+    // 2. Cascading Classes & Divisions for Educational Tenants
     const classSelect = document.getElementById("transferTargetClass");
-    if (classSelect) {
+    if (classSelect && window.allTenantClasses && Array.isArray(window.allTenantClasses)) {
+        const filteredClasses = deptId ? window.allTenantClasses.filter(c => c.department_id === deptId) : window.allTenantClasses;
+        let classHtml = '<option value="">Unassigned / General</option>';
+        let stillValid = false;
+        filteredClasses.forEach(c => {
+            const isSel = targetClassId && c.id === Number(targetClassId);
+            if (isSel) stillValid = true;
+            classHtml += `<option value="${c.id}" data-dept-id="${c.department_id || ''}" ${isSel ? 'selected' : ''}>${escapeHtml(c.name)}</option>`;
+        });
+        classSelect.innerHTML = classHtml;
+        if (!stillValid && !targetClassId) classSelect.value = "";
+    } else if (classSelect) {
         Array.from(classSelect.options).forEach((opt, idx) => {
             if (idx === 0) return;
             const dId = opt.getAttribute("data-dept-id");
-            opt.style.display = (!deptId || !dId || dId === deptId) ? "" : "none";
+            opt.hidden = (!deptVal || !dId || dId === deptVal) ? false : true;
         });
     }
+    onTransferClassChanged();
 }
 
-function onTransferClassChanged() {
-    const classId = document.getElementById("transferTargetClass")?.value;
+function onTransferClassChanged(targetDivId = null) {
+    const classVal = document.getElementById("transferTargetClass")?.value;
+    const classId = classVal ? parseInt(classVal) : null;
     const divSelect = document.getElementById("transferTargetDiv");
-    if (divSelect) {
+    if (divSelect && window.allTenantDivisions && Array.isArray(window.allTenantDivisions)) {
+        const filteredDivs = classId ? window.allTenantDivisions.filter(d => d.class_id === classId) : window.allTenantDivisions;
+        let divHtml = '<option value="">Unassigned</option>';
+        let stillValid = false;
+        filteredDivs.forEach(dv => {
+            const isSel = targetDivId && dv.id === Number(targetDivId);
+            if (isSel) stillValid = true;
+            divHtml += `<option value="${dv.id}" data-class-id="${dv.class_id}" ${isSel ? 'selected' : ''}>${escapeHtml(dv.name)}</option>`;
+        });
+        divSelect.innerHTML = divHtml;
+        if (!stillValid && !targetDivId) divSelect.value = "";
+    } else if (divSelect) {
         Array.from(divSelect.options).forEach((opt, idx) => {
             if (idx === 0) return;
             const cId = opt.getAttribute("data-class-id");
-            opt.style.display = (!classId || !cId || cId === classId) ? "" : "none";
+            opt.hidden = (!classVal || !cId || cId === classVal) ? false : true;
         });
     }
 }
@@ -879,11 +1109,19 @@ async function submitDepartmentTransfer(e) {
     const studentId = document.getElementById("transferStudentId")?.value;
     const deptSelect = document.getElementById("transferTargetDept");
     const deptId = deptSelect?.value;
+    const desigSelect = document.getElementById("transferTargetDesignation");
+    const desigId = desigSelect?.value || null;
+    const desigTitle = desigSelect && desigSelect.selectedIndex > 0 ? (desigSelect.options[desigSelect.selectedIndex]?.getAttribute("data-title") || desigSelect.options[desigSelect.selectedIndex]?.text) : null;
     const classId = document.getElementById("transferTargetClass")?.value || null;
     const divId = document.getElementById("transferTargetDiv")?.value || null;
 
     if (!studentId || !deptId) {
         alert("Please select a target department.");
+        return;
+    }
+
+    if (desigSelect && desigSelect.hasAttribute("required") && !desigId) {
+        alert("Please select a target designation.");
         return;
     }
 
@@ -896,14 +1134,18 @@ async function submitDepartmentTransfer(e) {
     }
 
     try {
+        const payload = {
+            department_id: parseInt(deptId),
+            designation_id: desigId ? parseInt(desigId) : null,
+            designation: desigTitle || null,
+            class_id: classId ? parseInt(classId) : null,
+            division_id: divId ? parseInt(divId) : null,
+        };
+
         const res = await fetch(`/api/v1/enroll/student/${studentId}/transfer-department`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                department_id: parseInt(deptId),
-                class_id: classId ? parseInt(classId) : null,
-                division_id: divId ? parseInt(divId) : null,
-            }),
+            body: JSON.stringify(payload),
         });
         const data = await res.json();
 
@@ -921,6 +1163,10 @@ async function submitDepartmentTransfer(e) {
                     const targetDeptName = deptSelect.options[deptSelect.selectedIndex]?.text || "";
                     window.allTenantStudents[sIdx].department_id = parseInt(deptId);
                     window.allTenantStudents[sIdx].department = targetDeptName;
+                    if (desigId) {
+                        window.allTenantStudents[sIdx].designation_id = parseInt(desigId);
+                        window.allTenantStudents[sIdx].designation = desigTitle;
+                    }
                     if (classId) window.allTenantStudents[sIdx].class_id = parseInt(classId);
                     if (divId) window.allTenantStudents[sIdx].division_id = parseInt(divId);
                 }
@@ -991,50 +1237,112 @@ function onEditRoleChanged() {
     }
 }
 
-function onEditDeptSelectChanged() {
-    const deptId = document.getElementById("editDepartmentSelect")?.value || "";
+function onEditDeptSelectChanged(targetDesigId = null) {
+    const deptVal = document.getElementById("editDepartmentSelect")?.value || "";
+    const deptId = deptVal ? parseInt(deptVal) : null;
     const classSelect = document.getElementById("editClassSelect");
     const divSelect = document.getElementById("editDivisionSelect");
+    const desigSelect = document.getElementById("editDesignationSelect");
 
-    if (classSelect) {
-        Array.from(classSelect.options).forEach((opt, idx) => {
-            if (idx === 0) {
-                opt.style.display = "";
-                return;
-            }
-            const optDeptId = opt.getAttribute("data-dept-id");
-            if (!deptId || !optDeptId || optDeptId === deptId) {
-                opt.style.display = "";
-            } else {
-                opt.style.display = "none";
-            }
+    // 1. Dynamic Class Cascading (Educational)
+    if (classSelect && window.allTenantClasses && Array.isArray(window.allTenantClasses)) {
+        const currentClassVal = classSelect.value ? parseInt(classSelect.value) : null;
+        const filteredClasses = deptId
+            ? window.allTenantClasses.filter(c => c.department_id === deptId)
+            : window.allTenantClasses;
+
+        let classHtml = '<option value="">Unassigned / General</option>';
+        let classStillValid = false;
+        filteredClasses.forEach(c => {
+            const isSel = currentClassVal && c.id === currentClassVal;
+            if (isSel) classStillValid = true;
+            classHtml += `<option value="${c.id}" data-dept-id="${c.department_id || ''}" ${isSel ? 'selected' : ''}>${escapeHtml(c.name)}</option>`;
         });
-        classSelect.value = "";
+        classSelect.innerHTML = classHtml;
+        if (!classStillValid) {
+            classSelect.value = "";
+        }
     }
 
-    if (divSelect) {
+    if (divSelect && window.allTenantDivisions && Array.isArray(window.allTenantDivisions)) {
+        divSelect.innerHTML = '<option value="">Unassigned</option>';
         divSelect.value = "";
+    }
+
+    // 2. Dynamic Designation Cascading (Corporate / Institutional)
+    if (desigSelect) {
+        const desigs = (window.allTenantDesignations && Array.isArray(window.allTenantDesignations))
+            ? window.allTenantDesignations
+            : [];
+        
+        let desiredDesigId = (targetDesigId !== null && targetDesigId !== undefined && String(targetDesigId).trim() !== "")
+            ? parseInt(targetDesigId)
+            : (desigSelect.value ? parseInt(desigSelect.value) : null);
+
+        let desigHtml = '<option value="">-- Unassigned Designation --</option>';
+
+        if (desigs.length > 0) {
+            const filteredDesigs = deptId
+                ? desigs.filter(d => !d.department_id || d.department_id === deptId)
+                : desigs;
+
+            let desigStillValid = false;
+            filteredDesigs.forEach(d => {
+                const isSel = desiredDesigId && d.id === desiredDesigId;
+                if (isSel) desigStillValid = true;
+                const codeStr = d.code ? ` (${escapeHtml(d.code)})` : '';
+                desigHtml += `<option value="${d.id}" data-dept-id="${d.department_id || ''}" data-title="${escapeHtml(d.title)}" data-template-id="${d.salary_template_id || ''}" ${isSel ? 'selected' : ''}>${escapeHtml(d.title)}${codeStr}</option>`;
+            });
+            desigSelect.innerHTML = desigHtml;
+            if (desiredDesigId && desigStillValid) {
+                desigSelect.value = String(desiredDesigId);
+            } else {
+                desigSelect.value = "";
+            }
+        } else {
+            // Fallback if cache not available: filter existing options by data-dept-id
+            Array.from(desigSelect.options).forEach((opt, idx) => {
+                if (idx === 0) return;
+                const optDeptId = opt.getAttribute("data-dept-id");
+                const matches = (!deptVal || !optDeptId || optDeptId === deptVal);
+                opt.hidden = !matches;
+                opt.disabled = !matches;
+                if (matches && desiredDesigId && String(opt.value) === String(desiredDesigId)) {
+                    desigSelect.value = String(desiredDesigId);
+                }
+            });
+        }
+        onEditDesignationChanged();
     }
 }
 
-function onEditClassSelectChanged() {
-    const classId = document.getElementById("editClassSelect")?.value || "";
+function onEditClassSelectChanged(targetDivId = null) {
+    const classVal = document.getElementById("editClassSelect")?.value || "";
+    const classId = classVal ? parseInt(classVal) : null;
     const divSelect = document.getElementById("editDivisionSelect");
 
-    if (divSelect) {
-        Array.from(divSelect.options).forEach((opt, idx) => {
-            if (idx === 0) {
-                opt.style.display = "";
-                return;
-            }
-            const optClassId = opt.getAttribute("data-class-id");
-            if (!classId || !optClassId || optClassId === classId) {
-                opt.style.display = "";
-            } else {
-                opt.style.display = "none";
-            }
+    if (divSelect && window.allTenantDivisions && Array.isArray(window.allTenantDivisions)) {
+        const currentDivVal = (targetDivId !== null && targetDivId !== undefined && String(targetDivId).trim() !== "")
+            ? parseInt(targetDivId)
+            : (divSelect.value ? parseInt(divSelect.value) : null);
+
+        const filteredDivs = classId
+            ? window.allTenantDivisions.filter(d => d.class_id === classId)
+            : window.allTenantDivisions;
+
+        let divHtml = '<option value="">Unassigned</option>';
+        let divStillValid = false;
+        filteredDivs.forEach(dv => {
+            const isSel = currentDivVal && dv.id === currentDivVal;
+            if (isSel) divStillValid = true;
+            divHtml += `<option value="${dv.id}" data-class-id="${dv.class_id}" ${isSel ? 'selected' : ''}>${escapeHtml(dv.name)}</option>`;
         });
-        divSelect.value = "";
+        divSelect.innerHTML = divHtml;
+        if (currentDivVal && divStillValid) {
+            divSelect.value = String(currentDivVal);
+        } else {
+            divSelect.value = "";
+        }
     }
 }
 
@@ -1052,9 +1360,52 @@ function onEditDesignationChanged() {
             }
         }
     }
+    updateEditRateInputVisibility();
 }
 
-function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, doj, shiftId, locationId, designationId, salaryTemplateId) {
+function onEditSalaryTemplateChanged() {
+    updateEditRateInputVisibility();
+}
+
+function updateEditRateInputVisibility() {
+    const tplSelect = document.getElementById("editSalaryTemplateSelect");
+    const desigSelect = document.getElementById("editDesignationSelect");
+    
+    let model = "STRUCTURED_SALARY";
+    if (tplSelect && tplSelect.value) {
+        const opt = tplSelect.options[tplSelect.selectedIndex];
+        if (opt) model = opt.getAttribute("data-model") || "STRUCTURED_SALARY";
+    } else if (desigSelect && desigSelect.value) {
+        const dOpt = desigSelect.options[desigSelect.selectedIndex];
+        const tplId = dOpt ? dOpt.getAttribute("data-template-id") : null;
+        if (tplId && tplSelect) {
+            const matchingTplOpt = Array.from(tplSelect.options).find(o => String(o.value) === String(tplId));
+            if (matchingTplOpt) model = matchingTplOpt.getAttribute("data-model") || "STRUCTURED_SALARY";
+        }
+    }
+
+    const monthlyGrp = document.getElementById("editMonthlySalaryGroup");
+    const dailyGrp = document.getElementById("editDailyRateGroup");
+    const hourlyGrp = document.getElementById("editHourlyRateGroup");
+
+    if (!monthlyGrp || !dailyGrp || !hourlyGrp) return;
+
+    if (model === "HOURLY") {
+        hourlyGrp.style.display = "block";
+        dailyGrp.style.display = "none";
+        monthlyGrp.style.display = "none";
+    } else if (model === "DAILY_WAGE") {
+        dailyGrp.style.display = "block";
+        hourlyGrp.style.display = "none";
+        monthlyGrp.style.display = "none";
+    } else {
+        monthlyGrp.style.display = "block";
+        dailyGrp.style.display = "none";
+        hourlyGrp.style.display = "none";
+    }
+}
+
+function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId, classId, divId, hourlyRate, monthlySalary, doj, shiftId, locationId, designationId, salaryTemplateId, dailyRate) {
     try {
         const modal = document.getElementById("editStudentModal");
         if (!modal) {
@@ -1076,21 +1427,26 @@ function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId,
             if (cached) {
                 s = Object.assign({}, cached);
             } else {
+                const domName = document.getElementById(`stdNameLabel${studentId}`)?.innerText.trim();
+                const domRoll = document.getElementById(`stdRollLabel${studentId}`)?.innerText.trim();
+                const domEmail = document.getElementById(`stdEmailLabel${studentId}`)?.innerText.trim();
+                const domRow = document.getElementById(`studentRow${studentId}`);
                 s = {
                     id: studentId,
-                    name: name || "",
-                    roll_number: roll || "",
-                    department: dept || "",
-                    email: email || "",
-                    user_role: role || "",
+                    name: name || domName || "",
+                    roll_number: roll || domRoll || "",
+                    department: dept || domRow?.getAttribute("data-dept") || "",
+                    email: email || (domEmail === "No email registered" ? "" : domEmail) || "",
+                    user_role: role || domRow?.getAttribute("data-role") || "",
                     class_semester: classSem || "",
-                    department_id: deptId,
-                    class_id: classId,
-                    division_id: divId,
+                    department_id: deptId || (domRow?.getAttribute("data-dept-id") ? Number(domRow.getAttribute("data-dept-id")) : null),
+                    class_id: classId || (domRow?.getAttribute("data-class-id") ? Number(domRow.getAttribute("data-class-id")) : null),
+                    division_id: divId || (domRow?.getAttribute("data-div-id") ? Number(domRow.getAttribute("data-div-id")) : null),
                     hourly_rate: hourlyRate,
+                    daily_rate: dailyRate,
                     monthly_base_salary: monthlySalary,
                     date_of_joining: doj || "",
-                    shift_id: shiftId,
+                    shift_id: shiftId || (domRow?.getAttribute("data-shift-id") ? Number(domRow.getAttribute("data-shift-id")) : null),
                     location_id: locationId,
                     designation_id: designationId,
                     salary_template_id: salaryTemplateId
@@ -1110,7 +1466,7 @@ function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId,
             if (rollInput && data.roll_number !== undefined) rollInput.value = data.roll_number || "";
 
             const emailInput = document.getElementById("editEmail");
-            if (emailInput) emailInput.value = data.email || "";
+            if (emailInput) emailInput.value = (data.email && data.email !== "No email registered") ? data.email : "";
 
             const roleSelect = document.getElementById("editUserRole");
             if (roleSelect) {
@@ -1144,27 +1500,15 @@ function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId,
             if (dojInput && data.date_of_joining !== undefined) dojInput.value = data.date_of_joining || "";
 
             const shiftSelect = document.getElementById("editShiftSelect");
-            if (shiftSelect && data.shift_id !== undefined) shiftSelect.value = (data.shift_id !== null && data.shift_id !== undefined) ? data.shift_id : "";
+            if (shiftSelect && data.shift_id !== undefined) shiftSelect.value = (data.shift_id !== null && data.shift_id !== undefined) ? String(data.shift_id) : "";
 
             const locSelect = document.getElementById("editLocationSelect");
-            if (locSelect && data.location_id !== undefined) locSelect.value = (data.location_id !== null && data.location_id !== undefined) ? data.location_id : "";
-
-            const desigSelect = document.getElementById("editDesignationSelect");
-            if (desigSelect && data.designation_id !== undefined) desigSelect.value = (data.designation_id !== null && data.designation_id !== undefined) ? data.designation_id : "";
-
-            const tplSelect = document.getElementById("editSalaryTemplateSelect");
-            if (tplSelect && data.salary_template_id !== undefined) tplSelect.value = (data.salary_template_id !== null && data.salary_template_id !== undefined) ? data.salary_template_id : "";
-
-            const hourlyInput = document.getElementById("editHourlyRate");
-            if (hourlyInput && data.hourly_rate !== undefined) hourlyInput.value = (data.hourly_rate !== null && data.hourly_rate !== undefined) ? data.hourly_rate : "";
-
-            const monthlyInput = document.getElementById("editMonthlyBaseSalary");
-            if (monthlyInput && data.monthly_base_salary !== undefined) monthlyInput.value = (data.monthly_base_salary !== null && data.monthly_base_salary !== undefined) ? data.monthly_base_salary : "";
+            if (locSelect && data.location_id !== undefined) locSelect.value = (data.location_id !== null && data.location_id !== undefined) ? String(data.location_id) : "";
 
             const deptSelect = document.getElementById("editDepartmentSelect");
             if (deptSelect) {
                 if (data.department_id) {
-                    deptSelect.value = data.department_id;
+                    deptSelect.value = String(data.department_id);
                 } else if (data.department) {
                     for (let i = 0; i < deptSelect.options.length; i++) {
                         if (deptSelect.options[i].text.toLowerCase() === data.department.toLowerCase()) {
@@ -1173,19 +1517,31 @@ function openEditModal(idOrObj, name, roll, dept, email, role, classSem, deptId,
                         }
                     }
                 }
-                try { if (typeof onEditDeptSelectChanged === "function") onEditDeptSelectChanged(); } catch (e) {}
+                // Dynamically filter designations matching this department and select employee designation
+                onEditDeptSelectChanged(data.designation_id);
             }
 
             const classSelect = document.getElementById("editClassSelect");
             if (classSelect) {
-                classSelect.value = data.class_id || "";
-                try { if (typeof onEditClassSelectChanged === "function") onEditClassSelectChanged(); } catch (e) {}
+                if (data.class_id) classSelect.value = String(data.class_id);
+                onEditClassSelectChanged(data.division_id);
             }
 
-            const divSelect = document.getElementById("editDivisionSelect");
-            if (divSelect) {
-                divSelect.value = data.division_id || "";
+            const tplSelect = document.getElementById("editSalaryTemplateSelect");
+            if (tplSelect && data.salary_template_id !== undefined) {
+                tplSelect.value = (data.salary_template_id !== null && data.salary_template_id !== undefined) ? String(data.salary_template_id) : "";
             }
+
+            const hourlyInput = document.getElementById("editHourlyRate");
+            if (hourlyInput && data.hourly_rate !== undefined) hourlyInput.value = (data.hourly_rate !== null && data.hourly_rate !== undefined) ? data.hourly_rate : "";
+
+            const dailyInput = document.getElementById("editDailyRate");
+            if (dailyInput && data.daily_rate !== undefined) dailyInput.value = (data.daily_rate !== null && data.daily_rate !== undefined) ? data.daily_rate : "";
+
+            const monthlyInput = document.getElementById("editMonthlyBaseSalary");
+            if (monthlyInput && data.monthly_base_salary !== undefined) monthlyInput.value = (data.monthly_base_salary !== null && data.monthly_base_salary !== undefined) ? data.monthly_base_salary : "";
+
+            updateEditRateInputVisibility();
 
             try { if (typeof onEditRoleChanged === "function") onEditRoleChanged(); } catch (e) {}
         }
@@ -1257,7 +1613,7 @@ async function loadStudentPhotosPreview(studentId, containerId) {
             }
             container.innerHTML = data.student.photos.map(p => `
                 <div class="photo-preview-card" style="cursor: pointer;" onclick="openLightbox('${p.url}', '${escapeHtml(data.student.name)} (${p.angle || 'Sample'})')" title="Click to view full image">
-                    <img class="photo-preview-img" src="${p.url}" alt="${p.angle}" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:20px;\'><i class=\'fa-regular fa-image\'></i></div><div class=\'photo-preview-label\'>Crop Missing</div>';">
+                    <img class="photo-preview-img" src="${p.url}" alt="${p.angle}" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:20px;\\'><i class=\\'fa-regular fa-image\\'></i></div><div class=\\'photo-preview-label\\'>Crop Missing</div>';">
                     <div class="photo-preview-label">${p.angle ? p.angle.replace('_', ' ').toUpperCase() : 'FACE CROP'}</div>
                 </div>
             `).join("");
@@ -1278,12 +1634,17 @@ async function loadStudentPhotosPreview(studentId, containerId) {
 }
 
 async function submitStudentEdit(e) {
-    e.preventDefault();
-    const id = document.getElementById("editStudentId").value;
-    const name = document.getElementById("editStudentName").value.trim();
-    const roll = document.getElementById("editRollNumber").value.trim();
-    const email = document.getElementById("editEmail").value.trim();
-    const role = document.getElementById("editUserRole")?.value || "student";
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    const id = document.getElementById("editStudentId")?.value;
+    if (!id) {
+        alert("Employee ID is missing.");
+        return;
+    }
+
+    const name = document.getElementById("editStudentName")?.value.trim() || "";
+    const roll = document.getElementById("editRollNumber")?.value.trim() || "";
+    const email = document.getElementById("editEmail")?.value.trim() || "";
+    const role = document.getElementById("editUserRole")?.value || "employee";
 
     const deptSelect = document.getElementById("editDepartmentSelect");
     const deptId = deptSelect?.value ? parseInt(deptSelect.value) : null;
@@ -1311,14 +1672,17 @@ async function submitStudentEdit(e) {
     const tplId = (tplSelect && tplSelect.value) ? parseInt(tplSelect.value) : null;
 
     const hourlyRateInput = document.getElementById("editHourlyRate")?.value;
+    const dailyRateInput = document.getElementById("editDailyRate")?.value;
     const monthlySalaryInput = document.getElementById("editMonthlyBaseSalary")?.value;
     const dojInput = document.getElementById("editDateOfJoining")?.value;
 
     const saveBtn = document.getElementById("btnSaveEdit");
     const alertBox = document.getElementById("editResultAlert");
 
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    }
 
     try {
         const res = await fetch(`/api/v1/enroll/student/${id}`, {
@@ -1340,8 +1704,9 @@ async function submitStudentEdit(e) {
                 email: email || null,
                 user_role: role,
                 hourly_rate: hourlyRateInput ? parseFloat(hourlyRateInput) : null,
+                daily_rate: dailyRateInput ? parseFloat(dailyRateInput) : null,
                 monthly_base_salary: monthlySalaryInput ? parseFloat(monthlySalaryInput) : null,
-                date_of_joining: dojInput !== undefined ? dojInput : null,
+                date_of_joining: (dojInput && dojInput.trim()) ? dojInput.trim() : null,
             }),
         });
         const data = await res.json();
@@ -1350,7 +1715,7 @@ async function submitStudentEdit(e) {
             const updatedStudent = data.student || {};
             // Sync cache
             if (window.allTenantStudents && Array.isArray(window.allTenantStudents)) {
-                const idx = window.allTenantStudents.findIndex(x => x.id === updatedStudent.id);
+                const idx = window.allTenantStudents.findIndex(x => Number(x.id) === Number(id));
                 if (idx >= 0) {
                     window.allTenantStudents[idx] = Object.assign({}, window.allTenantStudents[idx], updatedStudent);
                 }
@@ -1359,25 +1724,35 @@ async function submitStudentEdit(e) {
             updateStudentTableRowInDOM(updatedStudent);
 
             closeEditModal();
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+            }
 
             showFloatingToast(`Profile for '${name}' updated successfully.`, "success");
         } else {
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Update failed.");
+            }
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+            }
+        }
+    } catch (e) {
+        if (alertBox) {
             alertBox.style.display = "block";
             alertBox.style.background = "var(--badge-rose-bg)";
             alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Update failed.");
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+        }
+        if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
         }
-    } catch (e) {
-        alertBox.style.display = "block";
-        alertBox.style.background = "var(--badge-rose-bg)";
-        alertBox.style.color = "var(--badge-rose-text)";
-        alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
     }
 }
 
@@ -1388,6 +1763,15 @@ function updateStudentTableRowInDOM(student) {
     // Update labels
     const nameLabel = document.getElementById(`stdNameLabel${sId}`);
     if (nameLabel) nameLabel.innerText = student.name;
+
+    // Avatar initials
+    const row = document.getElementById(`studentRow${sId}`);
+    if (row) {
+        const avatar = row.querySelector(".user-avatar");
+        if (avatar && student.name) {
+            avatar.innerText = student.name.slice(0, 2).toUpperCase();
+        }
+    }
 
     const emailLabel = document.getElementById(`stdEmailLabel${sId}`);
     if (emailLabel) emailLabel.innerText = student.email || "No email registered";
@@ -1400,6 +1784,32 @@ function updateStudentTableRowInDOM(student) {
 
     const dojLabel = document.getElementById(`stdDojLabel${sId}`);
     if (dojLabel) dojLabel.innerText = student.date_of_joining || "—";
+
+    // Designation badge for corporate tenants
+    const desigBadge = document.getElementById(`stdDesigBadge${sId}`);
+    if (desigBadge) {
+        desigBadge.className = "badge badge-sky";
+        desigBadge.innerHTML = `<i class="fa-solid fa-id-badge"></i> ${escapeHtml(student.designation || 'Staff')}`;
+    }
+
+    const roleBadge = document.getElementById(`stdRoleBadge${sId}`);
+    if (roleBadge) {
+        const r = (student.user_role || "student").toLowerCase();
+        if (["teacher", "faculty"].includes(r)) {
+            roleBadge.className = "badge badge-node";
+            roleBadge.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> Faculty';
+        } else if (r === "manager") {
+            roleBadge.className = "badge badge-sky";
+            roleBadge.innerHTML = '<i class="fa-solid fa-user-gear"></i> Manager';
+        } else if (r === "admin_staff") {
+            roleBadge.className = "badge badge-amber";
+            roleBadge.innerHTML = '<i class="fa-solid fa-user-shield"></i> Admin Staff';
+        } else {
+            const isCorp = window.IS_CORPORATE || (document.getElementById("statShiftHours") !== null) || (window.location.pathname.includes('/employees'));
+            roleBadge.className = "badge badge-present";
+            roleBadge.innerHTML = `<i class="fa-solid fa-user"></i> ${isCorp ? 'Employee' : 'Student'}`;
+        }
+    }
 
     const shiftBadge = document.getElementById(`stdShiftBadge${sId}`);
     if (shiftBadge) {
@@ -1417,14 +1827,22 @@ function updateStudentTableRowInDOM(student) {
         }
     }
 
-    const row = document.getElementById(`studentRow${sId}`);
+    const classLabel = document.getElementById(`stdClassLabel${sId}`);
+    if (classLabel) {
+        classLabel.innerText = student.class_name || student.class_semester || "General";
+    }
+
     if (row) {
         row.setAttribute("data-name", (student.name || "").toLowerCase());
         row.setAttribute("data-roll", (student.roll_number || "").toLowerCase());
         row.setAttribute("data-dept-id", student.department_id || "");
         row.setAttribute("data-dept", student.department || "");
+        row.setAttribute("data-desig-id", student.designation_id || "");
+        row.setAttribute("data-desig", (student.designation || "").toLowerCase());
         row.setAttribute("data-shift-id", student.shift_id || "");
         row.setAttribute("data-role", student.user_role || "");
+        row.setAttribute("data-class-id", student.class_id || "");
+        row.setAttribute("data-div-id", student.division_id || "");
     }
 }
 
@@ -1467,6 +1885,12 @@ function openRetakeModal(id, name, roll) {
             sRoll = sRoll || found.roll_number;
         }
     }
+    if (!sName) {
+        sName = document.getElementById(`stdNameLabel${id}`)?.innerText.trim() || "";
+    }
+    if (!sRoll) {
+        sRoll = document.getElementById(`stdRollLabel${id}`)?.innerText.trim() || "";
+    }
 
     retakeStudentId = id;
     const idInput = document.getElementById("retakeStudentId");
@@ -1476,10 +1900,33 @@ function openRetakeModal(id, name, roll) {
     if (titleEl) titleEl.innerText = `Update Photos: ${sName || ''}`;
 
     const subEl = document.getElementById("retakeModalSubtitle");
-    if (subEl) subEl.innerText = `Roll Number: ${sRoll || ''} | Overwrite with 3 fresh reference images`;
+    if (subEl) subEl.innerText = `ID / Roll Number: ${sRoll || ''} | Overwrite with 3 fresh reference images`;
 
     retakeFiles = [];
     updateRetakePreviews();
+
+    // Reset capture buttons
+    const btnFrontal = document.getElementById("btnRetakeCapFrontal");
+    if (btnFrontal) {
+        btnFrontal.disabled = false;
+        btnFrontal.className = "btn btn-secondary";
+    }
+    const btnLeft = document.getElementById("btnRetakeCapLeft");
+    if (btnLeft) {
+        btnLeft.disabled = true;
+        btnLeft.className = "btn btn-secondary";
+    }
+    const btnRight = document.getElementById("btnRetakeCapRight");
+    if (btnRight) {
+        btnRight.disabled = true;
+        btnRight.className = "btn btn-secondary";
+    }
+
+    const camFb = document.getElementById("retakeCamFeedback");
+    if (camFb) {
+        camFb.style.display = "none";
+        camFb.innerHTML = "";
+    }
 
     const alertBox = document.getElementById("retakeResultAlert");
     if (alertBox) alertBox.style.display = "none";
@@ -1669,17 +2116,39 @@ async function submitRetakeUpload() {
 }
 
 // Live Webcam Retake Handlers
+function toggleRetakeWebcam() {
+    if (retakeWebcamStream) {
+        stopRetakeWebcam();
+    } else {
+        startRetakeWebcam();
+    }
+}
+
 async function startRetakeWebcam() {
     if (retakeWebcamStream) return;
     const video = document.getElementById("retakeWebcamVideo");
+    const toggleBtn = document.getElementById("btnToggleRetakeCam");
+    const fb = document.getElementById("retakeCamFeedback");
     try {
         retakeWebcamStream = await navigator.mediaDevices.getUserMedia({
             video: { width: 640, height: 480 }
         });
         if (video) video.srcObject = retakeWebcamStream;
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fa-solid fa-video-slash"></i> Stop Camera';
+            toggleBtn.className = "btn btn-secondary";
+        }
+        if (fb) {
+            fb.style.display = "none";
+            fb.innerHTML = "";
+        }
     } catch (e) {
-        const fb = document.getElementById("retakeCamFeedback");
-        if (fb) fb.innerHTML = '<span style="color:var(--accent-rose); font-weight:600;">Camera in use or permission denied.</span>';
+        if (fb) {
+            fb.style.display = "block";
+            fb.style.background = "var(--badge-rose-bg)";
+            fb.style.color = "var(--badge-rose-text)";
+            fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Camera in use or permission denied.';
+        }
     }
 }
 
@@ -1690,27 +2159,60 @@ function stopRetakeWebcam() {
         const video = document.getElementById("retakeWebcamVideo");
         if (video) video.srcObject = null;
     }
+    const toggleBtn = document.getElementById("btnToggleRetakeCam");
+    if (toggleBtn) {
+        toggleBtn.innerHTML = '<i class="fa-solid fa-video"></i> Start Camera';
+    }
 }
 
 async function captureRetakeSample(angle) {
     if (!retakeStudentId) return;
     const video = document.getElementById("retakeWebcamVideo");
-    const canvas = document.getElementById("retakeCaptureCanvas");
-    if (!video || !canvas) return;
+    let canvas = document.getElementById("retakeCaptureCanvas");
+    if (!canvas) {
+        canvas = document.createElement("canvas");
+        canvas.id = "retakeCaptureCanvas";
+        canvas.style.display = "none";
+        document.body.appendChild(canvas);
+    }
+    if (!video || !video.videoWidth) {
+        const fb = document.getElementById("retakeCamFeedback");
+        if (fb) {
+            fb.style.display = "block";
+            fb.style.background = "var(--badge-rose-bg)";
+            fb.style.color = "var(--badge-rose-text)";
+            fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Camera stream not active. Please start camera first.';
+        }
+        return;
+    }
 
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+    const fb = document.getElementById("retakeCamFeedback");
+    if (fb) {
+        fb.style.display = "block";
+        fb.style.background = "var(--badge-indigo-bg)";
+        fb.style.color = "var(--accent-primary)";
+        fb.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing and saving ${angle} sample...`;
+    }
+
     canvas.toBlob(async (blob) => {
+        if (!blob) {
+            if (fb) {
+                fb.style.display = "block";
+                fb.style.background = "var(--badge-rose-bg)";
+                fb.style.color = "var(--badge-rose-text)";
+                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Failed to capture image frame.';
+            }
+            return;
+        }
         const formData = new FormData();
         formData.append("student_id", retakeStudentId);
         formData.append("sample_angle", angle);
         formData.append("image", blob, `retake_${angle}.jpg`);
-
-        const fb = document.getElementById("retakeCamFeedback");
-        if (fb) fb.innerHTML = `<span style="color:var(--accent-primary);"><i class="fa-solid fa-spinner fa-spin"></i> Saving ${angle} sample...</span>`;
 
         try {
             const res = await fetch("/api/v1/enroll/capture-sample", {
@@ -1719,27 +2221,67 @@ async function captureRetakeSample(angle) {
             });
             const data = await res.json();
             if (res.ok) {
-                if (fb) fb.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;">✓ ${angle} pose recorded!</span>`;
+                if (fb) {
+                    fb.style.display = "block";
+                    fb.style.background = "var(--badge-emerald-bg)";
+                    fb.style.color = "var(--badge-emerald-text)";
+                    fb.innerHTML = `<i class="fa-solid fa-circle-check"></i> ✓ ${angle} pose recorded successfully!`;
+                }
                 if (angle === 'frontal') {
-                    document.getElementById("btnRetakeCapFrontal").disabled = true;
-                    document.getElementById("btnRetakeCapFrontal").className = "btn btn-primary";
-                    document.getElementById("btnRetakeCapLeft").disabled = false;
+                    const btnF = document.getElementById("btnRetakeCapFrontal");
+                    if (btnF) {
+                        btnF.disabled = true;
+                        btnF.className = "btn btn-primary";
+                    }
+                    const btnL = document.getElementById("btnRetakeCapLeft");
+                    if (btnL) {
+                        btnL.disabled = false;
+                        btnL.focus();
+                    }
                 } else if (angle === 'left') {
-                    document.getElementById("btnRetakeCapLeft").disabled = true;
-                    document.getElementById("btnRetakeCapLeft").className = "btn btn-primary";
-                    document.getElementById("btnRetakeCapRight").disabled = false;
+                    const btnL = document.getElementById("btnRetakeCapLeft");
+                    if (btnL) {
+                        btnL.disabled = true;
+                        btnL.className = "btn btn-primary";
+                    }
+                    const btnR = document.getElementById("btnRetakeCapRight");
+                    if (btnR) {
+                        btnR.disabled = false;
+                        btnR.focus();
+                    }
                 } else if (angle === 'right') {
-                    document.getElementById("btnRetakeCapRight").disabled = true;
-                    document.getElementById("btnRetakeCapRight").className = "btn btn-primary";
-                    if (fb) fb.innerHTML = '<span style="color:var(--badge-emerald-text); font-weight:700;">✓ All 3 samples retaken! Refreshing directory...</span>';
+                    const btnR = document.getElementById("btnRetakeCapRight");
+                    if (btnR) {
+                        btnR.disabled = true;
+                        btnR.className = "btn btn-primary";
+                    }
+                    if (fb) {
+                        fb.style.display = "block";
+                        fb.style.background = "var(--badge-emerald-bg)";
+                        fb.style.color = "var(--badge-emerald-text)";
+                        fb.innerHTML = '<i class="fa-solid fa-circle-check"></i> <strong>✓ All 3 samples retaken!</strong> Refreshing directory...';
+                    }
                     stopRetakeWebcam();
-                    setTimeout(() => window.location.reload(), 1000);
+                    setTimeout(() => {
+                        closeRetakeModal();
+                        window.location.reload();
+                    }, 1200);
                 }
             } else {
-                if (fb) fb.innerHTML = `<span style="color:var(--accent-rose);">${data.detail}</span>`;
+                if (fb) {
+                    fb.style.display = "block";
+                    fb.style.background = "var(--badge-rose-bg)";
+                    fb.style.color = "var(--badge-rose-text)";
+                    fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || "Capture failed. Please try again."}`;
+                }
             }
         } catch (e) {
-            if (fb) fb.innerHTML = '<span style="color:var(--accent-rose);">Upload failed. Try again.</span>';
+            if (fb) {
+                fb.style.display = "block";
+                fb.style.background = "var(--badge-rose-bg)";
+                fb.style.color = "var(--badge-rose-text)";
+                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error during upload.';
+            }
         }
     }, "image/jpeg", 0.9);
 }

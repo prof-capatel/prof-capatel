@@ -200,29 +200,45 @@ class PayrollService:
 
         annual_ctc = float(payload.annual_ctc or 0.0)
         monthly_gross = float(payload.monthly_gross or 0.0)
+        monthly_basic_input = float(payload.monthly_basic or 0.0)
 
-        if annual_ctc > 0 and monthly_gross <= 0:
-            monthly_gross = round(annual_ctc / 12.0, 2)
-        elif monthly_gross > 0 and annual_ctc <= 0:
+        if monthly_basic_input > 0:
+            monthly_basic = monthly_basic_input
+            monthly_da = float(payload.monthly_da if payload.monthly_da is not None else (round(monthly_basic * (da_pct / 100.0), 2) if payload.monthly_gross is None else 0.0))
+            monthly_hra = float(payload.monthly_hra if payload.monthly_hra is not None else round(monthly_basic * (hra_pct / 100.0), 2))
+            conv_allow = float(payload.conveyance_allowance if payload.conveyance_allowance is not None else conv_val)
+            med_allow = float(payload.medical_allowance if payload.medical_allowance is not None else med_val)
+            other_allow = float(payload.other_allowances if payload.other_allowances is not None else (getattr(tpl, 'other_perks_fixed', 0.0) if payload.template_id and tpl else 0.0))
+            special_allow = float(payload.special_allowance or 0.0)
+            if payload.monthly_gross is not None and float(payload.monthly_gross) > 0:
+                monthly_gross = float(payload.monthly_gross)
+            else:
+                monthly_gross = round(monthly_basic + monthly_da + monthly_hra + conv_allow + med_allow + special_allow + other_allow, 2)
             annual_ctc = round(monthly_gross * 12.0, 2)
-
-        if model == "STRUCTURED_SALARY" and monthly_gross > 0:
-            monthly_basic = float(payload.monthly_basic or round(monthly_gross * (basic_pct / 100.0), 2))
-            monthly_da = float(payload.monthly_da or round(monthly_gross * (da_pct / 100.0), 2))
+        elif monthly_gross > 0:
+            if model == "STRUCTURED_SALARY" and basic_pct < 100 and basic_pct > 0:
+                monthly_basic = float(round(monthly_gross * (basic_pct / 100.0), 2))
+            else:
+                monthly_basic = monthly_gross
+            monthly_da = float(payload.monthly_da or round(monthly_basic * (da_pct / 100.0), 2))
             monthly_hra = float(payload.monthly_hra or round(monthly_basic * (hra_pct / 100.0), 2))
             conv_allow = float(payload.conveyance_allowance or conv_val)
             med_allow = float(payload.medical_allowance or med_val)
             specified_total = monthly_basic + monthly_da + monthly_hra + conv_allow + med_allow
             special_allow = float(payload.special_allowance or max(0.0, round(monthly_gross - specified_total, 2)))
-            other_allow = float(payload.other_allowances or 0.0)
+            other_allow = float(payload.other_allowances or (getattr(tpl, 'other_perks_fixed', 0.0) if payload.template_id and tpl else 0.0))
+            if annual_ctc <= 0:
+                annual_ctc = round(monthly_gross * 12.0, 2)
         else:
-            monthly_basic = float(payload.monthly_basic or (monthly_gross * 0.50 if monthly_gross > 0 else 0.0))
-            monthly_da = float(payload.monthly_da or 0.0)
-            monthly_hra = float(payload.monthly_hra or 0.0)
-            conv_allow = float(payload.conveyance_allowance or 0.0)
-            med_allow = float(payload.medical_allowance or 0.0)
-            special_allow = float(payload.special_allowance or 0.0)
-            other_allow = float(payload.other_allowances or 0.0)
+            monthly_basic = float(emp.monthly_base_salary or 0.0)
+            monthly_da = round(monthly_basic * (da_pct / 100.0), 2)
+            monthly_hra = round(monthly_basic * (hra_pct / 100.0), 2)
+            conv_allow = float(conv_val)
+            med_allow = float(med_val)
+            other_allow = float(getattr(tpl, 'other_perks_fixed', 0.0) if payload.template_id and tpl else 0.0)
+            special_allow = 0.0
+            monthly_gross = round(monthly_basic + monthly_da + monthly_hra + conv_allow + med_allow + other_allow, 2)
+            annual_ctc = round(monthly_gross * 12.0, 2)
 
         existing_current = (
             self.db.query(EmployeeSalaryStructure)

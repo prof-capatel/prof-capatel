@@ -258,64 +258,52 @@ def seed_default_salary_templates(db: Session, tenant_id: int):
     if not existing:
         templates = [
             {
-                "name": "Executive Structured CTC",
-                "code": "EXEC_STD",
+                "name": "Standard Corporate Structured",
+                "code": "CORP_STD",
                 "compensation_model": "STRUCTURED_SALARY",
-                "description": "Standard corporate structured package: 50% Basic, 20% HRA, statutory EPF (12%), ESIC, and PT.",
+                "description": "Standard corporate structured package: 20% HRA, 10% DA, ₹1600 TA, ₹1250 Medical, ₹1000 Other Perks, EPF, ESIC, and PT.",
+                "basic_percentage": 50.0,
+                "hra_percentage": 20.0,
+                "da_percentage": 10.0,
+                "conveyance_fixed": 1600.0,
+                "medical_fixed": 1250.0,
+                "other_perks_fixed": 1000.0,
+                "enable_pf": True,
+                "pf_capped_at_ceiling": True,
+                "enable_esi": True,
+                "enable_pt": True,
+            },
+            {
+                "name": "Executive Management Structured",
+                "code": "EXEC_MGMT",
+                "compensation_model": "STRUCTURED_SALARY",
+                "description": "Executive structured package: 40% HRA, 10% DA, ₹3000 TA, ₹2500 Medical, ₹3500 Other Perks with EPF and PT.",
+                "basic_percentage": 50.0,
+                "hra_percentage": 40.0,
+                "da_percentage": 10.0,
+                "conveyance_fixed": 3000.0,
+                "medical_fixed": 2500.0,
+                "other_perks_fixed": 3500.0,
+                "enable_pf": True,
+                "pf_capped_at_ceiling": True,
+                "enable_esi": False,
+                "enable_pt": True,
+            },
+            {
+                "name": "Operations Staff Structured",
+                "code": "OPS_STAFF",
+                "compensation_model": "STRUCTURED_SALARY",
+                "description": "Operations staff structure: 20% HRA, 0% DA, ₹1600 TA, ₹1250 Medical, EPF, ESIC, and PT.",
                 "basic_percentage": 50.0,
                 "hra_percentage": 20.0,
                 "da_percentage": 0.0,
                 "conveyance_fixed": 1600.0,
                 "medical_fixed": 1250.0,
+                "other_perks_fixed": 0.0,
                 "enable_pf": True,
                 "pf_capped_at_ceiling": True,
                 "enable_esi": True,
                 "enable_pt": True,
-            },
-            {
-                "name": "Monthly Fixed Base Pay",
-                "code": "MONTHLY_FIXED",
-                "compensation_model": "MONTHLY_FIXED",
-                "description": "Monthly base compensation pro-rated by working days with overtime multiplier.",
-                "basic_percentage": 60.0,
-                "hra_percentage": 20.0,
-                "da_percentage": 0.0,
-                "conveyance_fixed": 0.0,
-                "medical_fixed": 0.0,
-                "enable_pf": True,
-                "pf_capped_at_ceiling": True,
-                "enable_esi": True,
-                "enable_pt": True,
-            },
-            {
-                "name": "Hourly Operations Worker",
-                "code": "HOURLY_OPS",
-                "compensation_model": "HOURLY",
-                "description": "Wage computed directly by tracked biometric hours worked and overtime multiplier.",
-                "basic_percentage": 100.0,
-                "hra_percentage": 0.0,
-                "da_percentage": 0.0,
-                "conveyance_fixed": 0.0,
-                "medical_fixed": 0.0,
-                "enable_pf": False,
-                "pf_capped_at_ceiling": True,
-                "enable_esi": True,
-                "enable_pt": True,
-            },
-            {
-                "name": "Graduate Trainee / Intern Stipend",
-                "code": "INTERN_STIPEND",
-                "compensation_model": "STIPEND",
-                "description": "Fixed monthly intern stipend pro-rated for unpaid leaves with zero PF deduction.",
-                "basic_percentage": 100.0,
-                "hra_percentage": 0.0,
-                "da_percentage": 0.0,
-                "conveyance_fixed": 0.0,
-                "medical_fixed": 0.0,
-                "enable_pf": False,
-                "pf_capped_at_ceiling": True,
-                "enable_esi": False,
-                "enable_pt": False,
             },
         ]
         for t in templates:
@@ -330,6 +318,7 @@ def seed_default_salary_templates(db: Session, tenant_id: int):
                 da_percentage=t["da_percentage"],
                 conveyance_fixed=t["conveyance_fixed"],
                 medical_fixed=t["medical_fixed"],
+                other_perks_fixed=t.get("other_perks_fixed", 0.0),
                 enable_pf=t["enable_pf"],
                 pf_capped_at_ceiling=t["pf_capped_at_ceiling"],
                 enable_esi=t["enable_esi"],
@@ -1063,6 +1052,26 @@ def run_schema_migrations():
                 conn.execute(text("ALTER TABLE attendance_records ADD COLUMN shift_status VARCHAR(30) DEFAULT 'ON_TIME' NOT NULL"))
                 logger.info("Migrated attendance_records table: added shift_status column.")
 
+            # 6b. Attendance soft delete columns
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'is_deleted'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN is_deleted TINYINT(1) DEFAULT 0 NOT NULL"))
+                try:
+                    conn.execute(text("CREATE INDEX ix_attendance_tenant_deleted ON attendance_records(tenant_id, is_deleted)"))
+                except Exception:
+                    pass
+                logger.info("Migrated attendance_records table: added is_deleted column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'deleted_at'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN deleted_at DATETIME NULL"))
+                logger.info("Migrated attendance_records table: added deleted_at column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM attendance_records LIKE 'deleted_by'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE attendance_records ADD COLUMN deleted_by VARCHAR(100) NULL"))
+                logger.info("Migrated attendance_records table: added deleted_by column.")
+
             # 7. Students offboarding & relieving columns
             res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'employment_status'")).fetchall()
             if not res:
@@ -1141,6 +1150,11 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE students ADD COLUMN bank_ifsc_code VARCHAR(30) NULL"))
                 logger.info("Migrated students table: added bank_ifsc_code column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM students LIKE 'daily_rate'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE students ADD COLUMN daily_rate FLOAT NULL"))
+                logger.info("Migrated students table: added daily_rate column.")
 
             # Seed default WorkShift for corporate tenants if none exist
             try:

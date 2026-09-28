@@ -14,6 +14,7 @@ SUITES = {
         "attendance/test_corporate_checkin_checkout.py",
         "attendance/test_multi_shift_management.py",
         "attendance/test_smart_override_and_doj.py",
+        "attendance/test_duplicate_attendance_prevention.py",
     ],
     "masters": [
         "masters/test_masters_crud_and_salary_templates.py",
@@ -35,6 +36,8 @@ SUITES = {
         "ui/test_streamlined_navigation_and_core_protection.py",
         "ui/test_settings_universal_employee_portal_link.py",
         "ui/test_employee_portal_tenant_theming.py",
+        "ui/test_subscription_tier_field_visibility.py",
+        "ui/test_cascading_designations_and_shift_fix.py",
     ],
     "cv": [
         "unit/test_face_detection.py",

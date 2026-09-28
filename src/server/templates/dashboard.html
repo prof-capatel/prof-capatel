@@ -728,6 +728,7 @@
     let captureIntervalTimer = null;
     let isCaptureIngesting = false;
     let isContinuousActive = false;
+    let isInitializingCapture = false;
     let isInterruptedState = false;
     let pausedForSecondaryCamera = false;
     let consecutiveIngestErrors = 0;
@@ -781,24 +782,31 @@
     }
 
     async function startContinuousCapture() {
-        isInterruptedState = false;
-        window.isInterruptedState = false;
-        consecutiveIngestErrors = 0;
+        if (isContinuousActive || isInitializingCapture) return;
+        isInitializingCapture = true;
 
-        const success = await initCaptureCamera();
-        if (!success) return;
+        try {
+            isInterruptedState = false;
+            window.isInterruptedState = false;
+            consecutiveIngestErrors = 0;
 
-        isContinuousActive = true;
-        window.isContinuousActive = true;
-        updateScannerUIState(true);
+            const success = await initCaptureCamera();
+            if (!success) return;
 
-        // Capture frame loop at ~2.5 FPS (every 400ms)
-        if (captureIntervalTimer) clearInterval(captureIntervalTimer);
-        captureIntervalTimer = setInterval(() => {
-            if (isContinuousActive) {
-                captureAndIngestFrame(false);
-            }
-        }, 400);
+            isContinuousActive = true;
+            window.isContinuousActive = true;
+            updateScannerUIState(true);
+
+            // Capture frame loop at ~2.5 FPS (every 400ms) with in-flight ingestion guard
+            if (captureIntervalTimer) clearInterval(captureIntervalTimer);
+            captureIntervalTimer = setInterval(() => {
+                if (isContinuousActive && !isCaptureIngesting) {
+                    captureAndIngestFrame(false);
+                }
+            }, 400);
+        } finally {
+            isInitializingCapture = false;
+        }
     }
 
     function stopContinuousCapture() {
@@ -1075,6 +1083,7 @@
     }
 
     function captureManualSingleShot() {
+        if (isCaptureIngesting) return;
         captureAndIngestFrame(true);
     }
 
@@ -1205,8 +1214,8 @@
                 }
             }
 
-            // Trigger recognition toast & chime for matched faces
-            if (isMatch) {
+            // Trigger recognition toast & chime ONLY when attendance is successfully logged
+            if (isMatch && det.attendance_logged) {
                 try {
                     const idKey = String(studentId || name || roll || "matched_face");
                     const lastSeen = lastRecognitionTimes.get(idKey) || 0;

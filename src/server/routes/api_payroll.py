@@ -123,6 +123,7 @@ class SalaryTemplateCreateRequest(BaseModel):
     da_percentage: float = 0.0
     conveyance_fixed: float = 1600.0
     medical_fixed: float = 1250.0
+    other_perks_fixed: float = 0.0
     enable_pf: bool = True
     pf_capped_at_ceiling: bool = True
     enable_esi: bool = True
@@ -139,6 +140,7 @@ class SalaryTemplateUpdateRequest(BaseModel):
     da_percentage: Optional[float] = None
     conveyance_fixed: Optional[float] = None
     medical_fixed: Optional[float] = None
+    other_perks_fixed: Optional[float] = None
     enable_pf: Optional[bool] = None
     pf_capped_at_ceiling: Optional[bool] = None
     enable_esi: Optional[bool] = None

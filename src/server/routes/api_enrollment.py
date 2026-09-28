@@ -47,6 +47,7 @@ class StudentCreate(BaseModel):
     role: Optional[str] = None
     class_semester: Optional[str] = "General"
     hourly_rate: Optional[float] = None
+    daily_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
     shift_id: Optional[int] = None
     date_of_joining: Optional[str] = None
@@ -69,6 +70,7 @@ class StudentUpdate(BaseModel):
     role: Optional[str] = None
     class_semester: Optional[str] = "General"
     hourly_rate: Optional[float] = None
+    daily_rate: Optional[float] = None
     monthly_base_salary: Optional[float] = None
     shift_id: Optional[int] = None
     date_of_joining: Optional[str] = None
@@ -80,6 +82,8 @@ class StudentUpdate(BaseModel):
 
 class StudentDepartmentTransferPayload(BaseModel):
     department_id: int
+    designation_id: Optional[int] = None
+    designation: Optional[str] = None
     class_id: Optional[int] = None
     division_id: Optional[int] = None
 
@@ -274,6 +278,17 @@ def register_student(
     if not target_tpl_id and desig_obj and getattr(desig_obj, "salary_template_id", None):
         target_tpl_id = desig_obj.salary_template_id
 
+    # If tenant is on Basic edition, suppress salary fields and structures
+    if getattr(current_tenant, "saas_edition", "PRO") == "BASIC":
+        target_tpl_id = None
+        monthly_base_salary_val = None
+        hourly_rate_val = None
+        daily_rate_val = None
+    else:
+        monthly_base_salary_val = payload.monthly_base_salary
+        hourly_rate_val = payload.hourly_rate
+        daily_rate_val = payload.daily_rate
+
     student = Student(
         tenant_id=current_tenant.id,
         roll_number=clean_roll,
@@ -286,8 +301,9 @@ def register_student(
         academic_year_id=acad_id,
         email=payload.email.strip() if payload.email else None,
         user_role=chosen_role,
-        hourly_rate=payload.hourly_rate,
-        monthly_base_salary=payload.monthly_base_salary,
+        hourly_rate=hourly_rate_val,
+        daily_rate=daily_rate_val,
+        monthly_base_salary=monthly_base_salary_val,
         shift_id=chosen_shift_id,
         date_of_joining=doj_val,
         location_id=loc_id,
@@ -300,25 +316,49 @@ def register_student(
     if is_corporate and target_tpl_id:
         tpl = db.query(SalaryTemplate).filter(SalaryTemplate.id == target_tpl_id, SalaryTemplate.tenant_id == current_tenant.id).first()
         if tpl:
-            gross_val = float(payload.monthly_base_salary or 0.0)
+            basic_val = float(payload.monthly_base_salary or 0.0)
             hr_val = float(payload.hourly_rate or 0.0)
-            model_val = tpl.compensation_model
+            dr_val = float(payload.daily_rate or 0.0)
+            model_val = tpl.compensation_model or "STRUCTURED_SALARY"
 
-            if model_val == "STRUCTURED_SALARY" and gross_val > 0:
-                basic_val = round(gross_val * (tpl.basic_percentage / 100.0), 2)
-                da_val = round(gross_val * (tpl.da_percentage / 100.0), 2)
+            if model_val == "STRUCTURED_SALARY":
+                da_val = round(basic_val * (tpl.da_percentage / 100.0), 2)
                 hra_val = round(basic_val * (tpl.hra_percentage / 100.0), 2)
-                conv_allow = tpl.conveyance_fixed
-                med_allow = tpl.medical_fixed
-                specified = basic_val + da_val + hra_val + conv_allow + med_allow
-                special_allow = max(0.0, round(gross_val - specified, 2))
-            else:
-                basic_val = round(gross_val * 0.50, 2) if gross_val > 0 else 0.0
+                conv_allow = float(tpl.conveyance_fixed or 0.0)
+                med_allow = float(tpl.medical_fixed or 0.0)
+                other_perks = float(getattr(tpl, 'other_perks_fixed', 0.0) or 0.0)
+                gross_val = round(basic_val + da_val + hra_val + conv_allow + med_allow + other_perks, 2)
+                special_allow = 0.0
+                d_rate = round(gross_val / 26.0, 2) if gross_val > 0 else 0.0
+            elif model_val == "HOURLY":
                 da_val = 0.0
                 hra_val = 0.0
                 conv_allow = 0.0
                 med_allow = 0.0
+                other_perks = 0.0
                 special_allow = 0.0
+                basic_val = 0.0
+                d_rate = hr_val * 8.0
+                gross_val = hr_val * 8.0 * 26.0
+            elif model_val == "DAILY_WAGE":
+                da_val = 0.0
+                hra_val = 0.0
+                conv_allow = 0.0
+                med_allow = 0.0
+                other_perks = 0.0
+                special_allow = 0.0
+                basic_val = 0.0
+                d_rate = dr_val
+                gross_val = d_rate * 26.0
+            else:
+                da_val = 0.0
+                hra_val = 0.0
+                conv_allow = 0.0
+                med_allow = 0.0
+                other_perks = 0.0
+                special_allow = 0.0
+                gross_val = basic_val
+                d_rate = round(gross_val / 26.0, 2) if gross_val > 0 else 0.0
 
             init_struct = EmployeeSalaryStructure(
                 tenant_id=current_tenant.id,
@@ -333,10 +373,10 @@ def register_student(
                 conveyance_allowance=conv_allow,
                 medical_allowance=med_allow,
                 special_allowance=special_allow,
-                other_allowances=0.0,
-                hourly_rate=hr_val if hr_val > 0 else (round(gross_val / (26.0 * 8.0), 2) if gross_val > 0 else 0.0),
-                daily_rate=round(gross_val / 26.0, 2) if gross_val > 0 else 0.0,
-                fixed_stipend=gross_val if model_val == "STIPEND" else 0.0,
+                other_allowances=other_perks,
+                hourly_rate=hr_val,
+                daily_rate=d_rate,
+                fixed_stipend=basic_val if model_val == "STIPEND" else 0.0,
                 enable_pf=tpl.enable_pf,
                 pf_capped_at_ceiling=tpl.pf_capped_at_ceiling,
                 enable_esi=tpl.enable_esi,
@@ -477,6 +517,7 @@ async def batch_upload_enrollment(
     user_role: str = Form("student"),
     class_semester: Optional[str] = Form("General"),
     hourly_rate: Optional[float] = Form(None),
+    daily_rate: Optional[float] = Form(None),
     monthly_base_salary: Optional[float] = Form(None),
     shift_id: Optional[int] = Form(None),
     date_of_joining: Optional[str] = Form(None),
@@ -660,6 +701,17 @@ async def batch_upload_enrollment(
     if not target_tpl_id and desig_obj and getattr(desig_obj, "salary_template_id", None):
         target_tpl_id = desig_obj.salary_template_id
 
+    # If tenant is on Basic edition, suppress salary fields and structures
+    if getattr(current_tenant, "saas_edition", "PRO") == "BASIC":
+        target_tpl_id = None
+        monthly_base_salary_val = None
+        hourly_rate_val = None
+        daily_rate_val = None
+    else:
+        monthly_base_salary_val = monthly_base_salary
+        hourly_rate_val = hourly_rate
+        daily_rate_val = daily_rate
+
     # Save Student
     student = Student(
         tenant_id=current_tenant.id,
@@ -673,8 +725,9 @@ async def batch_upload_enrollment(
         academic_year_id=acad_id,
         email=email.strip() if email else None,
         user_role=chosen_role,
-        hourly_rate=hourly_rate,
-        monthly_base_salary=monthly_base_salary,
+        hourly_rate=hourly_rate_val,
+        daily_rate=daily_rate_val,
+        monthly_base_salary=monthly_base_salary_val,
         shift_id=chosen_shift_id,
         date_of_joining=doj_val,
         location_id=loc_id,
@@ -698,25 +751,49 @@ async def batch_upload_enrollment(
     if is_corporate and target_tpl_id:
         tpl = db.query(SalaryTemplate).filter(SalaryTemplate.id == target_tpl_id, SalaryTemplate.tenant_id == current_tenant.id).first()
         if tpl:
-            gross_val = float(monthly_base_salary or 0.0)
+            basic_val = float(monthly_base_salary or 0.0)
             hr_val = float(hourly_rate or 0.0)
-            model_val = tpl.compensation_model
+            dr_val = float(daily_rate or 0.0)
+            model_val = tpl.compensation_model or "STRUCTURED_SALARY"
 
-            if model_val == "STRUCTURED_SALARY" and gross_val > 0:
-                basic_val = round(gross_val * (tpl.basic_percentage / 100.0), 2)
-                da_val = round(gross_val * (tpl.da_percentage / 100.0), 2)
+            if model_val == "STRUCTURED_SALARY":
+                da_val = round(basic_val * (tpl.da_percentage / 100.0), 2)
                 hra_val = round(basic_val * (tpl.hra_percentage / 100.0), 2)
-                conv_allow = tpl.conveyance_fixed
-                med_allow = tpl.medical_fixed
-                specified = basic_val + da_val + hra_val + conv_allow + med_allow
-                special_allow = max(0.0, round(gross_val - specified, 2))
-            else:
-                basic_val = round(gross_val * 0.50, 2) if gross_val > 0 else 0.0
+                conv_allow = float(tpl.conveyance_fixed or 0.0)
+                med_allow = float(tpl.medical_fixed or 0.0)
+                other_perks = float(getattr(tpl, 'other_perks_fixed', 0.0) or 0.0)
+                gross_val = round(basic_val + da_val + hra_val + conv_allow + med_allow + other_perks, 2)
+                special_allow = 0.0
+                d_rate = round(gross_val / 26.0, 2) if gross_val > 0 else 0.0
+            elif model_val == "HOURLY":
                 da_val = 0.0
                 hra_val = 0.0
                 conv_allow = 0.0
                 med_allow = 0.0
+                other_perks = 0.0
                 special_allow = 0.0
+                basic_val = 0.0
+                d_rate = hr_val * 8.0
+                gross_val = hr_val * 8.0 * 26.0
+            elif model_val == "DAILY_WAGE":
+                da_val = 0.0
+                hra_val = 0.0
+                conv_allow = 0.0
+                med_allow = 0.0
+                other_perks = 0.0
+                special_allow = 0.0
+                basic_val = 0.0
+                d_rate = dr_val
+                gross_val = d_rate * 26.0
+            else:
+                da_val = 0.0
+                hra_val = 0.0
+                conv_allow = 0.0
+                med_allow = 0.0
+                other_perks = 0.0
+                special_allow = 0.0
+                gross_val = basic_val
+                d_rate = round(gross_val / 26.0, 2) if gross_val > 0 else 0.0
 
             init_struct = EmployeeSalaryStructure(
                 tenant_id=current_tenant.id,
@@ -731,10 +808,10 @@ async def batch_upload_enrollment(
                 conveyance_allowance=conv_allow,
                 medical_allowance=med_allow,
                 special_allowance=special_allow,
-                other_allowances=0.0,
-                hourly_rate=hr_val if hr_val > 0 else (round(gross_val / (26.0 * 8.0), 2) if gross_val > 0 else 0.0),
-                daily_rate=round(gross_val / 26.0, 2) if gross_val > 0 else 0.0,
-                fixed_stipend=gross_val if model_val == "STIPEND" else 0.0,
+                other_allowances=other_perks,
+                hourly_rate=hr_val,
+                daily_rate=d_rate,
+                fixed_stipend=basic_val if model_val == "STIPEND" else 0.0,
                 enable_pf=tpl.enable_pf,
                 pf_capped_at_ceiling=tpl.pf_capped_at_ceiling,
                 enable_esi=tpl.enable_esi,
@@ -857,6 +934,11 @@ def update_student_profile(
     elif payload.hourly_rate is not None:
         student.hourly_rate = payload.hourly_rate
 
+    if "daily_rate" in fields_set:
+        student.daily_rate = payload.daily_rate
+    elif payload.daily_rate is not None:
+        student.daily_rate = payload.daily_rate
+
     if "monthly_base_salary" in fields_set:
         student.monthly_base_salary = payload.monthly_base_salary
     elif payload.monthly_base_salary is not None:
@@ -902,7 +984,14 @@ def update_student_profile(
         student.designation = payload.designation.strip()
 
     is_corporate = (getattr(current_tenant, "tenant_type", "educational") == "corporate")
-    if is_corporate and ("salary_template_id" in fields_set or "designation_id" in fields_set or "monthly_base_salary" in fields_set or "hourly_rate" in fields_set):
+    is_basic = (getattr(current_tenant, "saas_edition", "PRO") == "BASIC")
+
+    if is_basic:
+        student.hourly_rate = None
+        student.daily_rate = None
+        student.monthly_base_salary = None
+
+    if is_corporate and not is_basic and ("salary_template_id" in fields_set or "designation_id" in fields_set or "monthly_base_salary" in fields_set or "hourly_rate" in fields_set or "daily_rate" in fields_set):
         target_tpl_id = payload.salary_template_id
         if not target_tpl_id and "salary_template_id" not in fields_set:
             if student.designation_id:
@@ -921,25 +1010,49 @@ def update_student_profile(
         if target_tpl_id and target_tpl_id > 0:
             tpl = db.query(SalaryTemplate).filter(SalaryTemplate.id == target_tpl_id, SalaryTemplate.tenant_id == current_tenant.id).first()
             if tpl:
-                gross_val = float(student.monthly_base_salary or 0.0)
+                basic_val = float(student.monthly_base_salary or 0.0)
                 hr_val = float(student.hourly_rate or 0.0)
-                model_val = tpl.compensation_model
+                dr_val = float(student.daily_rate or 0.0)
+                model_val = tpl.compensation_model or "STRUCTURED_SALARY"
 
-                if model_val == "STRUCTURED_SALARY" and gross_val > 0:
-                    basic_val = round(gross_val * (tpl.basic_percentage / 100.0), 2)
-                    da_val = round(gross_val * (tpl.da_percentage / 100.0), 2)
+                if model_val == "STRUCTURED_SALARY":
+                    da_val = round(basic_val * (tpl.da_percentage / 100.0), 2)
                     hra_val = round(basic_val * (tpl.hra_percentage / 100.0), 2)
-                    conv_allow = tpl.conveyance_fixed
-                    med_allow = tpl.medical_fixed
-                    specified = basic_val + da_val + hra_val + conv_allow + med_allow
-                    special_allow = max(0.0, round(gross_val - specified, 2))
-                else:
-                    basic_val = round(gross_val * 0.50, 2) if gross_val > 0 else 0.0
+                    conv_allow = float(tpl.conveyance_fixed or 0.0)
+                    med_allow = float(tpl.medical_fixed or 0.0)
+                    other_perks = float(getattr(tpl, 'other_perks_fixed', 0.0) or 0.0)
+                    gross_val = round(basic_val + da_val + hra_val + conv_allow + med_allow + other_perks, 2)
+                    special_allow = 0.0
+                    d_rate = round(gross_val / 26.0, 2) if gross_val > 0 else 0.0
+                elif model_val == "HOURLY":
                     da_val = 0.0
                     hra_val = 0.0
                     conv_allow = 0.0
                     med_allow = 0.0
+                    other_perks = 0.0
                     special_allow = 0.0
+                    basic_val = 0.0
+                    d_rate = hr_val * 8.0
+                    gross_val = hr_val * 8.0 * 26.0
+                elif model_val == "DAILY_WAGE":
+                    da_val = 0.0
+                    hra_val = 0.0
+                    conv_allow = 0.0
+                    med_allow = 0.0
+                    other_perks = 0.0
+                    special_allow = 0.0
+                    basic_val = 0.0
+                    d_rate = dr_val
+                    gross_val = d_rate * 26.0
+                else:
+                    da_val = 0.0
+                    hra_val = 0.0
+                    conv_allow = 0.0
+                    med_allow = 0.0
+                    other_perks = 0.0
+                    special_allow = 0.0
+                    gross_val = basic_val
+                    d_rate = round(gross_val / 26.0, 2) if gross_val > 0 else 0.0
 
                 existing_struct = db.query(EmployeeSalaryStructure).filter(
                     EmployeeSalaryStructure.tenant_id == current_tenant.id,
@@ -966,10 +1079,10 @@ def update_student_profile(
                     conveyance_allowance=conv_allow,
                     medical_allowance=med_allow,
                     special_allowance=special_allow,
-                    other_allowances=0.0,
-                    hourly_rate=hr_val if hr_val > 0 else (round(gross_val / (26.0 * 8.0), 2) if gross_val > 0 else 0.0),
-                    daily_rate=round(gross_val / 26.0, 2) if gross_val > 0 else 0.0,
-                    fixed_stipend=gross_val if model_val == "STIPEND" else 0.0,
+                    other_allowances=other_perks,
+                    hourly_rate=hr_val,
+                    daily_rate=d_rate,
+                    fixed_stipend=basic_val if model_val == "STIPEND" else 0.0,
                     enable_pf=tpl.enable_pf,
                     pf_capped_at_ceiling=tpl.pf_capped_at_ceiling,
                     enable_esi=tpl.enable_esi,
@@ -1028,6 +1141,17 @@ def transfer_student_department(
 
     student.department_id = target_dept.id
     student.department = target_dept.name
+
+    if payload.designation_id:
+        target_desig = db.query(DesignationMaster).filter(
+            DesignationMaster.tenant_id == current_tenant.id,
+            DesignationMaster.id == payload.designation_id,
+        ).first()
+        if target_desig:
+            student.designation_id = target_desig.id
+            student.designation = target_desig.title
+    elif payload.designation:
+        student.designation = payload.designation.strip()
 
     if payload.class_id:
         target_class = db.query(ClassModel).filter(
@@ -1186,6 +1310,7 @@ async def update_student_photos(
     photo_front: Optional[UploadFile] = File(None),
     photo_left: Optional[UploadFile] = File(None),
     photo_right: Optional[UploadFile] = File(None),
+    images: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
@@ -1204,6 +1329,11 @@ async def update_student_photos(
         ("left", photo_left),
         ("right", photo_right),
     ]
+
+    # Handle multiple files submitted via "images" field if photo_front/etc. are not provided
+    if images and not any(f and f.filename for _, f in uploaded_files):
+        angles_seq = ["frontal", "left", "right"]
+        uploaded_files = [(angles_seq[i] if i < len(angles_seq) else f"sample_{i}", img_f) for i, img_f in enumerate(images)]
 
     valid_uploads = [(angle, f) for angle, f in uploaded_files if f and f.filename]
     if not valid_uploads:
@@ -1282,29 +1412,6 @@ async def update_student_photos(
         "message": f"Updated photo angles: {', '.join(updated_angles)} for {student.name}.",
         "student": student.to_dict(),
     }
-
-
-@router.get("/student/{student_id}")
-def get_student_details(
-    student_id: int,
-    db: Session = Depends(get_db),
-    current_tenant: Tenant = Depends(get_current_tenant),
-):
-    """Fetches single student profile with associated photos and sample counts."""
-    student = db.query(Student).filter(
-        Student.id == student_id,
-        Student.tenant_id == current_tenant.id,
-    ).first()
-
-    if not student:
-        raise HTTPException(status_code=404, detail="Student profile not found in this institution.")
-
-    return {
-        "status": "success",
-        "tenant_id": current_tenant.id,
-        "student": student.to_dict(),
-    }
-
 
 @router.delete("/student/{student_id}")
 def delete_student_profile(

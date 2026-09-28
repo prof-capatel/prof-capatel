@@ -187,6 +187,21 @@
 }
 
 
+/* ==========================================================
+   Global Form Inputs Normalization: Remove Numeric Spin Arrows
+   Prevents accidental mouse-wheel adjustments & browser native stepper arrows
+   ========================================================== */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Common System Dimensions & Transitions */
 :root {
   --radius-xs: 6px;
@@ -2062,5 +2077,21 @@ video,
     padding: 10px 10px;
     gap: 12px;
   }
+}
+
+/* ==========================================================
+   Global Numeric Input Spin Button Normalization
+   Removes browser-native up/down increment/decrement spinners
+   across all templates and forms to prevent accidental adjustments.
+   ========================================================== */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
 }
 

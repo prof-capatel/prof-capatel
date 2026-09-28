@@ -661,25 +661,29 @@
                     <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">Active Monthly Breakdown (₹):</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
-                            <label style="font-size: 11px; color: var(--text-muted);">Basic Pay (50%)</label>
+                            <label style="font-size: 11px; color: var(--text-muted);">Basic Pay</label>
                             <input type="number" step="10" id="assignMonthlyBasic" class="form-control" readonly style="background: var(--bg-card);">
                         </div>
                         <div>
-                            <label style="font-size: 11px; color: var(--text-muted);">HRA (20%)</label>
+                            <label style="font-size: 11px; color: var(--text-muted);">HRA</label>
                             <input type="number" step="10" id="assignMonthlyHra" class="form-control" readonly style="background: var(--bg-card);">
                         </div>
                         <div>
-                            <label style="font-size: 11px; color: var(--text-muted);">Conveyance Allowance</label>
+                            <label style="font-size: 11px; color: var(--text-muted);">DA</label>
+                            <input type="number" step="10" id="assignMonthlyDa" class="form-control" readonly style="background: var(--bg-card);" value="0">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">TA / Conveyance</label>
                             <input type="number" step="10" id="assignConveyance" class="form-control" readonly style="background: var(--bg-card);" value="1600">
                         </div>
                         <div>
                             <label style="font-size: 11px; color: var(--text-muted);">Medical Allowance</label>
                             <input type="number" step="10" id="assignMedical" class="form-control" readonly style="background: var(--bg-card);" value="1250">
                         </div>
-                    </div>
-                    <div style="margin-top: 8px;">
-                        <label style="font-size: 11px; color: var(--text-muted);">Special Allowance (Balance)</label>
-                        <input type="number" step="10" id="assignSpecialAllowance" class="form-control" readonly style="background: var(--bg-card);">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Other Perks</label>
+                            <input type="number" step="10" id="assignOtherPerks" class="form-control" readonly style="background: var(--bg-card);" value="0">
+                        </div>
                     </div>
                 </div>
 
@@ -924,29 +928,29 @@
 
                 <!-- Breakdown Percentages (Conditionally rendered only for Structured Salary) -->
                 <div id="tplComponentBreakdownSection" style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 12px;">
-                    <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">Breakdown Rules (% of Monthly Gross):</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">Breakdown Rules (Computed on Employee Monthly Basic):</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
-                            <label style="font-size: 11px; color: var(--text-muted);">Basic % *</label>
-                            <input type="number" step="1" id="tplModalBasicPct" class="form-control" value="50" required>
-                        </div>
-                        <div>
-                            <label style="font-size: 11px; color: var(--text-muted);">HRA % *</label>
+                            <label style="font-size: 11px; color: var(--text-muted);">HRA (% of Basic) *</label>
                             <input type="number" step="1" id="tplModalHraPct" class="form-control" value="20" required>
                         </div>
                         <div>
-                            <label style="font-size: 11px; color: var(--text-muted);">DA %</label>
+                            <label style="font-size: 11px; color: var(--text-muted);">DA (% of Basic)</label>
                             <input type="number" step="1" id="tplModalDaPct" class="form-control" value="0">
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
                         <div>
-                            <label style="font-size: 11px; color: var(--text-muted);">Conveyance (₹/mo)</label>
+                            <label style="font-size: 11px; color: var(--text-muted);">TA / Conveyance (₹/mo)</label>
                             <input type="number" step="50" id="tplModalConvFixed" class="form-control" value="1600">
                         </div>
                         <div>
                             <label style="font-size: 11px; color: var(--text-muted);">Medical (₹/mo)</label>
                             <input type="number" step="50" id="tplModalMedFixed" class="form-control" value="1250">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Other Perks (₹/mo)</label>
+                            <input type="number" step="50" id="tplModalOtherPerksFixed" class="form-control" value="0">
                         </div>
                     </div>
                 </div>
@@ -1411,11 +1415,12 @@
             document.getElementById("assignMonthlyGross").value = st.monthly_gross || "";
             document.getElementById("assignMonthlyBasic").value = st.monthly_basic || "";
             document.getElementById("assignMonthlyHra").value = st.monthly_hra || "";
+            if (document.getElementById("assignMonthlyDa")) document.getElementById("assignMonthlyDa").value = st.monthly_da || 0;
             document.getElementById("assignConveyance").value = st.conveyance_allowance || 1600;
             document.getElementById("assignMedical").value = st.medical_allowance || 1250;
-            document.getElementById("assignSpecialAllowance").value = st.special_allowance || "";
-            document.getElementById("assignHourlyRate").value = st.hourly_rate || "";
-            document.getElementById("assignDailyRate").value = st.daily_rate || "";
+            if (document.getElementById("assignOtherPerks")) document.getElementById("assignOtherPerks").value = st.other_allowances || 0;
+            if (document.getElementById("assignHourlyRate")) document.getElementById("assignHourlyRate").value = st.hourly_rate || "";
+            if (document.getElementById("assignDailyRate")) document.getElementById("assignDailyRate").value = st.daily_rate || "";
             if (st.template_id) tplSelect.value = st.template_id;
         } else {
             // Option A: Default to mapped designation template blueprint if available
@@ -1782,10 +1787,10 @@
             const isStructured = (t.compensation_model === 'STRUCTURED_SALARY');
             const statusBadge = (t.is_active !== false) ? '<span class="badge badge-present">Active</span>' : '<span class="badge badge-node">Inactive</span>';
             const breakdownStr = isStructured 
-                ? `Basic: ${t.basic_percentage}% • HRA: ${t.hra_percentage}%${t.da_percentage > 0 ? ' • DA: ' + t.da_percentage + '%' : ''}`
+                ? `HRA: ${t.hra_percentage}%${t.da_percentage > 0 ? ' • DA: ' + t.da_percentage + '%' : ''}`
                 : '<span style="color: var(--text-muted); font-size: 11px;">Standard Base</span>';
             const fixedStr = isStructured
-                ? `Conv: ₹${t.conveyance_fixed} • Med: ₹${t.medical_fixed}`
+                ? `TA: ₹${t.conveyance_fixed} • Med: ₹${t.medical_fixed}${t.other_perks_fixed > 0 ? ' • Perks: ₹' + t.other_perks_fixed : ''}`
                 : '<span style="color: var(--text-muted); font-size: 11px;">--</span>';
 
             return `
@@ -1824,11 +1829,11 @@
         document.getElementById("salaryTemplateModalTitle").innerHTML = '<i class="fa-solid fa-layer-group" style="color: var(--accent-primary);"></i> <span>Create Salary Template</span>';
         document.getElementById("salaryTemplateForm").reset();
         document.getElementById("tplModalModel").value = "STRUCTURED_SALARY";
-        document.getElementById("tplModalBasicPct").value = "50";
         document.getElementById("tplModalHraPct").value = "20";
         document.getElementById("tplModalDaPct").value = "0";
         document.getElementById("tplModalConvFixed").value = "1600";
         document.getElementById("tplModalMedFixed").value = "1250";
+        if (document.getElementById("tplModalOtherPerksFixed")) document.getElementById("tplModalOtherPerksFixed").value = "0";
         document.getElementById("tplModalEnablePf").checked = true;
         document.getElementById("tplModalPfCeiling").checked = true;
         document.getElementById("tplModalEnableEsi").checked = true;
@@ -1863,11 +1868,11 @@
         document.getElementById("tplModalName").value = tpl.name || "";
         document.getElementById("tplModalCode").value = tpl.code || "";
         document.getElementById("tplModalModel").value = tpl.compensation_model || "STRUCTURED_SALARY";
-        document.getElementById("tplModalBasicPct").value = tpl.basic_percentage !== undefined ? tpl.basic_percentage : 50;
         document.getElementById("tplModalHraPct").value = tpl.hra_percentage !== undefined ? tpl.hra_percentage : 20;
         document.getElementById("tplModalDaPct").value = tpl.da_percentage !== undefined ? tpl.da_percentage : 0;
         document.getElementById("tplModalConvFixed").value = tpl.conveyance_fixed !== undefined ? tpl.conveyance_fixed : 1600;
         document.getElementById("tplModalMedFixed").value = tpl.medical_fixed !== undefined ? tpl.medical_fixed : 1250;
+        if (document.getElementById("tplModalOtherPerksFixed")) document.getElementById("tplModalOtherPerksFixed").value = tpl.other_perks_fixed !== undefined ? tpl.other_perks_fixed : 0;
         document.getElementById("tplModalEnablePf").checked = Boolean(tpl.enable_pf);
         document.getElementById("tplModalPfCeiling").checked = Boolean(tpl.pf_capped_at_ceiling);
         document.getElementById("tplModalEnableEsi").checked = Boolean(tpl.enable_esi);
@@ -1896,11 +1901,11 @@
         const code = document.getElementById("tplModalCode").value.trim().toUpperCase();
         const model = document.getElementById("tplModalModel").value;
         const isStructured = (model === "STRUCTURED_SALARY");
-        const basicPct = isStructured ? (parseFloat(document.getElementById("tplModalBasicPct").value) || 0) : 0;
         const hraPct = isStructured ? (parseFloat(document.getElementById("tplModalHraPct").value) || 0) : 0;
         const daPct = isStructured ? (parseFloat(document.getElementById("tplModalDaPct").value) || 0) : 0;
         const convFixed = isStructured ? (parseFloat(document.getElementById("tplModalConvFixed").value) || 0) : 0;
         const medFixed = isStructured ? (parseFloat(document.getElementById("tplModalMedFixed").value) || 0) : 0;
+        const otherPerksFixed = isStructured && document.getElementById("tplModalOtherPerksFixed") ? (parseFloat(document.getElementById("tplModalOtherPerksFixed").value) || 0) : 0;
         const enablePf = document.getElementById("tplModalEnablePf").checked;
         const pfCeiling = document.getElementById("tplModalPfCeiling").checked;
         const enableEsi = document.getElementById("tplModalEnableEsi").checked;
@@ -1913,11 +1918,11 @@
             code: code,
             compensation_model: model,
             description: desc || null,
-            basic_percentage: basicPct,
             hra_percentage: hraPct,
             da_percentage: daPct,
             conveyance_fixed: convFixed,
             medical_fixed: medFixed,
+            other_perks_fixed: otherPerksFixed,
             enable_pf: enablePf,
             pf_capped_at_ceiling: pfCeiling,
             enable_esi: enableEsi,

@@ -378,18 +378,19 @@ class OrganizationService:
             tenant_id=tenant_id,
             name=payload.name.strip(),
             code=code,
-            compensation_model=payload.compensation_model,
+            compensation_model=payload.compensation_model or "STRUCTURED_SALARY",
             description=payload.description.strip() if payload.description else None,
-            basic_percentage=payload.basic_percentage,
-            hra_percentage=payload.hra_percentage,
-            da_percentage=payload.da_percentage,
-            conveyance_fixed=payload.conveyance_fixed,
-            medical_fixed=payload.medical_fixed,
-            enable_pf=payload.enable_pf,
-            pf_capped_at_ceiling=payload.pf_capped_at_ceiling,
-            enable_esi=payload.enable_esi,
-            enable_pt=payload.enable_pt,
-            is_active=payload.is_active,
+            basic_percentage=payload.basic_percentage if payload.basic_percentage is not None else 50.0,
+            hra_percentage=payload.hra_percentage if payload.hra_percentage is not None else 20.0,
+            da_percentage=payload.da_percentage if payload.da_percentage is not None else 0.0,
+            conveyance_fixed=payload.conveyance_fixed if payload.conveyance_fixed is not None else 1600.0,
+            medical_fixed=payload.medical_fixed if payload.medical_fixed is not None else 1250.0,
+            other_perks_fixed=getattr(payload, 'other_perks_fixed', 0.0) or 0.0,
+            enable_pf=payload.enable_pf if payload.enable_pf is not None else True,
+            pf_capped_at_ceiling=payload.pf_capped_at_ceiling if payload.pf_capped_at_ceiling is not None else True,
+            enable_esi=payload.enable_esi if payload.enable_esi is not None else True,
+            enable_pt=payload.enable_pt if payload.enable_pt is not None else True,
+            is_active=payload.is_active if payload.is_active is not None else True,
         )
         self.db.add(tpl)
         self.db.commit()
@@ -421,6 +422,8 @@ class OrganizationService:
             tpl.conveyance_fixed = payload.conveyance_fixed
         if payload.medical_fixed is not None:
             tpl.medical_fixed = payload.medical_fixed
+        if hasattr(payload, 'other_perks_fixed') and payload.other_perks_fixed is not None:
+            tpl.other_perks_fixed = payload.other_perks_fixed
         if payload.enable_pf is not None:
             tpl.enable_pf = payload.enable_pf
         if payload.pf_capped_at_ceiling is not None:

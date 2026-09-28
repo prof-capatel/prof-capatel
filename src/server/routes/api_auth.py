@@ -403,6 +403,7 @@ def tenant_face_login(
         "role": effective_role,
         "is_admin": is_admin,
         "access_token": token,
+        "tenant": target_tenant.to_dict(),
         "redirect_url": redirect_url,
         "distance": round(min_dist, 3),
     }

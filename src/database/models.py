@@ -452,6 +452,7 @@ class Student(Base):
 
     # Corporate Compensation Attributes
     hourly_rate = Column(Float, nullable=True)
+    daily_rate = Column(Float, nullable=True)
     monthly_base_salary = Column(Float, nullable=True)
     date_of_joining = Column(Date, nullable=True)
 
@@ -542,6 +543,7 @@ class Student(Base):
             "last_promoted_at": self.last_promoted_at.isoformat() if self.last_promoted_at else None,
             "last_transferred_at": self.last_transferred_at.isoformat() if self.last_transferred_at else None,
             "hourly_rate": self.hourly_rate,
+            "daily_rate": self.daily_rate,
             "monthly_base_salary": self.monthly_base_salary,
             "location_id": self.location_id,
             "location_name": self.location.name if self.location else None,
@@ -636,10 +638,16 @@ class AttendanceRecord(Base):
     work_duration_minutes = Column(Integer, nullable=True)
     shift_status = Column(String(30), default="ON_TIME", nullable=False)  # ON_TIME, LATE_CHECKIN, EARLY_DEPARTURE, MISSED_CHECKOUT, COMPLETED, PRESENT
 
+    # Soft Delete Audit Tracking
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by = Column(String(100), nullable=True)
+
     __table_args__ = (
         Index("ix_attendance_tenant_ts", "tenant_id", "timestamp"),
         Index("ix_attendance_tenant_node", "tenant_id", "node_id"),
         Index("ix_attendance_student_date", "tenant_id", "student_id", "timestamp"),
+        Index("ix_attendance_tenant_deleted", "tenant_id", "is_deleted"),
     )
 
     tenant = relationship("Tenant", back_populates="attendance_records")
@@ -670,8 +678,11 @@ class AttendanceRecord(Base):
         
         c_out_str = self.check_out_time.strftime("%Y-%m-%d %H:%M:%S") if self.check_out_time else None
         c_out_short = self.check_out_time.strftime("%I:%M %p") if self.check_out_time else "--"
-
         duration_formatted = self.work_duration_formatted
+
+        desig_title = self.student.designation if self.student else None
+        if not desig_title and self.student and self.student.designation_rel:
+            desig_title = self.student.designation_rel.title
 
         return {
             "id": self.id,
@@ -681,6 +692,8 @@ class AttendanceRecord(Base):
             "roll_number": self.student.roll_number if self.student else "N/A",
             "department": self.student.department if self.student else "N/A",
             "user_role": self.student.user_role if self.student else "student",
+            "designation_id": self.student.designation_id if self.student else None,
+            "designation": desig_title or "Staff",
             "class_semester": class_name,
             "division_name": div_name,
             "node_id": self.node_id,
@@ -704,6 +717,9 @@ class AttendanceRecord(Base):
             "work_duration_minutes": self.work_duration_minutes,
             "work_duration_formatted": duration_formatted,
             "shift_status": self.shift_status or "ON_TIME",
+            "is_deleted": bool(self.is_deleted),
+            "deleted_at": self.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if self.deleted_at else None,
+            "deleted_by": self.deleted_by,
         }
 
 
@@ -1306,6 +1322,7 @@ class SalaryTemplate(Base):
     da_percentage = Column(Float, default=0.0, nullable=False)
     conveyance_fixed = Column(Float, default=1600.0, nullable=False)
     medical_fixed = Column(Float, default=1250.0, nullable=False)
+    other_perks_fixed = Column(Float, default=0.0, nullable=False)
     enable_pf = Column(Boolean, default=True, nullable=False)
     pf_capped_at_ceiling = Column(Boolean, default=True, nullable=False)
     enable_esi = Column(Boolean, default=True, nullable=False)
@@ -1335,6 +1352,7 @@ class SalaryTemplate(Base):
             "da_percentage": float(self.da_percentage or 0.0),
             "conveyance_fixed": float(self.conveyance_fixed or 0.0),
             "medical_fixed": float(self.medical_fixed or 0.0),
+            "other_perks_fixed": float(self.other_perks_fixed or 0.0),
             "enable_pf": bool(self.enable_pf),
             "pf_capped_at_ceiling": bool(self.pf_capped_at_ceiling),
             "enable_esi": bool(self.enable_esi),

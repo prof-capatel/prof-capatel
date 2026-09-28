@@ -88,6 +88,7 @@ async def ingest_node_frame(
     if target_tenant.branding and target_tenant.branding.cooldown_minutes is not None:
         custom_cooldown_secs = max(60, int(target_tenant.branding.cooldown_minutes * 60))
 
+    seen_student_ids = set()
     processed_detections = []
 
     # 4. Process attendance for all detected faces with Anti-Spoofing gating
@@ -120,7 +121,11 @@ async def ingest_node_frame(
         status_message = None
 
         if is_match and student_id is not None:
-            if is_live and temporal_confirmed:
+            if student_id in seen_student_ids:
+                cooldown_active = True
+                status_message = "Duplicate detection in same frame ignored"
+            elif is_live and temporal_confirmed:
+                seen_student_ids.add(student_id)
                 mark_res = attendance_manager.mark_attendance(
                     student_id=student_id,
                     node_id=node_id,

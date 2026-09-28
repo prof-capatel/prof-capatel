@@ -120,6 +120,7 @@ class AttendanceService:
             .filter(
                 AttendanceRecord.tenant_id == tenant.id,
                 AttendanceRecord.student_id == student.id,
+                AttendanceRecord.is_deleted == False,
                 AttendanceRecord.timestamp.between(start_today, end_today),
             )
             .order_by(AttendanceRecord.timestamp.desc())
@@ -128,6 +129,11 @@ class AttendanceService:
 
         should_checkout = False
         if requested_punch == "CHECK_OUT":
+            if is_corporate and (not latest_today_rec or latest_today_rec.check_out_time is not None or not latest_today_rec.check_in_time):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot record Check-Out for '{student.name}': No active Check-In record found for today."
+                )
             should_checkout = True
         elif requested_punch == "AUTO":
             if is_corporate and latest_today_rec and latest_today_rec.check_in_time and not latest_today_rec.check_out_time:
@@ -169,25 +175,10 @@ class AttendanceService:
                 self.db.refresh(record)
                 msg = f"Manual Check-Out recorded for '{student.name}' ({student.roll_number}). Duration: {record.work_duration_formatted}."
             else:
-                record = AttendanceRecord(
-                    tenant_id=tenant.id,
-                    student_id=student.id,
-                    node_id=payload.node_id or "MANUAL-OVERRIDE",
-                    timestamp=log_time,
-                    confidence_distance=0.0,
-                    status="PRESENT",
-                    punch_type="CHECK_OUT",
-                    check_in_time=None,
-                    check_out_time=log_time,
-                    shift_status="COMPLETED",
-                    is_manual_override=True,
-                    override_reason=payload.reason.strip(),
-                    override_by=payload.override_by.strip() if payload.override_by else "Admin",
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot record Check-Out for '{student.name}': No active Check-In record found for today."
                 )
-                self.db.add(record)
-                self.db.commit()
-                self.db.refresh(record)
-                msg = f"Manual Check-Out recorded for '{student.name}' ({student.roll_number})."
         else:
             shift_status = "ON_TIME"
             if is_corporate:

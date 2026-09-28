@@ -125,7 +125,9 @@ def get_effective_salary_structures(
     Handles Mid-Month Salary Revisions (Option 3A) by dividing the period into sub-segments.
     Returns a list of tuples: (segment_start_date, segment_end_date, structure_obj, segment_day_count).
     """
-    structures = (
+    total_period_days = float((end_date - start_date).days + 1)
+
+    raw_structures = (
         db.query(EmployeeSalaryStructure)
         .filter(
             EmployeeSalaryStructure.tenant_id == tenant_id,
@@ -133,35 +135,130 @@ def get_effective_salary_structures(
             EmployeeSalaryStructure.effective_from_date <= end_date,
             (EmployeeSalaryStructure.effective_to_date == None) | (EmployeeSalaryStructure.effective_to_date >= start_date),
         )
-        .order_by(EmployeeSalaryStructure.effective_from_date.asc())
+        .order_by(EmployeeSalaryStructure.effective_from_date.asc(), EmployeeSalaryStructure.id.asc())
         .all()
     )
 
-    total_period_days = (end_date - start_date).days + 1
+    # Filter out inactive structures that have zero/negative duration (e.g. superseded same-day records)
+    valid_structures = []
+    for st in raw_structures:
+        if not st.is_current and st.effective_to_date is not None and st.effective_to_date <= st.effective_from_date:
+            continue
+        valid_structures.append(st)
 
-    if not structures:
-        # Build an on-the-fly default fallback structure from student or branding
+    if not valid_structures:
+        # Check if student's designation has a mapped salary template
+        desig_tpl = None
+        if student.designation_rel and student.designation_rel.salary_template:
+            desig_tpl = student.designation_rel.salary_template
+        elif student.designation_id:
+            desig = db.query(DesignationMaster).filter(
+                DesignationMaster.id == student.designation_id,
+                DesignationMaster.tenant_id == tenant_id,
+            ).first()
+            if desig and desig.salary_template:
+                desig_tpl = desig.salary_template
+
         branding = student.tenant.branding if (student.tenant and student.tenant.branding) else None
-        p_structure = (branding.payroll_structure if branding and branding.payroll_structure else "HOURLY").upper()
-        h_rate = float(student.hourly_rate or (branding.default_hourly_rate if branding else 15.0) or 15.0)
-        m_base = float(student.monthly_base_salary or (h_rate * 8.0 * 26.0 if p_structure == "HOURLY" else 35000.0))
+
+        if desig_tpl:
+            model = desig_tpl.compensation_model or "STRUCTURED_SALARY"
+            basic_val = float(student.monthly_base_salary or 30000.0)
+
+            if model == "STRUCTURED_SALARY":
+                da_val = round(basic_val * (desig_tpl.da_percentage / 100.0), 2)
+                hra_val = round(basic_val * (desig_tpl.hra_percentage / 100.0), 2)
+                conv_val = float(desig_tpl.conveyance_fixed or 0.0)
+                med_val = float(desig_tpl.medical_fixed or 0.0)
+                perks_val = float(getattr(desig_tpl, 'other_perks_fixed', 0.0) or 0.0)
+                gross_val = round(basic_val + da_val + hra_val + conv_val + med_val + perks_val, 2)
+                d_rate = round(gross_val / max(1.0, total_period_days), 2)
+                h_rate = 0.0
+            elif model == "HOURLY":
+                da_val = 0.0
+                hra_val = 0.0
+                conv_val = 0.0
+                med_val = 0.0
+                perks_val = 0.0
+                basic_val = 0.0
+                h_rate = float(student.hourly_rate or 0.0)
+                d_rate = h_rate * 8.0
+                gross_val = d_rate * 26.0
+            elif model == "DAILY_WAGE":
+                da_val = 0.0
+                hra_val = 0.0
+                conv_val = 0.0
+                med_val = 0.0
+                perks_val = 0.0
+                basic_val = 0.0
+                h_rate = 0.0
+                d_rate = float(student.daily_rate or (basic_val / 26.0 if basic_val else 500.0))
+                gross_val = d_rate * 26.0
+            else:
+                da_val = 0.0
+                hra_val = 0.0
+                conv_val = 0.0
+                med_val = 0.0
+                perks_val = 0.0
+                gross_val = basic_val
+                d_rate = round(gross_val / max(1.0, total_period_days), 2)
+                h_rate = 0.0
+
+            fallback = EmployeeSalaryStructure(
+                tenant_id=tenant_id,
+                student_id=student.id,
+                template_id=desig_tpl.id,
+                compensation_model=model,
+                annual_ctc=gross_val * 12.0,
+                monthly_gross=gross_val,
+                monthly_basic=basic_val,
+                monthly_da=da_val,
+                monthly_hra=hra_val,
+                conveyance_allowance=conv_val,
+                medical_allowance=med_val,
+                special_allowance=0.0,
+                other_allowances=perks_val,
+                hourly_rate=h_rate,
+                daily_rate=d_rate,
+                fixed_stipend=basic_val if model == "STIPEND" else 0.0,
+                commission_percentage=0.0,
+                enable_pf=desig_tpl.enable_pf,
+                pf_capped_at_ceiling=desig_tpl.pf_capped_at_ceiling,
+                enable_esi=desig_tpl.enable_esi,
+                enable_pt=desig_tpl.enable_pt,
+                pt_monthly_amount=float(branding.pt_monthly_default if branding and branding.pt_monthly_default is not None else 200.0),
+                tds_monthly_amount=0.0,
+                effective_from_date=start_date,
+                effective_to_date=None,
+                is_current=True,
+            )
+            return [(start_date, end_date, fallback, total_period_days)]
+
+        # Build an on-the-fly default fallback structure from student or branding
+        basic_val = float(student.monthly_base_salary or 30000.0)
+        da_val = round(basic_val * 0.10, 2)
+        hra_val = round(basic_val * 0.20, 2)
+        conv_val = 1600.0
+        med_val = 1250.0
+        perks_val = 0.0
+        gross_val = round(basic_val + da_val + hra_val + conv_val + med_val + perks_val, 2)
 
         fallback = EmployeeSalaryStructure(
             tenant_id=tenant_id,
             student_id=student.id,
-            compensation_model=p_structure,
-            annual_ctc=m_base * 12.0,
-            monthly_gross=m_base,
-            monthly_basic=round(m_base * 0.50, 2),
-            monthly_da=0.0,
-            monthly_hra=round(m_base * 0.20, 2),
-            conveyance_allowance=1600.0 if m_base > 20000 else 0.0,
-            medical_allowance=1250.0 if m_base > 20000 else 0.0,
-            special_allowance=round(max(0.0, m_base - (m_base * 0.70 + 2850.0)), 2),
-            other_allowances=0.0,
-            hourly_rate=h_rate,
-            daily_rate=round(m_base / 26.0, 2),
-            fixed_stipend=m_base if p_structure == "STIPEND" else 0.0,
+            compensation_model="STRUCTURED_SALARY",
+            annual_ctc=gross_val * 12.0,
+            monthly_gross=gross_val,
+            monthly_basic=basic_val,
+            monthly_da=da_val,
+            monthly_hra=hra_val,
+            conveyance_allowance=conv_val,
+            medical_allowance=med_val,
+            special_allowance=0.0,
+            other_allowances=perks_val,
+            hourly_rate=0.0,
+            daily_rate=round(gross_val / max(1.0, total_period_days), 2),
+            fixed_stipend=0.0,
             commission_percentage=0.0,
             enable_pf=True,
             pf_capped_at_ceiling=True,
@@ -173,19 +270,36 @@ def get_effective_salary_structures(
             effective_to_date=None,
             is_current=True,
         )
-        return [(start_date, end_date, fallback, float(total_period_days))]
+        return [(start_date, end_date, fallback, total_period_days)]
 
+    # If only 1 valid structure exists, it covers the entire payroll calculation window
+    if len(valid_structures) == 1:
+        return [(start_date, end_date, valid_structures[0], total_period_days)]
+
+    # Multiple structures (Mid-period revisions): partition [start_date, end_date] contiguously
     segments = []
-    for st in structures:
-        seg_start = max(start_date, st.effective_from_date)
-        seg_end = min(end_date, st.effective_to_date) if st.effective_to_date else end_date
+    for idx, st in enumerate(valid_structures):
+        if idx == 0:
+            seg_start = start_date
+        else:
+            seg_start = max(start_date, st.effective_from_date)
+
+        if idx == len(valid_structures) - 1:
+            seg_end = end_date
+        else:
+            next_st = valid_structures[idx + 1]
+            if st.effective_to_date:
+                seg_end = min(end_date, st.effective_to_date)
+            else:
+                seg_end = min(end_date, next_st.effective_from_date - timedelta(days=1))
+
         if seg_start <= seg_end:
-            seg_days = (seg_end - seg_start).days + 1
-            segments.append((seg_start, seg_end, st, float(seg_days)))
+            seg_days = float((seg_end - seg_start).days + 1)
+            segments.append((seg_start, seg_end, st, seg_days))
 
     if not segments:
-        fallback = structures[-1]
-        segments.append((start_date, end_date, fallback, float(total_period_days)))
+        fallback = valid_structures[-1]
+        segments.append((start_date, end_date, fallback, total_period_days))
 
     return segments
 
@@ -220,13 +334,14 @@ def calculate_employee_payroll(
     currency = branding.currency_symbol if branding and branding.currency_symbol else "₹"
     shift_out_str = branding.shift_check_out_time if branding and branding.shift_check_out_time else "18:00"
 
-    # 1. Fetch Attendance Records for this employee
+    # 1. Fetch Attendance Records for this employee (excluding soft-deleted)
     records = (
         db.query(AttendanceRecord)
         .filter(
             AttendanceRecord.tenant_id == tenant.id,
             AttendanceRecord.student_id == student.id,
             AttendanceRecord.timestamp.between(start_dt, end_dt),
+            AttendanceRecord.is_deleted == False,
         )
         .order_by(AttendanceRecord.timestamp.asc())
         .all()
@@ -247,6 +362,9 @@ def calculate_employee_payroll(
 
     paid_leave_days = 0.0
     unpaid_leave_days = 0.0
+    daily_paid_leave_map: Dict[date, float] = {}
+    daily_unpaid_leave_map: Dict[date, float] = {}
+
     for lr in approved_leaves:
         l_start = max(start_date, lr.start_date)
         l_end = min(end_date, lr.end_date)
@@ -260,6 +378,15 @@ def calculate_employee_payroll(
             paid_leave_days += duration
         else:
             unpaid_leave_days += duration
+
+        cur = l_start
+        while cur <= l_end:
+            day_dur = 0.5 if lr.is_half_day else 1.0
+            if lr.leave_type and lr.leave_type.is_paid:
+                daily_paid_leave_map[cur] = daily_paid_leave_map.get(cur, 0.0) + day_dur
+            else:
+                daily_unpaid_leave_map[cur] = daily_unpaid_leave_map.get(cur, 0.0) + day_dur
+            cur += timedelta(days=1)
 
     # 3. Resolve shift details
     emp_shift = student.shift
@@ -286,6 +413,8 @@ def calculate_employee_payroll(
     missed_checkouts = 0
     late_checkins = 0
     early_departures = 0
+    daily_present_map: Dict[date, float] = {}
+    daily_billed_mins_map: Dict[date, int] = {}
 
     for cal_date, day_recs in daily_records.items():
         day_mins = 0
@@ -316,14 +445,19 @@ def calculate_employee_payroll(
 
         day_hours = day_mins / 60.0
         total_billed_minutes += day_mins
+        daily_billed_mins_map[cal_date] = day_mins
 
+        day_present = 0.0
         if day_hours > 0:
             if day_hours >= (emp_std_hours * 0.7):
-                present_days_count += 1.0
+                day_present = 1.0
             elif day_hours >= (emp_std_hours * 0.35):
-                present_days_count += 0.5
+                day_present = 0.5
             else:
-                present_days_count += round(day_hours / emp_std_hours, 2)
+                day_present = round(day_hours / emp_std_hours, 2)
+
+        daily_present_map[cal_date] = day_present
+        present_days_count += day_present
 
         # Overtime computation
         if enable_overtime and day_hours > emp_std_hours:
@@ -352,62 +486,91 @@ def calculate_employee_payroll(
     primary_template_id = None
     primary_model = "STRUCTURED_SALARY"
 
+    cal_denom = float(calendar_days_count) if calendar_days_count > 0 else 30.0
+
     for seg_start, seg_end, st, seg_total_days in structure_segments:
         primary_template_id = st.template_id
         primary_model = st.compensation_model
         hourly_rate_applied = st.hourly_rate
         daily_rate_applied = st.daily_rate
 
-        # Ratio of this segment to the full period
-        seg_weight = seg_total_days / float(calendar_days_count) if calendar_days_count > 0 else 1.0
-        seg_working_days = round(total_working_days * seg_weight, 2)
+        # Tally attendance, leaves, and hours within this segment window [seg_start, seg_end]
+        seg_present = 0.0
+        seg_paid_leave = 0.0
+        seg_unpaid_leave = 0.0
+        seg_billed_hours = 0.0
 
-        # Attendance ratio for this segment
-        att_ratio = min(1.0, (present_days_count + paid_leave_days) / max(1.0, total_working_days))
+        cur_d = seg_start
+        while cur_d <= seg_end:
+            seg_present += daily_present_map.get(cur_d, 0.0)
+            seg_paid_leave += daily_paid_leave_map.get(cur_d, 0.0)
+            seg_unpaid_leave += daily_unpaid_leave_map.get(cur_d, 0.0)
+            seg_billed_hours += daily_billed_mins_map.get(cur_d, 0) / 60.0
+            cur_d += timedelta(days=1)
+
+        seg_payable_days = seg_present + seg_paid_leave
+
+        # Calendar Days Pro-Rating factor for this segment:
+        # Rate per day = Monthly component / Calendar days in month (C, e.g. 28, 29, 30, 31)
+        # Payable in segment = Monthly component * (seg_payable_days / C)
+        cal_factor = min(1.0, seg_payable_days / cal_denom)
 
         if st.compensation_model == "STRUCTURED_SALARY":
-            earned_basic += (st.monthly_basic * seg_weight) * att_ratio
-            earned_da += (st.monthly_da * seg_weight) * att_ratio
-            earned_hra += (st.monthly_hra * seg_weight) * att_ratio
-            earned_conveyance += (st.conveyance_allowance * seg_weight) * att_ratio
-            earned_medical += (st.medical_allowance * seg_weight) * att_ratio
-            earned_special += (st.special_allowance * seg_weight) * att_ratio
-            earned_other += (st.other_allowances * seg_weight) * att_ratio
+            earned_basic += st.monthly_basic * cal_factor
+            earned_da += st.monthly_da * cal_factor
+            earned_hra += st.monthly_hra * cal_factor
+            earned_conveyance += st.conveyance_allowance * cal_factor
+            earned_medical += st.medical_allowance * cal_factor
+            earned_special += st.special_allowance * cal_factor
+            earned_other += st.other_allowances * cal_factor
 
         elif st.compensation_model == "MONTHLY_FIXED":
             m_gross = st.monthly_gross if st.monthly_gross > 0 else (student.monthly_base_salary or 35000.0)
-            seg_gross = (m_gross * seg_weight) * att_ratio
-            earned_basic += seg_gross * 0.60
-            earned_hra += seg_gross * 0.20
-            earned_special += seg_gross * 0.20
+            if st.monthly_basic > 0 and (st.monthly_hra > 0 or st.conveyance_allowance > 0 or st.medical_allowance > 0 or st.special_allowance > 0 or st.monthly_da > 0):
+                earned_basic += st.monthly_basic * cal_factor
+                earned_da += st.monthly_da * cal_factor
+                earned_hra += st.monthly_hra * cal_factor
+                earned_conveyance += st.conveyance_allowance * cal_factor
+                earned_medical += st.medical_allowance * cal_factor
+                earned_special += st.special_allowance * cal_factor
+                earned_other += st.other_allowances * cal_factor
+            else:
+                earned_basic += m_gross * cal_factor
+                earned_hra += 0.0
+                earned_special += 0.0
 
         elif st.compensation_model == "HOURLY":
             h_rate = st.hourly_rate if st.hourly_rate > 0 else (student.hourly_rate or 15.0)
-            seg_hours = total_billed_hours * seg_weight
-            earned_basic += seg_hours * h_rate
+            earned_basic += seg_billed_hours * h_rate
 
         elif st.compensation_model == "DAILY_WAGE":
-            d_rate = st.daily_rate if st.daily_rate > 0 else (student.monthly_base_salary / 26.0 if student.monthly_base_salary else 500.0)
-            seg_present = (present_days_count + paid_leave_days) * seg_weight
-            earned_basic += seg_present * d_rate
+            d_rate = st.daily_rate if st.daily_rate > 0 else (student.daily_rate or (student.monthly_base_salary / 26.0 if student.monthly_base_salary else 500.0))
+            earned_basic += seg_payable_days * d_rate
 
         elif st.compensation_model == "STIPEND":
             stip = st.fixed_stipend if st.fixed_stipend > 0 else (student.monthly_base_salary or 15000.0)
-            seg_stip = stip * seg_weight
-            per_day_stip = seg_stip / max(1.0, seg_working_days)
-            lwp_ded = per_day_stip * (unpaid_leave_days * seg_weight)
-            earned_basic += max(0.0, seg_stip - lwp_ded)
+            earned_basic += stip * cal_factor
 
         elif st.compensation_model in ("CONTRACT", "COMMISSION", "HYBRID"):
             m_gross = st.monthly_gross if st.monthly_gross > 0 else (student.monthly_base_salary or 30000.0)
-            seg_base = (m_gross * seg_weight) * att_ratio
-            earned_basic += seg_base * 0.70
-            earned_special += seg_base * 0.30
+            if st.monthly_basic > 0 and (st.monthly_hra > 0 or st.conveyance_allowance > 0 or st.medical_allowance > 0 or st.special_allowance > 0 or st.monthly_da > 0):
+                earned_basic += st.monthly_basic * cal_factor
+                earned_da += st.monthly_da * cal_factor
+                earned_hra += st.monthly_hra * cal_factor
+                earned_conveyance += st.conveyance_allowance * cal_factor
+                earned_medical += st.medical_allowance * cal_factor
+                earned_special += st.special_allowance * cal_factor
+                earned_other += st.other_allowances * cal_factor
+            else:
+                earned_basic += m_gross * cal_factor
 
     # 6. Compute Overtime Outlay
     effective_struct = structure_segments[-1][2]
     if effective_struct.compensation_model == "HOURLY":
         ot_base_rate = effective_struct.hourly_rate if effective_struct.hourly_rate > 0 else (student.hourly_rate or 15.0)
+    elif effective_struct.compensation_model == "DAILY_WAGE":
+        d_rate_for_ot = effective_struct.daily_rate if effective_struct.daily_rate > 0 else (student.daily_rate or 500.0)
+        ot_base_rate = d_rate_for_ot / std_daily_hours
     else:
         monthly_denom = (earned_basic + earned_da) if (earned_basic + earned_da) > 0 else (student.monthly_base_salary or 35000.0)
         ot_base_rate = monthly_denom / max(1.0, total_working_days * std_daily_hours)
@@ -444,10 +607,12 @@ def calculate_employee_payroll(
     if effective_struct.enable_pf:
         pf_wage = earned_basic + earned_da
         if pf_wage > 0:
-            if effective_struct.pf_capped_at_ceiling and branding and branding.enable_pf_ceiling:
-                # Statutory ₹15,000 cap pro-rated by working days attendance
-                ceiling = float(branding.epf_ceiling_limit or 15000.0)
-                eligible_pf_wage = min(pf_wage, ceiling * min(1.0, (present_days_count + paid_leave_days) / max(1.0, total_working_days)))
+            is_ceiling_enabled = (branding is None or getattr(branding, "enable_pf_ceiling", True))
+            if effective_struct.pf_capped_at_ceiling and is_ceiling_enabled:
+                # Statutory ₹15,000 cap pro-rated by attendance
+                ceiling = float((branding.epf_ceiling_limit if branding and branding.epf_ceiling_limit is not None else 15000.0) or 15000.0)
+                att_denom = float(calendar_days_count if effective_struct.compensation_model == "STRUCTURED_SALARY" else total_working_days)
+                eligible_pf_wage = min(pf_wage, ceiling * min(1.0, (present_days_count + paid_leave_days) / max(1.0, att_denom)))
             else:
                 eligible_pf_wage = pf_wage
 
@@ -489,8 +654,65 @@ def calculate_employee_payroll(
     net_salary = round(max(0.0, total_gross - total_deductions), 2)
     employer_ctc_outlay = round(total_gross + epf_er + eps_er + esic_er, 2)
 
+    # 10. Structure Compensation Parameters Breakdown
+    tpl = effective_struct.template if effective_struct.template else (
+        db.query(SalaryTemplate).filter(SalaryTemplate.id == effective_struct.template_id).first() if effective_struct.template_id else None
+    )
+    tpl_name = tpl.name if tpl else "Custom Structure"
+    tpl_code = tpl.code if tpl else (effective_struct.compensation_model or "CUSTOM")
+
+    cal_denom_val = max(1.0, float(calendar_days_count))
+    work_denom_val = max(1.0, float(total_working_days))
+    if effective_struct.compensation_model == "DAILY_WAGE":
+        daily_salary_rate = float(effective_struct.daily_rate or (student.daily_rate or (effective_struct.monthly_gross / work_denom_val if effective_struct.monthly_gross else 500.0)))
+    elif effective_struct.compensation_model == "HOURLY":
+        daily_salary_rate = 0.0
+    elif effective_struct.compensation_model == "STRUCTURED_SALARY":
+        daily_salary_rate = round(float(effective_struct.monthly_gross) / cal_denom_val, 2)
+    elif effective_struct.compensation_model == "MONTHLY_FIXED":
+        daily_salary_rate = round(float(effective_struct.monthly_gross or (student.monthly_base_salary or 0.0)) / work_denom_val, 2)
+    else:
+        daily_salary_rate = round(float(effective_struct.monthly_gross or 0.0) / cal_denom_val, 2)
+
+    da_pct = float(tpl.da_percentage) if tpl and tpl.da_percentage is not None else (
+        round((float(effective_struct.monthly_da) / float(effective_struct.monthly_basic) * 100.0), 1)
+        if effective_struct.monthly_basic and effective_struct.monthly_basic > 0 and effective_struct.monthly_da
+        else 0.0
+    )
+    hra_pct = float(tpl.hra_percentage) if tpl and tpl.hra_percentage is not None else (
+        round((float(effective_struct.monthly_hra) / float(effective_struct.monthly_basic) * 100.0), 1)
+        if effective_struct.monthly_basic and effective_struct.monthly_basic > 0 and effective_struct.monthly_hra
+        else 0.0
+    )
+
+    structure_parameters = {
+        "compensation_model": effective_struct.compensation_model or primary_model,
+        "template_id": effective_struct.template_id,
+        "template_name": tpl_name,
+        "template_code": tpl_code,
+        "monthly_basic": float(effective_struct.monthly_basic or 0.0),
+        "monthly_da": float(effective_struct.monthly_da or 0.0),
+        "monthly_hra": float(effective_struct.monthly_hra or 0.0),
+        "da_percentage": da_pct,
+        "hra_percentage": hra_pct,
+        "daily_salary_rate": round(daily_salary_rate, 2),
+        "hourly_rate": float(effective_struct.hourly_rate or 0.0),
+        "monthly_gross": float(effective_struct.monthly_gross or 0.0),
+        "annual_ctc": float(effective_struct.annual_ctc or 0.0),
+        "conveyance_allowance": float(effective_struct.conveyance_allowance or 0.0),
+        "medical_allowance": float(effective_struct.medical_allowance or 0.0),
+        "special_allowance": float(effective_struct.special_allowance or 0.0),
+        "other_allowances": float(effective_struct.other_allowances or 0.0),
+        "enable_pf": bool(effective_struct.enable_pf),
+        "pf_capped_at_ceiling": bool(effective_struct.pf_capped_at_ceiling),
+        "enable_esi": bool(effective_struct.enable_esi),
+        "enable_pt": bool(effective_struct.enable_pt),
+        "pt_monthly_amount": float(effective_struct.pt_monthly_amount or 0.0),
+    }
+
     breakdown = {
         "compensation_model": primary_model,
+        "parameters": structure_parameters,
         "currency_symbol": currency,
         "calendar_days": calendar_days_count,
         "working_days": total_working_days,
@@ -551,6 +773,7 @@ def calculate_employee_payroll(
         "template_id": primary_template_id,
         "compensation_model": primary_model,
         "calendar_days": calendar_days_count,
+        "calendar_days_count": calendar_days_count,
         "working_days": total_working_days,
         "present_days": present_days_count,
         "paid_leave_days": paid_leave_days,
@@ -566,6 +789,8 @@ def calculate_employee_payroll(
         "conveyance_earned": earned_conveyance,
         "medical_earned": earned_medical,
         "special_allowance_earned": earned_special,
+        "other_allowance_earned": earned_other,
+        "other_perks_earned": earned_other,
         "other_earnings": earned_other,
         "incentives_bonus": bonus_incentives,
         "gross_earnings": total_gross,
@@ -575,6 +800,7 @@ def calculate_employee_payroll(
         "esic_employee": esic_ee,
         "esic_employer": esic_er,
         "professional_tax": pt_amount,
+        "pt": pt_amount,
         "tds_deduction": tds_amount,
         "advance_loan_deduction": advance_loan_deduction,
         "other_deductions": other_deductions_manual,
@@ -583,5 +809,6 @@ def calculate_employee_payroll(
         "employer_total_ctc_outlay": employer_ctc_outlay,
         "payment_method": payment_method,
         "remarks": remarks,
+        "parameters": structure_parameters,
         "breakdown": breakdown,
     }

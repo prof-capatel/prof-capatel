@@ -15,10 +15,10 @@ from src.config import EXPORTS_DIR
 from src.core.attendance_manager import attendance_manager
 from src.core.camera_utils import decode_image_bytes
 from src.core.face_engine import face_engine
-from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant, WorkShift, LeaveRequest
+from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant, WorkShift, LeaveRequest, AuditLog, User
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
-from src.server.rbac_middleware import check_tenant_operational_access, create_access_token
+from src.server.rbac_middleware import check_tenant_operational_access, create_access_token, get_current_user_optional
 from src.utils.geo_utils import validate_geofence, haversine_distance
 from src.utils.timezone import get_ist_now, get_ist_date
 
@@ -110,6 +110,8 @@ def get_attendance_records(
     user_role: Optional[str] = Query(None, description="Filter by user role"),
     is_override: Optional[bool] = Query(None, description="Filter only manual overrides"),
     node_id: Optional[str] = Query(None, description="Filter by node ID"),
+    include_deleted: bool = Query(False, description="Include soft-deleted records"),
+    view_mode: Optional[str] = Query("active", description="Filter view mode: active, deleted/trash, all"),
     limit: int = Query(300, ge=1, le=2000),
     db: Session = Depends(get_db),
     current_tenant: Tenant = Depends(get_current_tenant),
@@ -120,6 +122,13 @@ def get_attendance_records(
         .join(Student, AttendanceRecord.student_id == Student.id, isouter=True)
         .filter(AttendanceRecord.tenant_id == current_tenant.id)
     )
+
+    if view_mode in ["deleted", "trash"]:
+        query = query.filter(AttendanceRecord.is_deleted == True)
+    elif view_mode == "all" or include_deleted:
+        pass
+    else:
+        query = query.filter(AttendanceRecord.is_deleted == False)
 
     if start_date and end_date:
         try:
@@ -174,7 +183,132 @@ def get_attendance_records(
         "status": "success",
         "tenant_id": current_tenant.id,
         "is_corporate": is_corporate,
+        "view_mode": view_mode or "active",
         "records": serialized,
+    }
+
+
+@router.delete("/records/{record_id}")
+def delete_attendance_record(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Soft-deletes an attendance record with full audit log and institutional tenant boundary check."""
+    check_tenant_operational_access(current_tenant)
+    record = (
+        db.query(AttendanceRecord)
+        .filter(
+            AttendanceRecord.id == record_id,
+            AttendanceRecord.tenant_id == current_tenant.id,
+        )
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Attendance record not found or does not belong to active organization.")
+
+    actor_username = current_user.username if current_user else "Admin"
+    actor_display = (current_user.full_name or current_user.username) if current_user else "Administrator"
+    actor_role = current_user.role if current_user else "TENANT_ADMIN"
+
+    if record.is_deleted:
+        return {
+            "status": "success",
+            "message": f"Attendance record #{record_id} is already deleted.",
+            "record_id": record_id,
+            "is_deleted": True,
+        }
+
+    record.is_deleted = True
+    record.deleted_at = get_ist_now()
+    record.deleted_by = actor_username
+
+    student_name = record.student.name if record.student else "Unknown"
+    roll_no = record.student.roll_number if record.student else "N/A"
+    ts_str = record.timestamp.strftime("%Y-%m-%d %H:%M:%S") if record.timestamp else "N/A"
+
+    audit = AuditLog(
+        tenant_id=current_tenant.id,
+        user_id=current_user.id if current_user else None,
+        actor_name=actor_display,
+        actor_role=actor_role,
+        action_type="ATTENDANCE_RECORD_DELETED",
+        target_type="ATTENDANCE_RECORD",
+        target_id=str(record.id),
+        description=f"Soft-deleted attendance record #{record.id} for {student_name} (Code: {roll_no}) at {ts_str}.",
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Attendance record #{record_id} has been soft-deleted successfully.",
+        "record_id": record_id,
+        "is_deleted": True,
+        "deleted_at": record.deleted_at.isoformat() if record.deleted_at else None,
+        "deleted_by": record.deleted_by,
+    }
+
+
+@router.post("/records/{record_id}/restore")
+def restore_attendance_record(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Restores (undeletes) a soft-deleted attendance record."""
+    check_tenant_operational_access(current_tenant)
+    record = (
+        db.query(AttendanceRecord)
+        .filter(
+            AttendanceRecord.id == record_id,
+            AttendanceRecord.tenant_id == current_tenant.id,
+        )
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Attendance record not found or does not belong to active organization.")
+
+    actor_username = current_user.username if current_user else "Admin"
+    actor_display = (current_user.full_name or current_user.username) if current_user else "Administrator"
+    actor_role = current_user.role if current_user else "TENANT_ADMIN"
+
+    if not record.is_deleted:
+        return {
+            "status": "success",
+            "message": f"Attendance record #{record_id} is already active.",
+            "record_id": record_id,
+            "is_deleted": False,
+        }
+
+    record.is_deleted = False
+    record.deleted_at = None
+    record.deleted_by = None
+
+    student_name = record.student.name if record.student else "Unknown"
+    roll_no = record.student.roll_number if record.student else "N/A"
+    ts_str = record.timestamp.strftime("%Y-%m-%d %H:%M:%S") if record.timestamp else "N/A"
+
+    audit = AuditLog(
+        tenant_id=current_tenant.id,
+        user_id=current_user.id if current_user else None,
+        actor_name=actor_display,
+        actor_role=actor_role,
+        action_type="ATTENDANCE_RECORD_RESTORED",
+        target_type="ATTENDANCE_RECORD",
+        target_id=str(record.id),
+        description=f"Restored soft-deleted attendance record #{record.id} for {student_name} (Code: {roll_no}) at {ts_str}.",
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Attendance record #{record_id} has been restored successfully.",
+        "record_id": record_id,
+        "is_deleted": False,
     }
 
 
@@ -225,6 +359,7 @@ def get_attendance_stats(
             .filter(
                 AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.timestamp.between(start_today, end_today),
+                AttendanceRecord.is_deleted == False,
             )
             .all()
         )
@@ -264,6 +399,7 @@ def get_attendance_stats(
                 AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.timestamp.between(start_today, end_today),
                 Student.user_role == "student",
+                AttendanceRecord.is_deleted == False,
             )
             .count()
         )
@@ -287,6 +423,7 @@ def get_attendance_stats(
         .filter(
             AttendanceRecord.tenant_id == current_tenant.id,
             AttendanceRecord.timestamp.between(start_today, end_today),
+            AttendanceRecord.is_deleted == False,
         )
         .count()
     )
@@ -587,7 +724,7 @@ def export_compliance_report(
     """Exports structured institutional/corporate compliance audit report in Excel or CSV format for active tenant."""
     total_dates_recorded = (
         db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
-        .filter(AttendanceRecord.tenant_id == current_tenant.id)
+        .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.is_deleted == False)
         .scalar()
     ) or 1
     total_dates_recorded = max(1, total_dates_recorded)
@@ -606,7 +743,7 @@ def export_compliance_report(
     for s in students:
         attended = (
             db.query(func.count(distinct(func.date(AttendanceRecord.timestamp))))
-            .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.student_id == s.id)
+            .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.student_id == s.id, AttendanceRecord.is_deleted == False)
             .scalar()
         ) or 0
 
@@ -616,6 +753,7 @@ def export_compliance_report(
                 AttendanceRecord.tenant_id == current_tenant.id,
                 AttendanceRecord.student_id == s.id,
                 AttendanceRecord.is_manual_override == True,
+                AttendanceRecord.is_deleted == False,
             )
             .scalar()
         ) or 0
@@ -719,7 +857,7 @@ def export_attendance_report(
     query = (
         db.query(AttendanceRecord)
         .join(Student, AttendanceRecord.student_id == Student.id, isouter=True)
-        .filter(AttendanceRecord.tenant_id == current_tenant.id)
+        .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.is_deleted == False)
         .order_by(AttendanceRecord.timestamp.desc())
     )
 

@@ -131,36 +131,45 @@
                     <select id="enrollDesignationSelect" class="form-control" onchange="onDesignationChanged('webcam')">
                         <option value="">-- Select Designation (Optional) --</option>
                         {% for desig in designations %}
-                        <option value="{{ desig.id }}" data-title="{{ desig.title }}" data-template-id="{{ desig.salary_template_id or '' }}">{{ desig.title }}{% if desig.code %} ({{ desig.code }}){% endif %}</option>
+                        <option value="{{ desig.id }}" data-dept-id="{{ desig.department_id or '' }}" data-title="{{ desig.title }}" data-template-id="{{ desig.salary_template_id or '' }}">{{ desig.title }}{% if desig.code %} ({{ desig.code }}){% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>
 
+                {% if current_tenant and current_tenant.saas_edition != 'BASIC' %}
                 <div class="form-group">
-                    <label class="form-label">Salary Structure (Optional)</label>
-                    <select id="enrollSalaryTemplateSelect" class="form-control">
-                        <option value="">-- Custom / No Template --</option>
+                    <label class="form-label">Salary Structure Blueprint (Optional)</label>
+                    <select id="enrollSalaryTemplateSelect" class="form-control" onchange="onEnrollTemplateChanged('webcam')">
+                        <option value="" data-model="STRUCTURED_SALARY">-- Designation Default / No Template --</option>
                         {% for tpl in salary_templates %}
-                        <option value="{{ tpl.id }}" data-model="{{ tpl.compensation_model }}">{{ tpl.name }} ({{ tpl.code }} - {{ tpl.compensation_model }})</option>
+                        <option value="{{ tpl.id }}" data-model="{{ tpl.compensation_model }}">{{ tpl.name }}{% if tpl.code %} ({{ tpl.code }}){% endif %}</option>
                         {% endfor %}
                     </select>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Blueprint automatically populates components while allowing individual overrides.</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Template defines compensation model and components (HRA, DA, etc.).</div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                        <label class="form-label">Monthly Gross (₹)</label>
-                        <input type="number" step="50" id="enrollMonthlySalary" class="form-control" placeholder="e.g. 45000">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Hourly Rate (₹/hr)</label>
-                        <input type="number" step="0.5" id="enrollHourlyRate" class="form-control" placeholder="e.g. 250">
-                    </div>
+                <div class="form-group" id="enrollMonthlySalaryGroup">
+                    <label class="form-label">Monthly Basic Salary (₹) *</label>
+                    <input type="number" step="50" id="enrollMonthlySalary" class="form-control" placeholder="e.g. 35000">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Base compensation; components (HRA, DA, etc.) calculate automatically based on designation template.</div>
                 </div>
+
+                <div class="form-group" id="enrollDailyRateGroup" style="display: none;">
+                    <label class="form-label">Daily Wage Rate (₹/day) *</label>
+                    <input type="number" step="10" id="enrollDailyRate" class="form-control" placeholder="e.g. 750">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Daily wage rate applied per present day & paid leave.</div>
+                </div>
+
+                <div class="form-group" id="enrollHourlyRateGroup" style="display: none;">
+                    <label class="form-label">Hourly Rate (₹/hr) *</label>
+                    <input type="number" step="1" id="enrollHourlyRate" class="form-control" placeholder="e.g. 200">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Hourly rate applied to billed working hours.</div>
+                </div>
+                {% endif %}
 
                 <div class="form-group">
                     <label class="form-label">Work shift *</label>
-                    <select id="enrollShiftSelect" class="form-control" required>
+                    <select id="enrollShiftSelect" class="form-control">
                         {% if work_shifts %}
                             {% for s in work_shifts %}
                             <option value="{{ s.id }}" {% if s.is_default %}selected{% endif %}>
@@ -168,7 +177,7 @@
                             </option>
                             {% endfor %}
                         {% else %}
-                            <option value="">General Shift (Default)</option>
+                            <option value="" selected>General Shift (Default)</option>
                         {% endif %}
                     </select>
                 </div>
@@ -417,36 +426,45 @@
                         <select id="batchEnrollDesignationSelect" class="form-control" onchange="onDesignationChanged('batch')">
                             <option value="">-- Select Designation (Optional) --</option>
                             {% for desig in designations %}
-                            <option value="{{ desig.id }}" data-title="{{ desig.title }}" data-template-id="{{ desig.salary_template_id or '' }}">{{ desig.title }}{% if desig.code %} ({{ desig.code }}){% endif %}</option>
+                            <option value="{{ desig.id }}" data-dept-id="{{ desig.department_id or '' }}" data-title="{{ desig.title }}" data-template-id="{{ desig.salary_template_id or '' }}">{{ desig.title }}{% if desig.code %} ({{ desig.code }}){% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
 
+                    {% if current_tenant and current_tenant.saas_edition != 'BASIC' %}
                     <div class="form-group">
-                        <label class="form-label">Salary Structure (Optional)</label>
-                        <select id="batchEnrollSalaryTemplateSelect" class="form-control">
-                            <option value="">-- Custom / No Template --</option>
+                        <label class="form-label">Salary Structure Blueprint (Optional)</label>
+                        <select id="batchEnrollSalaryTemplateSelect" class="form-control" onchange="onEnrollTemplateChanged('batch')">
+                            <option value="" data-model="STRUCTURED_SALARY">-- Designation Default / No Template --</option>
                             {% for tpl in salary_templates %}
-                            <option value="{{ tpl.id }}" data-model="{{ tpl.compensation_model }}">{{ tpl.name }} ({{ tpl.code }} - {{ tpl.compensation_model }})</option>
+                            <option value="{{ tpl.id }}" data-model="{{ tpl.compensation_model }}">{{ tpl.name }}{% if tpl.code %} ({{ tpl.code }}){% endif %}</option>
                             {% endfor %}
                         </select>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Blueprint automatically populates components while allowing individual overrides.</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Template defines compensation model and components (HRA, DA, etc.).</div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <div class="form-group">
-                            <label class="form-label">Monthly Gross (₹)</label>
-                            <input type="number" step="50" id="batchMonthlySalary" class="form-control" placeholder="e.g. 45000">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Hourly Rate (₹/hr)</label>
-                            <input type="number" step="0.5" id="batchHourlyRate" class="form-control" placeholder="e.g. 250">
-                        </div>
+                    <div class="form-group" id="batchMonthlySalaryGroup">
+                        <label class="form-label">Monthly Basic Salary (₹) *</label>
+                        <input type="number" step="50" id="batchMonthlySalary" class="form-control" placeholder="e.g. 35000">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Base compensation; components (HRA, DA, etc.) calculate automatically based on designation template.</div>
                     </div>
+
+                    <div class="form-group" id="batchDailyRateGroup" style="display: none;">
+                        <label class="form-label">Daily Wage Rate (₹/day) *</label>
+                        <input type="number" step="10" id="batchDailyRate" class="form-control" placeholder="e.g. 750">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Daily wage rate applied per present day & paid leave.</div>
+                    </div>
+
+                    <div class="form-group" id="batchHourlyRateGroup" style="display: none;">
+                        <label class="form-label">Hourly Rate (₹/hr) *</label>
+                        <input type="number" step="1" id="batchHourlyRate" class="form-control" placeholder="e.g. 200">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Hourly rate applied to billed working hours.</div>
+                    </div>
+                    {% endif %}
 
                     <div class="form-group">
                         <label class="form-label">Work shift *</label>
-                        <select id="batchEnrollShiftSelect" class="form-control" required>
+                        <select id="batchEnrollShiftSelect" class="form-control">
                             {% if work_shifts %}
                                 {% for s in work_shifts %}
                                 <option value="{{ s.id }}" {% if s.is_default %}selected{% endif %}>
@@ -454,7 +472,7 @@
                                 </option>
                                 {% endfor %}
                             {% else %}
-                                <option value="">General Shift (Default)</option>
+                                <option value="" selected>General Shift (Default)</option>
                             {% endif %}
                         </select>
                     </div>
@@ -560,6 +578,7 @@ const isCorporateTenant = {{ 'true' if (current_tenant and current_tenant.tenant
 const ENROLL_DEPARTMENTS = {{ departments | tojson | safe }};
 const ENROLL_CLASSES = {{ classes | tojson | safe }};
 const ENROLL_DIVISIONS = {{ divisions | tojson | safe }};
+const ENROLL_DESIGNATIONS = {{ designations | tojson | safe }};
 
 // ==========================================================
 // Employee Code Auto-Generation & Refresh
@@ -586,20 +605,47 @@ function onEnrollDeptChanged(mode) {
     const deptSelect = document.getElementById(isBatch ? "batchEnrollDeptSelect" : "enrollDeptSelect");
     const classSelect = document.getElementById(isBatch ? "batchEnrollClassSelect" : "enrollClassSelect");
     const divSelect = document.getElementById(isBatch ? "batchEnrollDivSelect" : "enrollDivSelect");
+    const desigSelect = document.getElementById(isBatch ? "batchEnrollDesignationSelect" : "enrollDesignationSelect");
 
-    const deptId = deptSelect.value ? parseInt(deptSelect.value) : null;
+    const deptId = deptSelect && deptSelect.value ? parseInt(deptSelect.value) : null;
 
     // Filter Classes
-    const filteredClasses = deptId ? ENROLL_CLASSES.filter(c => c.department_id === deptId) : ENROLL_CLASSES;
+    if (classSelect) {
+        const filteredClasses = deptId ? ENROLL_CLASSES.filter(c => c.department_id === deptId) : ENROLL_CLASSES;
 
-    let classHtml = '<option value="">-- Select Class --</option>';
-    filteredClasses.forEach(c => {
-        classHtml += `<option value="${c.id}" data-dept-id="${c.department_id || ''}" data-name="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`;
-    });
-    classSelect.innerHTML = classHtml;
+        let classHtml = '<option value="">-- Select Class --</option>';
+        filteredClasses.forEach(c => {
+            classHtml += `<option value="${c.id}" data-dept-id="${c.department_id || ''}" data-name="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`;
+        });
+        classSelect.innerHTML = classHtml;
+    }
 
     // Reset Division
-    divSelect.innerHTML = '<option value="">-- Select Division (Optional) --</option>';
+    if (divSelect) {
+        divSelect.innerHTML = '<option value="">-- Select Division (Optional) --</option>';
+    }
+
+    // Filter Designations (Mapped to department or unassigned/global)
+    if (desigSelect && typeof ENROLL_DESIGNATIONS !== "undefined" && Array.isArray(ENROLL_DESIGNATIONS)) {
+        const currentDesigVal = desigSelect.value ? parseInt(desigSelect.value) : null;
+        const filteredDesigs = deptId
+            ? ENROLL_DESIGNATIONS.filter(d => !d.department_id || d.department_id === deptId)
+            : ENROLL_DESIGNATIONS;
+
+        let desigHtml = '<option value="">-- Select Designation (Optional) --</option>';
+        let stillValid = false;
+        filteredDesigs.forEach(d => {
+            const isSel = currentDesigVal && d.id === currentDesigVal;
+            if (isSel) stillValid = true;
+            const codeStr = d.code ? ` (${escapeHtml(d.code)})` : '';
+            desigHtml += `<option value="${d.id}" data-dept-id="${d.department_id || ''}" data-title="${escapeHtml(d.title)}" data-template-id="${d.salary_template_id || ''}" ${isSel ? 'selected' : ''}>${escapeHtml(d.title)}${codeStr}</option>`;
+        });
+        desigSelect.innerHTML = desigHtml;
+        if (!stillValid) {
+            desigSelect.value = "";
+        }
+        onDesignationChanged(mode);
+    }
 }
 
 function onEnrollClassChanged(mode) {
@@ -648,6 +694,50 @@ function onDesignationChanged(mode) {
             tplSelect.value = tplId;
         }
     }
+    updateEnrollRateInputVisibility(mode);
+}
+
+function onEnrollTemplateChanged(mode) {
+    updateEnrollRateInputVisibility(mode);
+}
+
+function updateEnrollRateInputVisibility(mode) {
+    const isBatch = mode === "batch";
+    const tplSelect = document.getElementById(isBatch ? "batchEnrollSalaryTemplateSelect" : "enrollSalaryTemplateSelect");
+    const desigSelect = document.getElementById(isBatch ? "batchEnrollDesignationSelect" : "enrollDesignationSelect");
+    
+    let model = "STRUCTURED_SALARY";
+    if (tplSelect && tplSelect.value) {
+        const opt = tplSelect.options[tplSelect.selectedIndex];
+        if (opt) model = opt.getAttribute("data-model") || "STRUCTURED_SALARY";
+    } else if (desigSelect && desigSelect.value) {
+        const dOpt = desigSelect.options[desigSelect.selectedIndex];
+        const tplId = dOpt ? dOpt.getAttribute("data-template-id") : null;
+        if (tplId && tplSelect) {
+            const matchingTplOpt = Array.from(tplSelect.options).find(o => String(o.value) === String(tplId));
+            if (matchingTplOpt) model = matchingTplOpt.getAttribute("data-model") || "STRUCTURED_SALARY";
+        }
+    }
+
+    const monthlyGrp = document.getElementById(isBatch ? "batchMonthlySalaryGroup" : "enrollMonthlySalaryGroup");
+    const dailyGrp = document.getElementById(isBatch ? "batchDailyRateGroup" : "enrollDailyRateGroup");
+    const hourlyGrp = document.getElementById(isBatch ? "batchHourlyRateGroup" : "enrollHourlyRateGroup");
+
+    if (!monthlyGrp || !dailyGrp || !hourlyGrp) return;
+
+    if (model === "HOURLY") {
+        hourlyGrp.style.display = "block";
+        dailyGrp.style.display = "none";
+        monthlyGrp.style.display = "none";
+    } else if (model === "DAILY_WAGE") {
+        dailyGrp.style.display = "block";
+        hourlyGrp.style.display = "none";
+        monthlyGrp.style.display = "none";
+    } else {
+        monthlyGrp.style.display = "block";
+        dailyGrp.style.display = "none";
+        hourlyGrp.style.display = "none";
+    }
 }
 
 function escapeHtml(text) {
@@ -694,6 +784,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (batchRollInput && !batchRollInput.value) {
         batchRollInput.value = generateRandomEmployeeCode();
     }
+
+    // Initialize rate visibility
+    updateEnrollRateInputVisibility('webcam');
+    updateEnrollRateInputVisibility('batch');
 });
 
 // ==========================================================
@@ -885,6 +979,7 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
     const tplSelect = document.getElementById("enrollSalaryTemplateSelect");
     const tplId = tplSelect && tplSelect.value ? parseInt(tplSelect.value) : null;
     const monthlySalary = parseFloat(document.getElementById("enrollMonthlySalary")?.value) || null;
+    const dailyRate = parseFloat(document.getElementById("enrollDailyRate")?.value) || null;
     const hourlyRate = parseFloat(document.getElementById("enrollHourlyRate")?.value) || null;
 
     if (userRole === "student" && !classId) {
@@ -913,6 +1008,7 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
                 designation: desigTitle,
                 salary_template_id: tplId,
                 monthly_base_salary: monthlySalary,
+                daily_rate: dailyRate,
                 hourly_rate: hourlyRate,
             })
         });
@@ -924,6 +1020,9 @@ document.getElementById("enrollStudentForm").addEventListener("submit", async (e
             document.getElementById("btnRegisterProfile").innerHTML = '<i class="fa-solid fa-check"></i> Profile Registered';
             document.getElementById("enrollProgressSection").style.display = "block";
             document.getElementById("camFeedbackText").innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-check"></i> Registered ${name}. Initializing camera...</span>`;
+            if (typeof showFloatingToast === "function") {
+                showFloatingToast(`Employee '${name}' registered successfully! Starting face capture...`, "success");
+            }
             await startWebcam(selectedCameraDeviceId);
         } else {
             alert(`Error: ${data.detail || 'Could not register student.'}`);
@@ -1002,6 +1101,9 @@ async function uploadSampleBlob(blobOrFile, angle) {
                 document.getElementById("enrollmentCompleteBox").style.display = "block";
                 stopWebcam();
                 feedbackEl.innerHTML = `<span style="color:var(--badge-emerald-text); font-weight:600;"><i class="fa-solid fa-circle-check"></i> Enrollment finished! Camera released.</span>`;
+                if (typeof showFloatingToast === "function") {
+                    showFloatingToast(`Face capture completed successfully for '${document.getElementById("studentName")?.value || "employee"}'!`, "success");
+                }
             }
         } else {
             feedbackEl.innerHTML = `<span style="color:var(--accent-rose); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${data.detail}</span>`;
@@ -1173,6 +1275,10 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
     if (batchMonthly) {
         formData.append("monthly_base_salary", batchMonthly);
     }
+    const batchDaily = document.getElementById("batchDailyRate")?.value;
+    if (batchDaily) {
+        formData.append("daily_rate", batchDaily);
+    }
     const batchHourly = document.getElementById("batchHourlyRate")?.value;
     if (batchHourly) {
         formData.append("hourly_rate", batchHourly);
@@ -1191,6 +1297,12 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
         const data = await res.json();
 
         if (res.ok) {
+            batchFiles = [];
+            renderBatchPreviews();
+            submitBtn.disabled = true;
+            document.getElementById("batchRollNumber").value = generateRandomEmployeeCode();
+            document.getElementById("batchStudentName").value = "";
+            alertBox.style.display = "block";
             alertBox.style.background = "var(--badge-emerald-bg)";
             alertBox.style.border = "1px solid var(--badge-emerald-border)";
             alertBox.innerHTML = `
@@ -1206,6 +1318,9 @@ document.getElementById("batchUploadForm").addEventListener("submit", async (e) 
                 </a>
             `;
             submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Enrolled Successfully';
+            if (typeof showFloatingToast === "function") {
+                showFloatingToast(`Employee '${data.student.name}' registered & face embeddings generated successfully!`, "success");
+            }
         } else {
             alertBox.style.background = "var(--badge-rose-bg)";
             alertBox.style.border = "1px solid var(--badge-rose-border)";

@@ -74,9 +74,16 @@
             </div>
 
             {% if is_tenant_scoped and tenant %}
-                <span class="role-badge-pill">
-                    <i class="fa-solid fa-shield-halved"></i> {{ 'Corporate Enterprise Portal' if is_corporate else 'Academic Campus Portal' }}
-                </span>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+                    <span class="role-badge-pill" style="margin-bottom: 0;">
+                        <i class="fa-solid fa-shield-halved"></i> {{ 'Corporate Enterprise Portal' if is_corporate else 'Academic Campus Portal' }}
+                    </span>
+                    {% if tenant.saas_edition %}
+                    <span class="badge badge-node" style="font-size: 10.5px; font-weight: 700; text-transform: uppercase;">
+                        <i class="fa-solid fa-gem" style="color: var(--accent-primary);"></i> {{ tenant.saas_edition }} Edition
+                    </span>
+                    {% endif %}
+                </div>
                 <h2 style="font-size: 21px; font-weight: 800; color: var(--text-heading); margin: 0;">{{ tenant.name }}</h2>
                 <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">{{ branding.tagline if (branding and branding.tagline) else 'Sign in to access your organization workspace' }}</p>
             {% else %}
@@ -96,12 +103,12 @@
             </div>
             {% endif %}
 
-            <!-- Quick-Login Profiles (Scored per Tenant or Global) -->
-            {% if not is_corporate %}
+            <!-- Quick-Login Profiles (Only on Global Platform Login Gateway) -->
+            {% if not is_tenant_scoped %}
             <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
-                        <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> {{ 'Tenant Quick Profiles' if is_tenant_scoped else 'Quick-Login Demo Profiles' }}
+                        <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Quick-Login Demo Profiles
                     </span>
                     <a href="/demo-login" style="font-size: 11px; color: var(--accent-primary); text-decoration: none; font-weight: 700;">
                         <i class="fa-solid fa-flask"></i> Demo Sandbox
@@ -109,46 +116,34 @@
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" id="quickProfilesGrid">
-                    {% if is_tenant_scoped and demo_users %}
-                        {% for du in demo_users %}
-                            <button type="button" class="demo-pill-btn" onclick="fillTenantLogin('{{ du.username }}', 'admin123', '{{ du.role }}')">
-                                <i class="fa-solid {{ du.icon }}" style="color: {{ du.color or 'var(--accent-primary)' }};"></i>
-                                <div>
-                                    <div style="font-weight: 700;">{{ du.label }}</div>
-                                    <div style="font-size: 9.5px; color: var(--text-muted);">{{ du.username }}</div>
-                                </div>
-                            </button>
-                        {% endfor %}
-                    {% else %}
-                        <button type="button" class="demo-pill-btn" onclick="fillLogin('superadmin', 'admin123', 'SUPER_ADMIN', '')">
-                            <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
-                            <div>
-                                <div style="font-weight: 700;">Super Admin</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);">superadmin</div>
-                            </div>
-                        </button>
-                        <button type="button" class="demo-pill-btn" onclick="fillLogin('admin', 'admin123', 'TENANT_ADMIN', '1')">
-                            <i class="fa-solid fa-user-shield" style="color: var(--accent-primary);"></i>
-                            <div>
-                                <div style="font-weight: 700;">Tenant Admin</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);">admin</div>
-                            </div>
-                        </button>
-                        <button type="button" class="demo-pill-btn" onclick="fillLogin('teacher1', 'teacher123', 'TEACHER', '1')">
-                            <i class="fa-solid fa-chalkboard-user" style="color: var(--accent-emerald);"></i>
-                            <div>
-                                <div style="font-weight: 700;">Teacher</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);">teacher1</div>
-                            </div>
-                        </button>
-                        <button type="button" class="demo-pill-btn" onclick="fillLogin('student1', 'student123', 'STUDENT', '1')">
-                            <i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i>
-                            <div>
-                                <div style="font-weight: 700;">Student</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);">student1</div>
-                            </div>
-                        </button>
-                    {% endif %}
+                    <button type="button" class="demo-pill-btn" onclick="fillLogin('superadmin', 'admin123', 'SUPER_ADMIN', '')">
+                        <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
+                        <div>
+                            <div style="font-weight: 700;">Super Admin</div>
+                            <div style="font-size: 9.5px; color: var(--text-muted);">superadmin</div>
+                        </div>
+                    </button>
+                    <button type="button" class="demo-pill-btn" onclick="fillLogin('admin', 'admin123', 'TENANT_ADMIN', '1')">
+                        <i class="fa-solid fa-user-shield" style="color: var(--accent-primary);"></i>
+                        <div>
+                            <div style="font-weight: 700;">Tenant Admin</div>
+                            <div style="font-size: 9.5px; color: var(--text-muted);">admin</div>
+                        </div>
+                    </button>
+                    <button type="button" class="demo-pill-btn" onclick="fillLogin('teacher1', 'teacher123', 'TEACHER', '1')">
+                        <i class="fa-solid fa-chalkboard-user" style="color: var(--accent-emerald);"></i>
+                        <div>
+                            <div style="font-weight: 700;">Teacher</div>
+                            <div style="font-size: 9.5px; color: var(--text-muted);">teacher1</div>
+                        </div>
+                    </button>
+                    <button type="button" class="demo-pill-btn" onclick="fillLogin('student1', 'student123', 'STUDENT', '1')">
+                        <i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i>
+                        <div>
+                            <div style="font-weight: 700;">Student</div>
+                            <div style="font-size: 9.5px; color: var(--text-muted);">student1</div>
+                        </div>
+                    </button>
                 </div>
             </div>
             {% endif %}

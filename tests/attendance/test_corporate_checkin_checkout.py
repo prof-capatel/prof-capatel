@@ -40,12 +40,20 @@ class TestCorporateCheckinCheckout(unittest.TestCase):
         self.attendance_mgr = AttendanceManager()
         # Clean any stale test students and records
         with get_db_context() as db:
+            from src.database.models import WorkShift
+            ssec = db.query(Tenant).filter(Tenant.slug == "ssec").first()
+            if ssec:
+                for w in db.query(WorkShift).filter(WorkShift.tenant_id == ssec.id).all():
+                    w.start_time = "10:30"
+                    w.end_time = "18:00"
+                    w.grace_period_minutes = 15
+
             test_rolls = ["EMP_TEST_CORP_001", "EMP_TEST_CORP_002", "EMP_TEST_CORP_003", "EMP_TEST_CORP_004"]
             st_ids = [s.id for s in db.query(Student).filter(Student.roll_number.in_(test_rolls)).all()]
             if st_ids:
                 db.query(AttendanceRecord).filter(AttendanceRecord.student_id.in_(st_ids)).delete(synchronize_session=False)
                 db.query(Student).filter(Student.id.in_(st_ids)).delete(synchronize_session=False)
-                db.commit()
+            db.commit()
 
     def tearDown(self):
         with get_db_context() as db:
@@ -454,6 +462,93 @@ class TestCorporateCheckinCheckout(unittest.TestCase):
             self.assertEqual(records[1].work_duration_minutes, 270)
             total_active_mins = sum(r.work_duration_minutes for r in records if r.work_duration_minutes)
             self.assertEqual(total_active_mins, 450)
+
+    def test_disallow_checkout_without_active_checkin(self):
+        """Verify that an initial scan for a new employee is ALWAYS a CHECK-IN and cannot checkout."""
+        with get_db_context() as db:
+            ssec = db.query(Tenant).filter(Tenant.slug == "ssec").first()
+            self.assertIsNotNone(ssec)
+            ssec_id = ssec.id
+            emp = Student(
+                tenant_id=ssec_id,
+                roll_number="EMP_TEST_CORP_003",
+                name="Fresh Test Employee",
+                department="Engineering",
+                user_role="employee",
+                is_active=True,
+            )
+            db.add(emp)
+            db.commit()
+            db.refresh(emp)
+            emp_id = emp.id
+
+        self.attendance_mgr._last_logged_cache.clear()
+
+        # Attempt first punch of the day: MUST be CHECK_IN
+        now = datetime.combine(date.today(), time(9, 0, 0))
+        res = self.attendance_mgr.mark_attendance(
+            student_id=emp_id,
+            node_id="GATE_SCANNER_1",
+            confidence_distance=0.20,
+            now_dt=now,
+            tenant_id=ssec_id,
+        )
+        self.assertTrue(res["attendance_logged"])
+        self.assertEqual(res["punch_type"], "CHECK_IN")
+        self.assertIsNotNone(res["record"]["check_in_time"])
+        self.assertIsNone(res["record"]["check_out_time"])
+
+    def test_soft_deleted_checkin_does_not_permit_checkout(self):
+        """Verify that soft-deleted check-in is ignored and does NOT trigger a check-out."""
+        with get_db_context() as db:
+            ssec = db.query(Tenant).filter(Tenant.slug == "ssec").first()
+            self.assertIsNotNone(ssec)
+            ssec_id = ssec.id
+            emp = Student(
+                tenant_id=ssec_id,
+                roll_number="EMP_TEST_CORP_004",
+                name="Soft Deleted Employee",
+                department="Engineering",
+                user_role="employee",
+                is_active=True,
+            )
+            db.add(emp)
+            db.commit()
+            db.refresh(emp)
+            emp_id = emp.id
+
+            # Create a soft-deleted check-in
+            rec = AttendanceRecord(
+                tenant_id=ssec_id,
+                student_id=emp_id,
+                node_id="GATE_SCANNER_1",
+                timestamp=datetime.combine(date.today(), time(8, 0, 0)),
+                confidence_distance=0.15,
+                status="PRESENT",
+                punch_type="CHECK_IN",
+                check_in_time=datetime.combine(date.today(), time(8, 0, 0)),
+                check_out_time=None,
+                is_deleted=True,
+            )
+            db.add(rec)
+            db.commit()
+
+        self.attendance_mgr._last_logged_cache.clear()
+
+        # Scan now: since the previous record was deleted, active check-in is None.
+        # It must log a fresh CHECK_IN, NOT check-out the deleted record!
+        now = datetime.combine(date.today(), time(10, 0, 0))
+        res = self.attendance_mgr.mark_attendance(
+            student_id=emp_id,
+            node_id="GATE_SCANNER_1",
+            confidence_distance=0.20,
+            now_dt=now,
+            tenant_id=ssec_id,
+        )
+        self.assertTrue(res["attendance_logged"])
+        self.assertEqual(res["punch_type"], "CHECK_IN")
+        self.assertIsNotNone(res["record"]["check_in_time"])
+        self.assertIsNone(res["record"]["check_out_time"])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import unittest
 import os
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta, time as dt_time
 from fastapi.testclient import TestClient
 
 # Ensure project root is in sys.path
@@ -19,8 +19,10 @@ from src.database.models import (
     SalaryRevisionHistory,
     Department,
     CompanyLocation,
+    AttendanceRecord,
 )
 from src.server.rbac_middleware import create_access_token
+from src.core.payroll_engine import calculate_employee_payroll
 
 
 class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
@@ -217,17 +219,14 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
         self.assertIsNotNone(struct, "Expected EmployeeSalaryStructure to be auto-created")
         self.assertEqual(struct.template_id, desig.salary_template_id)
         self.assertEqual(struct.compensation_model, "STRUCTURED_SALARY")
-        self.assertEqual(struct.monthly_gross, 100000.0)
-        self.assertEqual(struct.annual_ctc, 1200000.0)
-
-        # Basic 50% = 50000, DA 10% = 10000, HRA 20% of Basic = 10000, Conv = 1600, Med = 1250, Special = balance
-        self.assertEqual(struct.monthly_basic, 50000.0)
-        self.assertEqual(struct.monthly_da, 10000.0)
-        self.assertEqual(struct.monthly_hra, 10000.0)
+        self.assertEqual(struct.monthly_basic, 100000.0)
+        self.assertEqual(struct.monthly_hra, 20000.0)  # 20% of 100k
+        self.assertEqual(struct.monthly_da, 10000.0)   # 10% of 100k
         self.assertEqual(struct.conveyance_allowance, 1600.0)
         self.assertEqual(struct.medical_allowance, 1250.0)
-        expected_special = 100000.0 - (50000.0 + 10000.0 + 10000.0 + 1600.0 + 1250.0)
-        self.assertEqual(struct.special_allowance, expected_special)
+        self.assertEqual(struct.other_allowances, 0.0)
+        self.assertEqual(struct.monthly_gross, 132850.0)
+        self.assertEqual(struct.annual_ctc, 132850.0 * 12.0)
         self.assertTrue(struct.enable_pf)
         self.assertFalse(struct.enable_esi)
         self.assertTrue(struct.enable_pt)
@@ -235,27 +234,27 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
 
     def test_03_employee_onboarding_with_explicit_template_override(self):
         """Test employee registration with explicit salary_template_id overrides designation template."""
-        # Create a second template: Fixed Stipend
-        res_stipend = self.client.post(
+        # Create a second structured template: Executive Leadership
+        res_exec = self.client.post(
             "/api/v1/payroll/masters/templates",
             headers=self.headers,
             json={
-                "name": "Graduate Trainee Stipend",
-                "code": "STIPEND-25K",
-                "compensation_model": "STIPEND",
-                "basic_percentage": 100.0,
-                "hra_percentage": 0.0,
-                "da_percentage": 0.0,
-                "conveyance_fixed": 0.0,
-                "medical_fixed": 0.0,
-                "enable_pf": False,
+                "name": "Executive Leadership Blueprint",
+                "code": "EXEC-LEAD",
+                "compensation_model": "STRUCTURED_SALARY",
+                "hra_percentage": 25.0,
+                "da_percentage": 5.0,
+                "conveyance_fixed": 2000.0,
+                "medical_fixed": 1500.0,
+                "other_perks_fixed": 5000.0,
+                "enable_pf": True,
                 "enable_esi": False,
-                "enable_pt": False,
+                "enable_pt": True,
                 "is_active": True,
             },
         )
-        self.assertEqual(res_stipend.status_code, 200)
-        stipend_tpl_id = res_stipend.json()["data"]["id"]
+        self.assertEqual(res_exec.status_code, 200)
+        exec_tpl_id = res_exec.json()["data"]["id"]
 
         self.refresh_session()
         desig = self.db.query(DesignationMaster).filter(
@@ -263,14 +262,14 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
             DesignationMaster.code == "PRIN-ARCH",
         ).first()
 
-        # Register employee specifying stipend_tpl_id explicitly
+        # Register employee specifying exec_tpl_id explicitly
         emp_payload = {
             "roll_number": "EMP-INT-002",
             "name": "Siddharth Verma",
             "user_role": "employee",
             "designation_id": desig.id,
-            "salary_template_id": stipend_tpl_id,
-            "monthly_base_salary": 25000.0,
+            "salary_template_id": exec_tpl_id,
+            "monthly_base_salary": 50000.0,
             "date_of_joining": "2026-04-01",
         }
         res_reg = self.client.post(
@@ -288,11 +287,16 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
             EmployeeSalaryStructure.is_current == True,
         ).first()
         self.assertIsNotNone(struct)
-        self.assertEqual(struct.template_id, stipend_tpl_id)
-        self.assertEqual(struct.compensation_model, "STIPEND")
-        self.assertEqual(struct.monthly_gross, 25000.0)
-        self.assertEqual(struct.fixed_stipend, 25000.0)
-        self.assertFalse(struct.enable_pf)
+        self.assertEqual(struct.template_id, exec_tpl_id)
+        self.assertEqual(struct.compensation_model, "STRUCTURED_SALARY")
+        self.assertEqual(struct.monthly_basic, 50000.0)
+        self.assertEqual(struct.monthly_hra, 12500.0) # 25% of 50k
+        self.assertEqual(struct.monthly_da, 2500.0)   # 5% of 50k
+        self.assertEqual(struct.conveyance_allowance, 2000.0)
+        self.assertEqual(struct.medical_allowance, 1500.0)
+        self.assertEqual(struct.other_allowances, 5000.0)
+        self.assertEqual(struct.monthly_gross, 73500.0)
+        self.assertTrue(struct.enable_pf)
 
     def test_04_assign_salary_structure_and_revision_history(self):
         """Test /api/v1/payroll/structure/assign creates revision history and transitions previous structure."""
@@ -310,18 +314,18 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
         ).first()
         self.assertIsNotNone(old_struct)
 
-        # Assign revised structure effective from 2026-07-01 (Promotion / CTC hike to 1,50,000/mo)
+        # Assign revised structure effective from 2026-07-01 (Promotion / Basic hike to 1,20,000/mo)
         assign_payload = {
             "student_id": emp.id,
             "compensation_model": "STRUCTURED_SALARY",
-            "annual_ctc": 1800000.0,
-            "monthly_gross": 150000.0,
-            "monthly_basic": 75000.0,
-            "monthly_hra": 15000.0,
-            "monthly_da": 15000.0,
+            "annual_ctc": 1920000.0,
+            "monthly_gross": 160000.0,
+            "monthly_basic": 120000.0,
+            "monthly_hra": 24000.0,
+            "monthly_da": 12000.0,
             "conveyance_allowance": 2000.0,
-            "medical_allowance": 1500.0,
-            "special_allowance": 41500.0,
+            "medical_allowance": 2000.0,
+            "other_allowances": 0.0,
             "enable_pf": True,
             "enable_esi": False,
             "enable_pt": True,
@@ -349,8 +353,8 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
             EmployeeSalaryStructure.is_current == True,
         ).first()
         self.assertIsNotNone(new_struct)
-        self.assertEqual(new_struct.monthly_gross, 150000.0)
-        self.assertEqual(new_struct.annual_ctc, 1800000.0)
+        self.assertEqual(new_struct.monthly_basic, 120000.0)
+        self.assertEqual(new_struct.monthly_gross, 160000.0)
         self.assertEqual(new_struct.effective_from_date, date(2026, 7, 1))
 
         # Check revision history
@@ -359,8 +363,8 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
             SalaryRevisionHistory.student_id == emp.id,
         ).all()
         self.assertEqual(len(revisions), 1)
-        self.assertEqual(revisions[0].previous_monthly_gross, 100000.0)
-        self.assertEqual(revisions[0].new_monthly_gross, 150000.0)
+        self.assertEqual(revisions[0].previous_monthly_gross, 132850.0)
+        self.assertEqual(revisions[0].new_monthly_gross, 160000.0)
         self.assertEqual(revisions[0].revision_reason, "Annual Performance Appraisal & Merit Hike")
 
     def test_05_update_employee_profile_updates_salary_structure(self):
@@ -378,7 +382,7 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
         ).first()
         self.assertIsNotNone(eng_tpl)
 
-        # Update employee to Full-time Engineer with monthly salary 60,000 and template
+        # Update employee to Full-time Engineer with monthly basic 60,000 and template
         update_payload = {
             "roll_number": emp.roll_number,
             "name": emp.name,
@@ -402,10 +406,12 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
         self.assertIsNotNone(updated_struct)
         self.assertEqual(updated_struct.template_id, eng_tpl.id)
         self.assertEqual(updated_struct.compensation_model, "STRUCTURED_SALARY")
-        self.assertEqual(updated_struct.monthly_gross, 60000.0)
-        self.assertEqual(updated_struct.monthly_basic, 30000.0)  # 50% of 60k
-        self.assertEqual(updated_struct.monthly_da, 6000.0)    # 10% of 60k
-        self.assertEqual(updated_struct.monthly_hra, 6000.0)   # 20% of Basic (30k)
+        self.assertEqual(updated_struct.monthly_basic, 60000.0)
+        self.assertEqual(updated_struct.monthly_hra, 12000.0)   # 20% of Basic (60k)
+        self.assertEqual(updated_struct.monthly_da, 6000.0)    # 10% of Basic (60k)
+        self.assertEqual(updated_struct.conveyance_allowance, 1600.0)
+        self.assertEqual(updated_struct.medical_allowance, 1250.0)
+        self.assertEqual(updated_struct.monthly_gross, 80850.0)
 
     def test_06_structure_endpoints_and_route_aliases(self):
         """Test /api/v1/payroll/structures and /api/v1/payroll/employees aliases return 200 OK and valid structure overview."""
@@ -454,6 +460,249 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
         # 5. Test GET /api/v1/payroll/structures/{id} alias
         res_alias2 = self.client.get(f"/api/v1/payroll/structures/{emp.id}", headers=self.headers)
         self.assertEqual(res_alias2.status_code, 200)
+
+    def test_07_structured_salary_calculation_with_calendar_days_prorating(self):
+        """Test attendance pro-rating for Structured Salary based on total calendar days in the month."""
+        self.refresh_session()
+
+        # 1. Create a structured template with HRA 20%, DA 10%, TA 1600, Med 1250, Perks 1000
+        res_tpl = self.client.post(
+            "/api/v1/payroll/masters/templates",
+            headers=self.headers,
+            json={
+                "name": "Operations Standard Structured",
+                "code": "OPS-STD-STRUCT",
+                "compensation_model": "STRUCTURED_SALARY",
+                "hra_percentage": 20.0,
+                "da_percentage": 10.0,
+                "conveyance_fixed": 1600.0,
+                "medical_fixed": 1250.0,
+                "other_perks_fixed": 1000.0,
+                "enable_pf": True,
+                "pf_capped_at_ceiling": True,
+                "enable_esi": False,
+                "enable_pt": True,
+                "is_active": True,
+            },
+        )
+        self.assertEqual(res_tpl.status_code, 200)
+        ops_tpl_id = res_tpl.json()["data"]["id"]
+
+        # 2. Register employee with basic salary ₹60,000
+        emp_payload = {
+            "roll_number": "EMP-OPS-003",
+            "name": "Kavita Rao",
+            "user_role": "employee",
+            "salary_template_id": ops_tpl_id,
+            "monthly_base_salary": 60000.0,
+            "date_of_joining": "2026-05-01",
+        }
+        res_reg = self.client.post(
+            "/api/v1/enroll/student",
+            headers=self.headers,
+            json=emp_payload,
+        )
+        self.assertEqual(res_reg.status_code, 200)
+        emp_id = res_reg.json()["student"]["id"]
+
+        self.refresh_session()
+        emp = self.db.query(Student).filter(Student.id == emp_id).first()
+        self.assertIsNotNone(emp)
+
+        # 3. Simulate 25 present days in May 2026 (31 total calendar days)
+        for day in range(1, 26):
+            att_date = datetime(2026, 5, day, 9, 0, 0)
+            rec = AttendanceRecord(
+                tenant_id=self.tenant.id,
+                student_id=emp.id,
+                confidence_distance=0.0,
+                timestamp=att_date,
+                check_in_time=att_date,
+                check_out_time=datetime(2026, 5, day, 18, 0, 0),
+                work_duration_minutes=480,
+                shift_status="ON_TIME",
+                is_manual_override=False,
+            )
+            self.db.add(rec)
+        self.db.commit()
+
+        # 4. Calculate employee payroll for May 1 to May 31 (31 calendar days)
+        calc = calculate_employee_payroll(
+            db=self.db,
+            tenant=self.tenant,
+            student=emp,
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 5, 31),
+            total_working_days=26.0,
+        )
+
+        # 5. Verify calculations:
+        # Ratio = 25 / 31 = 0.8064516
+        # Earned Basic = 60000 * 25/31 = 48387.10
+        # Earned HRA = 12000 * 25/31 = 9677.42
+        # Earned DA = 6000 * 25/31 = 4838.71
+        # Earned TA = 1600 * 25/31 = 1290.32
+        # Earned Med = 1250 * 25/31 = 1008.06
+        # Earned Perks = 1000 * 25/31 = 806.45
+        # Gross Earned = 66008.06
+        self.assertEqual(calc["compensation_model"], "STRUCTURED_SALARY")
+        self.assertEqual(calc["present_days"], 25.0)
+        self.assertEqual(calc["calendar_days_count"], 31)
+        expected_ratio = 25.0 / 31.0
+        self.assertAlmostEqual(calc["basic_earned"], round(60000.0 * expected_ratio, 2), places=2)
+        self.assertAlmostEqual(calc["hra_earned"], round(12000.0 * expected_ratio, 2), places=2)
+        self.assertAlmostEqual(calc["da_earned"], round(6000.0 * expected_ratio, 2), places=2)
+        self.assertAlmostEqual(calc["conveyance_earned"], round(1600.0 * expected_ratio, 2), places=2)
+        self.assertAlmostEqual(calc["medical_earned"], round(1250.0 * expected_ratio, 2), places=2)
+        self.assertAlmostEqual(calc["other_allowance_earned"], round(1000.0 * expected_ratio, 2), places=2)
+        # EPF ceiling: 12% * min(basic + da, 15000 * ratio) = 12% * (15000 * 25/31) = 1451.61
+        self.assertAlmostEqual(calc["epf_employee"], round(1800.0 * expected_ratio, 2), places=2)
+        self.assertEqual(calc["pt"], 200.0)
+
+    def test_08_designation_template_fallback_without_explicit_structure(self):
+        """Test calculate_employee_payroll inherits designation salary template when no structure record exists."""
+        self.refresh_session()
+
+        # 1. Create a Structured Template
+        res_tpl = self.client.post(
+            "/api/v1/payroll/masters/templates",
+            headers=self.headers,
+            json={
+                "name": "R&D Fellowship Template",
+                "code": "RD-FELLOW",
+                "compensation_model": "STRUCTURED_SALARY",
+                "hra_percentage": 20.0,
+                "da_percentage": 0.0,
+                "conveyance_fixed": 1600.0,
+                "medical_fixed": 1250.0,
+                "other_perks_fixed": 0.0,
+                "enable_pf": False,
+                "enable_esi": False,
+                "enable_pt": False,
+                "is_active": True,
+            },
+        )
+        self.assertEqual(res_tpl.status_code, 200)
+        tpl_id = res_tpl.json()["data"]["id"]
+
+        # 2. Create Designation with this template
+        res_desig = self.client.post(
+            "/api/v1/payroll/masters/designations",
+            headers=self.headers,
+            json={
+                "title": "Research Fellow",
+                "code": "RES-FELLOW",
+                "salary_template_id": tpl_id,
+                "is_active": True,
+            },
+        )
+        self.assertEqual(res_desig.status_code, 200)
+        desig_id = res_desig.json()["data"]["id"]
+
+        # 3. Create Student directly without EmployeeSalaryStructure
+        emp = Student(
+            tenant_id=self.tenant.id,
+            roll_number="FELLOW-004",
+            name="Ananya Sharma",
+            user_role="employee",
+            designation_id=desig_id,
+            monthly_base_salary=30000.0,
+            is_active=True,
+        )
+        self.db.add(emp)
+        self.db.commit()
+        self.db.refresh(emp)
+
+        # 4. Verify no EmployeeSalaryStructure exists
+        struct_count = self.db.query(EmployeeSalaryStructure).filter(
+            EmployeeSalaryStructure.tenant_id == self.tenant.id,
+            EmployeeSalaryStructure.student_id == emp.id,
+        ).count()
+        self.assertEqual(struct_count, 0)
+
+        # 5. Run calculate_employee_payroll (30 calendar days in June)
+        calc = calculate_employee_payroll(
+            db=self.db,
+            tenant=self.tenant,
+            student=emp,
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 30),
+            total_working_days=26.0,
+        )
+
+        # 6. Verify fallback inherited STRUCTURED_SALARY model from designation template
+        self.assertEqual(calc["compensation_model"], "STRUCTURED_SALARY")
+        # 0 attendance -> earned components = 0.0
+        self.assertEqual(calc["gross_earnings"], 0.0)
+        self.assertEqual(calc["basic_earned"], 0.0)
+        self.assertEqual(calc["epf_employee"], 0.0)
+        self.assertEqual(calc["esic_employee"], 0.0)
+
+    def test_09_full_month_attendance_calculation_and_net_salary(self):
+        """Test full 30-day attendance calculation with all statutory deductions."""
+        self.refresh_session()
+
+        # 1. Create Employee with 30k basic and full month attendance in June (30 days)
+        desig = self.db.query(DesignationMaster).filter(
+            DesignationMaster.tenant_id == self.tenant.id,
+            DesignationMaster.code == "PRIN-ARCH",
+        ).first()
+
+        emp_payload = {
+            "roll_number": "EMP-FULL-005",
+            "name": "Ramesh Kumar",
+            "user_role": "employee",
+            "designation_id": desig.id,
+            "monthly_base_salary": 30000.0,
+            "date_of_joining": "2026-06-01",
+        }
+        res_reg = self.client.post(
+            "/api/v1/enroll/student",
+            headers=self.headers,
+            json=emp_payload,
+        )
+        self.assertEqual(res_reg.status_code, 200)
+        emp_id = res_reg.json()["student"]["id"]
+
+        self.refresh_session()
+        emp = self.db.query(Student).filter(Student.id == emp_id).first()
+
+        # Add 30 present days for June 2026
+        for day in range(1, 31):
+            att_date = datetime(2026, 6, day, 9, 0, 0)
+            self.db.add(AttendanceRecord(
+                tenant_id=self.tenant.id,
+                student_id=emp.id,
+                confidence_distance=0.0,
+                timestamp=att_date,
+                check_in_time=att_date,
+                check_out_time=datetime(2026, 6, day, 18, 0, 0),
+                work_duration_minutes=480,
+                shift_status="ON_TIME",
+            ))
+        self.db.commit()
+
+        calc = calculate_employee_payroll(
+            db=self.db,
+            tenant=self.tenant,
+            student=emp,
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 30),
+            total_working_days=26.0,
+        )
+        self.assertEqual(calc["compensation_model"], "STRUCTURED_SALARY")
+        self.assertEqual(calc["present_days"], 30.0)
+        self.assertEqual(calc["basic_earned"], 30000.0)
+        self.assertEqual(calc["hra_earned"], 6000.0)  # 20%
+        self.assertEqual(calc["da_earned"], 3000.0)   # 10%
+        self.assertEqual(calc["conveyance_earned"], 1600.0)
+        self.assertEqual(calc["medical_earned"], 1250.0)
+        self.assertEqual(calc["gross_earnings"], 41850.0)
+        # EPF = 12% * 15000 = 1800.0
+        self.assertEqual(calc["epf_employee"], 1800.0)
+        self.assertEqual(calc["pt"], 200.0)
+        expected_net = 41850.0 - 1800.0 - 200.0
+        self.assertEqual(calc["net_salary"], expected_net)
 
 
 if __name__ == "__main__":

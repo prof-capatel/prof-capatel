@@ -189,8 +189,8 @@ class TestIndianPayrollSystem(unittest.TestCase):
         )
         self.db.add(structure)
 
-        # Add 26 days of attendance (Full month present)
-        for d in range(1, 27):
+        # Add 30 days of attendance (Full month present in Sep 2026)
+        for d in range(1, 31):
             att_date = date(2026, 9, d)
             rec = AttendanceRecord(
                 tenant_id=self.tenant.id,
@@ -264,8 +264,8 @@ class TestIndianPayrollSystem(unittest.TestCase):
         )
         self.db.add(structure)
 
-        # 26 days of attendance, including 10 hours work on weekday (2 hrs OT) and weekend work
-        for d in range(1, 27):
+        # 30 days of attendance (full month), including 10 hours work on weekday (2 hrs OT) and weekend work
+        for d in range(1, 31):
             att_date = date(2026, 9, d)
             # 10 hours on day 1 (2 hours regular OT)
             mins = 600 if d == 1 else 480
@@ -348,8 +348,8 @@ class TestIndianPayrollSystem(unittest.TestCase):
         self.db.add(st1)
         self.db.add(st2)
 
-        # Attendance 26 days
-        for d in range(1, 27):
+        # Attendance 30 days
+        for d in range(1, 31):
             att_date = date(2026, 9, d)
             rec = AttendanceRecord(
                 tenant_id=self.tenant.id,
@@ -486,6 +486,168 @@ class TestIndianPayrollSystem(unittest.TestCase):
         self.assertEqual(html_res.status_code, 200)
         self.assertIn("SALARY SLIP", html_res.text.upper())
         self.assertIn("₹", html_res.text)
+
+    # ----------------------------------------------------------------------
+    # 6. Test Daily Wage & Hourly Compensation Engine Calculations
+    # ----------------------------------------------------------------------
+    def test_daily_wage_and_hourly_payroll_calculation(self):
+        # 1. Daily Wage Employee (₹800/day)
+        emp_daily = Student(
+            tenant_id=self.tenant.id,
+            roll_number="APEX-DAILY-001",
+            name="Ramesh Kumar",
+            department_id=self.dept.id,
+            user_role="employee",
+            daily_rate=800.0,
+            is_active=True,
+        )
+        self.db.add(emp_daily)
+        self.db.flush()
+
+        struct_daily = EmployeeSalaryStructure(
+            tenant_id=self.tenant.id,
+            student_id=emp_daily.id,
+            compensation_model="DAILY_WAGE",
+            annual_ctc=800.0 * 26.0 * 12.0,
+            monthly_gross=800.0 * 26.0,
+            monthly_basic=0.0,
+            daily_rate=800.0,
+            hourly_rate=100.0,
+            enable_pf=False,
+            enable_esi=False,
+            enable_pt=False,
+            effective_from_date=date(2026, 9, 1),
+            is_current=True,
+        )
+        self.db.add(struct_daily)
+
+        # 20 days present (8 hours each day), plus day 1 has 10 hours (2 hours regular OT)
+        for d in range(1, 21):
+            att_date = date(2026, 9, d)
+            mins = 600 if d == 1 else 480
+            rec = AttendanceRecord(
+                tenant_id=self.tenant.id,
+                student_id=emp_daily.id,
+                timestamp=datetime.combine(att_date, datetime.min.time()) + timedelta(hours=9),
+                confidence_distance=0.45,
+                check_in_time=datetime.combine(att_date, datetime.min.time()) + timedelta(hours=9),
+                check_out_time=datetime.combine(att_date, datetime.min.time()) + timedelta(minutes=mins),
+                work_duration_minutes=mins,
+                shift_status="COMPLETED",
+            )
+            self.db.add(rec)
+        self.db.commit()
+
+        res_daily = calculate_employee_payroll(
+            db=self.db,
+            tenant=self.tenant,
+            student=emp_daily,
+            start_date=date(2026, 9, 1),
+            end_date=date(2026, 9, 30),
+            total_working_days=26.0,
+        )
+
+        # 20 present days * ₹800 = ₹16,000 basic earnings
+        self.assertEqual(res_daily["basic_earned"], 16000.0)
+        # OT: 2 hrs * (₹800 / 8 hrs) * 1.5 multiplier = 2 * 100 * 1.5 = ₹300 OT pay
+        self.assertEqual(res_daily["ot_earnings"], 300.0)
+        self.assertEqual(res_daily["gross_earnings"], 16300.0)
+
+        # 2. Hourly Employee (₹250/hr)
+        emp_hourly = Student(
+            tenant_id=self.tenant.id,
+            roll_number="APEX-HOURLY-001",
+            name="Sunita Rao",
+            department_id=self.dept.id,
+            user_role="employee",
+            hourly_rate=250.0,
+            is_active=True,
+        )
+        self.db.add(emp_hourly)
+        self.db.flush()
+
+        struct_hourly = EmployeeSalaryStructure(
+            tenant_id=self.tenant.id,
+            student_id=emp_hourly.id,
+            compensation_model="HOURLY",
+            annual_ctc=250.0 * 8.0 * 26.0 * 12.0,
+            monthly_gross=250.0 * 8.0 * 26.0,
+            monthly_basic=0.0,
+            daily_rate=2000.0,
+            hourly_rate=250.0,
+            enable_pf=False,
+            enable_esi=False,
+            enable_pt=False,
+            effective_from_date=date(2026, 9, 1),
+            is_current=True,
+        )
+        self.db.add(struct_hourly)
+
+        # 10 days present at 8 hours = 80 hours
+        for d in range(1, 11):
+            att_date = date(2026, 9, d)
+            rec = AttendanceRecord(
+                tenant_id=self.tenant.id,
+                student_id=emp_hourly.id,
+                timestamp=datetime.combine(att_date, datetime.min.time()) + timedelta(hours=9),
+                confidence_distance=0.45,
+                check_in_time=datetime.combine(att_date, datetime.min.time()) + timedelta(hours=9),
+                check_out_time=datetime.combine(att_date, datetime.min.time()) + timedelta(hours=17),
+                work_duration_minutes=480,
+                shift_status="COMPLETED",
+            )
+            self.db.add(rec)
+        self.db.commit()
+
+        res_hourly = calculate_employee_payroll(
+            db=self.db,
+            tenant=self.tenant,
+            student=emp_hourly,
+            start_date=date(2026, 9, 1),
+            end_date=date(2026, 9, 30),
+            total_working_days=26.0,
+        )
+
+        # 80 hours * ₹250 = ₹20,000
+        self.assertEqual(res_hourly["basic_earned"], 20000.0)
+        self.assertEqual(res_hourly["gross_earnings"], 20000.0)
+
+    # ----------------------------------------------------------------------
+    # 7. Test Dynamic Rate Enrollment & Update API
+    # ----------------------------------------------------------------------
+    def test_dynamic_rate_enrollment_and_update_api(self):
+        # Fetch daily wage template
+        daily_tpl = self.db.query(SalaryTemplate).filter(
+            SalaryTemplate.tenant_id == self.tenant.id,
+            SalaryTemplate.compensation_model == "DAILY_WAGE",
+        ).first()
+
+        # Enroll with daily_rate
+        enroll_res = self.client.post("/api/v1/enroll/student", json={
+            "roll_number": "APEX-DYN-001",
+            "name": "Karan Malhotra",
+            "department_id": self.dept.id,
+            "department": self.dept.name,
+            "user_role": "employee",
+            "salary_template_id": daily_tpl.id if daily_tpl else None,
+            "daily_rate": 650.0,
+        })
+        self.assertEqual(enroll_res.status_code, 200)
+        std_data = enroll_res.json()["student"]
+        self.assertEqual(std_data["daily_rate"], 650.0)
+        std_id = std_data["id"]
+
+        # Update with hourly_rate
+        update_res = self.client.put(f"/api/v1/enroll/student/{std_id}", json={
+            "name": "Karan Malhotra Updated",
+            "roll_number": "APEX-DYN-001",
+            "department_id": self.dept.id,
+            "hourly_rate": 180.0,
+            "daily_rate": None,
+        })
+        self.assertEqual(update_res.status_code, 200)
+        updated_data = update_res.json()["student"]
+        self.assertEqual(updated_data["hourly_rate"], 180.0)
 
 
 if __name__ == "__main__":

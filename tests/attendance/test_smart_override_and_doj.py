@@ -33,7 +33,7 @@ class TestSmartOverrideAndDOJ(unittest.TestCase):
             self.tenant_id = self.tenant.id
 
             # Clean test students
-            test_rolls = ["EMP_DOJ_TEST_001", "EMP_DOJ_TEST_002"]
+            test_rolls = ["EMP_DOJ_TEST_001", "EMP_DOJ_TEST_002", "EMP_DOJ_TEST_003"]
             st_ids = [s.id for s in db.query(Student).filter(Student.roll_number.in_(test_rolls)).all()]
             if st_ids:
                 db.query(AttendanceRecord).filter(AttendanceRecord.student_id.in_(st_ids)).delete(synchronize_session=False)
@@ -48,7 +48,7 @@ class TestSmartOverrideAndDOJ(unittest.TestCase):
 
     def tearDown(self):
         with get_db_context() as db:
-            test_rolls = ["EMP_DOJ_TEST_001", "EMP_DOJ_TEST_002"]
+            test_rolls = ["EMP_DOJ_TEST_001", "EMP_DOJ_TEST_002", "EMP_DOJ_TEST_003"]
             st_ids = [s.id for s in db.query(Student).filter(Student.roll_number.in_(test_rolls)).all()]
             if st_ids:
                 db.query(AttendanceRecord).filter(AttendanceRecord.student_id.in_(st_ids)).delete(synchronize_session=False)
@@ -142,6 +142,36 @@ class TestSmartOverrideAndDOJ(unittest.TestCase):
         res_st3 = self.client.get(f"/api/v1/attendance/employee-status/{student_id}")
         self.assertEqual(res_st3.status_code, 200)
         self.assertEqual(res_st3.json()["status"], "CHECKED_OUT")
+
+    def test_disallow_manual_checkout_without_active_checkin(self):
+        """Verify that manual CHECK_OUT is rejected with 400 when no active check-in exists."""
+        with get_db_context() as db:
+            student = Student(
+                tenant_id=self.tenant_id,
+                roll_number="EMP_DOJ_TEST_003",
+                name="CheckOut Disallowed Tester",
+                department="Operations",
+                user_role="employee",
+                date_of_joining=get_ist_date(),
+            )
+            db.add(student)
+            db.commit()
+            db.refresh(student)
+            student_id = student.id
+
+        today_date = get_ist_date()
+
+        # Attempt manual CHECK_OUT directly
+        ts_out_str = f"{today_date.strftime('%Y-%m-%d')} 18:00:00"
+        res = self.client.post("/api/v1/attendance/manual-override", json={
+            "student_id": student_id,
+            "punch_type": "CHECK_OUT",
+            "timestamp": ts_out_str,
+            "reason": "Invalid checkout attempt without checkin",
+            "override_by": "Test Administrator",
+        })
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("No active Check-In record found", res.json()["detail"])
 
 
 if __name__ == "__main__":

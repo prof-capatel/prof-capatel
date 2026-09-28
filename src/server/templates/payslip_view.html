@@ -53,6 +53,17 @@
             padding: 0;
         }
 
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-body, #f1f5f9);
@@ -251,6 +262,68 @@
             font-weight: 700;
             color: var(--text-heading, #0f172a);
             word-break: break-word;
+        }
+
+        /* Transparent Compensation Parameters Breakdown Card */
+        .params-card {
+            background: var(--bg-subtle, #f8fafc);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-sm, 8px);
+            padding: 14px 18px;
+            margin-bottom: 18px;
+        }
+
+        .params-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed var(--border-color, #cbd5e1);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .params-title {
+            font-size: 11.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--accent-primary, #4338ca);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px 16px;
+        }
+
+        .param-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .param-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted, #64748b);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .param-val {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-heading, #0f172a);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .param-val.text-val {
+            font-family: inherit;
         }
 
         /* Attendance Summary Bar */
@@ -514,6 +587,11 @@
                 gap: 8px;
             }
 
+            .params-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px 10px;
+            }
+
             .detail-label {
                 width: 110px;
                 font-size: 11.5px;
@@ -600,6 +678,7 @@
             }
 
             .details-grid,
+            .params-card,
             .attendance-bar,
             .table-body,
             .employer-statutory-note {
@@ -734,6 +813,135 @@
                         {% if employee.bank_ifsc_code or payslip.bank_ifsc_code %}
                             ({{ employee.bank_ifsc_code or payslip.bank_ifsc_code }})
                         {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transparent Compensation Parameters Breakdown Card -->
+        {% set p = payslip.parameters or (payslip.breakdown and payslip.breakdown.parameters) or {} %}
+        {% set comp_model = (p.compensation_model or payslip.compensation_model or 'STRUCTURED_SALARY')|upper %}
+        {% set tpl_code = (p.template_code or '')|upper %}
+        {% set tpl_name = (p.template_name or '')|upper %}
+        {% set is_hourly = (comp_model == 'HOURLY' or 'HOURLY' in tpl_code or 'HOURLY' in tpl_name) %}
+        {% set is_daily = (comp_model == 'DAILY_WAGE' or 'DAILY' in tpl_code or 'DAILY' in tpl_name) %}
+        <div class="params-card">
+            <div class="params-header">
+                <div class="params-title">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Compensation Parameters & Verification Basis</span>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">
+                    Structure: <strong style="color: var(--accent-primary);">{{ comp_model|replace('_', ' ') }}</strong>
+                    {% if p.template_name %} • Template: <strong>{{ p.template_name }}</strong>{% endif %}
+                </div>
+            </div>
+
+            <div class="params-grid">
+                <!-- Monthly Basic -->
+                <div class="param-item">
+                    <span class="param-label">Monthly Basic</span>
+                    <span class="param-val">
+                        {% if is_hourly or is_daily %}
+                            <span style="color: var(--text-muted); font-size: 13px;">NA</span>
+                        {% else %}
+                            ₹ {{ "{:,.2f}".format(p.monthly_basic or payslip.basic_earned or 0.0) }}
+                        {% endif %}
+                    </span>
+                </div>
+
+                <!-- Dearness Allowance (DA%) -->
+                <div class="param-item">
+                    <span class="param-label">Dearness Allowance (DA)</span>
+                    <span class="param-val">
+                        {% if is_hourly or is_daily %}
+                            <span style="color: var(--text-muted); font-size: 13px;">NA</span>
+                        {% elif p.da_percentage and p.da_percentage > 0 %}
+                            {{ "%.1f"|format(p.da_percentage) }}% (₹ {{ "{:,.2f}".format(p.monthly_da or payslip.da_earned or 0.0) }})
+                        {% elif p.monthly_da and p.monthly_da > 0 %}
+                            ₹ {{ "{:,.2f}".format(p.monthly_da) }}
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 11.5px;">NA (0%)</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <!-- House Rent Allowance (HRA%) -->
+                <div class="param-item">
+                    <span class="param-label">House Rent Allowance (HRA)</span>
+                    <span class="param-val">
+                        {% if is_hourly or is_daily %}
+                            <span style="color: var(--text-muted); font-size: 13px;">NA</span>
+                        {% elif p.hra_percentage and p.hra_percentage > 0 %}
+                            {{ "%.1f"|format(p.hra_percentage) }}% (₹ {{ "{:,.2f}".format(p.monthly_hra or payslip.hra_earned or 0.0) }})
+                        {% elif p.monthly_hra and p.monthly_hra > 0 %}
+                            ₹ {{ "{:,.2f}".format(p.monthly_hra) }}
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 11.5px;">NA (0%)</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <!-- Daily Salary Rate -->
+                <div class="param-item">
+                    <span class="param-label">Daily Salary Rate</span>
+                    <span class="param-val">
+                        {% if is_hourly %}
+                            <span style="color: var(--text-muted); font-size: 13px;">NA</span>
+                        {% elif is_daily and (p.daily_rate or p.daily_salary_rate) %}
+                            ₹ {{ "{:,.2f}".format(p.daily_rate or p.daily_salary_rate) }} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">/day</span>
+                        {% elif not is_daily and (p.daily_salary_rate or p.monthly_gross or payslip.gross_earnings) %}
+                            ₹ {{ "{:,.2f}".format(p.daily_salary_rate or ((p.monthly_gross or payslip.gross_earnings or 0.0) / (payslip.calendar_days or 30))) }} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">/day</span>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 13px;">NA</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <!-- Monthly Gross Target / CTC -->
+                <div class="param-item">
+                    <span class="param-label">Monthly Gross (CTC Basis)</span>
+                    <span class="param-val">
+                        {% if (p.monthly_gross and p.monthly_gross > 0) or (not is_hourly and not is_daily and payslip.gross_earnings) %}
+                            ₹ {{ "{:,.2f}".format(p.monthly_gross or payslip.gross_earnings or 0.0) }} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">/mo</span>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 13px;">NA</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <!-- Fixed Allowances -->
+                <div class="param-item">
+                    <span class="param-label">Fixed Allowances</span>
+                    <span class="param-val" style="font-size: 12px;">
+                        {% if (is_hourly or is_daily) and not (p.conveyance_allowance or payslip.conveyance_earned or p.medical_allowance or payslip.medical_earned) %}
+                            <span style="color: var(--text-muted); font-size: 13px;">NA</span>
+                        {% else %}
+                            Conv: ₹ {{ "{:,.0f}".format(p.conveyance_allowance or payslip.conveyance_earned or 0.0) }} | Med: ₹ {{ "{:,.0f}".format(p.medical_allowance or payslip.medical_earned or 0.0) }}
+                        {% endif %}
+                    </span>
+                </div>
+
+                <!-- Hourly Rate (if applicable) -->
+                {% if (p.hourly_rate and p.hourly_rate > 0) or is_hourly %}
+                <div class="param-item">
+                    <span class="param-label">Hourly Pay Rate</span>
+                    <span class="param-val">₹ {{ "{:,.2f}".format(p.hourly_rate or 0.0) }} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">/hr</span></span>
+                </div>
+                {% elif is_daily %}
+                <div class="param-item">
+                    <span class="param-label">Hourly Pay Rate</span>
+                    <span class="param-val"><span style="color: var(--text-muted); font-size: 13px;">NA</span></span>
+                </div>
+                {% endif %}
+
+                <!-- Statutory Compliance Settings -->
+                <div class="param-item" style="grid-column: span {% if (p.hourly_rate and p.hourly_rate > 0) or is_hourly or is_daily %}1{% else %}2{% endif %};">
+                    <span class="param-label">Statutory Applicability</span>
+                    <span class="param-val text-val" style="font-size: 11px; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;">
+                        <span class="badge {{ 'badge-present' if (p.enable_pf != false and (payslip.epf_employee > 0 or p.enable_pf)) else 'badge-node' }}" style="font-size: 10px; padding: 2px 7px;">PF: {{ 'Active' if (p.enable_pf != false and (payslip.epf_employee > 0 or p.enable_pf)) else 'No' }}</span>
+                        <span class="badge {{ 'badge-present' if (p.enable_esi != false and (payslip.esic_employee > 0 or p.enable_esi)) else 'badge-node' }}" style="font-size: 10px; padding: 2px 7px;">ESI: {{ 'Active' if (p.enable_esi != false and (payslip.esic_employee > 0 or p.enable_esi)) else 'No' }}</span>
+                        <span class="badge {{ 'badge-present' if (p.enable_pt != false and (payslip.professional_tax > 0 or p.enable_pt)) else 'badge-node' }}" style="font-size: 10px; padding: 2px 7px;">PT: {{ 'Active' if (p.enable_pt != false and (payslip.professional_tax > 0 or p.enable_pt)) else 'No' }}</span>
                     </span>
                 </div>
             </div>

@@ -739,6 +739,72 @@ def page_payslip_view(
     payslip_data = payslip.to_dict()
     net_in_words = number_to_words_inr(payslip.net_salary)
 
+    # Ensure structure parameters are present for transparent verification:
+    breakdown = payslip_data.get("breakdown") or {}
+    params = breakdown.get("parameters")
+    if not params:
+        emp = payslip.student
+        active_st = None
+        if emp and emp.salary_structures:
+            active_st = next((s for s in emp.salary_structures if s.is_current), emp.salary_structures[0])
+        tpl = (active_st.template if active_st else None) or payslip.template or (emp.designation_rel.salary_template if emp and emp.designation_rel else None)
+        
+        cal_days = max(1, payslip.calendar_days or 30)
+        work_days = max(1.0, float(payslip.working_days or 26.0))
+        comp_model = (active_st.compensation_model if active_st else None) or (tpl.compensation_model if tpl else "STRUCTURED_SALARY")
+        tpl_name = tpl.name if tpl else "Standard Structure"
+        tpl_code = tpl.code if tpl else comp_model
+
+        is_hourly_model = (comp_model == "HOURLY" or "HOURLY" in str(tpl_code).upper() or "HOURLY" in str(tpl_name).upper())
+        is_daily_model = (comp_model == "DAILY_WAGE" or "DAILY" in str(tpl_code).upper() or "DAILY" in str(tpl_name).upper())
+
+        if is_hourly_model or is_daily_model:
+            m_basic = float(active_st.monthly_basic) if (active_st and active_st.monthly_basic) else 0.0
+        else:
+            m_basic = float(active_st.monthly_basic if active_st and active_st.monthly_basic else (payslip.basic_earned if payslip.basic_earned > 0 else (emp.monthly_base_salary or 0.0) if emp else 0.0))
+
+        m_gross = float(active_st.monthly_gross if active_st and active_st.monthly_gross else (0.0 if (is_hourly_model or is_daily_model) else (payslip.gross_earnings or (m_basic * 1.5 if m_basic else 0.0))))
+
+        m_da = float(active_st.monthly_da if active_st else (payslip.da_earned or 0.0))
+        m_hra = float(active_st.monthly_hra if active_st else (payslip.hra_earned or 0.0))
+
+        da_pct = float(tpl.da_percentage) if tpl and tpl.da_percentage is not None else (
+            round((m_da / m_basic * 100.0), 1) if m_basic > 0 and m_da > 0 else 0.0
+        )
+        hra_pct = float(tpl.hra_percentage) if tpl and tpl.hra_percentage is not None else (
+            round((m_hra / m_basic * 100.0), 1) if m_basic > 0 and m_hra > 0 else 0.0
+        )
+
+        if is_hourly_model:
+            daily_salary = 0.0
+        elif is_daily_model:
+            daily_salary = float(active_st.daily_rate if active_st and active_st.daily_rate else ((emp.daily_rate or 0.0) if emp else 0.0))
+        else:
+            daily_salary = round(float(active_st.daily_rate if active_st and active_st.daily_rate else (m_gross / (cal_days if comp_model == 'STRUCTURED_SALARY' else work_days))), 2)
+
+        params = {
+            "compensation_model": comp_model,
+            "template_name": tpl.name if tpl else "Standard Structure",
+            "template_code": tpl.code if tpl else comp_model,
+            "monthly_basic": m_basic,
+            "monthly_da": m_da,
+            "monthly_hra": m_hra,
+            "da_percentage": da_pct,
+            "hra_percentage": hra_pct,
+            "daily_salary_rate": daily_salary,
+            "hourly_rate": float(active_st.hourly_rate if active_st else (emp.hourly_rate or 0.0) if emp else 0.0),
+            "monthly_gross": m_gross,
+            "annual_ctc": float(active_st.annual_ctc if active_st else (m_gross * 12.0)),
+            "conveyance_allowance": float(active_st.conveyance_allowance if active_st else (tpl.conveyance_fixed if tpl else payslip.conveyance_earned or 0.0)),
+            "medical_allowance": float(active_st.medical_allowance if active_st else (tpl.medical_fixed if tpl else payslip.medical_earned or 0.0)),
+            "special_allowance": float(active_st.special_allowance if active_st else (payslip.special_allowance_earned or 0.0)),
+            "other_allowances": float(active_st.other_allowances if active_st else (payslip.other_earnings or 0.0)),
+            "enable_pf": bool(active_st.enable_pf if active_st else (payslip.epf_employee > 0 or (tpl.enable_pf if tpl else True))),
+            "enable_esi": bool(active_st.enable_esi if active_st else (payslip.esic_employee > 0 or (tpl.enable_esi if tpl else True))),
+            "enable_pt": bool(active_st.enable_pt if active_st else (payslip.professional_tax > 0 or (tpl.enable_pt if tpl else True))),
+        }
+    payslip_data["parameters"] = params
+
     return templates.TemplateResponse(
         "payslip_view.html",
         {
@@ -1031,9 +1097,10 @@ def page_tenant_credential_login(
     demo_users = []
     admin_u = db.query(User).filter(User.tenant_id == tenant.id, User.role == "TENANT_ADMIN", User.is_active == True).first()
     if admin_u:
+        edition_label = f"Admin ({tenant.saas_edition})" if tenant.saas_edition else "Tenant Admin"
         demo_users.append({
             "role": "TENANT_ADMIN",
-            "label": "Tenant Admin",
+            "label": edition_label,
             "username": admin_u.username,
             "icon": "fa-user-shield",
             "color": "var(--accent-primary)",
@@ -1108,9 +1175,10 @@ def render_tenant_portal_response(request: Request, db: Session, tenant: Tenant)
     demo_users = []
     admin_u = db.query(User).filter(User.tenant_id == tenant.id, User.role == "TENANT_ADMIN", User.is_active == True).first()
     if admin_u:
+        edition_label = f"Admin ({tenant.saas_edition})" if tenant.saas_edition else "Tenant Admin"
         demo_users.append({
             "role": "TENANT_ADMIN",
-            "label": "Tenant Admin",
+            "label": edition_label,
             "username": admin_u.username,
             "icon": "fa-user-shield",
             "color": "var(--accent-primary)",

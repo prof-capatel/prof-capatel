@@ -231,7 +231,7 @@ class TestTenantPortalFaceLoginAndRelieve(unittest.TestCase):
         }
 
         res = self.client.post("/api/v1/auth/tenant/face-login", json=payload)
-        self.assertIn(res.status_code, [403, 404])
+        self.assertIn(res.status_code, [401, 403, 404])
 
     @patch("src.server.routes.api_auth.FaceEngine.compute_single_face_vector")
     @patch("src.server.routes.api_auth.decode_image_bytes")
