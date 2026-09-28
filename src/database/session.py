@@ -1156,6 +1156,12 @@ def run_schema_migrations():
                 conn.execute(text("ALTER TABLE students ADD COLUMN daily_rate FLOAT NULL"))
                 logger.info("Migrated students table: added daily_rate column.")
 
+            # 10. Salary Templates other_perks_fixed column
+            res = conn.execute(text("SHOW COLUMNS FROM salary_templates LIKE 'other_perks_fixed'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE salary_templates ADD COLUMN other_perks_fixed FLOAT DEFAULT 0.0 NOT NULL"))
+                logger.info("Migrated salary_templates table: added other_perks_fixed column.")
+
             # Seed default WorkShift for corporate tenants if none exist
             try:
                 corp_tenants = conn.execute(text("SELECT id, name FROM tenants WHERE tenant_type = 'corporate' AND is_deleted = 0")).fetchall()
