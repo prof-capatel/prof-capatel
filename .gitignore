@@ -25,6 +25,10 @@ scratch/
 .flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
-.pub/
+# Credentials & Secrets
+*.pem
+*.key
+smtp-credentials.csv
+*credentials*.csv
 
 
