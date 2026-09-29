@@ -216,16 +216,19 @@ class AttendanceManager:
                         last_logged_time = latest_record[0].timestamp()
                         self._last_logged_cache[cache_key] = last_logged_time
 
-            # In-memory sliding debounce: suppress duplicate hits within 10s for live cameras
+            # In-memory sliding debounce: suppress duplicate hits within debounce window for live cameras
             if now_dt is None and (custom_cooldown_seconds is None or custom_cooldown_seconds > 0):
-                if last_logged_time is not None and (current_time - last_logged_time) < 10.0:
-                    remaining = max(1, int(10.0 - (current_time - last_logged_time)))
+                debounce_limit = 10.0
+                if custom_cooldown_seconds is not None and custom_cooldown_seconds > 0:
+                    debounce_limit = min(10.0, float(custom_cooldown_seconds) / 2.0)
+                if last_logged_time is not None and (current_time - last_logged_time) < debounce_limit:
+                    remaining = max(1, int(debounce_limit - (current_time - last_logged_time)))
                     return {
                         "attendance_logged": False,
                         "cooldown_active": True,
                         "cooldown_remaining_seconds": remaining,
-                        "cooldown_remaining_minutes": 0.1,
-                        "cooldown_window_minutes": 0.15,
+                        "cooldown_remaining_minutes": round(remaining / 60, 2),
+                        "cooldown_window_minutes": round(debounce_limit / 60, 2),
                         "message": "Attendance already recorded recently. Please wait a moment.",
                     }
 
@@ -244,13 +247,22 @@ class AttendanceManager:
                 is_corporate = tenant_type in ["corporate", "company", "enterprise"]
 
                 branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == tenant_id).first()
-                # Maintain min_checkout_interval strictly from tenant settings (default 15 mins)
-                raw_checkout_interval = branding.min_checkout_interval_minutes if branding and branding.min_checkout_interval_minutes is not None else 15
-                min_checkout_interval = max(1, int(raw_checkout_interval))
-                
-                min_interval_secs = min_checkout_interval * 60
-                if custom_cooldown_seconds is not None and custom_cooldown_seconds == 0:
-                    min_interval_secs = 0
+                if custom_cooldown_seconds is not None:
+                    min_interval_secs = max(0, int(custom_cooldown_seconds))
+                else:
+                    cd_mins = branding.cooldown_minutes if (branding and branding.cooldown_minutes is not None) else None
+                    chk_mins = branding.min_checkout_interval_minutes if (branding and branding.min_checkout_interval_minutes is not None) else None
+                    if cd_mins is not None and chk_mins is not None:
+                        effective_mins = min(cd_mins, chk_mins)
+                    elif cd_mins is not None:
+                        effective_mins = cd_mins
+                    elif chk_mins is not None:
+                        effective_mins = chk_mins
+                    else:
+                        effective_mins = 15
+                    min_interval_secs = max(0, int(effective_mins * 60))
+
+                min_checkout_interval = max(1, round(min_interval_secs / 60)) if min_interval_secs >= 60 else (round(min_interval_secs / 60.0, 2) if min_interval_secs > 0 else 0)
 
                 student = db.query(Student).filter(Student.id == student_id, Student.tenant_id == tenant_id).first()
                 if not student:
@@ -339,6 +351,7 @@ class AttendanceManager:
                         if min_interval_secs > 0 and elapsed_secs < min_interval_secs:
                             # Too soon after check-in -> suppress double punch
                             remaining_secs = max(1, int(min_interval_secs - elapsed_secs))
+                            time_str = f"{remaining_secs}s" if remaining_secs < 60 else f"{max(1, remaining_secs // 60)} min(s)"
                             return {
                                 "attendance_logged": False,
                                 "punch_type": "CHECK_IN",
@@ -346,7 +359,7 @@ class AttendanceManager:
                                 "cooldown_remaining_seconds": remaining_secs,
                                 "cooldown_remaining_minutes": round(remaining_secs / 60, 1),
                                 "cooldown_window_minutes": min_checkout_interval,
-                                "message": f"Check-In already logged at {ref_time.strftime('%I:%M %p')}. Checkout enabled in {max(1, remaining_secs // 60)} min(s).",
+                                "message": f"Check-In already logged at {ref_time.strftime('%I:%M %p')}. Checkout enabled in {time_str}.",
                             }
 
                         # Buffer elapsed: Execute Valid Check-Out Punch
@@ -412,6 +425,7 @@ class AttendanceManager:
                             elapsed_since_out = (now - completed_record.check_out_time).total_seconds()
                             if min_interval_secs > 0 and elapsed_since_out < min_interval_secs:
                                 remaining_secs = max(1, int(min_interval_secs - elapsed_since_out))
+                                time_str = f"{remaining_secs}s" if remaining_secs < 60 else f"{max(1, remaining_secs // 60)} min(s)"
                                 return {
                                     "attendance_logged": False,
                                     "punch_type": "CHECK_IN",
@@ -419,7 +433,7 @@ class AttendanceManager:
                                     "cooldown_remaining_seconds": remaining_secs,
                                     "cooldown_remaining_minutes": round(remaining_secs / 60, 1),
                                     "cooldown_window_minutes": min_checkout_interval,
-                                    "message": f"Check-Out already logged at {completed_record.check_out_time.strftime('%I:%M %p')}. Next Check-In enabled in {max(1, remaining_secs // 60)} min(s).",
+                                    "message": f"Check-Out already logged at {completed_record.check_out_time.strftime('%I:%M %p')}. Next Check-In enabled in {time_str}.",
                                 }
 
                         # Check-in allowed: Evaluate shift on-time vs late check-in

@@ -377,7 +377,81 @@ class TestDuplicateAttendancePrevention(unittest.TestCase):
         )
         self.assertFalse(res2.get("attendance_logged"))
         self.assertTrue(res2.get("cooldown_active"))
-        self.assertIn("Check-In already logged", res2.get("message", ""))
+    def test_one_minute_sliding_cooldown_transitions(self):
+        """Verify 1-minute test sliding cooldown window correctly alternates between check-in and check-out without premature blocking."""
+        with get_db_context() as db:
+            branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == self.tenant_id).first()
+            if branding:
+                branding.cooldown_minutes = 1
+                branding.min_checkout_interval_minutes = 1
+                db.commit()
+
+        base_time = datetime(2026, 9, 23, 9, 0, 0)
+
+        # 1. First Punch: Check-In
+        res1 = self.attendance_mgr.mark_attendance(
+            student_id=self.employee_id,
+            node_id="TEST-NODE-01",
+            confidence_distance=0.30,
+            tenant_id=self.tenant_id,
+            custom_cooldown_seconds=60,
+            now_dt=base_time,
+        )
+        self.assertTrue(res1.get("attendance_logged"))
+        self.assertEqual(res1.get("punch_type"), "CHECK_IN")
+
+        # 2. Punch at +30s (inside 1-min cooldown): Suppressed with countdown
+        res2 = self.attendance_mgr.mark_attendance(
+            student_id=self.employee_id,
+            node_id="TEST-NODE-01",
+            confidence_distance=0.30,
+            tenant_id=self.tenant_id,
+            custom_cooldown_seconds=60,
+            now_dt=base_time + timedelta(seconds=30),
+        )
+        self.assertFalse(res2.get("attendance_logged"))
+        self.assertTrue(res2.get("cooldown_active"))
+        self.assertEqual(res2.get("cooldown_remaining_seconds"), 30)
+        self.assertIn("Checkout enabled in 30s", res2.get("message", ""))
+
+        # 3. Punch at +61s (after 1-min cooldown): Transitions to Check-Out
+        t_checkout = base_time + timedelta(seconds=61)
+        res3 = self.attendance_mgr.mark_attendance(
+            student_id=self.employee_id,
+            node_id="TEST-NODE-01",
+            confidence_distance=0.30,
+            tenant_id=self.tenant_id,
+            custom_cooldown_seconds=60,
+            now_dt=t_checkout,
+        )
+        self.assertTrue(res3.get("attendance_logged"))
+        self.assertEqual(res3.get("punch_type"), "CHECK_OUT")
+
+        # 4. Punch at checkout +30s (inside checkout cooldown): Suppressed with countdown
+        res4 = self.attendance_mgr.mark_attendance(
+            student_id=self.employee_id,
+            node_id="TEST-NODE-01",
+            confidence_distance=0.30,
+            tenant_id=self.tenant_id,
+            custom_cooldown_seconds=60,
+            now_dt=t_checkout + timedelta(seconds=30),
+        )
+        self.assertFalse(res4.get("attendance_logged"))
+        self.assertTrue(res4.get("cooldown_active"))
+        self.assertEqual(res4.get("cooldown_remaining_seconds"), 30)
+        self.assertIn("Next Check-In enabled in 30s", res4.get("message", ""))
+
+        # 5. Punch at checkout +61s (after cooldown): Transitions to next Check-In
+        res5 = self.attendance_mgr.mark_attendance(
+            student_id=self.employee_id,
+            node_id="TEST-NODE-01",
+            confidence_distance=0.30,
+            tenant_id=self.tenant_id,
+            custom_cooldown_seconds=60,
+            now_dt=t_checkout + timedelta(seconds=61),
+        )
+        self.assertTrue(res5.get("attendance_logged"))
+        self.assertEqual(res5.get("punch_type"), "CHECK_IN")
 
 
 if __name__ == "__main__":

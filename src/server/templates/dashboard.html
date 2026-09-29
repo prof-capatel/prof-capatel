@@ -743,6 +743,58 @@
     const CLIENT_DEBOUNCE_MS = 3000;
     const lastRecognitionTimes = new Map(); // student_id -> timestamp ms
 
+    // Background-resilient Web Worker timer to avoid tab throttling / pausing
+    function createBackgroundWorkerTimer(callback, intervalMs) {
+        if (typeof Worker !== "undefined" && typeof Blob !== "undefined") {
+            try {
+                const workerScript = `
+                    let timer = null;
+                    self.onmessage = function(e) {
+                        if (e.data === 'start') {
+                            if (timer) clearInterval(timer);
+                            timer = setInterval(function() { self.postMessage('tick'); }, ${intervalMs});
+                        } else if (e.data === 'stop') {
+                            if (timer) clearInterval(timer);
+                            timer = null;
+                        }
+                    };
+                `;
+                const blob = new Blob([workerScript], { type: "application/javascript" });
+                const worker = new Worker(URL.createObjectURL(blob));
+                worker.onmessage = function(e) {
+                    if (e.data === 'tick') callback();
+                };
+                return {
+                    start: function() { worker.postMessage('start'); },
+                    stop: function() { worker.postMessage('stop'); },
+                    terminate: function() {
+                        try {
+                            worker.postMessage('stop');
+                            worker.terminate();
+                        } catch(e) {}
+                    }
+                };
+            } catch (err) {
+                console.warn("[Camera] Web Worker timer creation failed, using fallback:", err);
+            }
+        }
+        let fallbackTimer = null;
+        return {
+            start: function() {
+                if (fallbackTimer) clearInterval(fallbackTimer);
+                fallbackTimer = setInterval(callback, intervalMs);
+            },
+            stop: function() {
+                if (fallbackTimer) clearInterval(fallbackTimer);
+                fallbackTimer = null;
+            },
+            terminate: function() {
+                if (fallbackTimer) clearInterval(fallbackTimer);
+                fallbackTimer = null;
+            }
+        };
+    }
+
     function toggleScannerSound() {
         soundEnabled = !soundEnabled;
         const icon = document.getElementById("soundIcon");
@@ -797,13 +849,18 @@
             window.isContinuousActive = true;
             updateScannerUIState(true);
 
-            // Capture frame loop at ~2.5 FPS (every 400ms) with in-flight ingestion guard
-            if (captureIntervalTimer) clearInterval(captureIntervalTimer);
-            captureIntervalTimer = setInterval(() => {
+            // Resilient background capture loop at ~2.5 FPS (every 400ms) with in-flight ingestion guard
+            if (captureIntervalTimer) {
+                if (typeof captureIntervalTimer.terminate === "function") captureIntervalTimer.terminate();
+                else clearInterval(captureIntervalTimer);
+                captureIntervalTimer = null;
+            }
+            captureIntervalTimer = createBackgroundWorkerTimer(() => {
                 if (isContinuousActive && !isCaptureIngesting) {
                     captureAndIngestFrame(false);
                 }
             }, 400);
+            captureIntervalTimer.start();
         } finally {
             isInitializingCapture = false;
         }
@@ -813,7 +870,8 @@
         isContinuousActive = false;
         window.isContinuousActive = false;
         if (captureIntervalTimer) {
-            clearInterval(captureIntervalTimer);
+            if (typeof captureIntervalTimer.terminate === "function") captureIntervalTimer.terminate();
+            else clearInterval(captureIntervalTimer);
             captureIntervalTimer = null;
         }
 
@@ -839,7 +897,8 @@
             isContinuousActive = false;
             window.isContinuousActive = false;
             if (captureIntervalTimer) {
-                clearInterval(captureIntervalTimer);
+                if (typeof captureIntervalTimer.terminate === "function") captureIntervalTimer.terminate();
+                else clearInterval(captureIntervalTimer);
                 captureIntervalTimer = null;
             }
             if (captureMediaStream) {
@@ -875,7 +934,8 @@
         window.isInterruptedState = true;
 
         if (captureIntervalTimer) {
-            clearInterval(captureIntervalTimer);
+            if (typeof captureIntervalTimer.terminate === "function") captureIntervalTimer.terminate();
+            else clearInterval(captureIntervalTimer);
             captureIntervalTimer = null;
         }
 
@@ -883,6 +943,7 @@
             try {
                 captureMediaStream.getTracks().forEach(t => t.stop());
             } catch (e) {}
+            captureMediaStream = null;
             captureMediaStream = null;
         }
 
@@ -1042,8 +1103,10 @@
                     handleCaptureInterrupted("Camera connection was closed or disconnected by the system.");
                 };
                 videoTrack.onmute = () => {
-                    console.warn("[Camera] Live capture video track muted / locked.");
-                    handleCaptureInterrupted("Camera feed is muted or in exclusive use by another application.");
+                    console.warn("[Camera] Live capture video track muted/occluded (background or minimized); maintaining active capture stream.");
+                };
+                videoTrack.onunmute = () => {
+                    console.log("[Camera] Live capture video track unmuted / active in foreground.");
                 };
             }
 

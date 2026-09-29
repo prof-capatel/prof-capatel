@@ -197,7 +197,7 @@ def tenant_portal_login(
     elif user.role in ["STUDENT", "EMPLOYEE"]:
         redirect_url = "/logs"
     else:
-        redirect_url = "/"
+        redirect_url = "/dashboard"
 
     # Record Audit Log
     try:
@@ -515,35 +515,53 @@ def login(
     Supports global SUPER_ADMIN as well as tenant-scoped TENANT_ADMIN, TEACHER, STUDENT, EMPLOYEE.
     """
     username_clean = payload.username.strip().lower()
-    
-    # Check if Super Admin
-    user = db.query(User).filter(User.username == username_clean, User.role == "SUPER_ADMIN", User.is_active == True).first()
-    
-    if not user:
-        # Search by tenant-scoped username
-        tenant_id = payload.tenant_id or 1
+    role_requested = payload.role.strip().upper() if payload.role else None
+
+    user = None
+    if role_requested == "TENANT_ADMIN":
+        # Strictly restrict authentication exclusively to Tenant Administrators
         query = db.query(User).filter(
             User.username == username_clean,
-            User.tenant_id == tenant_id,
+            User.role == "TENANT_ADMIN",
             User.is_active == True,
         )
-        if payload.role:
-            role_clean = payload.role.strip().upper()
-            user = query.filter(User.role == role_clean).first()
+        if payload.tenant_id:
+            query = query.filter(User.tenant_id == payload.tenant_id)
+        user = query.first()
         if not user:
-            user = query.first()
+            user = db.query(User).filter(
+                User.username == username_clean,
+                User.role == "TENANT_ADMIN",
+                User.is_active == True,
+            ).first()
+    else:
+        # Check if Super Admin
+        user = db.query(User).filter(User.username == username_clean, User.role == "SUPER_ADMIN", User.is_active == True).first()
+        
+        if not user:
+            # Search by tenant-scoped username
+            tenant_id = payload.tenant_id or 1
+            query = db.query(User).filter(
+                User.username == username_clean,
+                User.tenant_id == tenant_id,
+                User.is_active == True,
+            )
+            if role_requested:
+                user = query.filter(User.role == role_requested).first()
+            if not user:
+                user = query.first()
 
-    if not user:
-        # Fallback search across any active user if tenant_id wasn't specified
-        user = db.query(User).filter(
-            User.username == username_clean,
-            User.is_active == True,
-        ).first()
+        if not user:
+            # Fallback search across any active user if tenant_id wasn't specified
+            user = db.query(User).filter(
+                User.username == username_clean,
+                User.is_active == True,
+            ).first()
 
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password.",
+            detail="Invalid credentials or access restricted to Tenant Administrators only." if role_requested == "TENANT_ADMIN" else "Invalid username or password.",
         )
 
     # If tenant-scoped user, check that tenant is not soft-deleted

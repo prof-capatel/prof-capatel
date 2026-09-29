@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import logging
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -71,6 +72,8 @@ app.add_middleware(
 # Mount Static Assets & Data Storage
 app.mount("/static", StaticFiles(directory="src/server/static"), name="static")
 app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")
+if os.path.exists("screenshots"):
+    app.mount("/screenshots", StaticFiles(directory="screenshots"), name="screenshots")
 
 # Register Routers
 app.include_router(views_dashboard.router)

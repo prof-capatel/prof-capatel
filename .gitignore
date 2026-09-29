@@ -13,6 +13,9 @@ __pycache__/
 # Data artifacts, snapshots & runtime face crops
 data/snapshots/
 data/crops/
+videos/
+screenshots/*
+!screenshots/walkthrough/
 graphify-out/
 scratch/
 .DS_Store

@@ -70,15 +70,6 @@
 
         <div style="padding: 0 28px 28px;">
 
-            <!-- Fast 1-Click Fill Button for Demo -->
-            <div style="background: rgba(245, 158, 11, 0.08); border: 1px dashed rgba(245, 158, 11, 0.35); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 11px; font-weight: 700; color: #fbbf24;">
-                    <i class="fa-solid fa-bolt"></i> Root Profile: <code>superadmin</code>
-                </span>
-                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-weight: 700;" onclick="fillSuperAdmin()">
-                    Auto Fill
-                </button>
-            </div>
 
             <!-- Super Admin Login Form -->
             <form onsubmit="submitSuperAdminLogin(event)">
@@ -105,12 +96,9 @@
                 </button>
             </form>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 22px; padding-top: 14px; border-top: 1px solid #334155; font-size: 12px;">
-                <a href="/login" style="color: #94a3b8; text-decoration: none; font-weight: 600;">
-                    &larr; Standard Login Gateway
-                </a>
-                <a href="/demo-login" style="color: #f59e0b; text-decoration: none; font-weight: 600;">
-                    <i class="fa-solid fa-flask"></i> Sandbox Portal &rarr;
+            <div style="display: flex; justify-content: center; align-items: center; margin-top: 22px; padding-top: 14px; border-top: 1px solid #334155; font-size: 12px;">
+                <a href="/" style="color: #94a3b8; text-decoration: none; font-weight: 600;">
+                    &larr; Back to Website
                 </a>
             </div>
 
@@ -118,10 +106,6 @@
     </div>
 
     <script>
-        function fillSuperAdmin() {
-            document.getElementById("saUsername").value = "superadmin";
-            document.getElementById("saPassword").value = "admin123";
-        }
 
         async function submitSuperAdminLogin(e) {
             e.preventDefault();

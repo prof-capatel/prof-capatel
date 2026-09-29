@@ -35,15 +35,17 @@ class TestTenantLoginRoutingAndDemoPortal(unittest.TestCase):
         cls.client = TestClient(app)
 
     def test_global_login_page_renders_universal_title(self):
-        """Test that default /login displays 'Face Recognition - Attendance System'."""
+        """Test that default /login displays 'Face Recognition Employee Management System' with CURIOSITY HUB and Tenant Admin restriction."""
         res = self.client.get("/login")
         self.assertEqual(res.status_code, 200)
         html = res.text
-        self.assertIn("Face Recognition - Attendance System", html)
-        self.assertTrue("Enterprise Platform Gateway" in html or "Biometric Attendance" in html)
+        self.assertIn("Face Recognition Employee Management System", html)
+        self.assertNotIn("Multi-Tenant Biometric Attendance System", html)
+        self.assertTrue("CURIOSITY HUB" in html)
         self.assertIn("loginRole", html)
-        self.assertIn("Super Administrator", html)
-        self.assertIn("Tenant Administrator", html)
+        self.assertIn('value="TENANT_ADMIN"', html)
+        self.assertNotIn("Select Role", html)
+        self.assertIn("Organization Admin Username", html)
 
     def test_tenant_specific_login_urls(self):
         """Test tenant-specific unique login URLs (/login/{slug})."""
@@ -53,7 +55,7 @@ class TestTenantLoginRoutingAndDemoPortal(unittest.TestCase):
         html_ssec = res_ssec.text
         self.assertIn("SSEC", html_ssec)
         self.assertIn("Corporate Enterprise Portal", html_ssec)
-        self.assertIn("Employee", html_ssec)
+        self.assertIn("Organization Admin Username", html_ssec)
 
         # 2. pulin1 Corporate Portal
         res_pulin = self.client.get("/login/pulin1")
@@ -61,6 +63,7 @@ class TestTenantLoginRoutingAndDemoPortal(unittest.TestCase):
         html_pulin = res_pulin.text
         self.assertIn("pulin1", html_pulin)
         self.assertIn("Corporate Enterprise Portal", html_pulin)
+        self.assertIn("Organization Admin Username", html_pulin)
 
         # 3. GECM Corporate Portal
         res_gecm = self.client.get("/login/gecm")

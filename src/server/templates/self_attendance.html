@@ -953,25 +953,7 @@
 
         window.addEventListener("DOMContentLoaded", initPage);
 
-        // Visibility-Aware Camera Shutdown & Wakeup Lifecycle
-        document.addEventListener("visibilitychange", () => {
-            if (document.hidden) {
-                stopCameraStream();
-            } else {
-                resumeCameraStream();
-            }
-        });
-
-        window.addEventListener("blur", () => {
-            stopCameraStream();
-        });
-
-        window.addEventListener("focus", () => {
-            if (!document.hidden) {
-                resumeCameraStream();
-            }
-        });
-
+        // Background-resilient camera lifecycle: maintain stream during window blur and tab switches
         window.addEventListener("pagehide", () => {
             stopCameraStream();
         });

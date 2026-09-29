@@ -868,6 +868,59 @@
             }
         }
 
+        let streamTimer = null;
+
+        function createMobileWorkerTimer(callback, intervalMs) {
+            if (typeof Worker !== "undefined" && typeof Blob !== "undefined") {
+                try {
+                    const script = `
+                        let t = null;
+                        self.onmessage = function(e) {
+                            if (e.data === 'start') {
+                                if (t) clearInterval(t);
+                                t = setInterval(function() { self.postMessage('tick'); }, ${intervalMs});
+                            } else if (e.data === 'stop') {
+                                if (t) clearInterval(t);
+                                t = null;
+                            }
+                        };
+                    `;
+                    const blob = new Blob([script], { type: "application/javascript" });
+                    const worker = new Worker(URL.createObjectURL(blob));
+                    worker.onmessage = function(e) {
+                        if (e.data === 'tick') callback();
+                    };
+                    return {
+                        start: function() { worker.postMessage('start'); },
+                        stop: function() { worker.postMessage('stop'); },
+                        terminate: function() {
+                            try {
+                                worker.postMessage('stop');
+                                worker.terminate();
+                            } catch(e) {}
+                        }
+                    };
+                } catch (e) {
+                    console.warn("[MobileCam] Worker timer fallback:", e);
+                }
+            }
+            let fb = null;
+            return {
+                start: function() {
+                    if (fb) clearInterval(fb);
+                    fb = setInterval(callback, intervalMs);
+                },
+                stop: function() {
+                    if (fb) clearInterval(fb);
+                    fb = null;
+                },
+                terminate: function() {
+                    if (fb) clearInterval(fb);
+                    fb = null;
+                }
+            };
+        }
+
         function startStreaming() {
             if (!mediaStream || !videoEl.srcObject) {
                 initCamera();
@@ -886,12 +939,22 @@
             document.getElementById("statusText").innerText = "Streaming (2 FPS)";
 
             transmitFrame();
-            streamTimer = setInterval(transmitFrame, FRAME_INTERVAL_MS);
+            if (streamTimer) {
+                if (typeof streamTimer.terminate === "function") streamTimer.terminate();
+                else clearInterval(streamTimer);
+                streamTimer = null;
+            }
+            streamTimer = createMobileWorkerTimer(transmitFrame, FRAME_INTERVAL_MS);
+            streamTimer.start();
         }
 
         function stopStreaming() {
             isStreaming = false;
-            if (streamTimer) clearInterval(streamTimer);
+            if (streamTimer) {
+                if (typeof streamTimer.terminate === "function") streamTimer.terminate();
+                else clearInterval(streamTimer);
+                streamTimer = null;
+            }
             const btn = document.getElementById("btnToggleStream");
             btn.className = "btn-stream inactive";
             document.getElementById("streamBtnText").innerText = "Start Attendance Stream";
@@ -1423,25 +1486,7 @@
             });
         }
 
-        // Visibility-Aware Camera Lifecycle Management
-        document.addEventListener("visibilitychange", () => {
-            if (document.hidden) {
-                stopCameraStream();
-            } else {
-                resumeCameraStream();
-            }
-        });
-
-        window.addEventListener("blur", () => {
-            stopCameraStream();
-        });
-
-        window.addEventListener("focus", () => {
-            if (!document.hidden) {
-                resumeCameraStream();
-            }
-        });
-
+        // Background-resilient camera lifecycle: maintain stream during window blur and tab switches
         window.addEventListener("pagehide", () => {
             stopCameraStream();
         });

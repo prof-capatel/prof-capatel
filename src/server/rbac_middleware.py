@@ -100,11 +100,8 @@ def get_current_user_optional(
             if user:
                 return user
 
-    # Default fallback to Tenant Admin for seamless local development
-    default_admin = db.query(User).filter(User.tenant_id == t_id, User.role == "TENANT_ADMIN").first()
-    if not default_admin:
-        default_admin = db.query(User).filter(User.role == "SUPER_ADMIN").first()
-    return default_admin
+    # Unauthenticated visitor
+    return None
 
 
 def get_current_user(

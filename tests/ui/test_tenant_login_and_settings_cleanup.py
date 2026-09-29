@@ -45,24 +45,54 @@ class TestTenantLoginAndSettingsCleanup(unittest.TestCase):
             self.assertNotIn("Filtered for", html, f"'Filtered for' banner must not appear on /login/{slug}")
             self.assertNotIn("roleBadgeHelp", html, f"roleBadgeHelp must not appear on /login/{slug}")
 
+            # Assert role dropdown is removed for company admin and three links are omitted
+            self.assertNotIn("Select Role", html, f"'Select Role' dropdown must not appear on company login /login/{slug}")
+            self.assertIn('id="loginRole"', html)
+            self.assertIn('value="TENANT_ADMIN"', html)
+            self.assertNotIn("Back to Website", html, f"'Back to Website' must not appear on /login/{slug}")
+            self.assertNotIn("Super Admin Gateway", html, f"'Super Admin Gateway' must not appear on /login/{slug}")
+            self.assertNotIn("Direct Tenant Login Portals", html, f"'Direct Tenant Login Portals' must not appear on /login/{slug}")
+
             # Assert standard clean login components are present
-            self.assertIn("Select Role", html)
-            self.assertIn("loginRole", html)
             self.assertIn("loginUsername", html)
             self.assertIn("loginPassword", html)
             self.assertIn("Sign In to Portal", html)
+            self.assertIn("Organization Admin Username", html, f"'Organization Admin Username' must appear on /login/{slug}")
 
-    def test_02_global_login_retains_sandbox_and_roles(self):
-        """Verify that default global /login retains demo profile sandbox for global testing."""
-        res = self.client.get("/login")
-        self.assertEqual(res.status_code, 200)
-        html = res.text
+    def test_02_global_login_removes_sandbox_and_retains_roles(self):
+        """Verify that default global /login and /saas enforce CURIOSITY HUB text, new title, and Organization Admin Username."""
+        for endpoint in ["/login", "/saas"]:
+            res = self.client.get(endpoint)
+            self.assertEqual(res.status_code, 200)
+            html = res.text
 
-        self.assertIn("Demo Sandbox", html)
-        self.assertIn("Quick-Login Demo Profiles", html)
-        self.assertIn("quickProfilesGrid", html)
-        self.assertIn("Super Administrator", html)
-        self.assertIn("Tenant Administrator", html)
+            # Requirement 1: Replace Enterprise Platform Gateway with CURIOSITY HUB
+            self.assertIn("CURIOSITY HUB", html)
+            self.assertNotIn("Enterprise Platform Gateway", html)
+
+            # Updated Requirement: Face Recognition Employee Management System and remove Multi-Tenant Biometric Attendance System
+            self.assertIn("Face Recognition Employee Management System", html)
+            self.assertNotIn("Multi-Tenant Biometric Attendance System", html)
+            self.assertNotIn("Identity Control Hub", html)
+
+            # Restrict to tenant admins and verify Organization Admin Username label
+            self.assertNotIn("Select Role", html)
+            self.assertIn('id="loginRole"', html)
+            self.assertIn('value="TENANT_ADMIN"', html)
+            self.assertIn("Organization Admin Username", html)
+
+            # Cleanliness assertions
+            self.assertNotIn("Demo Sandbox", html)
+            self.assertNotIn("Quick-Login Demo Profiles", html)
+            self.assertNotIn("quickProfilesGrid", html)
+            self.assertNotIn("Back to Website", html)
+            self.assertNotIn("Super Admin Gateway", html)
+            self.assertNotIn("Direct Tenant Login Portals", html)
+
+        # Confirm super admin page retains 'Back to Website'
+        res_sa = self.client.get("/super-admin/login")
+        self.assertEqual(res_sa.status_code, 200)
+        self.assertIn("Back to Website", res_sa.text)
 
     def test_03_settings_tab1_institutional_profile_header(self):
         """Verify Settings Tab 1 header is renamed to 'Institutional Profile'."""
@@ -108,6 +138,47 @@ class TestTenantLoginAndSettingsCleanup(unittest.TestCase):
         # Label refinement
         self.assertIn("Clean Employee Portal Link (Share with Employees)", html)
         self.assertNotIn("(Share with Workforce)", html)
+
+    def test_05_subheader_hud_removed_across_tenant_portal(self):
+        """Verify that the layout wrapper subheader HUD (acronyms, page subtitle banners, tenant store labels) is removed across all admin pages."""
+        admin_u = self.db.query(User).filter(User.role == "TENANT_ADMIN", User.is_active == True).first()
+        tenant = self.db.query(Tenant).filter(Tenant.id == admin_u.tenant_id).first()
+        tenant.subscription_plan = "PRO"
+        self.db.commit()
+
+        token = create_access_token(
+            user_id=admin_u.id, role="TENANT_ADMIN", tenant_id=admin_u.tenant_id, username=admin_u.username
+        )
+        self.client.cookies.set("access_token", token)
+
+        routes_to_test = [
+            "/dashboard",
+            "/employees",
+            "/logs",
+            "/payroll",
+            "/leave-management",
+            "/settings",
+        ]
+
+        for route in routes_to_test:
+            res = self.client.get(route, follow_redirects=False)
+            self.assertEqual(res.status_code, 200, f"Route {route} failed with status {res.status_code}")
+            html = res.text
+
+            # Layout acronym wrapper and subheader HUD must not be present
+            self.assertNotIn("layout-acronym-wrapper", html, f"Layout acronym wrapper must be removed on {route}")
+            self.assertNotIn("page-acronym-badge", html, f"Page acronym badge must be removed on {route}")
+            self.assertNotIn("Live Operational Dashboard & Real-Time Biometric HUD", html)
+            self.assertNotIn("Real-Time Biometric HUD", html)
+
+            # Website landing button must not be present in topbar
+            self.assertNotIn('title="View Landing Page"', html)
+            self.assertNotIn('href="/?view=landing"', html)
+
+            # Topbar cleanup: tenant-badge-box and user-profile-badge must not be present
+            self.assertNotIn("tenant-badge-box", html, f"tenant-badge-box must not appear on {route}")
+            self.assertNotIn("user-profile-badge", html, f"user-profile-badge must not appear on {route}")
+            self.assertNotIn('id="topBarTagline">Face Attendance System', html)
 
 
 if __name__ == "__main__":

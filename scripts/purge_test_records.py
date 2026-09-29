@@ -42,11 +42,11 @@ def purge_test_records():
 
         # 1. Update Tenant #1 System Branding if necessary to align with platform title
         b1 = db.query(SystemBranding).filter(SystemBranding.tenant_id == 1).first()
-        if b1 and b1.institution_name in ["Antigravity HQ Campus", "Test School"]:
-            b1.institution_name = "Face Recognition - Attendance System"
+        if b1 and b1.institution_name in ["Antigravity HQ Campus", "Test School", "Face Recognition - Attendance System"]:
+            b1.institution_name = "Face Recognition Employee Management System"
             b1.tagline = "Enterprise Multi-Tenant Biometric Attendance Platform"
             db.flush()
-            logger.info("Updated Tenant #1 branding institution name to 'Face Recognition - Attendance System'.")
+            logger.info("Updated Tenant #1 branding institution name to 'Face Recognition Employee Management System'.")
 
         # 2. Clean up non-core test tenants created by automated test runs
         test_tenants = db.query(Tenant).filter(~Tenant.slug.in_(CORE_TENANT_SLUGS)).all()
@@ -133,9 +133,12 @@ def purge_test_records():
         # 5. Ensure core admin accounts have valid standard demo passwords
         core_admins = db.query(User).filter(User.role.in_(["SUPER_ADMIN", "TENANT_ADMIN"])).all()
         for u in core_admins:
-            u.password_hash = hash_password("admin123")
+            if u.username == "demostore":
+                u.password_hash = hash_password("123")
+            else:
+                u.password_hash = hash_password("admin123")
         db.flush()
-        logger.info(f"Standardized passwords to 'admin123' for {len(core_admins)} administrators.")
+        logger.info(f"Standardized passwords ('123' for demostore, 'admin123' for others) for {len(core_admins)} administrators.")
 
         # 6. Delete test users outside core list
         test_users = db.query(User).filter(

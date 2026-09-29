@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <title>{{ page_title or 'Sign In - Face Recognition Attendance System' }}</title>
+    <title>{{ page_title or 'Sign In - Face Recognition Employee Management System' }}</title>
     <!-- Plus Jakarta Sans & Inter Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,27 +33,6 @@
             background: rgba(194, 65, 12, 0.12);
             color: var(--accent-primary);
             margin-bottom: 8px;
-        }
-        .demo-pill-btn {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            padding: 8px 10px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: left;
-        }
-        .demo-pill-btn:hover {
-            border-color: var(--accent-primary);
-            background: var(--bg-subtle);
-            transform: translateY(-1px);
         }
     </style>
 </head>
@@ -88,10 +67,9 @@
                 <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">{{ branding.tagline if (branding and branding.tagline) else 'Sign in to access your organization workspace' }}</p>
             {% else %}
                 <span class="role-badge-pill">
-                    <i class="fa-solid fa-globe"></i> Enterprise Platform Gateway
+                    <i class="fa-solid fa-globe"></i> CURIOSITY HUB
                 </span>
-                <h2 style="font-size: 20px; font-weight: 800; color: var(--text-heading); margin: 0;">Face Recognition - Attendance System</h2>
-                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Multi-Tenant Biometric Attendance & Identity Control Hub</p>
+                <h2 style="font-size: 20px; font-weight: 800; color: var(--text-heading); margin: 0;">Face Recognition Employee Management System</h2>
             {% endif %}
         </div>
 
@@ -103,79 +81,30 @@
             </div>
             {% endif %}
 
-            <!-- Quick-Login Profiles (Only on Global Platform Login Gateway) -->
-            {% if not is_tenant_scoped %}
-            <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 18px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
-                        <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Quick-Login Demo Profiles
-                    </span>
-                    <a href="/demo-login" style="font-size: 11px; color: var(--accent-primary); text-decoration: none; font-weight: 700;">
-                        <i class="fa-solid fa-flask"></i> Demo Sandbox
-                    </a>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" id="quickProfilesGrid">
-                    <button type="button" class="demo-pill-btn" onclick="fillLogin('superadmin', 'admin123', 'SUPER_ADMIN', '')">
-                        <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
-                        <div>
-                            <div style="font-weight: 700;">Super Admin</div>
-                            <div style="font-size: 9.5px; color: var(--text-muted);">superadmin</div>
-                        </div>
-                    </button>
-                    <button type="button" class="demo-pill-btn" onclick="fillLogin('admin', 'admin123', 'TENANT_ADMIN', '1')">
-                        <i class="fa-solid fa-user-shield" style="color: var(--accent-primary);"></i>
-                        <div>
-                            <div style="font-weight: 700;">Tenant Admin</div>
-                            <div style="font-size: 9.5px; color: var(--text-muted);">admin</div>
-                        </div>
-                    </button>
-                    <button type="button" class="demo-pill-btn" onclick="fillLogin('teacher1', 'teacher123', 'TEACHER', '1')">
-                        <i class="fa-solid fa-chalkboard-user" style="color: var(--accent-emerald);"></i>
-                        <div>
-                            <div style="font-weight: 700;">Teacher</div>
-                            <div style="font-size: 9.5px; color: var(--text-muted);">teacher1</div>
-                        </div>
-                    </button>
-                    <button type="button" class="demo-pill-btn" onclick="fillLogin('student1', 'student123', 'STUDENT', '1')">
-                        <i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i>
-                        <div>
-                            <div style="font-weight: 700;">Student</div>
-                            <div style="font-size: 9.5px; color: var(--text-muted);">student1</div>
-                        </div>
-                    </button>
-                </div>
-            </div>
-            {% endif %}
-
             <!-- Login Form -->
             <form onsubmit="submitLogin(event)">
                 
                 <!-- Dynamic Role Selector Dropdown -->
-                <div class="form-group">
-                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span><i class="fa-solid fa-id-badge" style="color: var(--accent-primary);"></i> Select Role</span>
-                        {% if not is_corporate %}
-                        <span id="roleBadgeHelp" style="font-size: 10px; color: var(--text-muted);">Filtered for {{ tenant.name if is_tenant_scoped else 'All Roles' }}</span>
-                        {% endif %}
-                    </label>
-                    <select id="loginRole" class="form-control" onchange="onRoleChanged()" style="font-weight: 600;">
-                        {% if is_tenant_scoped %}
+                {% if not is_tenant_scoped or is_corporate %}
+                    <!-- SaaS Portal & Corporate Tenant Login: Exclusively for Tenant Administrators -->
+                    <input type="hidden" id="loginRole" value="TENANT_ADMIN">
+                {% else %}
+                    <div class="form-group">
+                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fa-solid fa-id-badge" style="color: var(--accent-primary);"></i> Select Role</span>
+                            <span id="roleBadgeHelp" style="font-size: 10px; color: var(--text-muted);">Filtered for {{ tenant.name }}</span>
+                        </label>
+                        <select id="loginRole" class="form-control" onchange="onRoleChanged()" style="font-weight: 600;">
                             {% for r in available_roles %}
                                 <option value="{{ r.key }}">{{ r.label }} ({{ r.badge }})</option>
                             {% endfor %}
-                        {% else %}
-                            <option value="SUPER_ADMIN">👑 Super Administrator (Platform Owner)</option>
-                            <option value="TENANT_ADMIN" selected>🛡️ Tenant Administrator (Organization Admin)</option>
-                            <option value="TEACHER">🧑‍🏫 Teacher / Faculty (Academic Staff)</option>
-                            <option value="STUDENT">🎓 Student / Employee (End User)</option>
-                        {% endif %}
-                    </select>
-                </div>
+                        </select>
+                    </div>
+                {% endif %}
 
                 <!-- Username Input -->
                 <div class="form-group">
-                    <label class="form-label" id="usernameLabel">Username or ID</label>
+                    <label class="form-label" id="usernameLabel">{% if is_corporate or not is_tenant_scoped %}Organization Admin Username{% else %}Username or ID{% endif %}</label>
                     <div style="position: relative;">
                         <input type="text" id="loginUsername" class="form-control" placeholder="e.g. admin or username" required style="padding-left: 36px;">
                         <i class="fa-solid fa-user" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted); font-size: 13px;"></i>
@@ -202,38 +131,20 @@
             </form>
 
             <!-- Bottom Navigation Links -->
+            {% if is_tenant_scoped and not is_corporate %}
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 8px;">
-                {% if is_tenant_scoped %}
-                    <a href="/login" style="font-size: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600;">
-                        &larr; Global Platform Login
-                    </a>
-                    <a href="/portal/{{ tenant.slug if tenant else '' }}" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
-                        <i class="fa-solid fa-camera"></i> Face Scan Sign In &rarr;
-                    </a>
-                {% else %}
-                    <a href="/" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 600;">
-                        &larr; Campus Overview
-                    </a>
-                    <a href="/demo-login" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 600;">
-                        <i class="fa-solid fa-crown"></i> Super Admin Sandbox &rarr;
-                    </a>
-                {% endif %}
+                <a href="/saas" style="font-size: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600;">
+                    &larr; Universal Portal Gateway
+                </a>
+                <a href="/portal/{{ tenant.slug if tenant else '' }}" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fa-solid fa-camera"></i> Face Scan Sign In &rarr;
+                </a>
             </div>
-
-            {% if all_tenants and not is_tenant_scoped %}
-            <div style="margin-top: 14px; text-align: center;">
-                <details style="font-size: 11.5px; color: var(--text-muted); cursor: pointer;">
-                    <summary style="font-weight: 600; color: var(--text-muted);">
-                        <i class="fa-solid fa-building"></i> Direct Tenant Login Portals ({{ all_tenants|length }})
-                    </summary>
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px;">
-                        {% for t in all_tenants %}
-                            <a href="/login/{{ t.slug }}" class="badge badge-sky" style="text-decoration: none; font-size: 10.5px; padding: 4px 8px;">
-                                {{ t.name }} (/login/{{ t.slug }})
-                            </a>
-                        {% endfor %}
-                    </div>
-                </details>
+            {% elif is_tenant_scoped and is_corporate %}
+            <div style="text-align: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+                <a href="/portal/{{ tenant.slug if tenant else '' }}" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fa-solid fa-camera"></i> Face Scan Kiosk &rarr;
+                </a>
             </div>
             {% endif %}
 
@@ -264,27 +175,6 @@
             } else {
                 uLabel.innerText = "Student Roll Number / Username";
                 uInput.placeholder = "e.g. student1";
-            }
-        }
-
-        function fillLogin(u, p, role, tid) {
-            document.getElementById("loginUsername").value = u;
-            document.getElementById("loginPassword").value = p;
-            if (role) {
-                document.getElementById("loginRole").value = role;
-                onRoleChanged();
-            }
-            if (tid) {
-                document.getElementById("loginTenantId").value = tid;
-            }
-        }
-
-        function fillTenantLogin(u, p, role) {
-            document.getElementById("loginUsername").value = u;
-            document.getElementById("loginPassword").value = p;
-            if (role) {
-                document.getElementById("loginRole").value = role;
-                onRoleChanged();
             }
         }
 
@@ -354,7 +244,7 @@
                         } else if (data.user.role === "STUDENT" || data.user.role === "EMPLOYEE") {
                             window.location.href = "/logs";
                         } else {
-                            window.location.href = "/";
+                            window.location.href = data.redirect_url || "/dashboard";
                         }
                     }, 350);
                 } else {

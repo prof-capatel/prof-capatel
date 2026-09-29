@@ -86,7 +86,7 @@ async def ingest_node_frame(
     # Compute active tenant cooldown in seconds
     custom_cooldown_secs = None
     if target_tenant.branding and target_tenant.branding.cooldown_minutes is not None:
-        custom_cooldown_secs = max(60, int(target_tenant.branding.cooldown_minutes * 60))
+        custom_cooldown_secs = max(0, int(target_tenant.branding.cooldown_minutes * 60))
 
     seen_student_ids = set()
     processed_detections = []

@@ -1343,6 +1343,8 @@ function setCooldownPreset(mins) {
     mins = Math.max(1, Math.min(1440, parseInt(mins) || 1));
     document.getElementById("brandCooldownMinutes").value = mins;
     document.getElementById("cooldownSlider").value = Math.min(720, mins);
+    const minCheckoutEl = document.getElementById("brandMinCheckoutInterval");
+    if (minCheckoutEl) minCheckoutEl.value = mins;
     const hrs = (mins / 60).toFixed(1);
     document.getElementById("cooldownLabel").innerText = `${mins} Minutes (${hrs} Hours)`;
 }
@@ -1350,6 +1352,8 @@ function setCooldownPreset(mins) {
 function updateCooldownDisplay(val) {
     const mins = Math.max(1, parseInt(val) || 1);
     document.getElementById("brandCooldownMinutes").value = mins;
+    const minCheckoutEl = document.getElementById("brandMinCheckoutInterval");
+    if (minCheckoutEl) minCheckoutEl.value = mins;
     const hrs = (mins / 60).toFixed(1);
     document.getElementById("cooldownLabel").innerText = `${mins} Minutes (${hrs} Hours)`;
 }
@@ -1358,6 +1362,8 @@ function updateCooldownFromInput(val) {
     let mins = parseInt(val) || 1;
     mins = Math.max(1, Math.min(1440, mins));
     document.getElementById("cooldownSlider").value = Math.min(720, mins);
+    const minCheckoutEl = document.getElementById("brandMinCheckoutInterval");
+    if (minCheckoutEl) minCheckoutEl.value = mins;
     const hrs = (mins / 60).toFixed(1);
     document.getElementById("cooldownLabel").innerText = `${mins} Minutes (${hrs} Hours)`;
 }

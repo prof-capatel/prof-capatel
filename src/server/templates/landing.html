@@ -1,0 +1,2544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Curiosity HUB — Face Recognition Employee Management & Payroll SaaS</title>
+    <meta name="description" content="Curiosity HUB (Ahmedabad, Gujarat): Fastest onboarding zero-hardware facial recognition employee management SaaS for all companies. Centralize multi-location offices with dynamic multi-shift scheduling, mobile GPS geofencing, automated leaves, bank-grade security, and automated payroll.">
+    <meta name="keywords" content="face recognition attendance, employee management system, biometric attendance software, zero hardware attendance, multi location attendance, automated payroll software, attendance saas, ahmedabad hr software, curiosity hub, gps geofence attendance, shift scheduling software">
+    <meta name="author" content="Curiosity HUB">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://curiosityhub.co.in/">
+
+    <!-- Open Graph / Facebook / LinkedIn Social Metadata -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Curiosity HUB">
+    <meta property="og:title" content="Curiosity HUB — Face Recognition Employee Management & Payroll SaaS">
+    <meta property="og:description" content="Next-gen zero-hardware facial recognition employee management & automated payroll SaaS for companies. Fastest onboarding, multi-location offices, dynamic shifts, and bank-grade security.">
+    <meta property="og:url" content="https://curiosityhub.co.in/">
+    <meta property="og:image" content="https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png">
+    <meta property="og:image:width" content="1280">
+    <meta property="og:image:height" content="720">
+    <meta property="og:image:alt" content="Curiosity HUB Live Operational Biometric Attendance Dashboard">
+
+    <!-- Twitter Cards Metadata -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Curiosity HUB — Face Recognition Employee Management & Payroll SaaS">
+    <meta name="twitter:description" content="Zero-hardware 1:N facial biometric clock-in, multi-location offices, dynamic shifts, and automated payroll SaaS.">
+    <meta name="twitter:image" content="https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png">
+
+    <!-- JSON-LD Structured Data Schema (Organization & SoftwareApplication) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://curiosityhub.co.in/#organization",
+          "name": "Curiosity HUB",
+          "url": "https://curiosityhub.co.in",
+          "logo": "https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png",
+          "description": "Ahmedabad-based software development studio specializing in AI workforce platforms and content design.",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Ahmedabad",
+            "addressRegion": "Gujarat",
+            "addressCountry": "India"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+91-8866868245",
+            "contactType": "customer service",
+            "email": "curiosityhubahd@gmail.com",
+            "areaServed": "IN",
+            "availableLanguage": ["en", "hi", "gu"]
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://curiosityhub.co.in/#software",
+          "name": "Curiosity HUB Face Recognition Employee Management SaaS",
+          "operatingSystem": "Web, Cloud, Windows, macOS, Linux, Android, iOS",
+          "applicationCategory": "BusinessApplication",
+          "softwareVersion": "2.0.0",
+          "url": "https://curiosityhub.co.in",
+          "description": "Zero-hardware AI-powered facial recognition employee management, dynamic multi-shift scheduling, mobile GPS geofencing, and automated payroll SaaS.",
+          "publisher": {
+            "@id": "https://curiosityhub.co.in/#organization"
+          },
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Basic Edition",
+              "description": "Fastest 5-minute setup with zero specific hardware for startups and single offices."
+            },
+            {
+              "@type": "Offer",
+              "name": "Smart Edition",
+              "description": "Multi-location offices, dynamic shifts, GPS geofencing, and leave tracking."
+            },
+            {
+              "@type": "Offer",
+              "name": "Pro Edition",
+              "description": "Full enterprise power with automated payroll engine and bank-grade security."
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ==========================================================================
+           CURIOSITY HUB PREMIUM MODERN SAAS DESIGN SYSTEM
+           Clean Slate, Crisp Whites, Radiant Sunset-Orange & Indigo Tech Accents
+           ========================================================================== */
+        :root {
+            --bg-page: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --bg-subtle: #F1F5F9;
+            --bg-muted: #E2E8F0;
+            
+            --text-heading: #0F172A;
+            --text-body: #334155;
+            --text-muted: #64748B;
+            --text-light: #94A3B8;
+            
+            /* Primary Brand Accent (Curiosity HUB Sunset Gradient) */
+            --accent-primary: #EA580C;
+            --accent-hover: #C2410C;
+            --accent-glow: rgba(234, 88, 12, 0.15);
+            --accent-gradient: linear-gradient(135deg, #EA580C 0%, #F97316 50%, #FB923C 100%);
+            --accent-soft: #FFF7ED;
+            
+            /* Secondary Tech Accent (Deep Indigo) */
+            --tech-indigo: #4F46E5;
+            --tech-indigo-soft: #EEF2FF;
+            --tech-indigo-border: #C7D2FE;
+            
+            /* Functional Colors */
+            --success-emerald: #10B981;
+            --success-soft: #ECFDF5;
+            --warning-amber: #F59E0B;
+            
+            /* Clean Modern Borders */
+            --border-subtle: #E2E8F0;
+            --border-hover: #CBD5E1;
+            --border-focus: #EA580C;
+            
+            /* Premium Elevation Shadows */
+            --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-sm: 0 2px 6px -1px rgba(15, 23, 42, 0.06);
+            --shadow-md: 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+            --shadow-lg: 0 16px 36px -6px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+            --shadow-xl: 0 24px 50px -10px rgba(15, 23, 42, 0.16);
+            
+            /* Geometry */
+            --radius-xs: 6px;
+            --radius-sm: 10px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+            --radius-pill: 9999px;
+            
+            --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            background-color: var(--bg-page);
+            color: var(--text-body);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-body);
+            line-height: 1.6;
+            overflow-x: hidden;
+            font-size: 15px;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            color: var(--text-heading);
+            letter-spacing: -0.025em;
+            font-weight: 700;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ==========================================================================
+           HEADER & NAVIGATION (NO TOP BLACK STRIP)
+           ========================================================================== */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
+            transition: var(--transition);
+        }
+
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 74px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-gradient);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3);
+        }
+
+        .brand-meta {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-family: var(--font-display);
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-heading);
+            line-height: 1.15;
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-link {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--text-body);
+            transition: var(--transition);
+            position: relative;
+            padding: 6px 0;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-primary);
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-primary);
+            transition: var(--transition);
+            border-radius: var(--radius-pill);
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-nav-signin {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent-gradient);
+            color: #FFFFFF;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 22px;
+            border-radius: var(--radius-pill);
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-nav-signin:hover {
+            transform: translateY(-1.5px);
+            box-shadow: 0 8px 20px rgba(234, 88, 12, 0.35);
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: 1px solid var(--border-subtle);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 18px;
+            color: var(--text-heading);
+            cursor: pointer;
+        }
+
+        /* ==========================================================================
+           HERO SECTION (CLEAN, SOPHISTICATED, BALANCED)
+           ========================================================================== */
+        .hero-section {
+            position: relative;
+            padding: 72px 0 64px;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 10%, rgba(234, 88, 12, 0.05) 0%, rgba(248, 250, 252, 1) 60%);
+        }
+
+        .hero-ambient-glow {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 720px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(234, 88, 12, 0.08) 0%, rgba(249, 115, 22, 0.02) 60%, transparent 80%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero-container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 920px;
+            margin: 0 auto;
+        }
+
+        .hero-pill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-sm);
+            padding: 6px 18px;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: 24px;
+        }
+
+        .pulse-dot-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2);
+            display: inline-block;
+        }
+
+        .hero-headline {
+            font-size: 36px;
+            line-height: 1.25;
+            font-weight: 750;
+            letter-spacing: -0.025em;
+            color: var(--text-heading);
+            margin-bottom: 20px;
+        }
+
+        .hero-headline .gradient-accent {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-description-card {
+            max-width: 960px;
+            margin: 0 auto 30px;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            border-radius: var(--radius-lg);
+            padding: 24px 36px;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            transition: var(--transition);
+        }
+
+        .hero-description-card:hover {
+            border-color: rgba(234, 88, 12, 0.35);
+            box-shadow: 0 8px 30px -4px rgba(234, 88, 12, 0.09);
+        }
+
+        .hero-description-justified {
+            font-size: 15.5px;
+            line-height: 1.84;
+            color: var(--text-body);
+            text-align: justify;
+            text-justify: inter-word;
+            text-align-last: center;
+            hyphens: auto;
+            margin: 0;
+            letter-spacing: -0.005em;
+        }
+
+        .hero-description-justified strong {
+            color: var(--text-heading);
+            font-weight: 700;
+        }
+
+        /* Hero Trust Badges (Replaces buttons with clean executive pills) */
+        .hero-trust-pills {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 28px auto 36px;
+            max-width: 960px;
+        }
+
+        .hero-trust-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-pill);
+            padding: 7px 16px;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-heading);
+            box-shadow: var(--shadow-xs);
+            transition: var(--transition);
+        }
+
+        .hero-trust-pill:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-1.5px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .hero-trust-pill i {
+            color: var(--accent-primary);
+            font-size: 13.5px;
+        }
+
+        /* Hero Device Window Mockup */
+        .hero-mockup-wrapper {
+            margin-top: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-window-frame {
+            background: #FFFFFF;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+        }
+
+        .app-window-header {
+            background: #F8FAFC;
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mac-controls {
+            display: flex;
+            gap: 7px;
+        }
+
+        .mac-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-close { background: #EF4444; }
+        .dot-min { background: #F59E0B; }
+        .dot-max { background: #10B981; }
+
+        .browser-address {
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-pill);
+            padding: 4px 18px;
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: monospace;
+        }
+
+        .browser-address i {
+            color: var(--success-emerald);
+            font-size: 11px;
+        }
+
+        .window-badge {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            background: var(--accent-soft);
+            padding: 3px 12px;
+            border-radius: var(--radius-xs);
+        }
+
+        .app-screenshot-img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Metric Quick Ribbon */
+        .metric-ribbon {
+            background: #FFFFFF;
+            border-top: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 28px 0;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 6px 12px;
+            border-right: 1px solid var(--border-subtle);
+        }
+
+        .metric-item:last-child {
+            border-right: none;
+        }
+
+        .metric-big {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--accent-primary);
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+
+        .metric-name {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-heading);
+        }
+
+        .metric-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Common Section Layout */
+        .section-block {
+            padding: 88px 0;
+        }
+
+        .section-title-wrapper {
+            text-align: center;
+            max-width: 760px;
+            margin: 0 auto 52px;
+        }
+
+        .section-badge {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent-primary);
+            background: var(--accent-soft);
+            padding: 4px 14px;
+            border-radius: var(--radius-pill);
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .section-heading {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-heading);
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .section-subtext {
+            font-size: 16px;
+            color: var(--text-body);
+            line-height: 1.6;
+        }
+
+        /* ==========================================================================
+           SECTION 1: ABOUT US (CURIOSITY HUB AHMEDABAD)
+           ========================================================================== */
+        .about-showcase-card {
+            background: #FFFFFF;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-subtle);
+            padding: 48px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .about-layout-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .location-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent-soft);
+            border: 1px solid rgba(234, 88, 12, 0.2);
+            padding: 6px 14px;
+            border-radius: var(--radius-pill);
+            color: var(--accent-primary);
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+
+        .about-lead-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-heading);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .about-narrative {
+            font-size: 15px;
+            color: var(--text-body);
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        .about-pillars-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .pillar-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            padding: 18px;
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+        }
+
+        .pillar-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            background: #FFFFFF;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .pillar-icon {
+            font-size: 20px;
+            color: var(--accent-primary);
+            margin-bottom: 8px;
+        }
+
+        .pillar-title {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin-bottom: 4px;
+        }
+
+        .pillar-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        .about-side-panel {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            border-radius: var(--radius-lg);
+            padding: 38px;
+            color: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .side-panel-stat h4 {
+            font-size: 28px;
+            font-weight: 800;
+            color: #FB923C;
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+
+        .side-panel-stat p {
+            font-size: 14px;
+            font-weight: 600;
+            color: #F1F5F9;
+            margin-bottom: 2px;
+        }
+
+        .side-panel-stat span {
+            font-size: 12px;
+            color: #94A3B8;
+        }
+
+        /* ==========================================================================
+           SECTION 2: EMPLOYEE MANAGEMENT SYSTEM (FEATURES, ROLES, EDITIONS)
+           ========================================================================== */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 64px;
+        }
+
+        .feature-card {
+            background: #FFFFFF;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-icon-wrapper {
+            width: 52px;
+            height: 52px;
+            border-radius: var(--radius-md);
+            background: var(--accent-soft);
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-heading);
+        }
+
+        .feature-card-text {
+            font-size: 14px;
+            color: var(--text-body);
+            line-height: 1.6;
+            margin-bottom: 18px;
+            flex: 1;
+        }
+
+        .feature-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .feature-chip {
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            padding: 3px 8px;
+            border-radius: var(--radius-xs);
+            color: var(--text-body);
+        }
+
+        /* Industries / Suitability Grid (Suitable to All Companies) */
+        .industries-wrapper {
+            margin: 0 0 64px 0;
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 44px 36px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .industries-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .industries-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .industry-card {
+            background: var(--bg-page);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 24px 20px;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .industry-card:hover {
+            background: #FFFFFF;
+            border-color: var(--accent-primary);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .industry-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-soft);
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+            margin-bottom: 14px;
+        }
+
+        .industry-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin-bottom: 6px;
+        }
+
+        .industry-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        /* Roles Grid */
+        .roles-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 64px;
+        }
+
+        .role-card {
+            background: #FFFFFF;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            padding: 24px;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .role-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .role-icon-avatar {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: var(--bg-subtle);
+            border: 2px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: var(--accent-primary);
+            margin: 0 auto 14px;
+        }
+
+        .role-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text-heading);
+        }
+
+        .role-card-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Edition Tiers (Basic, Smart, Pro) */
+        .editions-wrapper {
+            background: #FFFFFF;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-subtle);
+            padding: 48px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .editions-heading-box {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .editions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+        }
+
+        .edition-tier-card {
+            background: var(--bg-page);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            padding: 36px 28px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .edition-tier-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .edition-tier-card.highlighted {
+            background: #FFFFFF;
+            border: 2px solid var(--accent-primary);
+            box-shadow: var(--shadow-lg);
+            transform: scale(1.02);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent-gradient);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 4px 14px;
+            border-radius: var(--radius-pill);
+            box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3);
+        }
+
+        .tier-name {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 6px;
+        }
+
+        .tier-target {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            min-height: 38px;
+        }
+
+        .tier-features-list {
+            list-style: none;
+            margin-bottom: 32px;
+            flex: 1;
+        }
+
+        .tier-feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13.5px;
+            color: var(--text-body);
+            margin-bottom: 12px;
+            line-height: 1.45;
+        }
+
+        .tier-feature-item i {
+            color: var(--success-emerald);
+            font-size: 14px;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        .btn-tier-action {
+            display: block;
+            text-align: center;
+            padding: 12px 20px;
+            border-radius: var(--radius-pill);
+            font-weight: 700;
+            font-size: 14px;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-tier-primary {
+            background: var(--accent-gradient);
+            color: #FFFFFF;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
+        }
+
+        .btn-tier-primary:hover {
+            box-shadow: 0 8px 20px rgba(234, 88, 12, 0.38);
+            transform: translateY(-1.5px);
+        }
+
+        .btn-tier-secondary {
+            background: #FFFFFF;
+            color: var(--text-heading);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-tier-secondary:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        /* ==========================================================================
+           SECTION 3: PRODUCT DEMO (INTERACTIVE SCREENSHOTS)
+           ========================================================================= */
+        .demo-filter-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 36px;
+        }
+
+        .demo-filter-btn {
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            padding: 9px 20px;
+            border-radius: var(--radius-pill);
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-body);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .demo-filter-btn:hover, .demo-filter-btn.active {
+            background: var(--accent-primary);
+            color: #FFFFFF;
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
+        }
+
+        .walkthrough-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .walkthrough-card {
+            background: #FFFFFF;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .walkthrough-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .walkthrough-img-box {
+            position: relative;
+            background: var(--bg-subtle);
+            overflow: hidden;
+            height: 200px;
+        }
+
+        .walkthrough-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top;
+            transition: transform 0.4s ease;
+        }
+
+        .walkthrough-card:hover .walkthrough-img {
+            transform: scale(1.04);
+        }
+
+        .walkthrough-overlay-btn {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .walkthrough-card:hover .walkthrough-overlay-btn {
+            opacity: 1;
+        }
+
+        .walkthrough-overlay-btn span {
+            background: #FFFFFF;
+            color: var(--text-heading);
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .walkthrough-body {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .walkthrough-module-tag {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+
+        .walkthrough-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text-heading);
+        }
+
+        .walkthrough-card-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* ==========================================================================
+           SECTION 4: CONTACT US (AHMEDABAD, GUJARAT)
+           ========================================================================== */
+        .contact-box {
+            background: #FFFFFF;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-subtle);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+        }
+
+        .contact-info-col {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            color: #FFFFFF;
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .contact-info-header h3 {
+            color: #FFFFFF;
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .contact-info-header p {
+            color: #94A3B8;
+            font-size: 14.5px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .contact-items-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .contact-row-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .contact-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            background: rgba(234, 88, 12, 0.15);
+            color: #FB923C;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            border: 1px solid rgba(234, 88, 12, 0.3);
+        }
+
+        .contact-field-label {
+            font-size: 12px;
+            color: #94A3B8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 3px;
+        }
+
+        .contact-field-val {
+            font-size: 16px;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+
+        .contact-field-val a {
+            color: #FFFFFF;
+            transition: var(--transition);
+        }
+
+        .contact-field-val a:hover {
+            color: #FB923C;
+            text-decoration: underline;
+        }
+
+        .contact-form-col {
+            padding: 48px;
+            background: #FFFFFF;
+        }
+
+        .contact-form-col h3 {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 6px;
+        }
+
+        .contact-form-col p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-heading);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-page);
+            font-family: var(--font-body);
+            font-size: 14px;
+            color: var(--text-heading);
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+        }
+
+        .btn-submit-inquiry {
+            width: 100%;
+            background: var(--accent-gradient);
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 14px;
+            border-radius: var(--radius-pill);
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit-inquiry:hover {
+            box-shadow: 0 8px 22px rgba(234, 88, 12, 0.38);
+            transform: translateY(-1.5px);
+        }
+
+        /* Footer */
+        .footer {
+            background: #0F172A;
+            color: #E2E8F0;
+            padding: 64px 0 32px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+
+        .footer-brand-col p {
+            font-size: 13.5px;
+            color: #94A3B8;
+            line-height: 1.6;
+            margin-top: 14px;
+            max-width: 320px;
+        }
+
+        .footer-col h4 {
+            color: #FFFFFF;
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            letter-spacing: -0.01em;
+        }
+
+        .footer-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-links a {
+            font-size: 13.5px;
+            color: #94A3B8;
+            transition: var(--transition);
+        }
+
+        .footer-links a:hover {
+            color: #FB923C;
+            padding-left: 2px;
+        }
+
+        .footer-bottom {
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #64748B;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .footer-bottom a {
+            color: #94A3B8;
+            transition: var(--transition);
+        }
+
+        .footer-bottom a:hover {
+            color: #FB923C;
+        }
+
+        /* Lightbox Modal */
+        .lightbox-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .lightbox-content {
+            background: #FFFFFF;
+            border-radius: var(--radius-lg);
+            max-width: 1080px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .lightbox-header {
+            padding: 14px 20px;
+            background: #F8FAFC;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .lightbox-title {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-heading);
+        }
+
+        .lightbox-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .lightbox-body {
+            padding: 16px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: center;
+            background: var(--bg-page);
+        }
+
+        .lightbox-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
+            .features-grid, .walkthrough-grid, .industries-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .roles-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .editions-grid {
+                grid-template-columns: 1fr;
+            }
+            .edition-tier-card.highlighted {
+                transform: none;
+            }
+            .about-layout-grid, .contact-grid {
+                grid-template-columns: 1fr;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .metric-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .metric-item:nth-child(2) {
+                border-right: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-headline {
+                font-size: 26px;
+                line-height: 1.28;
+            }
+            .nav-menu {
+                display: none;
+            }
+            .mobile-toggle {
+                display: block;
+            }
+            .features-grid, .walkthrough-grid, .roles-grid, .industries-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .hero-description-card {
+                padding: 18px 20px;
+            }
+            .hero-description-justified {
+                font-size: 14.5px;
+                line-height: 1.7;
+                text-align: left;
+                text-align-last: left;
+            }
+            .about-showcase-card, .contact-info-col, .contact-form-col, .editions-wrapper {
+                padding: 24px;
+            }
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+            .metric-item {
+                border-right: none;
+                border-bottom: 1px solid var(--border-subtle);
+            }
+            .metric-item:last-child {
+                border-bottom: none;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sticky Executive Navbar (Directly at top, NO black strip) -->
+    <nav class="navbar" id="mainNav">
+        <div class="container nav-inner">
+            <a href="/" class="nav-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-cube"></i>
+                </div>
+                <div class="brand-meta">
+                    <span class="brand-title">Curiosity HUB</span>
+                    <span class="brand-subtitle">Employee Management SaaS</span>
+                </div>
+            </a>
+
+            <!-- 4 Required Navigation Menus -->
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#about" class="nav-link">About Us</a></li>
+                <li><a href="#product" class="nav-link">Employee Management System</a></li>
+                <li><a href="#demo" class="nav-link">Product Demo</a></li>
+                <li><a href="#contact" class="nav-link">Contact Us</a></li>
+            </ul>
+
+            <div class="nav-actions">
+                <a href="/saas" class="btn-nav-signin">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    <span>Sign In</span>
+                </a>
+                <button class="mobile-toggle" onclick="toggleMobileNav()" aria-label="Toggle Navigation">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Semantic Landmark: Main Content -->
+    <main id="main-content" role="main">
+
+    <!-- Hero Section -->
+    <header class="hero-section">
+        <div class="hero-ambient-glow"></div>
+        <div class="container hero-container">
+            <div class="hero-pill-badge">
+                <span class="pulse-dot-indicator"></span>
+                <span>⚡ Fastest Onboarding &bull; Zero Dedicated Hardware &bull; Multi-Location Ready</span>
+            </div>
+            
+            <h1 class="hero-headline">
+                Face Recognition <br><span class="gradient-accent">Employee Management & Payroll</span>
+            </h1>
+            
+            <!-- Detailed Justified Single-Paragraph Value Proposition Card -->
+            <div class="hero-description-card">
+                <p class="hero-description-justified">
+                    Engineered in Ahmedabad by <strong>Curiosity HUB</strong>, our next-generation biometric workforce platform is purpose-built for <strong>all companies</strong> of every scale—from single-store retail outlets and fast-scaling startups to multi-branch enterprises. Experience the <strong>fastest onboarding</strong> in under 5 minutes with zero technical overhead or deployment friction. Designed with <strong>no specific hardware requirement</strong>, the software transforms standard office laptops, desktop webcams, tablets, iPads, and employee smartphones into instant, high-precision biometric attendance terminals with zero Capex and zero AMC. Centrally govern your <strong>multi-location offices</strong> and distributed workforce from one unified cloud console powered by sub-250ms 1:N Euclidean facial recognition and temporal anti-spoof liveness gating. Eliminate manual errors and time fraud with automated dynamic multi-shift scheduling, tamper-proof GPS geofencing with street verification, and multi-tier leave tracking. Attendance logs sync seamlessly with the automated payroll engine to compute salary structures, allowances, deductions, and downloadable PDF payslips—backed by <strong>bank-grade 128-dimensional vector security</strong>.
+                </p>
+            </div>
+
+            <!-- Hero Trust Badges -->
+            <div class="hero-trust-pills">
+                <div class="hero-trust-pill"><i class="fa-solid fa-bolt"></i> Fastest 5-Min Onboarding</div>
+                <div class="hero-trust-pill"><i class="fa-solid fa-laptop"></i> No Specific Hardware Needed</div>
+                <div class="hero-trust-pill"><i class="fa-solid fa-building-columns"></i> Multi-Location Offices</div>
+                <div class="hero-trust-pill"><i class="fa-solid fa-shield-halved"></i> 100% Secure & Anti-Spoof</div>
+                <div class="hero-trust-pill"><i class="fa-solid fa-briefcase"></i> Suitable to All Companies</div>
+            </div>
+
+            <!-- Hero Device Showcase Window -->
+            <div class="hero-mockup-wrapper">
+                <div class="app-window-frame">
+                    <div class="app-window-header">
+                        <div class="mac-controls">
+                            <span class="mac-dot dot-close"></span>
+                            <span class="mac-dot dot-min"></span>
+                            <span class="mac-dot dot-max"></span>
+                        </div>
+                        <div class="browser-address">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>curiosityhub.co.in/dashboard</span>
+                        </div>
+                        <span class="window-badge">Curiosity HUB &bull; Pro Edition</span>
+                    </div>
+                    <img src="/screenshots/walkthrough/02_dashboard_live.png" alt="Live Operational Dashboard" class="app-screenshot-img" onerror="this.src='/static/img/fallback_dash.png'">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Metric Ribbon -->
+    <section class="metric-ribbon">
+        <div class="container">
+            <div class="metric-grid">
+                <div class="metric-item">
+                    <div class="metric-big">&lt; 5 Mins</div>
+                    <div class="metric-name">Fastest Onboarding</div>
+                    <div class="metric-sub">Bulk employee CSV & instant face enrollment</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-big">Zero</div>
+                    <div class="metric-name">Specific Hardware</div>
+                    <div class="metric-sub">Runs on standard webcams, laptops & phones</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-big">Multi-Site</div>
+                    <div class="metric-name">Multi-Location Offices</div>
+                    <div class="metric-sub">Centralized HQ control across all branches</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-big">Bank-Grade</div>
+                    <div class="metric-name">Secure & Anti-Spoof</div>
+                    <div class="metric-sub">128-d vector encryption & tamper-proof audit</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- MENU 1: ABOUT US                                                          -->
+    <!-- ========================================================================= -->
+    <section class="section-block" id="about">
+        <div class="container">
+            <div class="section-title-wrapper">
+                <span class="section-badge">About Us</span>
+                <h2 class="section-heading">Engineered in Ahmedabad for Modern Enterprises</h2>
+                <p class="section-subtext">Curiosity HUB is a forward-thinking technology studio dedicated to building high-performance SaaS platforms, enterprise workflow software, and digital content solutions.</p>
+            </div>
+
+            <div class="about-showcase-card">
+                <div class="about-layout-grid">
+                    <div>
+                        <div class="location-tag">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Curiosity HUB &bull; Ahmedabad (AHD), Gujarat</span>
+                        </div>
+                        <h3 class="about-lead-text">
+                            Pioneering AI-Driven Workforce Software & High-Impact Content Design
+                        </h3>
+                        <p class="about-narrative">
+                            Headquartered in <strong>Ahmedabad, Gujarat</strong>, <strong>Curiosity HUB</strong> is an engineering firm involved in bespoke software development, digital product engineering, and content design. Our flagship product—the <strong>Face Recognition Employee Management SaaS System</strong>—is engineered for <strong>all companies</strong> of every scale, delivering the <strong>fastest onboarding</strong> with <strong>no specific hardware requirement</strong>, centralized <strong>multi-location office</strong> management, and <strong>bank-grade biometric security</strong>.
+                        </p>
+                        <p class="about-narrative">
+                            We eliminate cumbersome legacy biometric fingerprint terminals, buddy punching, and fragmented HR software by delivering a unified, multi-tenant cloud application with instant sub-250ms facial vector recognition, multi-shift flexibility, tamper-proof GPS geofencing, automated leaves, and comprehensive payroll management.
+                        </p>
+
+                        <div class="about-pillars-grid">
+                            <div class="pillar-card">
+                                <div class="pillar-icon"><i class="fa-solid fa-code"></i></div>
+                                <h4 class="pillar-title">Software Engineering</h4>
+                                <p class="pillar-desc">Scalable multi-tenant cloud architectures with real-time biometric pipelines.</p>
+                            </div>
+                            <div class="pillar-card">
+                                <div class="pillar-icon"><i class="fa-solid fa-pen-nib"></i></div>
+                                <h4 class="pillar-title">Content & UI Design</h4>
+                                <p class="pillar-desc">Human-centric interfaces designed for operational clarity and executive speed.</p>
+                            </div>
+                            <div class="pillar-card">
+                                <div class="pillar-icon"><i class="fa-solid fa-brain"></i></div>
+                                <h4 class="pillar-title">Computer Vision & AI</h4>
+                                <p class="pillar-desc">128-dimensional deep face embeddings with temporal liveness and anti-spoofing.</p>
+                            </div>
+                            <div class="pillar-card">
+                                <div class="pillar-icon"><i class="fa-solid fa-calculator"></i></div>
+                                <h4 class="pillar-title">Payroll System</h4>
+                                <p class="pillar-desc">Automated salary structures, deductions, batch calculations, and payslips.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-side-panel">
+                        <div class="side-panel-stat">
+                            <h4>Curiosity HUB</h4>
+                            <p>Technology & Content Engineering</p>
+                            <span>Operating out of Ahmedabad (AHD), Gujarat, India</span>
+                        </div>
+                        <div class="side-panel-stat">
+                            <h4>Fastest Onboarding</h4>
+                            <p>Under 5-Minute Setup</p>
+                            <span>Bulk employee CSV import, fast face registration & zero delay</span>
+                        </div>
+                        <div class="side-panel-stat">
+                            <h4>Zero Specific Hardware</h4>
+                            <p>Pure Cloud SaaS Freedom</p>
+                            <span>Runs on standard webcams, laptops, tablets, iPads & smartphones</span>
+                        </div>
+                        <div class="side-panel-stat">
+                            <h4>Multi-Location & Secure</h4>
+                            <p>Centralized HQ & Bank-Grade</p>
+                            <span>Multi-branch management with 128-d vector biometric encryption</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- MENU 2: EMPLOYEE MANAGEMENT SYSTEM (FEATURES, ROLES & EDITIONS)           -->
+    <!-- ========================================================================= -->
+    <section class="section-block" id="product" style="background: var(--bg-subtle);">
+        <div class="container">
+            <div class="section-title-wrapper">
+                <span class="section-badge">Product Capabilities</span>
+                <h2 class="section-heading">Built for All Companies & Multi-Location Workforces</h2>
+                <p class="section-subtext">The complete employee management suite: fastest 5-minute onboarding, zero hardware requirement, bank-grade biometric security, and centralized multi-branch office control.</p>
+            </div>
+
+            <!-- Features Grid (9 Comprehensive Cards) -->
+            <div class="features-grid">
+                <!-- Feature 1: Fastest Onboarding -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-bolt"></i></div>
+                    <h3 class="feature-card-title">Fastest 5-Minute Onboarding</h3>
+                    <p class="feature-card-text">Get your entire workforce operational in minutes. Bulk import employee rosters via standard Excel/CSV templates, enroll 3-angle facial vectors with any webcam or phone, and start attendance instantly with zero IT overhead.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">5-Min Deployment</span>
+                        <span class="feature-chip">Bulk CSV Import</span>
+                        <span class="feature-chip">Zero IT Friction</span>
+                    </div>
+                </div>
+
+                <!-- Feature 2: No Specific Hardware -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-laptop-file"></i></div>
+                    <h3 class="feature-card-title">No Specific Hardware Needed</h3>
+                    <p class="feature-card-text">Eliminate expensive fingerprint terminals, biometric punch machines, card readers, and recurrent AMC contracts. Runs effortlessly on existing office laptops, USB webcams, tablets, iPads, and mobile smartphones.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">Zero Hardware Capex</span>
+                        <span class="feature-chip">Webcam & Laptop Ready</span>
+                        <span class="feature-chip">Zero AMC Fees</span>
+                    </div>
+                </div>
+
+                <!-- Feature 3: Multi-Location Offices -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-network-wired"></i></div>
+                    <h3 class="feature-card-title">Multi-Location Offices Centralized</h3>
+                    <p class="feature-card-text">Connect your headquarters, distributed retail branches, regional warehouses, and remote offices under one unified tenant portal. Granular branch-level filtering, localized shift timings, and centralized executive oversight.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">Multi-Branch Centralized</span>
+                        <span class="feature-chip">Retail Store Chains</span>
+                        <span class="feature-chip">Unified HQ Console</span>
+                    </div>
+                </div>
+
+                <!-- Feature 4: Bank-Grade Security & Anti-Spoof -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h3 class="feature-card-title">Bank-Grade Biometric Security</h3>
+                    <p class="feature-card-text">Zero raw facial photos stored on edge capture devices—only irreversible 128-dimensional Euclidean mathematical vectors. Incorporates temporal anti-spoof liveness gating, tamper-proof logs, and strict tenant data isolation.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">128-d Vector Encryption</span>
+                        <span class="feature-chip">Anti-Spoof Liveness</span>
+                        <span class="feature-chip">Tamper-Proof Audit</span>
+                    </div>
+                </div>
+
+                <!-- Feature 5: Dynamic Multi-Shift Scheduling -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <h3 class="feature-card-title">Dynamic Multi-Shift Scheduling</h3>
+                    <p class="feature-card-text">Configure flexible morning, evening, rotational, and overnight cross-midnight shifts with customizable grace periods, late arrival flags, half-day/full-day thresholds, and overtime calculations.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">Overnight Shifts</span>
+                        <span class="feature-chip">Grace Buffers</span>
+                        <span class="feature-chip">Rotational Rosters</span>
+                    </div>
+                </div>
+
+                <!-- Feature 6: Mobile GPS Geofencing -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-location-crosshairs"></i></div>
+                    <h3 class="feature-card-title">Mobile GPS Geofencing</h3>
+                    <p class="feature-card-text">Empower remote, sales, or field employees to mark attendance within authorized coordinates. Enforces precise Haversine perimeter fences with reverse geocoded street verification and location spoof protection.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">Haversine Perimeter</span>
+                        <span class="feature-chip">Street-Level Geocoding</span>
+                        <span class="feature-chip">Field Staff Self-Check</span>
+                    </div>
+                </div>
+
+                <!-- Feature 7: Automated Payroll System -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-money-check-dollar"></i></div>
+                    <h3 class="feature-card-title">Automated Payroll System</h3>
+                    <p class="feature-card-text">Biometric attendance hours, approved leaves, and overtime hours synchronize directly with customizable salary structures. One-click monthly batch calculations, allowance/deduction handling, and downloadable PDF payslips.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">Salary Templates</span>
+                        <span class="feature-chip">One-Click Batch Run</span>
+                        <span class="feature-chip">Downloadable PDF Slips</span>
+                    </div>
+                </div>
+
+                <!-- Feature 8: Leave & Holiday Governance -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-calendar-check"></i></div>
+                    <h3 class="feature-card-title">Leave & Holiday Ledger</h3>
+                    <p class="feature-card-text">Automated tracking for Paid Leaves (PL), Casual Leaves (CL), and Sick Leaves (SL). Features automated monthly accruals, multi-tier manager approval queues, balance ledgers, and centralized holiday calendars.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">Automated Accruals</span>
+                        <span class="feature-chip">Approval Queues</span>
+                        <span class="feature-chip">Holiday Master</span>
+                    </div>
+                </div>
+
+                <!-- Feature 9: Real-Time Biometric HUD -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper"><i class="fa-solid fa-chart-line"></i></div>
+                    <h3 class="feature-card-title">Real-Time Biometric HUD</h3>
+                    <p class="feature-card-text">Live Server-Sent Events (SSE) stream biometric clock-in events to executive dashboards instantly. Live headcount counters, department-wise attendance distribution, and one-click Excel/CSV report exports.</p>
+                    <div class="feature-chips">
+                        <span class="feature-chip">SSE Live Streaming</span>
+                        <span class="feature-chip">&lt; 250ms Vector Match</span>
+                        <span class="feature-chip">CSV / Excel Exports</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suitable to All Companies & Industries Block -->
+            <div class="industries-wrapper">
+                <div class="industries-header">
+                    <span class="section-badge" style="background: var(--tech-indigo-soft); color: var(--tech-indigo);">Universal Fit</span>
+                    <h3 style="font-size: 28px; font-weight: 800; color: var(--text-heading); margin-top: 6px;">Suitable to All Companies & Industries</h3>
+                    <p style="color: var(--text-muted); font-size: 14.5px; max-width: 680px; margin: 8px auto 0;">From single-counter retail shops to multi-branch enterprises, Curiosity HUB adapts to your specific organizational structure.</p>
+                </div>
+
+                <div class="industries-grid">
+                    <div class="industry-card">
+                        <div class="industry-icon-box"><i class="fa-solid fa-shop"></i></div>
+                        <h4 class="industry-title">Retail Stores & Chains</h4>
+                        <p class="industry-desc">Multi-counter fast face check-in for cashiers and sales associates. Centralized multi-store visibility for branch managers and franchise owners.</p>
+                    </div>
+
+                    <div class="industry-card">
+                        <div class="industry-icon-box"><i class="fa-solid fa-building"></i></div>
+                        <h4 class="industry-title">Corporate & Tech Offices</h4>
+                        <p class="industry-desc">Touchless lobby check-in using standard reception webcams. Seamless self-service portal for leave applications and monthly payslip downloads.</p>
+                    </div>
+
+                    <div class="industry-card">
+                        <div class="industry-icon-box"><i class="fa-solid fa-industry"></i></div>
+                        <h4 class="industry-title">Factories & Manufacturing</h4>
+                        <p class="industry-desc">High-speed shift changes with rotational and overnight shifts. Tough-environment reliability using existing computers with zero hardware breakage.</p>
+                    </div>
+
+                    <div class="industry-card">
+                        <div class="industry-icon-box"><i class="fa-solid fa-truck-fast"></i></div>
+                        <h4 class="industry-title">Field & Logistics Teams</h4>
+                        <p class="industry-desc">Mobile GPS geofencing with Haversine perimeter verification. Tamper-proof reverse geocoded street locations for distributed drivers and sales reps.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role-Based Access Control (RBAC) -->
+            <div style="margin-bottom: 24px; text-align: center;">
+                <span class="section-badge" style="background: var(--tech-indigo-soft); color: var(--tech-indigo);">Governance & Access</span>
+                <h3 style="font-size: 26px; font-weight: 800; margin-top: 6px;">Role-Based Access Control (RBAC)</h3>
+                <p style="color: var(--text-muted); font-size: 14px; max-width: 600px; margin: 6px auto 32px;">Segregation of duties across four specialized organizational roles.</p>
+            </div>
+
+            <div class="roles-grid">
+                <div class="role-card">
+                    <div class="role-icon-avatar"><i class="fa-solid fa-building-user"></i></div>
+                    <h4 class="role-card-title">Organization Admin</h4>
+                    <p class="role-card-desc">Full governance over tenant configuration, shift timing rules, security cooldowns, company branding, and audit logs.</p>
+                </div>
+                <div class="role-card">
+                    <div class="role-icon-avatar"><i class="fa-solid fa-user-tie"></i></div>
+                    <h4 class="role-card-title">HR / Payroll Manager</h4>
+                    <p class="role-card-desc">Employee onboarding, salary template design, monthly payroll batch execution, leave ledger oversight, and payslip generation.</p>
+                </div>
+                <div class="role-card">
+                    <div class="role-icon-avatar"><i class="fa-solid fa-clipboard-user"></i></div>
+                    <h4 class="role-card-title">Shift Supervisor</h4>
+                    <p class="role-card-desc">Departmental floor management, live scanner kiosk supervision, attendance regularizations, and daily rosters.</p>
+                </div>
+                <div class="role-card">
+                    <div class="role-icon-avatar"><i class="fa-solid fa-user-check"></i></div>
+                    <h4 class="role-card-title">Employee</h4>
+                    <p class="role-card-desc">Personal self-service portal, mobile GPS clock-in, leave application submission, shift calendar, and monthly payslip downloads.</p>
+                </div>
+            </div>
+
+            <!-- Edition Tiers: Basic, Smart, Pro -->
+            <div class="editions-wrapper" id="editions">
+                <div class="editions-heading-box">
+                    <span class="section-badge">Software Editions</span>
+                    <h3 style="font-size: 30px; font-weight: 800; margin-top: 8px;">Tailored Edition Tiers for Every Company Size</h3>
+                    <p style="color: var(--text-body); font-size: 15px; max-width: 640px; margin: 8px auto 0;">Choose the ideal tier for your organizational footprint, from single-office startups to multi-branch enterprises.</p>
+                </div>
+
+                <div class="editions-grid">
+                    <!-- Basic Tier -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Basic Edition</h4>
+                        <p class="tier-target">Fastest 5-minute onboarding with zero specific hardware for startups & single offices.</p>
+                        
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span><strong>Fastest 5-Minute Onboarding</strong> (Bulk CSV)</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span><strong>Zero Dedicated Hardware</strong> (Webcams & Laptops)</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>1:N Euclidean Facial Biometrics</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Single Office / Store Operation</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Standard Shifts & CSV Attendance Exports</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Employee Self-Service Mobile Portal</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Standard Business Support</span>
+                            </li>
+                        </ul>
+
+                        <a href="#contact" class="btn-tier-action btn-tier-secondary">Inquire for Basic</a>
+                    </div>
+
+                    <!-- Smart Tier (Highlighted) -->
+                    <div class="edition-tier-card highlighted">
+                        <div class="popular-badge">Most Popular</div>
+                        <h4 class="tier-name">Smart Edition</h4>
+                        <p class="tier-target">Ideal for growing companies with dynamic shifts, multi-location offices & field teams.</p>
+                        
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span><strong>Everything in Basic Edition</strong></span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span><strong>Multi-Location Office Support</strong></span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Dynamic Multi-Shift Scheduling (Rotational/Night)</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Late Arrival & Early Exit Grace Periods</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Mobile GPS Geofencing with Street Verification</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Automated Leave Management (CL/SL/PL)</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Department & Designation Master Tables</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Priority Business Support</span>
+                            </li>
+                        </ul>
+
+                        <a href="#contact" class="btn-tier-action btn-tier-primary">Choose Smart Edition</a>
+                    </div>
+
+                    <!-- Pro Tier -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Pro Edition</h4>
+                        <p class="tier-target">Full enterprise power: automated payroll, bank-grade security & centralized multi-branch governance.</p>
+                        
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span><strong>Everything in Smart Edition</strong></span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Comprehensive Automated Payroll System</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>One-Click Payroll Batch Run & PDF Payslips</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span><strong>Bank-Grade Biometric Security</strong> & Anti-Spoof</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span><strong>Centralized Multi-Location</strong> Tenant Portals</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Live Real-Time SSE Biometric HUD & Audit Trails</span>
+                            </li>
+                            <li class="tier-feature-item">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Dedicated Account Manager & 99.9% SLA</span>
+                            </li>
+                        </ul>
+
+                        <a href="#contact" class="btn-tier-action btn-tier-secondary">Inquire for Pro</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- MENU 3: PRODUCT DEMO (INTERACTIVE SCREENSHOTS)                            -->
+    <!-- ========================================================================= -->
+    <section class="section-block" id="demo">
+        <div class="container">
+            <div class="section-title-wrapper">
+                <span class="section-badge">Interactive Walkthrough</span>
+                <h2 class="section-heading">Explore Production Modules & Real Interfaces</h2>
+                <p class="section-subtext">Inspect high-resolution captures of our operational software in action. Click any module preview to enlarge.</p>
+            </div>
+
+            <!-- Demo Category Filter Buttons -->
+            <div class="demo-filter-buttons">
+                <button type="button" class="demo-filter-btn active" onclick="filterModules('all')">All Modules</button>
+                <button type="button" class="demo-filter-btn" onclick="filterModules('biometrics')">Biometrics & Dashboard</button>
+                <button type="button" class="demo-filter-btn" onclick="filterModules('workforce')">Workforce & Directory</button>
+                <button type="button" class="demo-filter-btn" onclick="filterModules('payroll')">Payroll System</button>
+                <button type="button" class="demo-filter-btn" onclick="filterModules('settings')">Settings & Security</button>
+            </div>
+
+            <!-- Screenshots Walkthrough Grid -->
+            <div class="walkthrough-grid" id="walkthroughGrid">
+                <!-- 1. Live Dashboard -->
+                <div class="walkthrough-card" data-category="biometrics" onclick="openLightbox('/screenshots/walkthrough/02_dashboard_live.png', 'Live Biometric Operational HUD')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/02_dashboard_live.png" alt="Live Operational Dashboard" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Live Biometric HUD</span>
+                        <h4 class="walkthrough-card-title">Real-Time Operational Scanner</h4>
+                        <p class="walkthrough-card-desc">Live camera ingestion with sub-250ms vector matching, real-time presence counters, and SSE streaming.</p>
+                    </div>
+                </div>
+
+                <!-- 2. Employee Directory -->
+                <div class="walkthrough-card" data-category="workforce" onclick="openLightbox('/screenshots/walkthrough/03_employee_directory.png', 'Enterprise Employee Master Directory')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/03_employee_directory.png" alt="Employee Master Directory" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Workforce Directory</span>
+                        <h4 class="walkthrough-card-title">Employee Master Registry</h4>
+                        <p class="walkthrough-card-desc">Searchable roster with department tags, shift assignments, biometric vector status, and action menus.</p>
+                    </div>
+                </div>
+
+                <!-- 3. Payroll Batches -->
+                <div class="walkthrough-card" data-category="payroll" onclick="openLightbox('/screenshots/walkthrough/09_payroll_monthly_batches.png', 'Monthly Payroll Batches')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/09_payroll_monthly_batches.png" alt="Monthly Payroll Batches" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Payroll Processing</span>
+                        <h4 class="walkthrough-card-title">Monthly Payroll Batch Processor</h4>
+                        <p class="walkthrough-card-desc">One-click monthly payroll batch calculations with earnings breakdown and deductions.</p>
+                    </div>
+                </div>
+
+                <!-- 4. Multi-Angle Enrollment -->
+                <div class="walkthrough-card" data-category="biometrics" onclick="openLightbox('/screenshots/walkthrough/05_register_new_employee.png', '3-Angle Facial Biometric Enrollment')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/05_register_new_employee.png" alt="Employee Biometric Registration" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Biometric Enrollment</span>
+                        <h4 class="walkthrough-card-title">3-Angle Face Registration</h4>
+                        <p class="walkthrough-card-desc">Captures frontal, left, and right vector coordinates for maximum recognition accuracy under varied lighting.</p>
+                    </div>
+                </div>
+
+                <!-- 5. Leave Management -->
+                <div class="walkthrough-card" data-category="workforce" onclick="openLightbox('/screenshots/walkthrough/14_leave_management.png', 'Automated Leave Management & Accruals')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/14_leave_management.png" alt="Leave Management Module" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Leave Ledger</span>
+                        <h4 class="walkthrough-card-title">Leave Request & Ledger Engine</h4>
+                        <p class="walkthrough-card-desc">Staff apply for PL, CL, and SL leaves; managers review approvals with real-time balance calculations.</p>
+                    </div>
+                </div>
+
+                <!-- 6. GPS Geofencing Settings -->
+                <div class="walkthrough-card" data-category="settings" onclick="openLightbox('/screenshots/walkthrough/21_settings_geofencing_portals.png', 'GPS Geofencing & Branch Perimeter Settings')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/21_settings_geofencing_portals.png" alt="GPS Geofencing Settings" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">GPS Geofencing</span>
+                        <h4 class="walkthrough-card-title">Office Locations & Geofence Bounds</h4>
+                        <p class="walkthrough-card-desc">Interactive map interface to set exact latitude/longitude coordinates and meter radii.</p>
+                    </div>
+                </div>
+
+                <!-- 7. Salary Structure & Templates -->
+                <div class="walkthrough-card" data-category="payroll" onclick="openLightbox('/screenshots/walkthrough/10_payroll_employee_structures.png', 'Employee Salary Structure & Component Mapping')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/10_payroll_employee_structures.png" alt="Employee Salary Structure" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Payroll Mapping</span>
+                        <h4 class="walkthrough-card-title">Salary Templates & Allowances</h4>
+                        <p class="walkthrough-card-desc">Salary breakdown into Basic, HRA, Special Allowance, and net take-home pay.</p>
+                    </div>
+                </div>
+
+                <!-- 8. Shift Rules Configuration -->
+                <div class="walkthrough-card" data-category="settings" onclick="openLightbox('/screenshots/walkthrough/19_settings_shifts_rules.png', 'Shifts & Timing Master Configuration')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/19_settings_shifts_rules.png" alt="Shifts & Timing Master" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Shift Rules</span>
+                        <h4 class="walkthrough-card-title">Shift Timings & Grace Buffers</h4>
+                        <p class="walkthrough-card-desc">Setup start/end hours, break durations, ±15 min grace periods, and night shift flags (+1 day rollover).</p>
+                    </div>
+                </div>
+
+                <!-- 9. Organization Profile & Themes -->
+                <div class="walkthrough-card" data-category="settings" onclick="openLightbox('/screenshots/walkthrough/16_settings_themes_appearance.png', 'Tenant Profile & Theme Appearance Settings')">
+                    <div class="walkthrough-img-box">
+                        <img src="/screenshots/walkthrough/16_settings_themes_appearance.png" alt="Tenant Profile & Theme Settings" class="walkthrough-img">
+                        <div class="walkthrough-overlay-btn">
+                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
+                        </div>
+                    </div>
+                    <div class="walkthrough-body">
+                        <span class="walkthrough-module-tag">Custom Branding</span>
+                        <h4 class="walkthrough-card-title">White-Label Branding & Colors</h4>
+                        <p class="walkthrough-card-desc">Upload company logos, configure primary accent color palettes, and toggle appearance preferences.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- MENU 4: CONTACT US (AHMEDABAD, GUJARAT)                                   -->
+    <!-- ========================================================================= -->
+    <section class="section-block" id="contact" style="background: var(--bg-subtle);">
+        <div class="container">
+            <div class="section-title-wrapper">
+                <span class="section-badge">Get in Touch</span>
+                <h2 class="section-heading">Connect with Curiosity HUB</h2>
+                <p class="section-subtext">Have questions about our Employee Management System or ready to deploy for your organization? Reach out to our Ahmedabad team.</p>
+            </div>
+
+            <div class="contact-box">
+                <div class="contact-grid">
+                    <!-- Left Column: Direct Info -->
+                    <div class="contact-info-col">
+                        <div>
+                            <div class="contact-info-header">
+                                <h3>Curiosity HUB</h3>
+                                <p>SaaS Software Development & Digital Content Design Company</p>
+                            </div>
+
+                            <div class="contact-items-stack">
+                                <!-- Location: Ahmedabad -->
+                                <div class="contact-row-item">
+                                    <div class="contact-icon-box">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                    </div>
+                                    <div>
+                                        <div class="contact-field-label">Headquarters</div>
+                                        <div class="contact-field-val">Ahmedabad, Gujarat, India</div>
+                                    </div>
+                                </div>
+
+                                <!-- Email -->
+                                <div class="contact-row-item">
+                                    <div class="contact-icon-box">
+                                        <i class="fa-solid fa-envelope"></i>
+                                    </div>
+                                    <div>
+                                        <div class="contact-field-label">Email Inquiries</div>
+                                        <div class="contact-field-val">
+                                            <a href="mailto:curiosityhubahd@gmail.com">curiosityhubahd@gmail.com</a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mobile -->
+                                <div class="contact-row-item">
+                                    <div class="contact-icon-box">
+                                        <i class="fa-solid fa-phone"></i>
+                                    </div>
+                                    <div>
+                                        <div class="contact-field-label">Direct Contact / WhatsApp</div>
+                                        <div class="contact-field-val">
+                                            <a href="tel:+918866868245">+91 8866868245</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                            <span style="font-size: 13px; color: #94A3B8; display: block; margin-bottom: 6px;">
+                                <i class="fa-solid fa-clock" style="color: #FB923C; margin-right: 6px;"></i> Business Hours: Monday – Saturday (9:30 AM – 6:30 PM IST)
+                            </span>
+                            <span style="font-size: 12.5px; color: #64748B;">
+                                Quick turnarounds & dedicated client onboarding support.
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Interactive Form -->
+                    <div class="contact-form-col">
+                        <h3>Send Us a Message</h3>
+                        <p>Fill out the details below and our team will get in touch with you promptly.</p>
+
+                        <form id="inquiryForm" onsubmit="handleInquirySubmit(event)">
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label class="form-label" for="inqName">Your Name *</label>
+                                    <input type="text" id="inqName" class="form-control" placeholder="e.g. Chirag Patel" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="inqCompany">Company Name *</label>
+                                    <input type="text" id="inqCompany" class="form-control" placeholder="e.g. Acme Enterprises" required>
+                                </div>
+                            </div>
+
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label class="form-label" for="inqEmail">Work Email *</label>
+                                    <input type="email" id="inqEmail" class="form-control" placeholder="name@company.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="inqPhone">Mobile Number *</label>
+                                    <input type="tel" id="inqPhone" class="form-control" placeholder="e.g. +91 98765 43210" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="inqEdition">Interested Software Edition</label>
+                                <select id="inqEdition" class="form-control">
+                                    <option value="Smart" selected>Smart Edition (Shifts, GPS Geofencing & Leaves)</option>
+                                    <option value="Pro">Pro Edition (Automated Payroll & Live HUD)</option>
+                                    <option value="Basic">Basic Edition (Core Biometrics & Attendance)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="inqMessage">Message / Requirements</label>
+                                <textarea id="inqMessage" class="form-control" rows="3" placeholder="Tell us about your team size, locations, or specific workflow needs..."></textarea>
+                            </div>
+
+                            <div id="formFeedback" style="display: none; padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13.5px;"></div>
+
+                            <button type="submit" id="btnSubmitInquiry" class="btn-submit-inquiry">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>Submit Inquiry to Curiosity HUB</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand-col">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="brand-icon" style="width: 38px; height: 38px; font-size: 16px;">
+                            <i class="fa-solid fa-cube"></i>
+                        </div>
+                        <span style="font-family: var(--font-display); font-size: 20px; font-weight: 800; color: #FFFFFF;">Curiosity HUB</span>
+                    </div>
+                    <p>
+                        High-performance SaaS employee management, zero-hardware AI facial recognition attendance, and automated payroll systems. Engineered in Ahmedabad, Gujarat, India.
+                    </p>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Navigation</h4>
+                    <ul class="footer-links">
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#product">Employee Management System</a></li>
+                        <li><a href="#editions">Software Edition Tiers</a></li>
+                        <li><a href="#demo">Product Demo</a></li>
+                        <li><a href="#contact">Contact Us</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Product Editions</h4>
+                    <ul class="footer-links">
+                        <li><a href="#editions">Basic Edition (Core Attendance)</a></li>
+                        <li><a href="#editions">Smart Edition (Shifts & GPS)</a></li>
+                        <li><a href="#editions">Pro Edition (Payroll System)</a></li>
+                        <li><a href="#demo">Live Operational HUD</a></li>
+                        <li><a href="#product">Role-Based Access Control</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Portal Gateways</h4>
+                    <ul class="footer-links">
+                        <li><a href="/saas">SaaS Organization Sign-In</a></li>
+                        <li><a href="/login/demo-store">Demo Store Portal</a></li>
+                        <li><a href="/super-admin/login">Super Admin Console</a></li>
+                        <li><a href="#contact">Inquire for Deployment</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div>
+                    &copy; 2026 Curiosity HUB. All rights reserved. &bull; Ahmedabad, Gujarat, India.
+                </div>
+                <div style="display: flex; gap: 18px;">
+                    <a href="/saas">SaaS Portal</a>
+                    <a href="/super-admin/login">Super Admin</a>
+                    <a href="#mainNav">Back to Top &uarr;</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Screenshot Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox(event)">
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <div class="lightbox-header">
+                <span class="lightbox-title" id="lightboxTitle">Module Preview</span>
+                <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close Preview">&times;</button>
+            </div>
+            <div class="lightbox-body">
+                <img src="" alt="Module Preview" class="lightbox-img" id="lightboxImg">
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Scripts -->
+    <script>
+        // Module Filtering Tabs
+        function filterModules(category) {
+            const cards = document.querySelectorAll('.walkthrough-card');
+            const btns = document.querySelectorAll('.demo-filter-btn');
+            
+            btns.forEach(b => b.classList.remove('active'));
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+
+            cards.forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Lightbox Modal Handlers
+        function openLightbox(imgSrc, title) {
+            const modal = document.getElementById('lightboxModal');
+            const img = document.getElementById('lightboxImg');
+            const titleEl = document.getElementById('lightboxTitle');
+            
+            img.src = imgSrc;
+            titleEl.textContent = title || 'Module Preview';
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox(event) {
+            const modal = document.getElementById('lightboxModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Keyboard Esc to Close Lightbox
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeLightbox();
+            }
+        });
+
+        // Mobile Nav Toggle
+        function toggleMobileNav() {
+            const menu = document.getElementById('navMenu');
+            if (menu.style.display === 'flex') {
+                menu.style.display = 'none';
+            } else {
+                menu.style.display = 'flex';
+                menu.style.flexDirection = 'column';
+                menu.style.position = 'absolute';
+                menu.style.top = '100%';
+                menu.style.left = '0';
+                menu.style.width = '100%';
+                menu.style.background = '#FFFFFF';
+                menu.style.padding = '24px';
+                menu.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
+                menu.style.zIndex = '999';
+            }
+        }
+
+        // Inquiry Form Handler
+        function handleInquirySubmit(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btnSubmitInquiry');
+            const fb = document.getElementById('formFeedback');
+            const name = document.getElementById('inqName').value.trim();
+            const company = document.getElementById('inqCompany').value.trim();
+            const email = document.getElementById('inqEmail').value.trim();
+            const phone = document.getElementById('inqPhone').value.trim();
+            const edition = document.getElementById('inqEdition').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Sending to Curiosity HUB...</span>';
+
+            setTimeout(() => {
+                fb.style.display = 'block';
+                fb.style.background = 'var(--success-soft)';
+                fb.style.border = '1px solid var(--success-emerald)';
+                fb.style.color = 'var(--success-emerald)';
+                fb.innerHTML = `<strong><i class="fa-solid fa-circle-check"></i> Thank you, ${name}!</strong><br>Your inquiry for the <strong>${edition} Edition</strong> has been received. Our Ahmedabad team will connect with you at <strong>${email}</strong> or <strong>${phone}</strong> shortly.`;
+                
+                document.getElementById('inquiryForm').reset();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Inquiry Submitted Successfully</span>';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Submit Another Inquiry</span>';
+                }, 4000);
+            }, 600);
+        }
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import List, Tuple, Optional
-from fastapi import APIRouter, Request, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Request, Depends, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
@@ -120,22 +120,122 @@ def check_employee_portal_redirect(request: Request, db: Session) -> Optional[Re
     return None
 
 
+@router.get("/robots.txt", response_class=PlainTextResponse)
+def robots_txt():
+    """Technical SEO robots.txt file allowing indexing of public landing page and assets."""
+    content = (
+        "User-agent: *\n"
+        "Allow: /$\n"
+        "Allow: /screenshots/\n"
+        "Allow: /static/\n"
+        "Disallow: /saas\n"
+        "Disallow: /login\n"
+        "Disallow: /super-admin\n"
+        "Disallow: /dashboard\n"
+        "Disallow: /settings\n"
+        "Disallow: /payroll\n"
+        "Disallow: /leave-management\n"
+        "Disallow: /attendance\n"
+        "Disallow: /analytics\n"
+        "Disallow: /api/\n"
+        "Disallow: /employee/\n"
+        "\n"
+        "Sitemap: https://curiosityhub.co.in/sitemap.xml\n"
+    )
+    return PlainTextResponse(content=content, media_type="text/plain")
+
+
+@router.get("/sitemap.xml")
+def sitemap_xml():
+    """Technical SEO sitemap.xml file for search engine indexing."""
+    content = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        '  <url>\n'
+        '    <loc>https://curiosityhub.co.in/</loc>\n'
+        '    <lastmod>2026-09-29</lastmod>\n'
+        '    <changefreq>daily</changefreq>\n'
+        '    <priority>1.0</priority>\n'
+        '  </url>\n'
+        '</urlset>\n'
+    )
+    return Response(content=content, media_type="application/xml")
+
+
 @router.get("/", response_class=HTMLResponse)
+def page_landing(
+    request: Request,
+    db: Session = Depends(get_db),
+    fallback_tenant: Tenant = Depends(get_current_tenant),
+):
+    """
+    Public Enterprise Marketing & Product Showcase Landing Page.
+    Unauthenticated visitors see the marketing showcase.
+    Authenticated users are redirected to their active dashboard/portal,
+    unless ?view=landing is explicitly requested.
+    """
+    view_mode = request.query_params.get("view")
+    if view_mode != "landing":
+        emp_redirect = check_employee_portal_redirect(request, db)
+        if emp_redirect:
+            return emp_redirect
+
+    current_user = get_current_user_optional(request, db)
+
+    if current_user and view_mode != "landing":
+        if current_user.role == "TEACHER":
+            return RedirectResponse(url="/teacher-portal", status_code=303)
+        if current_user.role in ["STUDENT", "EMPLOYEE"]:
+            return RedirectResponse(url="/logs", status_code=303)
+        return page_dashboard(request=request, db=db, fallback_tenant=fallback_tenant)
+
+    all_tenants = get_all_active_tenants(db)
+    branding = {
+        "institution_name": "Curiosity HUB",
+        "short_code": "CURIOSITY-HUB",
+        "tagline": "AI Biometric Attendance & Employee Management SaaS Platform",
+        "primary_accent_color": "#c2410c",
+        "header_badge_text": "Enterprise SaaS Platform",
+    }
+
+    return templates.TemplateResponse(
+        "landing.html",
+        {
+            "request": request,
+            "page_title": "Curiosity HUB — Face Recognition Employee Management SaaS",
+            "active_page": "landing",
+            "branding": branding,
+            "all_tenants": all_tenants,
+            "current_user": current_user.to_dict() if current_user else None,
+        },
+    )
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
 def page_dashboard(
     request: Request,
     db: Session = Depends(get_db),
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Main Admin Overview Dashboard."""
+    """
+    Main Admin Overview Dashboard.
+    Requires authentication. Unauthenticated requests are redirected to /saas.
+    """
     emp_redirect = check_employee_portal_redirect(request, db)
     if emp_redirect:
         return emp_redirect
 
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
 
+    # Require authentication: unauthenticated visitors must be redirected to /saas
+    if not current_user:
+        return RedirectResponse(url="/saas", status_code=303)
+
     # If logged in as Teacher, redirect to their workspace
-    if current_user and current_user.role == "TEACHER":
-        return RedirectResponse(url="/teacher-portal")
+    if current_user.role == "TEACHER":
+        return RedirectResponse(url="/teacher-portal", status_code=303)
+    if current_user.role in ["STUDENT", "EMPLOYEE"]:
+        return RedirectResponse(url="/logs", status_code=303)
 
     tenant_type = (current_tenant.tenant_type or "educational").lower()
     is_corporate = tenant_type in ["corporate", "company", "enterprise"]
@@ -874,6 +974,7 @@ def page_face_demo(
     )
 
 
+@router.get("/saas", response_class=HTMLResponse)
 @router.get("/login", response_class=HTMLResponse)
 def page_login(
     request: Request,
@@ -881,7 +982,7 @@ def page_login(
     fallback_tenant: Tenant = Depends(get_current_tenant),
 ):
     """
-    Universal Multi-Tenant Platform Login Interface.
+    Universal Multi-Tenant Platform Login Interface (accessible via /saas and /login).
     Default header: 'Face Recognition - Attendance System'.
     """
     current_tenant, current_user = resolve_scoped_tenant_and_user(request, db, fallback_tenant)
@@ -1711,6 +1812,7 @@ def page_leave_management(
         {
             "request": request,
             "page_title": "Leave Management & Approvals",
+            "active_page": "leave-management",
             "branding": branding,
             "current_tenant": current_tenant.to_dict(),
             "all_tenants": get_all_active_tenants(db) if current_user.role == "SUPER_ADMIN" else [],
