@@ -261,17 +261,35 @@
         .nav-menu {
             display: flex;
             align-items: center;
-            gap: 32px;
+            gap: 28px;
             list-style: none;
         }
 
         .nav-link {
-            font-size: 14.5px;
+            font-size: 13.5px;
             font-weight: 600;
             color: var(--text-body);
             transition: var(--transition);
             position: relative;
-            padding: 6px 0;
+            padding: 6px 2px;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 1260px) and (min-width: 992px) {
+            .nav-menu {
+                gap: 18px;
+            }
+            .nav-link {
+                font-size: 13px;
+            }
+            .btn-nav-demo {
+                padding: 5.5px 11px;
+                font-size: 11.5px;
+            }
+            .btn-nav-signin {
+                padding: 6.5px 14px;
+                font-size: 12px;
+            }
         }
 
         .nav-link:hover {
@@ -297,18 +315,18 @@
         .nav-actions {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .btn-nav-signin {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 7px;
             background: var(--accent-gradient);
             color: #FFFFFF;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
-            padding: 10px 22px;
+            padding: 7px 18px;
             border-radius: var(--radius-pill);
             box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
             transition: var(--transition);
@@ -1564,6 +1582,875 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ==========================================================================
+           EYE-CATCHY FREE DEMO CTA BUTTON (ELECTRIC EMERALD-CYAN WITH SHIMMER & BEACON)
+           ========================================================================== */
+        .btn-nav-demo {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #059669 0%, #10b981 30%, #06b6d4 70%, #2563eb 100%);
+            background-size: 250% 250%;
+            color: #FFFFFF !important;
+            padding: 6px 13px;
+            border-radius: var(--radius-pill);
+            font-size: 12.5px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 3px 14px rgba(16, 185, 129, 0.4), 0 0 18px rgba(6, 182, 212, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: gradient-shift 4s ease infinite, pulse-emerald-glow 3s infinite;
+        }
+
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes pulse-emerald-glow {
+            0%, 100% {
+                box-shadow: 0 4px 16px rgba(16, 185, 129, 0.45), 0 0 20px rgba(6, 182, 212, 0.25);
+            }
+            50% {
+                box-shadow: 0 6px 28px rgba(16, 185, 129, 0.75), 0 0 35px rgba(6, 182, 212, 0.55);
+            }
+        }
+
+        /* Diagonal Shimmer Beam sweeping continuously */
+        .btn-nav-demo::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -120%;
+            width: 70%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.55) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: rotate(25deg);
+            animation: shimmer-beam 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer-beam {
+            0% {
+                left: -120%;
+            }
+            35%, 100% {
+                left: 220%;
+            }
+        }
+
+        .btn-nav-demo:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.8), 0 0 45px rgba(6, 182, 212, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+            border-color: rgba(255, 255, 255, 0.85);
+        }
+
+        .btn-nav-demo:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* Beacon pulsing live dot */
+        .demo-beacon {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 9px;
+            height: 9px;
+            flex-shrink: 0;
+        }
+
+        .beacon-core {
+            width: 7px;
+            height: 7px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ffffff;
+        }
+
+        .beacon-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            animation: beacon-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes beacon-ping {
+            0% {
+                transform: scale(1);
+                opacity: 0.9;
+            }
+            75%, 100% {
+                transform: scale(2.8);
+                opacity: 0;
+            }
+        }
+
+        /* Eye-catchy micro badge */
+        .demo-badge-pill {
+            font-size: 9.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(0, 0, 0, 0.25);
+            color: #ffffff;
+            padding: 2px 6px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            margin-left: 2px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 500px) {
+            .btn-nav-demo {
+                padding: 7px 12px;
+                font-size: 12.5px;
+            }
+            .demo-badge-pill {
+                display: none;
+            }
+        }
+
+        /* Free Demo Modal Styles */
+        .demo-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        .demo-modal-dialog {
+            background: #FFFFFF;
+            border-radius: 16px;
+            max-width: 580px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+            animation: modalFadeIn 0.3s ease-out;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .demo-modal-header {
+            padding: 24px 28px 20px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #FFFFFF;
+            position: relative;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .demo-modal-title-group {
+            padding-right: 32px;
+        }
+
+        .demo-pill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(37, 99, 235, 0.25);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.4);
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .demo-modal-title {
+            margin: 0 0 6px;
+            font-size: 20px;
+            font-weight: 800;
+            color: #FFFFFF;
+            letter-spacing: -0.3px;
+        }
+
+        .demo-modal-subtitle {
+            margin: 0;
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .demo-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #cbd5e1;
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .demo-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #FFFFFF;
+        }
+
+        .demo-modal-body {
+            padding: 28px;
+            background: #FFFFFF;
+        }
+
+        .demo-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 540px) {
+            .demo-form-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        .demo-perks-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 14px;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .demo-perk {
+            font-size: 12px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .demo-perk i {
+            color: #10b981;
+            font-size: 11px;
+        }
+
+        .btn-demo-submit {
+            width: 100%;
+            padding: 13px 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            transition: all 0.2s;
+        }
+
+        .btn-demo-submit:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .btn-demo-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .otp-instruction-card {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 8px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .otp-icon-wrap {
+            font-size: 24px;
+            color: #2563eb;
+        }
+
+        .otp-sent-text {
+            margin: 0;
+            font-size: 13px;
+            color: #1e40af;
+            line-height: 1.5;
+        }
+
+        .otp-code-input {
+            font-size: 28px !important;
+            font-weight: 800 !important;
+            letter-spacing: 12px !important;
+            text-align: center !important;
+            padding: 12px !important;
+            color: #1e3a8a !important;
+            font-family: 'Courier New', monospace !important;
+        }
+
+        .otp-resend-row {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .btn-resend-link, .btn-change-email {
+            background: none;
+            border: none;
+            color: #2563eb;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0 4px;
+            text-decoration: underline;
+        }
+
+        .demo-alert {
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .demo-alert-error {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            color: #991B1B;
+        }
+
+        .demo-alert-success {
+            background: #ECFDF5;
+            border: 1px solid #A7F3D0;
+            color: #065F46;
+        }
+
+        /* ==========================================================================
+           QUICK ONBOARDING STEPS SECTION & INTERACTIVE GUIDE MODAL
+           ========================================================================== */
+        #onboarding {
+            background: #FAFAF9;
+            border-top: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+            position: relative;
+        }
+
+        .btn-guide-modal-launch {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #FFFFFF !important;
+            padding: 11px 24px;
+            border-radius: var(--radius-pill);
+            font-size: 14px;
+            font-weight: 700;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .btn-guide-modal-launch:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Onboarding Horizontal Step Pills Navigation */
+        .onboarding-steps-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 4px 18px;
+            margin-bottom: 32px;
+            scrollbar-width: thin;
+        }
+
+        .onboarding-steps-nav::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .onboarding-steps-nav::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .step-nav-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-pill);
+            color: var(--text-heading);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .step-nav-pill:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+
+        .step-pill-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--bg-subtle);
+            color: var(--text-heading);
+            font-size: 11px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-nav-pill:hover .step-pill-num {
+            background: var(--accent-primary);
+            color: #FFFFFF;
+        }
+
+        /* Step Card Grid */
+        .onboarding-steps-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 36px;
+        }
+
+        .onboarding-step-card {
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 36px;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .onboarding-step-card:hover {
+            border-color: rgba(37, 99, 235, 0.4);
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .step-badge-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .step-number-tag {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .step-location-tag {
+            background: var(--bg-subtle);
+            color: var(--text-body);
+            font-size: 11.5px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .step-card-title {
+            font-family: var(--font-display);
+            font-size: 21px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin: 0 0 12px;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+        }
+
+        .step-card-desc {
+            font-size: 14.5px;
+            color: var(--text-body);
+            line-height: 1.65;
+            margin: 0 0 18px;
+        }
+
+        .step-checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .step-checklist li {
+            font-size: 13.5px;
+            color: var(--text-heading);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .step-checklist li i {
+            color: #10b981;
+            font-size: 13px;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        .step-callout {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-size: 12.5px;
+            color: #1E40AF;
+            line-height: 1.5;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .step-callout i {
+            font-size: 15px;
+            color: #2563eb;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        /* Screenshot Presentation Mockup */
+        .onboarding-screenshot-card {
+            background: #0F172A;
+            border-radius: 14px;
+            border: 1px solid #1E293B;
+            overflow: hidden;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .onboarding-screenshot-card:hover {
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+            border-color: #38BDF8;
+        }
+
+        .screenshot-header-bar {
+            background: #1E293B;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .screenshot-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .screenshot-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #475569;
+        }
+
+        .screenshot-dot:nth-child(1) { background: #EF4444; }
+        .screenshot-dot:nth-child(2) { background: #F59E0B; }
+        .screenshot-dot:nth-child(3) { background: #10B981; }
+
+        .screenshot-title-text {
+            font-size: 11px;
+            color: #94A3B8;
+            font-weight: 600;
+        }
+
+        .onboarding-screenshot-card img {
+            width: 100%;
+            height: auto;
+            max-height: 340px;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .onboarding-screenshot-card:hover img {
+            transform: scale(1.02);
+        }
+
+        .screenshot-zoom-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .onboarding-screenshot-card:hover .screenshot-zoom-overlay {
+            opacity: 1;
+        }
+
+        .zoom-action-badge {
+            background: #FFFFFF;
+            color: #0F172A;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media (max-width: 900px) {
+            .onboarding-step-card {
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 24px;
+            }
+        }
+
+        /* Onboarding Guide Fullscreen/Large Modal */
+        .guide-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+            padding: 20px;
+        }
+
+        .guide-modal-dialog {
+            background: #FFFFFF;
+            border-radius: 20px;
+            max-width: 960px;
+            width: 100%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        .guide-modal-header {
+            padding: 20px 28px;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .guide-modal-progress-bar {
+            height: 4px;
+            background: #1E293B;
+            width: 100%;
+            position: relative;
+        }
+
+        .guide-modal-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #EA580C, #F97316, #10B981);
+            width: 10%;
+            transition: width 0.3s ease;
+        }
+
+        .guide-modal-pills-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: #F8FAFC;
+            border-bottom: 1px solid var(--border-subtle);
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: thin;
+            flex-shrink: 0;
+        }
+
+        .guide-step-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: #FFFFFF;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+
+        .guide-step-pill:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            background: #FFF7ED;
+        }
+
+        .guide-step-pill.active {
+            background: var(--accent-primary);
+            color: #FFFFFF;
+            border-color: var(--accent-primary);
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+        }
+
+        .guide-pill-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 17px;
+            height: 17px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.08);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .guide-step-pill.active .guide-pill-num {
+            background: rgba(255, 255, 255, 0.28);
+            color: #FFFFFF;
+        }
+
+        .guide-modal-body {
+            padding: 24px 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .guide-modal-footer {
+            padding: 16px 28px;
+            background: #F8FAFC;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            gap: 12px;
+        }
+
+        .btn-guide-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-weight: 700;
+            border: 1px solid var(--border-color);
+            background: #FFFFFF;
+            color: var(--text-heading);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-guide-nav:hover:not(:disabled) {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            background: #F8FAFC;
+        }
+
+        .btn-guide-nav:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-guide-nav.btn-guide-primary {
+            background: linear-gradient(135deg, #EA580C 0%, #F97316 100%);
+            color: #FFFFFF;
+            border: none;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+        }
+
+        .btn-guide-nav.btn-guide-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+            color: #FFFFFF;
+            background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+        }
     </style>
 </head>
 <body>
@@ -1581,15 +2468,24 @@
                 </div>
             </a>
 
-            <!-- 4 Required Navigation Menus -->
+            <!-- Top Navigation Menus -->
             <ul class="nav-menu" id="navMenu">
                 <li><a href="#about" class="nav-link">About Us</a></li>
                 <li><a href="#product" class="nav-link">Employee Management System</a></li>
-                <li><a href="#demo" class="nav-link">Product Demo</a></li>
+                <li><a href="javascript:void(0)" class="nav-link" id="navLinkOnboarding" onclick="openOnboardingModal(0); return false;">Quick Onboarding Guide</a></li>
                 <li><a href="#contact" class="nav-link">Contact Us</a></li>
             </ul>
 
             <div class="nav-actions">
+                <button type="button" class="btn-nav-demo" onclick="openFreeDemoModal()" id="btnNavFreeDemo" aria-label="Start 7-Day Free Demo">
+                    <span class="demo-beacon">
+                        <span class="beacon-core"></span>
+                        <span class="beacon-ring"></span>
+                    </span>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span class="demo-btn-text">Free Demo</span>
+                    <span class="demo-badge-pill">7-Day Free</span>
+                </button>
                 <a href="/saas" class="btn-nav-signin">
                     <i class="fa-solid fa-arrow-right-to-bracket"></i>
                     <span>Sign In</span>
@@ -2084,169 +2980,9 @@
     </section>
 
     <!-- ========================================================================= -->
-    <!-- MENU 3: PRODUCT DEMO (INTERACTIVE SCREENSHOTS)                            -->
+    <!-- CONTACT US (AHMEDABAD, GUJARAT)                                           -->
     <!-- ========================================================================= -->
-    <section class="section-block" id="demo">
-        <div class="container">
-            <div class="section-title-wrapper">
-                <span class="section-badge">Interactive Walkthrough</span>
-                <h2 class="section-heading">Explore Production Modules & Real Interfaces</h2>
-                <p class="section-subtext">Inspect high-resolution captures of our operational software in action. Click any module preview to enlarge.</p>
-            </div>
-
-            <!-- Demo Category Filter Buttons -->
-            <div class="demo-filter-buttons">
-                <button type="button" class="demo-filter-btn active" onclick="filterModules('all')">All Modules</button>
-                <button type="button" class="demo-filter-btn" onclick="filterModules('biometrics')">Biometrics & Dashboard</button>
-                <button type="button" class="demo-filter-btn" onclick="filterModules('workforce')">Workforce & Directory</button>
-                <button type="button" class="demo-filter-btn" onclick="filterModules('payroll')">Payroll System</button>
-                <button type="button" class="demo-filter-btn" onclick="filterModules('settings')">Settings & Security</button>
-            </div>
-
-            <!-- Screenshots Walkthrough Grid -->
-            <div class="walkthrough-grid" id="walkthroughGrid">
-                <!-- 1. Live Dashboard -->
-                <div class="walkthrough-card" data-category="biometrics" onclick="openLightbox('/screenshots/walkthrough/02_dashboard_live.png', 'Live Biometric Operational HUD')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/02_dashboard_live.png" alt="Live Operational Dashboard" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Live Biometric HUD</span>
-                        <h4 class="walkthrough-card-title">Real-Time Operational Scanner</h4>
-                        <p class="walkthrough-card-desc">Live camera ingestion with sub-250ms vector matching, real-time presence counters, and SSE streaming.</p>
-                    </div>
-                </div>
-
-                <!-- 2. Employee Directory -->
-                <div class="walkthrough-card" data-category="workforce" onclick="openLightbox('/screenshots/walkthrough/03_employee_directory.png', 'Enterprise Employee Master Directory')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/03_employee_directory.png" alt="Employee Master Directory" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Workforce Directory</span>
-                        <h4 class="walkthrough-card-title">Employee Master Registry</h4>
-                        <p class="walkthrough-card-desc">Searchable roster with department tags, shift assignments, biometric vector status, and action menus.</p>
-                    </div>
-                </div>
-
-                <!-- 3. Payroll Batches -->
-                <div class="walkthrough-card" data-category="payroll" onclick="openLightbox('/screenshots/walkthrough/09_payroll_monthly_batches.png', 'Monthly Payroll Batches')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/09_payroll_monthly_batches.png" alt="Monthly Payroll Batches" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Payroll Processing</span>
-                        <h4 class="walkthrough-card-title">Monthly Payroll Batch Processor</h4>
-                        <p class="walkthrough-card-desc">One-click monthly payroll batch calculations with earnings breakdown and deductions.</p>
-                    </div>
-                </div>
-
-                <!-- 4. Multi-Angle Enrollment -->
-                <div class="walkthrough-card" data-category="biometrics" onclick="openLightbox('/screenshots/walkthrough/05_register_new_employee.png', '3-Angle Facial Biometric Enrollment')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/05_register_new_employee.png" alt="Employee Biometric Registration" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Biometric Enrollment</span>
-                        <h4 class="walkthrough-card-title">3-Angle Face Registration</h4>
-                        <p class="walkthrough-card-desc">Captures frontal, left, and right vector coordinates for maximum recognition accuracy under varied lighting.</p>
-                    </div>
-                </div>
-
-                <!-- 5. Leave Management -->
-                <div class="walkthrough-card" data-category="workforce" onclick="openLightbox('/screenshots/walkthrough/14_leave_management.png', 'Automated Leave Management & Accruals')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/14_leave_management.png" alt="Leave Management Module" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Leave Ledger</span>
-                        <h4 class="walkthrough-card-title">Leave Request & Ledger Engine</h4>
-                        <p class="walkthrough-card-desc">Staff apply for PL, CL, and SL leaves; managers review approvals with real-time balance calculations.</p>
-                    </div>
-                </div>
-
-                <!-- 6. GPS Geofencing Settings -->
-                <div class="walkthrough-card" data-category="settings" onclick="openLightbox('/screenshots/walkthrough/21_settings_geofencing_portals.png', 'GPS Geofencing & Branch Perimeter Settings')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/21_settings_geofencing_portals.png" alt="GPS Geofencing Settings" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">GPS Geofencing</span>
-                        <h4 class="walkthrough-card-title">Office Locations & Geofence Bounds</h4>
-                        <p class="walkthrough-card-desc">Interactive map interface to set exact latitude/longitude coordinates and meter radii.</p>
-                    </div>
-                </div>
-
-                <!-- 7. Salary Structure & Templates -->
-                <div class="walkthrough-card" data-category="payroll" onclick="openLightbox('/screenshots/walkthrough/10_payroll_employee_structures.png', 'Employee Salary Structure & Component Mapping')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/10_payroll_employee_structures.png" alt="Employee Salary Structure" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Payroll Mapping</span>
-                        <h4 class="walkthrough-card-title">Salary Templates & Allowances</h4>
-                        <p class="walkthrough-card-desc">Salary breakdown into Basic, HRA, Special Allowance, and net take-home pay.</p>
-                    </div>
-                </div>
-
-                <!-- 8. Shift Rules Configuration -->
-                <div class="walkthrough-card" data-category="settings" onclick="openLightbox('/screenshots/walkthrough/19_settings_shifts_rules.png', 'Shifts & Timing Master Configuration')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/19_settings_shifts_rules.png" alt="Shifts & Timing Master" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Shift Rules</span>
-                        <h4 class="walkthrough-card-title">Shift Timings & Grace Buffers</h4>
-                        <p class="walkthrough-card-desc">Setup start/end hours, break durations, ±15 min grace periods, and night shift flags (+1 day rollover).</p>
-                    </div>
-                </div>
-
-                <!-- 9. Organization Profile & Themes -->
-                <div class="walkthrough-card" data-category="settings" onclick="openLightbox('/screenshots/walkthrough/16_settings_themes_appearance.png', 'Tenant Profile & Theme Appearance Settings')">
-                    <div class="walkthrough-img-box">
-                        <img src="/screenshots/walkthrough/16_settings_themes_appearance.png" alt="Tenant Profile & Theme Settings" class="walkthrough-img">
-                        <div class="walkthrough-overlay-btn">
-                            <span><i class="fa-solid fa-magnifying-glass-plus"></i> View Module</span>
-                        </div>
-                    </div>
-                    <div class="walkthrough-body">
-                        <span class="walkthrough-module-tag">Custom Branding</span>
-                        <h4 class="walkthrough-card-title">White-Label Branding & Colors</h4>
-                        <p class="walkthrough-card-desc">Upload company logos, configure primary accent color palettes, and toggle appearance preferences.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========================================================================= -->
-    <!-- MENU 4: CONTACT US (AHMEDABAD, GUJARAT)                                   -->
-    <!-- ========================================================================= -->
-    <section class="section-block" id="contact" style="background: var(--bg-subtle);">
+    <section class="section-block" id="contact">
         <div class="container">
             <div class="section-title-wrapper">
                 <span class="section-badge">Get in Touch</span>
@@ -2392,7 +3128,7 @@
                         <li><a href="#about">About Us</a></li>
                         <li><a href="#product">Employee Management System</a></li>
                         <li><a href="#editions">Software Edition Tiers</a></li>
-                        <li><a href="#demo">Product Demo</a></li>
+                        <li><a href="javascript:void(0)" onclick="openOnboardingModal(0)">Quick Onboarding Guide</a></li>
                         <li><a href="#contact">Contact Us</a></li>
                     </ul>
                 </div>
@@ -2403,7 +3139,7 @@
                         <li><a href="#editions">Basic Edition (Core Attendance)</a></li>
                         <li><a href="#editions">Smart Edition (Shifts & GPS)</a></li>
                         <li><a href="#editions">Pro Edition (Payroll System)</a></li>
-                        <li><a href="#demo">Live Operational HUD</a></li>
+                        <li><a href="javascript:void(0)" onclick="openOnboardingModal(7)">Live Operational HUD</a></li>
                         <li><a href="#product">Role-Based Access Control</a></li>
                     </ul>
                 </div>
@@ -2539,6 +3275,757 @@
                 }, 4000);
             }, 600);
         }
+
+        // =========================================================================
+        // Free Demo Self-Service Modal & OTP Controller
+        // =========================================================================
+        let currentDemoEmail = '';
+        let resendInterval = null;
+
+        function openFreeDemoModal() {
+            const modal = document.getElementById('freeDemoModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                goToDemoStep1();
+                setTimeout(() => {
+                    const nameInput = document.getElementById('demoName');
+                    if (nameInput) nameInput.focus();
+                }, 100);
+            }
+        }
+
+        function closeFreeDemoModal() {
+            const modal = document.getElementById('freeDemoModal');
+            if (modal) {
+                modal.style.display = 'none';
+                if (resendInterval) clearInterval(resendInterval);
+            }
+        }
+
+        function handleDemoModalOverlayClick(event) {
+            if (event.target && event.target.id === 'freeDemoModal') {
+                closeFreeDemoModal();
+            }
+        }
+
+        function goToDemoStep1() {
+            document.getElementById('demoStep1').style.display = 'block';
+            document.getElementById('demoStep2').style.display = 'none';
+            document.getElementById('demoStep1Feedback').style.display = 'none';
+            if (resendInterval) clearInterval(resendInterval);
+        }
+
+        async function handleDemoRequestOtp(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btnRequestOtp');
+            const fb = document.getElementById('demoStep1Feedback');
+            const name = document.getElementById('demoName').value.trim();
+            const company = document.getElementById('demoCompany').value.trim();
+            const mobile = document.getElementById('demoMobile').value.trim();
+            const email = document.getElementById('demoEmail').value.trim().toLowerCase();
+
+            fb.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Sending Verification Code...</span>';
+
+            try {
+                const res = await fetch('/api/v1/demo/request-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        company_name: company,
+                        mobile: mobile,
+                        email: email,
+                    }),
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    currentDemoEmail = email;
+                    document.getElementById('displayTargetEmail').textContent = email;
+                    document.getElementById('demoStep1').style.display = 'none';
+                    document.getElementById('demoStep2').style.display = 'block';
+                    document.getElementById('demoStep2Feedback').style.display = 'none';
+                    document.getElementById('demoOtpCode').value = '';
+                    setTimeout(() => {
+                        document.getElementById('demoOtpCode').focus();
+                    }, 100);
+                    startResendTimer(60);
+                } else {
+                    fb.style.display = 'block';
+                    fb.className = 'demo-alert demo-alert-error';
+                    fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Unable to send verification code. Please check details and try again.'}`;
+                }
+            } catch (err) {
+                fb.style.display = 'block';
+                fb.className = 'demo-alert demo-alert-error';
+                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server. Please check your connection.';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send Verification Code</span>';
+            }
+        }
+
+        async function handleDemoVerifyOtp(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btnVerifyOtp');
+            const fb = document.getElementById('demoStep2Feedback');
+            const otp = document.getElementById('demoOtpCode').value.trim();
+
+            if (!otp || otp.length !== 6) {
+                fb.style.display = 'block';
+                fb.className = 'demo-alert demo-alert-error';
+                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Please enter the complete 6-digit verification code.';
+                return;
+            }
+
+            fb.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Activating 7-Day Pro Portal...</span>';
+
+            try {
+                const res = await fetch('/api/v1/demo/verify-and-provision', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: currentDemoEmail,
+                        otp: otp,
+                    }),
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    fb.style.display = 'block';
+                    fb.className = 'demo-alert demo-alert-success';
+                    fb.innerHTML = `<strong><i class="fa-solid fa-circle-check"></i> Demo Activated!</strong><br>Credentials emailed to <strong>${currentDemoEmail}</strong>.<br>Launching your workspace in 2 seconds...`;
+
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Portal Ready! Redirecting...</span>';
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || '/dashboard';
+                    }, 1800);
+                } else {
+                    fb.style.display = 'block';
+                    fb.className = 'demo-alert demo-alert-error';
+                    fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Invalid verification code.'}`;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Verify & Launch My Demo</span>';
+                }
+            } catch (err) {
+                fb.style.display = 'block';
+                fb.className = 'demo-alert demo-alert-error';
+                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error activating demo. Please try again.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Verify & Launch My Demo</span>';
+            }
+        }
+
+        function startResendTimer(seconds) {
+            if (resendInterval) clearInterval(resendInterval);
+            let remaining = seconds;
+            const timerSpan = document.getElementById('resendTimer');
+            const countdownText = document.getElementById('resendCountdownText');
+            const resendBtn = document.getElementById('btnResendOtp');
+
+            countdownText.style.display = 'inline';
+            resendBtn.style.display = 'none';
+            timerSpan.textContent = remaining;
+
+            resendInterval = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(resendInterval);
+                    countdownText.style.display = 'none';
+                    resendBtn.style.display = 'inline';
+                } else {
+                    timerSpan.textContent = remaining;
+                }
+            }, 1000);
+        }
+
+        async function handleResendOtp() {
+            const fb = document.getElementById('demoStep2Feedback');
+            const resendBtn = document.getElementById('btnResendOtp');
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Resending...';
+
+            try {
+                const name = document.getElementById('demoName').value.trim();
+                const company = document.getElementById('demoCompany').value.trim();
+                const mobile = document.getElementById('demoMobile').value.trim();
+
+                const res = await fetch('/api/v1/demo/request-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        company_name: company,
+                        mobile: mobile,
+                        email: currentDemoEmail,
+                    }),
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    fb.style.display = 'block';
+                    fb.className = 'demo-alert demo-alert-success';
+                    fb.innerHTML = '<i class="fa-solid fa-paper-plane"></i> A fresh verification code has been dispatched to your email.';
+                    startResendTimer(60);
+                } else {
+                    fb.style.display = 'block';
+                    fb.className = 'demo-alert demo-alert-error';
+                    fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Unable to resend OTP.'}`;
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend Verification Code';
+                }
+            } catch (err) {
+                fb.style.display = 'block';
+                fb.className = 'demo-alert demo-alert-error';
+                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error. Please try again.';
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend Verification Code';
+            }
+        }
+
+        // Expose Free Demo controllers globally on window
+        window.openFreeDemoModal = openFreeDemoModal;
+        window.closeFreeDemoModal = closeFreeDemoModal;
+        window.goToDemoStep1 = goToDemoStep1;
+        window.handleDemoModalOverlayClick = handleDemoModalOverlayClick;
+        window.handleDemoRequestOtp = handleDemoRequestOtp;
+        window.handleDemoVerifyOtp = handleDemoVerifyOtp;
+        window.handleResendOtp = handleResendOtp;
+
+        // Defensive event binding for Free Demo CTA buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const demoBtn = document.getElementById('btnNavFreeDemo');
+            if (demoBtn) {
+                demoBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openFreeDemoModal();
+                });
+            }
+        });
+
+        // =========================================================================
+        // Quick Onboarding Interactive Guide Modal Controller
+        // =========================================================================
+        const ONBOARDING_STEPS = [
+            {
+                stepNum: 0,
+                title: "Step 0: Prerequisite & Administrator Login",
+                badge: "Initial Setup",
+                time: "1 Min",
+                role: "Super Admin / Tenant Admin",
+                desc: "Upon tenant provisioning, the administrator accesses the dedicated organizational portal (<code>/{tenant_id}</code> or <code>/login</code>) using the automatically dispatched credentials.",
+                checklist: [
+                    "Navigate to your company tenant login URL.",
+                    "Authenticate using the issued Admin Email and secure password.",
+                    "Verify top-right tenant badge confirming your organizational workspace."
+                ],
+                callout: "Credentials are automatically emailed to your registered administrative address upon registration.",
+                images: [
+                    { src: "/screenshots/walkthrough/01_login_portal.png", label: "Tenant Administrator Login Portal", caption: "Secure entry point with tenant-specific branding and credential validation." }
+                ]
+            },
+            {
+                stepNum: 1,
+                title: "Step 1: Organization Settings & Branch Locations",
+                badge: "Workspace Foundation",
+                time: "2 Mins",
+                role: "Tenant Admin",
+                desc: "Establish your corporate identity, upload your official company logo, specify legal business entities, and register multi-location branches with physical street addresses.",
+                checklist: [
+                    "Go to Settings -> Organization Profile.",
+                    "Upload company brand logo and verify real-time preview across portal headers.",
+                    "Define physical office branch locations, primary contact details, and local time zones."
+                ],
+                callout: "All registered branch locations are immediately linked to geofencing and multi-location attendance routing.",
+                images: [
+                    { src: "/screenshots/walkthrough/15_settings_organization_profile.png", label: "Organization Profile & Multi-Branch Setup", caption: "Configure tenant profile, corporate identity, and multi-location branch offices." }
+                ]
+            },
+            {
+                stepNum: 2,
+                title: "Step 2: Themes & Appearance Customization",
+                badge: "Branding",
+                time: "1 Min",
+                role: "Tenant Admin",
+                desc: "Align the platform with your company brand guidelines by configuring custom primary colors, accent gradients, dark/light themes, and dashboard layouts.",
+                checklist: [
+                    "Navigate to Settings -> Themes & Appearance.",
+                    "Select your preferred color theme or customize brand hex codes.",
+                    "Save changes to instantly reflect across all administrative and employee interfaces."
+                ],
+                callout: "Theme preferences persist across all browser sessions and kiosks for consistent branding.",
+                images: [
+                    { src: "/screenshots/walkthrough/16_settings_themes_appearance.png", label: "Themes & Appearance Settings", caption: "Dynamic theme switching and custom corporate color scheme configuration." }
+                ]
+            },
+            {
+                stepNum: 3,
+                title: "Step 3: Departments & Designation Hierarchy",
+                badge: "Master Data",
+                time: "2 Mins",
+                role: "HR / Operations",
+                desc: "Define organizational structure by configuring department masters (Engineering, Sales, Operations, HR) and tiered designation levels with reporting lines.",
+                checklist: [
+                    "Go to Settings -> Departments to add functional departments and assign department heads.",
+                    "Go to Settings -> Designations to establish organizational hierarchy and job roles.",
+                    "Verify department-designation linkage for streamlined employee assignment."
+                ],
+                callout: "Departmental masters automatically feed into attendance filtering, leave approvals, and payroll categorization.",
+                images: [
+                    { src: "/screenshots/walkthrough/17_settings_departments.png", label: "Department Masters Setup", caption: "Create and organize functional departments with designated department leads." },
+                    { src: "/screenshots/walkthrough/18_settings_designations.png", label: "Designation & Hierarchy Setup", caption: "Establish corporate hierarchy, title classifications, and job levels." }
+                ]
+            },
+            {
+                stepNum: 4,
+                title: "Step 4: Shifts, Timing Rules & GPS Geofencing",
+                badge: "Operational Rules",
+                time: "3 Mins",
+                role: "Operations Admin",
+                desc: "Configure work schedules, flexible timing windows, grace periods, half-day thresholds, and pin tamper-proof GPS coordinates with meter radius geofencing for remote or mobile check-ins.",
+                checklist: [
+                    "Navigate to Settings -> Shift Configuration to define start time, end time, and grace intervals.",
+                    "Configure overtime policies, half-day cutoffs, and weekly off rotations.",
+                    "Set GPS Geofencing coordinates and authorized radius (50m - 500m) for mobile attendance portals."
+                ],
+                callout: "The anti-spoofing engine cross-checks real-time browser GPS coordinates against authorized site perimeters.",
+                images: [
+                    { src: "/screenshots/walkthrough/19_settings_shifts_rules.png", label: "Shift Scheduling & Policy Configuration", caption: "Set flexible work hours, grace periods, late arrival cutoffs, and overtime rules." },
+                    { src: "/screenshots/walkthrough/21_settings_geofencing_portals.png", label: "GPS Geofencing & Location Portals", caption: "Pinpoint authorized office perimeter radiuses for zero-fraud remote and mobile attendance." }
+                ]
+            },
+            {
+                stepNum: 5,
+                title: "Step 5: Employee Registration & 3-Angle Facial Biometrics",
+                badge: "Workforce Enrollment",
+                time: "3 Mins",
+                role: "HR Admin / Employee",
+                desc: "Rapidly enroll your workforce through two flexible methods: direct administrative capture or employee smartphone self-onboarding link. Multi-angle captures (Frontal, Left, Right) ensure 99.8% sub-second match precision.",
+                checklist: [
+                    "Method A (Admin): Go to Employees -> 'Register Employee', enter profile, and capture 3 facial angles via webcam.",
+                    "Method B (Self-Onboard): Share tokenized magic link (/onboard/{uuid}/{token}) with employees for frictionless smartphone photo registration.",
+                    "High-precision 128-dimensional embedding vectors are generated and indexed in memory for sub-second recognition."
+                ],
+                callout: "Multi-angle facial enrollment guarantees lightning-fast identification even under varying lighting conditions, spectacles, or head turns.",
+                images: [
+                    { src: "/screenshots/walkthrough/05_register_new_employee.png", label: "3-Angle Biometric Employee Enrollment", caption: "Guided facial capture with real-time liveness feedback and instant feature vector extraction." }
+                ]
+            },
+            {
+                stepNum: 6,
+                title: "Step 6: Employee Directory & Profile Lifecycle",
+                badge: "Workforce Management",
+                time: "2 Mins",
+                role: "HR Admin",
+                desc: "Centrally oversee the master employee directory with real-time search, department filtering, biometric status badges, credential resets, and full lifecycle edits.",
+                checklist: [
+                    "Browse the full employee roster with biometric registration badges.",
+                    "Click 'Edit' on any profile to update salary templates, assigned shifts, reporting managers, or personal info.",
+                    "Use quick actions to toggle active/inactive status or reset employee self-service portal passwords."
+                ],
+                callout: "Soft-delete safeguards and audit trails ensure no historical attendance or payroll records are lost.",
+                images: [
+                    { src: "/screenshots/walkthrough/03_employee_directory.png", label: "Master Employee Directory", caption: "Searchable employee roster with biometric status indicators, department tags, and quick actions." },
+                    { src: "/screenshots/walkthrough/04_employee_edit_modal.png", label: "Employee Profile Lifecycle Editor", caption: "Manage salary assignment, branch location, shift policies, and contact information." }
+                ]
+            },
+            {
+                stepNum: 7,
+                title: "Step 7: Live Biometric Attendance Scanner & Real-Time HUD",
+                badge: "Daily Operations",
+                time: "Instant",
+                role: "Kiosk / Receptionist / Security",
+                desc: "Launch the zero-hardware live biometric scanner on any PC, iPad, tablet, or kiosk webcam. Real-time HUD detects faces, runs Euclidean matching in <250ms, and flashes positive confirmation.",
+                checklist: [
+                    "Open the Dashboard live scanner terminal (or dedicated fullscreen kiosk view).",
+                    "Point any USB or built-in webcam toward the entrance.",
+                    "Staff walk past the camera; system auto-detects, validates anti-spoof liveness, logs In/Out timestamps, and displays personalized greeting cues."
+                ],
+                callout: "Zero specialized biometric hardware required. Standard 720p/1080p webcams deliver institutional-grade throughput.",
+                images: [
+                    { src: "/screenshots/walkthrough/02_dashboard_live.png", label: "Live Face Recognition Terminal", caption: "Sub-250ms recognition HUD with real-time liveness detection, punch confirmation, and occupancy counts." }
+                ]
+            },
+            {
+                stepNum: 8,
+                title: "Step 8: Daily Attendance Logs, In/Out Tracking & Auditing",
+                badge: "Compliance & Auditing",
+                time: "1 Min",
+                role: "HR / Line Managers",
+                desc: "Inspect real-time daily punch records, filter by date ranges, departments, or shifts, review confidence scores, and perform administrative manual adjustments with tamper-proof audit trails.",
+                checklist: [
+                    "Access Attendance Logs to view real-time entry/exit timestamps, work durations, and status (Present, Late, Half-day).",
+                    "Filter by specific date ranges, branch offices, or employee codes.",
+                    "Perform manual time adjustments or soft deletions with mandatory audit remarks when authorized."
+                ],
+                callout: "All manual adjustments are permanently logged with administrator ID and timestamp for statutory audit compliance.",
+                images: [
+                    { src: "/screenshots/walkthrough/06_attendance_logs_active.png", label: "Comprehensive Attendance Log Ledger", caption: "Detailed punch timelines, calculated working hours, late marks, and exportable CSV reports." },
+                    { src: "/screenshots/walkthrough/07_attendance_logs_soft_delete_modal.png", label: "Audited Record Modification & Soft Delete", caption: "Secure modal requiring administrative justification for attendance record corrections." }
+                ]
+            },
+            {
+                stepNum: 9,
+                title: "Step 9: Statutory Leaves & Automated Indian Payroll",
+                badge: "Payroll Automation",
+                time: "3 Mins",
+                role: "Payroll / Finance Admin",
+                desc: "Eliminate spreadsheet chaos with 1-click payroll processing. Automatically syncs monthly attendance data, calculates paid/unpaid leaves, computes Indian statutory deductions (PF, ESIC, PT, TDS), and generates downloadable PDF payslips.",
+                checklist: [
+                    "Navigate to Leave Management to review leave ledgers, allocate quotas (CL, SL, EL), and approve employee requests.",
+                    "Open Payroll -> Monthly Batches to trigger automated salary computation synced with biometric attendance logs.",
+                    "Review component breakdown (Basic, HRA, Allowances, PF, PT, Net Payable) and dispatch digital payslips to staff."
+                ],
+                callout: "Statutory deduction tables follow latest Indian Ministry of Labour compliance guidelines.",
+                images: [
+                    { src: "/screenshots/walkthrough/14_leave_management.png", label: "Statutory Leave Ledger & Approval System", caption: "Allocate annual leave quotas, track balance consumption, and process leave applications." },
+                    { src: "/screenshots/walkthrough/09_payroll_monthly_batches.png", label: "Automated Monthly Payroll Batch Execution", caption: "One-click attendance-to-salary reconciliation with automatic deduction calculations." },
+                    { src: "/screenshots/walkthrough/10_payroll_employee_structures.png", label: "Employee Salary Structure Configuration", caption: "Granular salary component builder supporting allowances, reimbursements, and statutory compliance." }
+                ]
+            }
+        ];
+
+        let currentGuideStepIndex = 0;
+
+        function openOnboardingModal(stepIndex = 0) {
+            const modal = document.getElementById('onboardingGuideModal');
+            if (!modal) return;
+            currentGuideStepIndex = (typeof stepIndex === 'number' && stepIndex >= 0 && stepIndex < ONBOARDING_STEPS.length) ? stepIndex : 0;
+            renderGuideStep(currentGuideStepIndex);
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeOnboardingModal() {
+            const modal = document.getElementById('onboardingGuideModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            const lightbox = document.getElementById('lightboxModal');
+            const demoModal = document.getElementById('freeDemoModal');
+            const isLightboxOpen = lightbox && lightbox.style.display === 'flex';
+            const isDemoOpen = demoModal && demoModal.style.display === 'flex';
+            if (!isLightboxOpen && !isDemoOpen) {
+                document.body.style.overflow = '';
+            }
+        }
+
+        function handleGuideModalOverlayClick(event) {
+            if (event.target && event.target.id === 'onboardingGuideModal') {
+                closeOnboardingModal();
+            }
+        }
+
+        function nextGuideStep() {
+            if (currentGuideStepIndex < ONBOARDING_STEPS.length - 1) {
+                currentGuideStepIndex++;
+                renderGuideStep(currentGuideStepIndex);
+            }
+        }
+
+        function prevGuideStep() {
+            if (currentGuideStepIndex > 0) {
+                currentGuideStepIndex--;
+                renderGuideStep(currentGuideStepIndex);
+            }
+        }
+
+        function renderGuideStep(index) {
+            if (index < 0 || index >= ONBOARDING_STEPS.length) return;
+            currentGuideStepIndex = index;
+            const step = ONBOARDING_STEPS[index];
+
+            const progressPercent = Math.round(((index + 1) / ONBOARDING_STEPS.length) * 100);
+            const pFill = document.getElementById('guideProgressBar');
+            if (pFill) pFill.style.width = progressPercent + '%';
+
+            const select = document.getElementById('guideStepSelect');
+            if (select) select.value = index;
+
+            const counter = document.getElementById('guideStepCounter');
+            if (counter) counter.textContent = `Step ${index + 1} of ${ONBOARDING_STEPS.length}`;
+
+            const btnPrev = document.getElementById('btnGuidePrev');
+            const btnNext = document.getElementById('btnGuideNext');
+            if (btnPrev) btnPrev.disabled = (index === 0);
+            if (btnNext) btnNext.disabled = (index === ONBOARDING_STEPS.length - 1);
+
+            // Update In-Modal Step Pills
+            const pills = document.querySelectorAll('.guide-step-pill');
+            pills.forEach((p, i) => {
+                if (i === index) {
+                    p.classList.add('active');
+                    p.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                } else {
+                    p.classList.remove('active');
+                }
+            });
+
+            const body = document.getElementById('guideModalBody');
+            if (!body) return;
+
+            let checklistHtml = '';
+            step.checklist.forEach(item => {
+                checklistHtml += `<li><i class="fa-solid fa-circle-check" style="color: #10B981; margin-top: 3px; flex-shrink: 0;"></i> <span>${item}</span></li>`;
+            });
+
+            let imagesHtml = '';
+            step.images.forEach(img => {
+                imagesHtml += `
+                    <div style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: #FFFFFF; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onclick="openLightbox('${img.src}', '${img.label.replace(/'/g, "\\'")}')">
+                        <div style="background: #0F172A; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; font-weight: 700; color: #F8FAFC; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-regular fa-image" style="color: #FB923C;"></i> ${img.label}
+                            </span>
+                            <span style="font-size: 11px; color: #94A3B8; display: flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i> Click to Zoom
+                            </span>
+                        </div>
+                        <img src="${img.src}" alt="${img.label}" loading="lazy" style="width: 100%; height: auto; display: block; border-bottom: 1px solid var(--border-subtle);">
+                        <div style="padding: 10px 14px; font-size: 12px; color: var(--text-muted); background: #F8FAFC; line-height: 1.4;">
+                            ${img.caption}
+                        </div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                                <span class="step-badge" style="background: var(--accent-light); color: var(--accent-primary); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; border: 1px solid rgba(234, 88, 12, 0.2);">
+                                    ${step.badge}
+                                </span>
+                                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fa-regular fa-clock" style="color: var(--accent-primary);"></i> Est. Time: ${step.time}
+                                </span>
+                                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fa-regular fa-user" style="color: var(--accent-primary);"></i> Role: ${step.role}
+                                </span>
+                            </div>
+                            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-heading); margin: 0 0 8px 0;">
+                                ${step.title}
+                            </h3>
+                            <p style="font-size: 14px; color: var(--text-body); line-height: 1.6; margin: 0;">
+                                ${step.desc}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style="background: #F8FAFC; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px 20px;">
+                        <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-list-check" style="color: var(--accent-primary);"></i> Required Setup Checklist
+                        </h4>
+                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; color: var(--text-body); line-height: 1.5;">
+                            ${checklistHtml}
+                        </ul>
+                    </div>
+
+                    <div style="background: rgba(234, 88, 12, 0.06); border-left: 4px solid var(--accent-primary); border-radius: 0 10px 10px 0; padding: 12px 18px; font-size: 13px; color: #9A3412; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
+                        <i class="fa-solid fa-lightbulb" style="color: var(--accent-primary); font-size: 15px; margin-top: 2px;"></i>
+                        <div><strong>Pro Tip:</strong> ${step.callout}</div>
+                    </div>
+
+                    <div>
+                        <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin: 0 0 14px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-display" style="color: var(--accent-primary);"></i> Screenshot Walkthrough & UI Reference
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                            ${imagesHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            body.scrollTop = 0;
+        }
+
+        // Global Esc & Arrow Key support for Onboarding Modal
+        window.addEventListener('keydown', function(e) {
+            const guideModal = document.getElementById('onboardingGuideModal');
+            if (guideModal && guideModal.style.display === 'flex') {
+                if (e.key === 'Escape') {
+                    closeOnboardingModal();
+                } else if (e.key === 'ArrowRight') {
+                    nextGuideStep();
+                } else if (e.key === 'ArrowLeft') {
+                    prevGuideStep();
+                }
+            }
+        });
+
+        // Expose onboarding functions to window
+        window.openOnboardingModal = openOnboardingModal;
+        window.closeOnboardingModal = closeOnboardingModal;
+        window.handleGuideModalOverlayClick = handleGuideModalOverlayClick;
+        window.renderGuideStep = renderGuideStep;
+        window.nextGuideStep = nextGuideStep;
+        window.prevGuideStep = prevGuideStep;
     </script>
+
+    <!-- Free Demo Self-Service Modal Dialog -->
+    <div id="freeDemoModal" class="demo-modal-overlay" onclick="handleDemoModalOverlayClick(event)">
+        <div class="demo-modal-dialog">
+            <div class="demo-modal-header">
+                <div class="demo-modal-title-group">
+                    <div class="demo-pill-badge">
+                        <i class="fa-solid fa-rocket"></i> 7-Day Pro Trial
+                    </div>
+                    <h3 class="demo-modal-title">Experience Curiosity HUB Free Demo</h3>
+                    <p class="demo-modal-subtitle">Instant zero-hardware facial recognition attendance and automated payroll in 60 seconds.</p>
+                </div>
+                <button type="button" class="demo-modal-close" onclick="closeFreeDemoModal()">&times;</button>
+            </div>
+
+            <!-- Step 1: User & Company Info -->
+            <div id="demoStep1" class="demo-modal-body">
+                <form id="demoRequestForm" onsubmit="handleDemoRequestOtp(event)">
+                    <div class="demo-form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="demoName">Your Full Name <span class="required">*</span></label>
+                            <input type="text" id="demoName" class="form-input" placeholder="e.g. Rajesh Shah" required minlength="2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="demoCompany">Company / Business Name <span class="required">*</span></label>
+                            <input type="text" id="demoCompany" class="form-input" placeholder="e.g. Apex Global Logistics" required minlength="2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="demoMobile">Mobile Number <span class="required">*</span></label>
+                            <input type="tel" id="demoMobile" class="form-input" placeholder="e.g. 9876543210" required pattern="[0-9]{10,12}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="demoEmail">Official / Work Email <span class="required">*</span></label>
+                            <input type="email" id="demoEmail" class="form-input" placeholder="e.g. rajesh@apexlogistics.com" required>
+                        </div>
+                    </div>
+
+                    <div class="demo-perks-row">
+                        <div class="demo-perk"><i class="fa-solid fa-check"></i> 7 Days Full Pro Edition</div>
+                        <div class="demo-perk"><i class="fa-solid fa-check"></i> Zero Dedicated Hardware</div>
+                        <div class="demo-perk"><i class="fa-solid fa-check"></i> Automated Email Credentials</div>
+                    </div>
+
+                    <div id="demoStep1Feedback" class="demo-alert" style="display: none;"></div>
+
+                    <button type="submit" id="btnRequestOtp" class="btn-demo-submit">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Send Verification Code</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Step 2: 6-Digit OTP Verification -->
+            <div id="demoStep2" class="demo-modal-body" style="display: none;">
+                <form id="demoVerifyForm" onsubmit="handleDemoVerifyOtp(event)">
+                    <div class="otp-instruction-card">
+                        <div class="otp-icon-wrap"><i class="fa-solid fa-envelope-circle-check"></i></div>
+                        <p class="otp-sent-text">We have sent a 6-digit verification code to <strong id="displayTargetEmail"></strong> via AWS SES. Please enter it below to launch your demo:</p>
+                    </div>
+
+                    <div class="form-group otp-group">
+                        <label class="form-label" for="demoOtpCode" style="text-align: center; display: block; margin-bottom: 8px;">Enter 6-Digit Verification Code</label>
+                        <input type="text" id="demoOtpCode" class="form-input otp-code-input" placeholder="1 2 3 4 5 6" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code">
+                    </div>
+
+                    <div id="demoStep2Feedback" class="demo-alert" style="display: none;"></div>
+
+                    <button type="submit" id="btnVerifyOtp" class="btn-demo-submit">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Verify & Launch My Demo</span>
+                    </button>
+
+                    <div class="otp-resend-row">
+                        <span id="resendCountdownText">Resend code in <strong id="resendTimer">60</strong>s</span>
+                        <button type="button" id="btnResendOtp" class="btn-resend-link" onclick="handleResendOtp()" style="display: none;">
+                            Resend Verification Code
+                        </button>
+                        &bull;
+                        <button type="button" class="btn-change-email" onclick="goToDemoStep1()">Edit Details</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Onboarding Interactive Guide Modal Dialog -->
+    <div id="onboardingGuideModal" class="guide-modal-overlay" onclick="handleGuideModalOverlayClick(event)">
+        <div class="guide-modal-dialog">
+            <div class="guide-modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="demo-pill-badge" style="background: rgba(234, 88, 12, 0.2); color: #FB923C; border: 1px solid rgba(234, 88, 12, 0.4);">
+                        <i class="fa-solid fa-compass"></i> Interactive Walkthrough
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 750; color: #FFFFFF;" id="guideModalTitle">Quick Onboarding Guide</h3>
+                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #94A3B8;" id="guideModalSubtitle">Complete administrator setup &amp; operational workflow</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <select id="guideStepSelect" onchange="renderGuideStep(parseInt(this.value))" style="background: #1E293B; color: #E2E8F0; border: 1px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; outline: none;">
+                        <option value="0">Step 0: Prerequisite & Login</option>
+                        <option value="1">Step 1: Organization Settings</option>
+                        <option value="2">Step 2: Themes & Appearance</option>
+                        <option value="3">Step 3: Departments & Designations</option>
+                        <option value="4">Step 4: Shifts & Geofencing</option>
+                        <option value="5">Step 5: Employee Registration</option>
+                        <option value="6">Step 6: Employee Directory</option>
+                        <option value="7">Step 7: Live Attendance Scanner</option>
+                        <option value="8">Step 8: Logs & Auditing</option>
+                        <option value="9">Step 9: Leaves & Payroll</option>
+                    </select>
+                    <button type="button" class="demo-modal-close" onclick="closeOnboardingModal()" aria-label="Close Guide">&times;</button>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="guide-modal-progress-bar">
+                <div class="guide-modal-progress-fill" id="guideProgressBar"></div>
+            </div>
+
+            <!-- In-Modal Step Jump Pills Bar -->
+            <div class="guide-modal-pills-bar" id="guideModalPillsBar">
+                <button type="button" class="guide-step-pill active" onclick="renderGuideStep(0)"><span class="guide-pill-num">0</span> Login</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(1)"><span class="guide-pill-num">1</span> Org & Locations</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(2)"><span class="guide-pill-num">2</span> Themes</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(3)"><span class="guide-pill-num">3</span> Departments</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(4)"><span class="guide-pill-num">4</span> Shifts & GPS</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(5)"><span class="guide-pill-num">5</span> Enrollment</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(6)"><span class="guide-pill-num">6</span> Directory</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(7)"><span class="guide-pill-num">7</span> Live Scanner</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(8)"><span class="guide-pill-num">8</span> Attendance Logs</button>
+                <button type="button" class="guide-step-pill" onclick="renderGuideStep(9)"><span class="guide-pill-num">9</span> Leaves & Payroll</button>
+            </div>
+
+            <!-- Scrollable Body with Dynamic Content -->
+            <div class="guide-modal-body" id="guideModalBody">
+                <!-- Dynamically rendered by renderGuideStep(stepIndex) -->
+            </div>
+
+            <!-- Modal Navigation Footer -->
+            <div class="guide-modal-footer">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" class="btn-guide-nav" id="btnGuidePrev" onclick="prevGuideStep()">
+                        <i class="fa-solid fa-chevron-left"></i> Previous
+                    </button>
+                    <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;" id="guideStepCounter">Step 1 of 10</span>
+                    <button type="button" class="btn-guide-nav" id="btnGuideNext" onclick="nextGuideStep()">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" class="btn-guide-nav" onclick="closeOnboardingModal()">
+                        Close Guide
+                    </button>
+                    <button type="button" class="btn-guide-nav btn-guide-primary" onclick="closeOnboardingModal(); openFreeDemoModal();">
+                        <i class="fa-solid fa-rocket"></i> Launch Free Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

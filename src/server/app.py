@@ -23,6 +23,7 @@ from src.server.routes import (
     api_leave,
     api_employee_portal,
     api_shifts,
+    api_demo,
 )
 
 # Configure root logger
@@ -90,6 +91,7 @@ app.include_router(api_payroll.router)
 app.include_router(api_leave.router)
 app.include_router(api_employee_portal.router)
 app.include_router(api_shifts.router)
+app.include_router(api_demo.router)
 
 
 @app.get("/health")

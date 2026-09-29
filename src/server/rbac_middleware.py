@@ -12,6 +12,7 @@ from src.database.models import User, Tenant
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
 from src.utils.auth_utils import hash_password, verify_password
+from src.utils.timezone import get_ist_now
 
 logger = logging.getLogger("rbac_middleware")
 SECRET_KEY = "face_attendance_enterprise_jwt_secret_salt_2026"
@@ -144,6 +145,7 @@ def check_tenant_login_access(tenant: Tenant):
     Verifies that a tenant is permitted to log in.
     Soft-deleted tenants are completely blocked from logging in.
     Suspended tenants ARE permitted to log in for read-only historical review.
+    Expired trial tenants are blocked with an upgrade prompt.
     """
     if not tenant:
         return
@@ -151,6 +153,22 @@ def check_tenant_login_access(tenant: Tenant):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This institution account has been deactivated or deleted. Please contact platform support.",
+        )
+
+    # Enforce 7-day demo trial expiration
+    if getattr(tenant, "subscription_expires_at", None):
+        if get_ist_now() > tenant.subscription_expires_at:
+            tenant.subscription_status = "EXPIRED"
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"The 7-day free trial for '{tenant.name}' has EXPIRED. Please contact Curiosity HUB (curiosityhubahd@gmail.com / +91-8866868245) to upgrade to an active subscription.",
+            )
+
+    status_upper = (tenant.subscription_status or "ACTIVE").upper()
+    if status_upper == "EXPIRED":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"The trial period for '{tenant.name}' has EXPIRED. Please contact Curiosity HUB (curiosityhubahd@gmail.com / +91-8866868245) to upgrade to an active subscription.",
         )
 
 
@@ -166,6 +184,15 @@ def check_tenant_operational_access(tenant: Tenant):
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Tenant organization '{tenant.name}' is deactivated/deleted. Operational features are blocked.",
         )
+
+    # Enforce 7-day demo trial expiration
+    if getattr(tenant, "subscription_expires_at", None):
+        if get_ist_now() > tenant.subscription_expires_at:
+            tenant.subscription_status = "EXPIRED"
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"The 7-day trial for organization '{tenant.name}' has EXPIRED. Operational actions are locked.",
+            )
 
     status_upper = (tenant.subscription_status or "ACTIVE").upper()
     if status_upper == "SUSPENDED":
