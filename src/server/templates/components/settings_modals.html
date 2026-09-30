@@ -1,0 +1,175 @@
+<!-- Designation Modal (Create / Edit in Settings - No Mandatory Salary Structure) -->
+<div id="settingsDesignationModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+            <h3 id="settingsDesigModalTitle" style="font-size: 15px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i>
+                <span>Add Designation</span>
+            </h3>
+            <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeSettingsDesignationModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 18px;">
+            <form id="settingsDesigModalForm" onsubmit="saveSettingsDesignationModal(event)">
+                <input type="hidden" id="modalSettingsDesigId" value="">
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Designation Title *</label>
+                    <input type="text" id="modalSettingsDesigTitle" class="form-control" placeholder="e.g. Senior Software Engineer, Store Manager" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Designation Code</label>
+                    <input type="text" id="modalSettingsDesigCode" class="form-control" placeholder="e.g. SSE, MGR" maxlength="20" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Department / Team (Optional)</label>
+                    <select id="modalSettingsDesigDept" class="form-control">
+                        <option value="">-- All / General Department --</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Description / Responsibilities</label>
+                    <textarea id="modalSettingsDesigDesc" class="form-control" rows="2" placeholder="Overview of role, responsibilities, or band..."></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Status</label>
+                    <select id="modalSettingsDesigIsActive" class="form-control">
+                        <option value="true">Active Designation</option>
+                        <option value="false">Inactive / Deprecated</option>
+                    </select>
+                </div>
+                <div id="settingsDesigModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeSettingsDesignationModal()">Cancel</button>
+                    <button type="submit" id="btnSaveSettingsDesigModal" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> Save Designation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Work Shift Modal (Create / Edit) -->
+<div id="shiftModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 520px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+            <h3 id="shiftModalTitle" style="font-size: 15px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <i class="fa-solid fa-clock" style="color: var(--accent-primary);"></i>
+                <span>Add Work Shift</span>
+            </h3>
+            <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeShiftModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 18px;">
+            <form id="shiftModalForm" onsubmit="saveShiftModal(event)">
+                <input type="hidden" id="modalShiftId" value="">
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Shift Name *</label>
+                        <input type="text" id="modalShiftName" class="form-control" placeholder="e.g. General Day Shift, Rotational Night Shift" required>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">Shift Code</label>
+                        <input type="text" id="modalShiftCode" class="form-control" placeholder="e.g. GEN-DAY, ROT-NGT">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                            <i class="fa-solid fa-arrow-right-to-bracket" style="color: var(--accent-emerald);"></i> Shift Start Time *
+                        </label>
+                        <input type="time" id="modalShiftStartTime" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="09:00" required>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 12px; font-weight: 600;">
+                            <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-rose);"></i> Shift End Time *
+                        </label>
+                        <input type="time" id="modalShiftEndTime" class="form-control" style="font-weight: 700; font-size: 13.5px;" value="17:30" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Grace Period</label>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="number" id="modalShiftGrace" class="form-control" min="0" max="120" value="15" style="font-weight: 700;">
+                            <span style="font-size: 11px; color: var(--text-muted);">m</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Break Duration</label>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="number" id="modalShiftBreak" class="form-control" min="0" max="240" value="0" style="font-weight: 700;">
+                            <span style="font-size: 11px; color: var(--text-muted);">m</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Half-Day (hrs)</label>
+                        <input type="number" step="0.5" id="modalShiftHalfDay" class="form-control" min="1" max="12" value="4.0" style="font-weight: 700;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px; padding: 10px 12px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="modalShiftIsDefault" style="width: 16px; height: 16px; cursor: pointer;">
+                    <label for="modalShiftIsDefault" style="font-size: 12px; font-weight: 600; color: var(--text-heading); cursor: pointer; margin: 0;">
+                        Set as Default Shift for New Employees & Legacy Records
+                    </label>
+                </div>
+
+                <div id="shiftModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeShiftModal()">Cancel</button>
+                    <button type="submit" id="btnSaveShiftModal" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> Save Shift
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Department Modal (Create / Edit) -->
+<div id="deptModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="card" style="width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+            <h3 id="deptModalTitle" style="font-size: 15px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <i class="fa-solid fa-building" style="color: var(--accent-primary);"></i>
+                <span>Add Department</span>
+            </h3>
+            <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeDeptModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="card-body" style="padding: 18px;">
+            <form id="deptModalForm" onsubmit="saveDepartmentModal(event)">
+                <input type="hidden" id="modalDeptId" value="">
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Department / Team Name *</label>
+                    <input type="text" id="modalDeptName" class="form-control" placeholder="e.g. Enterprise Sales, Operations, AI & Software Engineering" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Department Code / Key</label>
+                    <input type="text" id="modalDeptCode" class="form-control" placeholder="e.g. SALES, OPS, ENG">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 600;">Description / Responsibilities</label>
+                    <textarea id="modalDeptDesc" class="form-control" rows="3" placeholder="Overview of team roles, deliverables, or functions..."></textarea>
+                </div>
+                <div id="deptModalAlert" style="display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeptModal()">Cancel</button>
+                    <button type="submit" id="btnSaveDeptModal" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> Save Department
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

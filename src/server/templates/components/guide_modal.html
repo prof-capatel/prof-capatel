@@ -1,0 +1,76 @@
+<!-- Quick Onboarding Interactive Guide Modal Dialog Component -->
+<div id="onboardingGuideModal" class="guide-modal-overlay" onclick="handleGuideModalOverlayClick(event)">
+    <div class="guide-modal-dialog">
+        <div class="guide-modal-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="demo-pill-badge" style="background: rgba(234, 88, 12, 0.2); color: #FB923C; border: 1px solid rgba(234, 88, 12, 0.4);">
+                    <i class="fa-solid fa-compass"></i> Interactive Walkthrough
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 17px; font-weight: 750; color: #FFFFFF;" id="guideModalTitle">Quick Onboarding Guide</h3>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; color: #94A3B8;" id="guideModalSubtitle">Complete administrator setup &amp; operational workflow</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <select id="guideStepSelect" onchange="renderGuideStep(parseInt(this.value))" style="background: #1E293B; color: #E2E8F0; border: 1px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; outline: none;">
+                    <option value="0">Step 0: Prerequisite & Login</option>
+                    <option value="1">Step 1: Organization Settings</option>
+                    <option value="2">Step 2: Themes & Appearance</option>
+                    <option value="3">Step 3: Departments & Designations</option>
+                    <option value="4">Step 4: Shifts & Geofencing</option>
+                    <option value="5">Step 5: Employee Registration</option>
+                    <option value="6">Step 6: Employee Directory</option>
+                    <option value="7">Step 7: Live Attendance Scanner</option>
+                    <option value="8">Step 8: Logs & Auditing</option>
+                    <option value="9">Step 9: Leaves & Payroll</option>
+                </select>
+                <button type="button" class="demo-modal-close" onclick="closeOnboardingModal()" aria-label="Close Guide">&times;</button>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="guide-modal-progress-bar">
+            <div class="guide-modal-progress-fill" id="guideProgressBar"></div>
+        </div>
+
+        <!-- In-Modal Step Jump Pills Bar -->
+        <div class="guide-modal-pills-bar" id="guideModalPillsBar">
+            <button type="button" class="guide-step-pill active" onclick="renderGuideStep(0)"><span class="guide-pill-num">0</span> Login</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(1)"><span class="guide-pill-num">1</span> Org & Locations</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(2)"><span class="guide-pill-num">2</span> Themes</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(3)"><span class="guide-pill-num">3</span> Departments</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(4)"><span class="guide-pill-num">4</span> Shifts & GPS</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(5)"><span class="guide-pill-num">5</span> Enrollment</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(6)"><span class="guide-pill-num">6</span> Directory</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(7)"><span class="guide-pill-num">7</span> Live Scanner</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(8)"><span class="guide-pill-num">8</span> Attendance Logs</button>
+            <button type="button" class="guide-step-pill" onclick="renderGuideStep(9)"><span class="guide-pill-num">9</span> Leaves & Payroll</button>
+        </div>
+
+        <!-- Scrollable Body with Dynamic Content -->
+        <div class="guide-modal-body" id="guideModalBody">
+            <!-- Dynamically rendered by renderGuideStep(stepIndex) in landing.js -->
+        </div>
+
+        <!-- Modal Navigation Footer -->
+        <div class="guide-modal-footer">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="btn-guide-nav" id="btnGuidePrev" onclick="prevGuideStep()">
+                    <i class="fa-solid fa-chevron-left"></i> Previous
+                </button>
+                <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;" id="guideStepCounter">Step 1 of 10</span>
+                <button type="button" class="btn-guide-nav" id="btnGuideNext" onclick="nextGuideStep()">
+                    Next <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="btn-guide-nav" onclick="closeOnboardingModal()">
+                    Close Guide
+                </button>
+                <button type="button" class="btn-guide-nav btn-guide-primary" onclick="closeOnboardingModal(); openFreeDemoModal();">
+                    <i class="fa-solid fa-rocket"></i> Launch Free Demo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

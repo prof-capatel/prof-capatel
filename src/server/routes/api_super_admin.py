@@ -22,6 +22,8 @@ from src.database.session import get_db
 from src.server.rbac_middleware import require_roles, get_current_user
 from src.utils.auth_utils import hash_password
 from src.utils.timezone import get_ist_now
+from src.server.services import seo_service
+
 
 logger = logging.getLogger("api_super_admin")
 router = APIRouter(
@@ -906,3 +908,96 @@ def regenerate_tenant_tokens(
             "checkin_url": f"/check-in/{t_uuid}/{tenant.attendance_slug}",
         },
     }
+
+
+# =========================================================================
+# SEO Reporting, Live Health Audit & Search Engine Optimization Hub
+# =========================================================================
+class SeoUpdateRequest(BaseModel):
+    site_title: str
+    meta_description: str
+    meta_keywords: Optional[str] = ""
+    canonical_url: str
+    og_title: Optional[str] = ""
+    og_description: Optional[str] = ""
+    og_image: Optional[str] = ""
+    robots_directives: Optional[str] = ""
+
+
+@router.get("/seo")
+def get_seo_overview():
+    """
+    Returns complete SEO health report, meta tags audit,
+    Google Search Snippet preview, and social sharing cards.
+    """
+    return seo_service.get_seo_health_report()
+
+
+@router.post("/seo")
+def update_seo_configuration(
+    payload: SeoUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Persists updated SEO meta tags, title, description, and robots directives.
+    """
+    seo_data = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+    updated = seo_service.save_seo_settings(seo_data)
+
+    audit = AuditLog(
+        tenant_id=None,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="SEO_CONFIG_UPDATED",
+        target_type="PLATFORM_SEO",
+        target_id="global",
+        description="Updated global website SEO meta tags, titles, and indexing rules.",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Website SEO configuration published successfully.",
+        "seo": seo_service.get_seo_health_report(),
+    }
+
+
+@router.post("/seo/sitemap-regenerate")
+def regenerate_sitemap(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Rebuilds the XML sitemap with current canonical base URL and lastmod timestamp.
+    """
+    xml = seo_service.get_sitemap_xml()
+    settings = seo_service.get_seo_settings()
+    sitemap_url = f"{settings.get('canonical_url', 'https://curiosityhub.co.in/').rstrip('/')}/sitemap.xml"
+
+    audit = AuditLog(
+        tenant_id=None,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="SITEMAP_REGENERATED",
+        target_type="PLATFORM_SEO",
+        target_id="sitemap",
+        description="Regenerated XML sitemap for search engine crawlers.",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Sitemap successfully regenerated.",
+        "sitemap_url": sitemap_url,
+        "xml_snippet": xml[:200] + "...",
+    }
+

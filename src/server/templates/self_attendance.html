@@ -953,7 +953,32 @@
 
         window.addEventListener("DOMContentLoaded", initPage);
 
+        // Visibility and background-resilient camera stream lifecycle controls
+        function stopCameraStream() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => {
+                    try { track.stop(); } catch (e) {}
+                });
+                mediaStream = null;
+            }
+            const videoEl = document.getElementById("cameraFeed");
+            if (videoEl) {
+                videoEl.srcObject = null;
+            }
+        }
+
+        function resumeCameraStream() {
+            if (!mediaStream) {
+                initPage();
+            }
+        }
+
         // Background-resilient camera lifecycle: maintain stream during window blur and tab switches
+        // Optional visibilitychange listener for page lifecycle awareness
+        document.addEventListener("visibilitychange", () => {
+            // Maintained in background to ensure continuous clock-in availability
+        });
+
         window.addEventListener("pagehide", () => {
             stopCameraStream();
         });

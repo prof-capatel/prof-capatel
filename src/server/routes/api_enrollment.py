@@ -160,6 +160,67 @@ def list_enrolled_students(
     }
 
 
+@router.get("/next-code")
+def get_next_employee_code(
+    role: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """
+    Generates the next sequential unique employee/student code for the active tenant.
+    Format: EMP-001, EMP-002, ... or STU-001, STU-002, ...
+    Preserves existing codes and prevents duplicates.
+    """
+    import re
+    check_tenant_operational_access(current_tenant)
+    is_corporate = (getattr(current_tenant, "tenant_type", "educational") == "corporate")
+    
+    if role:
+        clean_role = role.strip().lower()
+    else:
+        clean_role = "employee" if is_corporate else "student"
+        
+    prefix = "EMP" if clean_role in ["employee", "staff", "teacher", "faculty", "admin_staff"] or is_corporate else "STU"
+    
+    existing_rolls = db.query(Student.roll_number).filter(
+        Student.tenant_id == current_tenant.id,
+        Student.roll_number.ilike(f"{prefix}-%")
+    ).all()
+    
+    max_num = 0
+    pattern = re.compile(rf"^{prefix}-?0*(\d+)$", re.IGNORECASE)
+    for (r_num,) in existing_rolls:
+        if not r_num:
+            continue
+        match = pattern.match(r_num.strip())
+        if match:
+            try:
+                val = int(match.group(1))
+                if val > max_num:
+                    max_num = val
+            except ValueError:
+                pass
+                
+    next_num = max_num + 1
+    while True:
+        candidate_code = f"{prefix}-{next_num:03d}"
+        exists = db.query(Student.id).filter(
+            Student.tenant_id == current_tenant.id,
+            Student.roll_number == candidate_code
+        ).first()
+        if not exists:
+            break
+        next_num += 1
+
+    return {
+        "status": "success",
+        "code": candidate_code,
+        "prefix": prefix,
+        "next_number": next_num,
+        "tenant_id": current_tenant.id,
+    }
+
+
 @router.post("/student")
 def register_student(
     payload: StudentCreate,

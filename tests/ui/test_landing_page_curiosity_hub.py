@@ -22,18 +22,25 @@ class TestLandingPageCuriosityHub(unittest.TestCase):
         self.assertIn("Ahmedabad", html)
 
     def test_02_four_required_navigation_menus(self):
-        """Test the 4 required navigation links exist in navbar."""
+        """Test the required navigation links, Products dropdown with 3 submenus, and onboarding guide trigger exist in navbar."""
         res = self.client.get("/")
         self.assertEqual(res.status_code, 200)
         html = res.text
         self.assertIn('href="#about"', html)
         self.assertIn("About Us", html)
-        self.assertIn('href="#product"', html)
-        self.assertIn("Employee Management System", html)
-        self.assertIn('href="#demo"', html)
-        self.assertIn("Product Demo", html)
+        # Products dropdown and submenus
+        self.assertIn("navProductsDropdown", html)
+        self.assertIn("Products", html)
+        self.assertIn("Face based Attendance System", html)
+        self.assertIn("Leave Management Software", html)
+        self.assertIn("Payroll Management System", html)
+        # Guide & Contact
+        self.assertIn("openOnboardingModal", html)
+        self.assertIn("Quick Onboarding Guide", html)
         self.assertIn('href="#contact"', html)
         self.assertIn("Contact Us", html)
+        # Deep-dive product modal
+        self.assertIn('id="productDetailModal"', html)
 
     def test_03_single_sign_in_header_action(self):
         """Test navbar contains single 'Sign In' action leading to /saas."""
@@ -67,13 +74,15 @@ class TestLandingPageCuriosityHub(unittest.TestCase):
         self.assertIn("Smart Edition", html)
         self.assertIn("Pro Edition", html)
 
-    def test_06_product_demo_walkthrough(self):
-        """Test Product Demo section includes walkthrough screenshots and lightbox."""
+    def test_06_onboarding_and_demo_modals(self):
+        """Test Onboarding Guide and Free Demo modals and lightbox exist in page."""
         res = self.client.get("/")
         html = res.text
-        self.assertIn('id="demo"', html)
+        self.assertIn('id="onboardingGuideModal"', html)
+        self.assertIn('id="freeDemoModal"', html)
+        self.assertIn('id="lightboxModal"', html)
         self.assertIn("/screenshots/walkthrough/02_dashboard_live.png", html)
-        self.assertIn("openLightbox", html)
+        self.assertIn("landing.js", html)
 
     def test_07_contact_us_details(self):
         """Test Contact Us section has Ahmedabad location, email, mobile, and form."""
@@ -86,14 +95,14 @@ class TestLandingPageCuriosityHub(unittest.TestCase):
         self.assertIn('id="inquiryForm"', html)
 
     def test_08_core_value_pillars(self):
-        """Test landing page emphasizes fastest onboarding, all companies, multi-location, secure, zero hardware."""
+        """Test landing page emphasizes workforce onboarding, all companies, multi-location, secure."""
         res = self.client.get("/")
         html = res.text
-        self.assertIn("Fastest Onboarding", html)
+        self.assertIn("Workforce Onboarding", html)
         self.assertIn("Suitable to All Companies", html)
         self.assertIn("Multi-Location Offices", html)
         self.assertIn("Bank-Grade", html)
-        self.assertIn("Specific Hardware", html)
+        self.assertIn("Hardware-Agnostic", html)
         self.assertIn("Automated Payroll", html)
 
     def test_09_seo_metadata_and_structured_data(self):

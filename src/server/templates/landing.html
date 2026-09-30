@@ -3,29 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Curiosity HUB — Face Recognition Employee Management & Payroll SaaS</title>
-    <meta name="description" content="Curiosity HUB (Ahmedabad, Gujarat): Fastest onboarding zero-hardware facial recognition employee management SaaS for all companies. Centralize multi-location offices with dynamic multi-shift scheduling, mobile GPS geofencing, automated leaves, bank-grade security, and automated payroll.">
-    <meta name="keywords" content="face recognition attendance, employee management system, biometric attendance software, zero hardware attendance, multi location attendance, automated payroll software, attendance saas, ahmedabad hr software, curiosity hub, gps geofence attendance, shift scheduling software">
-    <meta name="author" content="Curiosity HUB">
+    <title>{{ seo.site_title if seo and seo.site_title else 'Curiosity HUB — Face Recognition Employee Management & Payroll SaaS' }}</title>
+    <meta name="description" content="{{ seo.meta_description if seo and seo.meta_description else 'Enterprise AI facial recognition employee management & automated payroll SaaS for companies. Centralize multi-location offices with dynamic multi-shift scheduling, mobile GPS geofencing, automated leaves, bank-grade security, and automated payroll.' }}">
+    <meta name="keywords" content="{{ seo.meta_keywords if seo and seo.meta_keywords else 'face recognition attendance, employee management system, biometric attendance software, multi location attendance, automated payroll software, attendance saas, ahmedabad hr software, curiosity hub, gps geofence attendance, shift scheduling software' }}">
+    <meta name="author" content="{{ seo.author if seo and seo.author else 'Curiosity HUB' }}">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://curiosityhub.co.in/">
+    <link rel="canonical" href="{{ seo.canonical_url if seo and seo.canonical_url else 'https://curiosityhub.co.in/' }}">
 
     <!-- Open Graph / Facebook / LinkedIn Social Metadata -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Curiosity HUB">
-    <meta property="og:title" content="Curiosity HUB — Face Recognition Employee Management & Payroll SaaS">
-    <meta property="og:description" content="Next-gen zero-hardware facial recognition employee management & automated payroll SaaS for companies. Fastest onboarding, multi-location offices, dynamic shifts, and bank-grade security.">
-    <meta property="og:url" content="https://curiosityhub.co.in/">
-    <meta property="og:image" content="https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png">
+    <meta property="og:title" content="{{ seo.og_title if seo and seo.og_title else (seo.site_title if seo else 'Curiosity HUB — Face Recognition Employee Management & Payroll SaaS') }}">
+    <meta property="og:description" content="{{ seo.og_description if seo and seo.og_description else (seo.meta_description if seo else 'Enterprise AI facial recognition employee management & automated payroll SaaS for companies.') }}">
+    <meta property="og:url" content="{{ seo.canonical_url if seo and seo.canonical_url else 'https://curiosityhub.co.in/' }}">
+    <meta property="og:image" content="{{ seo.og_image if seo and seo.og_image else 'https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png' }}">
     <meta property="og:image:width" content="1280">
     <meta property="og:image:height" content="720">
     <meta property="og:image:alt" content="Curiosity HUB Live Operational Biometric Attendance Dashboard">
 
     <!-- Twitter Cards Metadata -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Curiosity HUB — Face Recognition Employee Management & Payroll SaaS">
-    <meta name="twitter:description" content="Zero-hardware 1:N facial biometric clock-in, multi-location offices, dynamic shifts, and automated payroll SaaS.">
-    <meta name="twitter:image" content="https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png">
+    <meta name="twitter:card" content="{{ seo.twitter_card if seo and seo.twitter_card else 'summary_large_image' }}">
+    <meta name="twitter:title" content="{{ seo.og_title if seo and seo.og_title else (seo.site_title if seo else 'Curiosity HUB — Face Recognition Employee Management & Payroll SaaS') }}">
+    <meta name="twitter:description" content="{{ seo.og_description if seo and seo.og_description else (seo.meta_description if seo else 'Enterprise AI facial recognition employee management & automated payroll SaaS for companies.') }}">
+    <meta name="twitter:image" content="{{ seo.og_image if seo and seo.og_image else 'https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png' }}">
 
     <!-- JSON-LD Structured Data Schema (Organization & SoftwareApplication) -->
     <script type="application/ld+json">
@@ -96,2362 +96,7 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <style>
-        /* ==========================================================================
-           CURIOSITY HUB PREMIUM MODERN SAAS DESIGN SYSTEM
-           Clean Slate, Crisp Whites, Radiant Sunset-Orange & Indigo Tech Accents
-           ========================================================================== */
-        :root {
-            --bg-page: #F8FAFC;
-            --bg-card: #FFFFFF;
-            --bg-subtle: #F1F5F9;
-            --bg-muted: #E2E8F0;
-            
-            --text-heading: #0F172A;
-            --text-body: #334155;
-            --text-muted: #64748B;
-            --text-light: #94A3B8;
-            
-            /* Primary Brand Accent (Curiosity HUB Sunset Gradient) */
-            --accent-primary: #EA580C;
-            --accent-hover: #C2410C;
-            --accent-glow: rgba(234, 88, 12, 0.15);
-            --accent-gradient: linear-gradient(135deg, #EA580C 0%, #F97316 50%, #FB923C 100%);
-            --accent-soft: #FFF7ED;
-            
-            /* Secondary Tech Accent (Deep Indigo) */
-            --tech-indigo: #4F46E5;
-            --tech-indigo-soft: #EEF2FF;
-            --tech-indigo-border: #C7D2FE;
-            
-            /* Functional Colors */
-            --success-emerald: #10B981;
-            --success-soft: #ECFDF5;
-            --warning-amber: #F59E0B;
-            
-            /* Clean Modern Borders */
-            --border-subtle: #E2E8F0;
-            --border-hover: #CBD5E1;
-            --border-focus: #EA580C;
-            
-            /* Premium Elevation Shadows */
-            --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-            --shadow-sm: 0 2px 6px -1px rgba(15, 23, 42, 0.06);
-            --shadow-md: 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
-            --shadow-lg: 0 16px 36px -6px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
-            --shadow-xl: 0 24px 50px -10px rgba(15, 23, 42, 0.16);
-            
-            /* Geometry */
-            --radius-xs: 6px;
-            --radius-sm: 10px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-            --radius-pill: 9999px;
-            
-            --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-            --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            scroll-behavior: smooth;
-            background-color: var(--bg-page);
-            color: var(--text-body);
-            font-family: var(--font-body);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        body {
-            background-color: var(--bg-page);
-            color: var(--text-body);
-            line-height: 1.6;
-            overflow-x: hidden;
-            font-size: 15px;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: var(--font-display);
-            color: var(--text-heading);
-            letter-spacing: -0.025em;
-            font-weight: 700;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .container {
-            max-width: 1240px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-
-        /* ==========================================================================
-           HEADER & NAVIGATION (NO TOP BLACK STRIP)
-           ========================================================================== */
-        .navbar {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border-subtle);
-            transition: var(--transition);
-        }
-
-        .nav-inner {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 74px;
-        }
-
-        .nav-brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-        }
-
-        .brand-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: var(--radius-sm);
-            background: var(--accent-gradient);
-            color: #FFFFFF;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3);
-        }
-
-        .brand-meta {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .brand-title {
-            font-family: var(--font-display);
-            font-size: 19px;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            color: var(--text-heading);
-            line-height: 1.15;
-        }
-
-        .brand-subtitle {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--accent-primary);
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-        }
-
-        .nav-menu {
-            display: flex;
-            align-items: center;
-            gap: 28px;
-            list-style: none;
-        }
-
-        .nav-link {
-            font-size: 13.5px;
-            font-weight: 600;
-            color: var(--text-body);
-            transition: var(--transition);
-            position: relative;
-            padding: 6px 2px;
-            white-space: nowrap;
-        }
-
-        @media (max-width: 1260px) and (min-width: 992px) {
-            .nav-menu {
-                gap: 18px;
-            }
-            .nav-link {
-                font-size: 13px;
-            }
-            .btn-nav-demo {
-                padding: 5.5px 11px;
-                font-size: 11.5px;
-            }
-            .btn-nav-signin {
-                padding: 6.5px 14px;
-                font-size: 12px;
-            }
-        }
-
-        .nav-link:hover {
-            color: var(--accent-primary);
-        }
-
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--accent-primary);
-            transition: var(--transition);
-            border-radius: var(--radius-pill);
-        }
-
-        .nav-link:hover::after {
-            width: 100%;
-        }
-
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn-nav-signin {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            background: var(--accent-gradient);
-            color: #FFFFFF;
-            font-size: 13px;
-            font-weight: 700;
-            padding: 7px 18px;
-            border-radius: var(--radius-pill);
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
-            transition: var(--transition);
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-nav-signin:hover {
-            transform: translateY(-1.5px);
-            box-shadow: 0 8px 20px rgba(234, 88, 12, 0.35);
-        }
-
-        .mobile-toggle {
-            display: none;
-            background: none;
-            border: 1px solid var(--border-subtle);
-            padding: 8px 12px;
-            border-radius: var(--radius-sm);
-            font-size: 18px;
-            color: var(--text-heading);
-            cursor: pointer;
-        }
-
-        /* ==========================================================================
-           HERO SECTION (CLEAN, SOPHISTICATED, BALANCED)
-           ========================================================================== */
-        .hero-section {
-            position: relative;
-            padding: 72px 0 64px;
-            overflow: hidden;
-            background: radial-gradient(circle at 50% 10%, rgba(234, 88, 12, 0.05) 0%, rgba(248, 250, 252, 1) 60%);
-        }
-
-        .hero-ambient-glow {
-            position: absolute;
-            top: -100px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 720px;
-            height: 420px;
-            background: radial-gradient(circle, rgba(234, 88, 12, 0.08) 0%, rgba(249, 115, 22, 0.02) 60%, transparent 80%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .hero-container {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            max-width: 920px;
-            margin: 0 auto;
-        }
-
-        .hero-pill-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #FFFFFF;
-            border: 1px solid var(--border-subtle);
-            box-shadow: var(--shadow-sm);
-            padding: 6px 18px;
-            border-radius: var(--radius-pill);
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--accent-primary);
-            margin-bottom: 24px;
-        }
-
-        .pulse-dot-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2);
-            display: inline-block;
-        }
-
-        .hero-headline {
-            font-size: 36px;
-            line-height: 1.25;
-            font-weight: 750;
-            letter-spacing: -0.025em;
-            color: var(--text-heading);
-            margin-bottom: 20px;
-        }
-
-        .hero-headline .gradient-accent {
-            background: var(--accent-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero-description-card {
-            max-width: 960px;
-            margin: 0 auto 30px;
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(226, 232, 240, 0.95);
-            border-radius: var(--radius-lg);
-            padding: 24px 36px;
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
-            transition: var(--transition);
-        }
-
-        .hero-description-card:hover {
-            border-color: rgba(234, 88, 12, 0.35);
-            box-shadow: 0 8px 30px -4px rgba(234, 88, 12, 0.09);
-        }
-
-        .hero-description-justified {
-            font-size: 15.5px;
-            line-height: 1.84;
-            color: var(--text-body);
-            text-align: justify;
-            text-justify: inter-word;
-            text-align-last: center;
-            hyphens: auto;
-            margin: 0;
-            letter-spacing: -0.005em;
-        }
-
-        .hero-description-justified strong {
-            color: var(--text-heading);
-            font-weight: 700;
-        }
-
-        /* Hero Trust Badges (Replaces buttons with clean executive pills) */
-        .hero-trust-pills {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin: 28px auto 36px;
-            max-width: 960px;
-        }
-
-        .hero-trust-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #FFFFFF;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-pill);
-            padding: 7px 16px;
-            font-size: 12.5px;
-            font-weight: 700;
-            color: var(--text-heading);
-            box-shadow: var(--shadow-xs);
-            transition: var(--transition);
-        }
-
-        .hero-trust-pill:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-1.5px);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .hero-trust-pill i {
-            color: var(--accent-primary);
-            font-size: 13.5px;
-        }
-
-        /* Hero Device Window Mockup */
-        .hero-mockup-wrapper {
-            margin-top: 10px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .app-window-frame {
-            background: #FFFFFF;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-subtle);
-            box-shadow: var(--shadow-xl);
-            overflow: hidden;
-        }
-
-        .app-window-header {
-            background: #F8FAFC;
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 14px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .mac-controls {
-            display: flex;
-            gap: 7px;
-        }
-
-        .mac-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .dot-close { background: #EF4444; }
-        .dot-min { background: #F59E0B; }
-        .dot-max { background: #10B981; }
-
-        .browser-address {
-            background: #FFFFFF;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-pill);
-            padding: 4px 18px;
-            font-size: 12px;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-family: monospace;
-        }
-
-        .browser-address i {
-            color: var(--success-emerald);
-            font-size: 11px;
-        }
-
-        .window-badge {
-            font-size: 11.5px;
-            font-weight: 700;
-            color: var(--accent-primary);
-            background: var(--accent-soft);
-            padding: 3px 12px;
-            border-radius: var(--radius-xs);
-        }
-
-        .app-screenshot-img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        /* Metric Quick Ribbon */
-        .metric-ribbon {
-            background: #FFFFFF;
-            border-top: 1px solid var(--border-subtle);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 28px 0;
-        }
-
-        .metric-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
-        }
-
-        .metric-item {
-            text-align: center;
-            padding: 6px 12px;
-            border-right: 1px solid var(--border-subtle);
-        }
-
-        .metric-item:last-child {
-            border-right: none;
-        }
-
-        .metric-big {
-            font-family: var(--font-display);
-            font-size: 32px;
-            font-weight: 800;
-            color: var(--accent-primary);
-            line-height: 1.1;
-            margin-bottom: 4px;
-        }
-
-        .metric-name {
-            font-size: 13.5px;
-            font-weight: 700;
-            color: var(--text-heading);
-        }
-
-        .metric-sub {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        /* Common Section Layout */
-        .section-block {
-            padding: 88px 0;
-        }
-
-        .section-title-wrapper {
-            text-align: center;
-            max-width: 760px;
-            margin: 0 auto 52px;
-        }
-
-        .section-badge {
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--accent-primary);
-            background: var(--accent-soft);
-            padding: 4px 14px;
-            border-radius: var(--radius-pill);
-            display: inline-block;
-            margin-bottom: 12px;
-        }
-
-        .section-heading {
-            font-size: 36px;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            color: var(--text-heading);
-            margin-bottom: 12px;
-            line-height: 1.2;
-        }
-
-        .section-subtext {
-            font-size: 16px;
-            color: var(--text-body);
-            line-height: 1.6;
-        }
-
-        /* ==========================================================================
-           SECTION 1: ABOUT US (CURIOSITY HUB AHMEDABAD)
-           ========================================================================== */
-        .about-showcase-card {
-            background: #FFFFFF;
-            border-radius: var(--radius-xl);
-            border: 1px solid var(--border-subtle);
-            padding: 48px;
-            box-shadow: var(--shadow-md);
-        }
-
-        .about-layout-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 48px;
-            align-items: center;
-        }
-
-        .location-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--accent-soft);
-            border: 1px solid rgba(234, 88, 12, 0.2);
-            padding: 6px 14px;
-            border-radius: var(--radius-pill);
-            color: var(--accent-primary);
-            font-weight: 700;
-            font-size: 13px;
-            margin-bottom: 18px;
-        }
-
-        .about-lead-text {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-heading);
-            line-height: 1.5;
-            margin-bottom: 16px;
-        }
-
-        .about-narrative {
-            font-size: 15px;
-            color: var(--text-body);
-            line-height: 1.7;
-            margin-bottom: 24px;
-        }
-
-        .about-pillars-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-top: 24px;
-        }
-
-        .pillar-card {
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-subtle);
-            padding: 18px;
-            border-radius: var(--radius-md);
-            transition: var(--transition);
-        }
-
-        .pillar-card:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-2px);
-            background: #FFFFFF;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .pillar-icon {
-            font-size: 20px;
-            color: var(--accent-primary);
-            margin-bottom: 8px;
-        }
-
-        .pillar-title {
-            font-size: 14.5px;
-            font-weight: 700;
-            color: var(--text-heading);
-            margin-bottom: 4px;
-        }
-
-        .pillar-desc {
-            font-size: 12.5px;
-            color: var(--text-muted);
-            line-height: 1.45;
-        }
-
-        .about-side-panel {
-            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-            border-radius: var(--radius-lg);
-            padding: 38px;
-            color: #FFFFFF;
-            display: flex;
-            flex-direction: column;
-            gap: 28px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .side-panel-stat h4 {
-            font-size: 28px;
-            font-weight: 800;
-            color: #FB923C;
-            line-height: 1.1;
-            margin-bottom: 4px;
-        }
-
-        .side-panel-stat p {
-            font-size: 14px;
-            font-weight: 600;
-            color: #F1F5F9;
-            margin-bottom: 2px;
-        }
-
-        .side-panel-stat span {
-            font-size: 12px;
-            color: #94A3B8;
-        }
-
-        /* ==========================================================================
-           SECTION 2: EMPLOYEE MANAGEMENT SYSTEM (FEATURES, ROLES, EDITIONS)
-           ========================================================================== */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-            margin-bottom: 64px;
-        }
-
-        .feature-card {
-            background: #FFFFFF;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-subtle);
-            padding: 32px;
-            box-shadow: var(--shadow-sm);
-            transition: var(--transition);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent-primary);
-            box-shadow: var(--shadow-md);
-        }
-
-        .feature-icon-wrapper {
-            width: 52px;
-            height: 52px;
-            border-radius: var(--radius-md);
-            background: var(--accent-soft);
-            color: var(--accent-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            margin-bottom: 20px;
-        }
-
-        .feature-card-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: var(--text-heading);
-        }
-
-        .feature-card-text {
-            font-size: 14px;
-            color: var(--text-body);
-            line-height: 1.6;
-            margin-bottom: 18px;
-            flex: 1;
-        }
-
-        .feature-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .feature-chip {
-            font-size: 11px;
-            font-weight: 600;
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-subtle);
-            padding: 3px 8px;
-            border-radius: var(--radius-xs);
-            color: var(--text-body);
-        }
-
-        /* Industries / Suitability Grid (Suitable to All Companies) */
-        .industries-wrapper {
-            margin: 0 0 64px 0;
-            background: #FFFFFF;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-xl);
-            padding: 44px 36px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .industries-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .industries-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-        }
-
-        .industry-card {
-            background: var(--bg-page);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-            padding: 24px 20px;
-            transition: var(--transition);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .industry-card:hover {
-            background: #FFFFFF;
-            border-color: var(--accent-primary);
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .industry-icon-box {
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-sm);
-            background: var(--accent-soft);
-            color: var(--accent-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 19px;
-            margin-bottom: 14px;
-        }
-
-        .industry-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-heading);
-            margin-bottom: 6px;
-        }
-
-        .industry-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            line-height: 1.5;
-            flex: 1;
-        }
-
-        /* Roles Grid */
-        .roles-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 64px;
-        }
-
-        .role-card {
-            background: #FFFFFF;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-subtle);
-            padding: 24px;
-            transition: var(--transition);
-            text-align: center;
-        }
-
-        .role-card:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .role-icon-avatar {
-            width: 54px;
-            height: 54px;
-            border-radius: 50%;
-            background: var(--bg-subtle);
-            border: 2px solid var(--border-subtle);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            color: var(--accent-primary);
-            margin: 0 auto 14px;
-        }
-
-        .role-card-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: var(--text-heading);
-        }
-
-        .role-card-desc {
-            font-size: 12.5px;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        /* Edition Tiers (Basic, Smart, Pro) */
-        .editions-wrapper {
-            background: #FFFFFF;
-            border-radius: var(--radius-xl);
-            border: 1px solid var(--border-subtle);
-            padding: 48px;
-            box-shadow: var(--shadow-md);
-        }
-
-        .editions-heading-box {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .editions-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 28px;
-        }
-
-        .edition-tier-card {
-            background: var(--bg-page);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-subtle);
-            padding: 36px 28px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            transition: var(--transition);
-        }
-
-        .edition-tier-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .edition-tier-card.highlighted {
-            background: #FFFFFF;
-            border: 2px solid var(--accent-primary);
-            box-shadow: var(--shadow-lg);
-            transform: scale(1.02);
-        }
-
-        .popular-badge {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--accent-gradient);
-            color: #FFFFFF;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            padding: 4px 14px;
-            border-radius: var(--radius-pill);
-            box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3);
-        }
-
-        .tier-name {
-            font-size: 22px;
-            font-weight: 800;
-            color: var(--text-heading);
-            margin-bottom: 6px;
-        }
-
-        .tier-target {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            min-height: 38px;
-        }
-
-        .tier-features-list {
-            list-style: none;
-            margin-bottom: 32px;
-            flex: 1;
-        }
-
-        .tier-feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            font-size: 13.5px;
-            color: var(--text-body);
-            margin-bottom: 12px;
-            line-height: 1.45;
-        }
-
-        .tier-feature-item i {
-            color: var(--success-emerald);
-            font-size: 14px;
-            margin-top: 3px;
-            flex-shrink: 0;
-        }
-
-        .btn-tier-action {
-            display: block;
-            text-align: center;
-            padding: 12px 20px;
-            border-radius: var(--radius-pill);
-            font-weight: 700;
-            font-size: 14px;
-            transition: var(--transition);
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-tier-primary {
-            background: var(--accent-gradient);
-            color: #FFFFFF;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
-        }
-
-        .btn-tier-primary:hover {
-            box-shadow: 0 8px 20px rgba(234, 88, 12, 0.38);
-            transform: translateY(-1.5px);
-        }
-
-        .btn-tier-secondary {
-            background: #FFFFFF;
-            color: var(--text-heading);
-            border: 1px solid var(--border-subtle);
-        }
-
-        .btn-tier-secondary:hover {
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-        }
-
-        /* ==========================================================================
-           SECTION 3: PRODUCT DEMO (INTERACTIVE SCREENSHOTS)
-           ========================================================================= */
-        .demo-filter-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 36px;
-        }
-
-        .demo-filter-btn {
-            background: #FFFFFF;
-            border: 1px solid var(--border-subtle);
-            padding: 9px 20px;
-            border-radius: var(--radius-pill);
-            font-size: 13.5px;
-            font-weight: 600;
-            color: var(--text-body);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .demo-filter-btn:hover, .demo-filter-btn.active {
-            background: var(--accent-primary);
-            color: #FFFFFF;
-            border-color: var(--accent-primary);
-            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
-        }
-
-        .walkthrough-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-        }
-
-        .walkthrough-card {
-            background: #FFFFFF;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-subtle);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            transition: var(--transition);
-            display: flex;
-            flex-direction: column;
-            cursor: pointer;
-        }
-
-        .walkthrough-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent-primary);
-            box-shadow: var(--shadow-md);
-        }
-
-        .walkthrough-img-box {
-            position: relative;
-            background: var(--bg-subtle);
-            overflow: hidden;
-            height: 200px;
-        }
-
-        .walkthrough-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top;
-            transition: transform 0.4s ease;
-        }
-
-        .walkthrough-card:hover .walkthrough-img {
-            transform: scale(1.04);
-        }
-
-        .walkthrough-overlay-btn {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: var(--transition);
-        }
-
-        .walkthrough-card:hover .walkthrough-overlay-btn {
-            opacity: 1;
-        }
-
-        .walkthrough-overlay-btn span {
-            background: #FFFFFF;
-            color: var(--text-heading);
-            font-size: 12.5px;
-            font-weight: 700;
-            padding: 8px 16px;
-            border-radius: var(--radius-pill);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .walkthrough-body {
-            padding: 20px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .walkthrough-module-tag {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--accent-primary);
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin-bottom: 6px;
-        }
-
-        .walkthrough-card-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: var(--text-heading);
-        }
-
-        .walkthrough-card-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        /* ==========================================================================
-           SECTION 4: CONTACT US (AHMEDABAD, GUJARAT)
-           ========================================================================== */
-        .contact-box {
-            background: #FFFFFF;
-            border-radius: var(--radius-xl);
-            border: 1px solid var(--border-subtle);
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .contact-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-        }
-
-        .contact-info-col {
-            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-            color: #FFFFFF;
-            padding: 48px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .contact-info-header h3 {
-            color: #FFFFFF;
-            font-size: 26px;
-            font-weight: 800;
-            margin-bottom: 12px;
-        }
-
-        .contact-info-header p {
-            color: #94A3B8;
-            font-size: 14.5px;
-            line-height: 1.6;
-            margin-bottom: 32px;
-        }
-
-        .contact-items-stack {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .contact-row-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-        }
-
-        .contact-icon-box {
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-sm);
-            background: rgba(234, 88, 12, 0.15);
-            color: #FB923C;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-            border: 1px solid rgba(234, 88, 12, 0.3);
-        }
-
-        .contact-field-label {
-            font-size: 12px;
-            color: #94A3B8;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 3px;
-        }
-
-        .contact-field-val {
-            font-size: 16px;
-            font-weight: 700;
-            color: #FFFFFF;
-        }
-
-        .contact-field-val a {
-            color: #FFFFFF;
-            transition: var(--transition);
-        }
-
-        .contact-field-val a:hover {
-            color: #FB923C;
-            text-decoration: underline;
-        }
-
-        .contact-form-col {
-            padding: 48px;
-            background: #FFFFFF;
-        }
-
-        .contact-form-col h3 {
-            font-size: 24px;
-            font-weight: 800;
-            color: var(--text-heading);
-            margin-bottom: 6px;
-        }
-
-        .contact-form-col p {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 28px;
-        }
-
-        .form-grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text-heading);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border-subtle);
-            background: var(--bg-page);
-            font-family: var(--font-body);
-            font-size: 14px;
-            color: var(--text-heading);
-            transition: var(--transition);
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            background: #FFFFFF;
-            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
-        }
-
-        .btn-submit-inquiry {
-            width: 100%;
-            background: var(--accent-gradient);
-            color: #FFFFFF;
-            font-weight: 700;
-            font-size: 15px;
-            padding: 14px;
-            border-radius: var(--radius-pill);
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-submit-inquiry:hover {
-            box-shadow: 0 8px 22px rgba(234, 88, 12, 0.38);
-            transform: translateY(-1.5px);
-        }
-
-        /* Footer */
-        .footer {
-            background: #0F172A;
-            color: #E2E8F0;
-            padding: 64px 0 32px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .footer-grid {
-            display: grid;
-            grid-template-columns: 1.5fr 1fr 1fr 1fr;
-            gap: 48px;
-            margin-bottom: 48px;
-        }
-
-        .footer-brand-col p {
-            font-size: 13.5px;
-            color: #94A3B8;
-            line-height: 1.6;
-            margin-top: 14px;
-            max-width: 320px;
-        }
-
-        .footer-col h4 {
-            color: #FFFFFF;
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 18px;
-            letter-spacing: -0.01em;
-        }
-
-        .footer-links {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .footer-links a {
-            font-size: 13.5px;
-            color: #94A3B8;
-            transition: var(--transition);
-        }
-
-        .footer-links a:hover {
-            color: #FB923C;
-            padding-left: 2px;
-        }
-
-        .footer-bottom {
-            padding-top: 24px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #64748B;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        .footer-bottom a {
-            color: #94A3B8;
-            transition: var(--transition);
-        }
-
-        .footer-bottom a:hover {
-            color: #FB923C;
-        }
-
-        /* Lightbox Modal */
-        .lightbox-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(8px);
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
-
-        .lightbox-content {
-            background: #FFFFFF;
-            border-radius: var(--radius-lg);
-            max-width: 1080px;
-            width: 100%;
-            overflow: hidden;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
-        }
-
-        .lightbox-header {
-            padding: 14px 20px;
-            background: #F8FAFC;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .lightbox-title {
-            font-weight: 700;
-            font-size: 15px;
-            color: var(--text-heading);
-        }
-
-        .lightbox-close {
-            background: none;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            color: var(--text-muted);
-        }
-
-        .lightbox-body {
-            padding: 16px;
-            max-height: 80vh;
-            overflow-y: auto;
-            text-align: center;
-            background: var(--bg-page);
-        }
-
-        .lightbox-img {
-            max-width: 100%;
-            height: auto;
-            border-radius: var(--radius-sm);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
-        }
-
-        /* Responsive Breakpoints */
-        @media (max-width: 1024px) {
-            .features-grid, .walkthrough-grid, .industries-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .roles-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .editions-grid {
-                grid-template-columns: 1fr;
-            }
-            .edition-tier-card.highlighted {
-                transform: none;
-            }
-            .about-layout-grid, .contact-grid {
-                grid-template-columns: 1fr;
-            }
-            .footer-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-            .metric-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .metric-item:nth-child(2) {
-                border-right: none;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .hero-headline {
-                font-size: 26px;
-                line-height: 1.28;
-            }
-            .nav-menu {
-                display: none;
-            }
-            .mobile-toggle {
-                display: block;
-            }
-            .features-grid, .walkthrough-grid, .roles-grid, .industries-grid {
-                grid-template-columns: 1fr;
-            }
-            .form-grid-2 {
-                grid-template-columns: 1fr;
-            }
-            .hero-description-card {
-                padding: 18px 20px;
-            }
-            .hero-description-justified {
-                font-size: 14.5px;
-                line-height: 1.7;
-                text-align: left;
-                text-align-last: left;
-            }
-            .about-showcase-card, .contact-info-col, .contact-form-col, .editions-wrapper {
-                padding: 24px;
-            }
-            .metric-grid {
-                grid-template-columns: 1fr;
-            }
-            .metric-item {
-                border-right: none;
-                border-bottom: 1px solid var(--border-subtle);
-            }
-            .metric-item:last-child {
-                border-bottom: none;
-            }
-            .footer-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* ==========================================================================
-           EYE-CATCHY FREE DEMO CTA BUTTON (ELECTRIC EMERALD-CYAN WITH SHIMMER & BEACON)
-           ========================================================================== */
-        .btn-nav-demo {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: linear-gradient(135deg, #059669 0%, #10b981 30%, #06b6d4 70%, #2563eb 100%);
-            background-size: 250% 250%;
-            color: #FFFFFF !important;
-            padding: 6px 13px;
-            border-radius: var(--radius-pill);
-            font-size: 12.5px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-            text-decoration: none;
-            border: 1px solid rgba(255, 255, 255, 0.55);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 3px 14px rgba(16, 185, 129, 0.4), 0 0 18px rgba(6, 182, 212, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.65);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: gradient-shift 4s ease infinite, pulse-emerald-glow 3s infinite;
-        }
-
-        @keyframes gradient-shift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        @keyframes pulse-emerald-glow {
-            0%, 100% {
-                box-shadow: 0 4px 16px rgba(16, 185, 129, 0.45), 0 0 20px rgba(6, 182, 212, 0.25);
-            }
-            50% {
-                box-shadow: 0 6px 28px rgba(16, 185, 129, 0.75), 0 0 35px rgba(6, 182, 212, 0.55);
-            }
-        }
-
-        /* Diagonal Shimmer Beam sweeping continuously */
-        .btn-nav-demo::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -120%;
-            width: 70%;
-            height: 200%;
-            background: linear-gradient(
-                90deg,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.55) 50%,
-                rgba(255, 255, 255, 0) 100%
-            );
-            transform: rotate(25deg);
-            animation: shimmer-beam 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-            pointer-events: none;
-        }
-
-        @keyframes shimmer-beam {
-            0% {
-                left: -120%;
-            }
-            35%, 100% {
-                left: 220%;
-            }
-        }
-
-        .btn-nav-demo:hover {
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.8), 0 0 45px rgba(6, 182, 212, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-            border-color: rgba(255, 255, 255, 0.85);
-        }
-
-        .btn-nav-demo:active {
-            transform: translateY(0) scale(0.98);
-        }
-
-        /* Beacon pulsing live dot */
-        .demo-beacon {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 9px;
-            height: 9px;
-            flex-shrink: 0;
-        }
-
-        .beacon-core {
-            width: 7px;
-            height: 7px;
-            background: #ffffff;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #ffffff;
-        }
-
-        .beacon-ring {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.8);
-            animation: beacon-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-
-        @keyframes beacon-ping {
-            0% {
-                transform: scale(1);
-                opacity: 0.9;
-            }
-            75%, 100% {
-                transform: scale(2.8);
-                opacity: 0;
-            }
-        }
-
-        /* Eye-catchy micro badge */
-        .demo-badge-pill {
-            font-size: 9.5px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            background: rgba(0, 0, 0, 0.25);
-            color: #ffffff;
-            padding: 2px 6px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            margin-left: 2px;
-            line-height: 1;
-            white-space: nowrap;
-        }
-
-        @media (max-width: 500px) {
-            .btn-nav-demo {
-                padding: 7px 12px;
-                font-size: 12.5px;
-            }
-            .demo-badge-pill {
-                display: none;
-            }
-        }
-
-        /* Free Demo Modal Styles */
-        .demo-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            padding: 20px;
-        }
-
-        .demo-modal-dialog {
-            background: #FFFFFF;
-            border-radius: 16px;
-            max-width: 580px;
-            width: 100%;
-            overflow: hidden;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
-            animation: modalFadeIn 0.3s ease-out;
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(20px) scale(0.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .demo-modal-header {
-            padding: 24px 28px 20px;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #FFFFFF;
-            position: relative;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .demo-modal-title-group {
-            padding-right: 32px;
-        }
-
-        .demo-pill-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(37, 99, 235, 0.25);
-            color: #60a5fa;
-            border: 1px solid rgba(96, 165, 250, 0.4);
-            padding: 4px 12px;
-            border-radius: var(--radius-pill);
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-        }
-
-        .demo-modal-title {
-            margin: 0 0 6px;
-            font-size: 20px;
-            font-weight: 800;
-            color: #FFFFFF;
-            letter-spacing: -0.3px;
-        }
-
-        .demo-modal-subtitle {
-            margin: 0;
-            font-size: 13px;
-            color: #94a3b8;
-            line-height: 1.5;
-        }
-
-        .demo-modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #cbd5e1;
-            font-size: 20px;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .demo-modal-close:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: #FFFFFF;
-        }
-
-        .demo-modal-body {
-            padding: 28px;
-            background: #FFFFFF;
-        }
-
-        .demo-form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 540px) {
-            .demo-form-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-        }
-
-        .demo-perks-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            padding: 12px 14px;
-            background: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .demo-perk {
-            font-size: 12px;
-            font-weight: 600;
-            color: #0f172a;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .demo-perk i {
-            color: #10b981;
-            font-size: 11px;
-        }
-
-        .btn-demo-submit {
-            width: 100%;
-            padding: 13px 20px;
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            color: #FFFFFF;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-            transition: all 0.2s;
-        }
-
-        .btn-demo-submit:hover:not(:disabled) {
-            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
-            transform: translateY(-1px);
-        }
-
-        .btn-demo-submit:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .otp-instruction-card {
-            background: #EFF6FF;
-            border: 1px solid #BFDBFE;
-            border-radius: 8px;
-            padding: 14px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .otp-icon-wrap {
-            font-size: 24px;
-            color: #2563eb;
-        }
-
-        .otp-sent-text {
-            margin: 0;
-            font-size: 13px;
-            color: #1e40af;
-            line-height: 1.5;
-        }
-
-        .otp-code-input {
-            font-size: 28px !important;
-            font-weight: 800 !important;
-            letter-spacing: 12px !important;
-            text-align: center !important;
-            padding: 12px !important;
-            color: #1e3a8a !important;
-            font-family: 'Courier New', monospace !important;
-        }
-
-        .otp-resend-row {
-            margin-top: 18px;
-            text-align: center;
-            font-size: 13px;
-            color: #64748b;
-        }
-
-        .btn-resend-link, .btn-change-email {
-            background: none;
-            border: none;
-            color: #2563eb;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            padding: 0 4px;
-            text-decoration: underline;
-        }
-
-        .demo-alert {
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            line-height: 1.5;
-            margin-bottom: 16px;
-        }
-
-        .demo-alert-error {
-            background: #FEF2F2;
-            border: 1px solid #FECACA;
-            color: #991B1B;
-        }
-
-        .demo-alert-success {
-            background: #ECFDF5;
-            border: 1px solid #A7F3D0;
-            color: #065F46;
-        }
-
-        /* ==========================================================================
-           QUICK ONBOARDING STEPS SECTION & INTERACTIVE GUIDE MODAL
-           ========================================================================== */
-        #onboarding {
-            background: #FAFAF9;
-            border-top: 1px solid var(--border-subtle);
-            border-bottom: 1px solid var(--border-subtle);
-            position: relative;
-        }
-
-        .btn-guide-modal-launch {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            color: #FFFFFF !important;
-            padding: 11px 24px;
-            border-radius: var(--radius-pill);
-            font-size: 14px;
-            font-weight: 700;
-            border: 1.5px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25);
-            cursor: pointer;
-            transition: all 0.25s ease;
-        }
-
-        .btn-guide-modal-launch:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        /* Onboarding Horizontal Step Pills Navigation */
-        .onboarding-steps-nav {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            overflow-x: auto;
-            padding: 10px 4px 18px;
-            margin-bottom: 32px;
-            scrollbar-width: thin;
-        }
-
-        .onboarding-steps-nav::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .onboarding-steps-nav::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 10px;
-        }
-
-        .step-nav-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: #FFFFFF;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-pill);
-            color: var(--text-heading);
-            font-size: 13px;
-            font-weight: 600;
-            text-decoration: none;
-            white-space: nowrap;
-            transition: var(--transition);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .step-nav-pill:hover {
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-            transform: translateY(-1px);
-        }
-
-        .step-pill-num {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--bg-subtle);
-            color: var(--text-heading);
-            font-size: 11px;
-            font-weight: 800;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .step-nav-pill:hover .step-pill-num {
-            background: var(--accent-primary);
-            color: #FFFFFF;
-        }
-
-        /* Step Card Grid */
-        .onboarding-steps-flow {
-            display: flex;
-            flex-direction: column;
-            gap: 36px;
-        }
-
-        .onboarding-step-card {
-            background: #FFFFFF;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            padding: 32px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 36px;
-            align-items: center;
-            transition: var(--transition);
-        }
-
-        .onboarding-step-card:hover {
-            border-color: rgba(37, 99, 235, 0.4);
-            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
-        }
-
-        .step-badge-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-
-        .step-number-tag {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            color: #FFFFFF;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 4px 12px;
-            border-radius: var(--radius-pill);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .step-location-tag {
-            background: var(--bg-subtle);
-            color: var(--text-body);
-            font-size: 11.5px;
-            font-weight: 600;
-            padding: 4px 12px;
-            border-radius: var(--radius-pill);
-            border: 1px solid var(--border-subtle);
-        }
-
-        .step-card-title {
-            font-family: var(--font-display);
-            font-size: 21px;
-            font-weight: 800;
-            color: var(--text-heading);
-            margin: 0 0 12px;
-            letter-spacing: -0.02em;
-            line-height: 1.3;
-        }
-
-        .step-card-desc {
-            font-size: 14.5px;
-            color: var(--text-body);
-            line-height: 1.65;
-            margin: 0 0 18px;
-        }
-
-        .step-checklist {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 9px;
-        }
-
-        .step-checklist li {
-            font-size: 13.5px;
-            color: var(--text-heading);
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            line-height: 1.5;
-        }
-
-        .step-checklist li i {
-            color: #10b981;
-            font-size: 13px;
-            margin-top: 3px;
-            flex-shrink: 0;
-        }
-
-        .step-callout {
-            background: #EFF6FF;
-            border: 1px solid #BFDBFE;
-            border-radius: var(--radius-sm);
-            padding: 12px 16px;
-            font-size: 12.5px;
-            color: #1E40AF;
-            line-height: 1.5;
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
-        .step-callout i {
-            font-size: 15px;
-            color: #2563eb;
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
-
-        /* Screenshot Presentation Mockup */
-        .onboarding-screenshot-card {
-            background: #0F172A;
-            border-radius: 14px;
-            border: 1px solid #1E293B;
-            overflow: hidden;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .onboarding-screenshot-card:hover {
-            transform: translateY(-3px) scale(1.01);
-            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
-            border-color: #38BDF8;
-        }
-
-        .screenshot-header-bar {
-            background: #1E293B;
-            padding: 8px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .screenshot-dots {
-            display: flex;
-            gap: 5px;
-        }
-
-        .screenshot-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #475569;
-        }
-
-        .screenshot-dot:nth-child(1) { background: #EF4444; }
-        .screenshot-dot:nth-child(2) { background: #F59E0B; }
-        .screenshot-dot:nth-child(3) { background: #10B981; }
-
-        .screenshot-title-text {
-            font-size: 11px;
-            color: #94A3B8;
-            font-weight: 600;
-        }
-
-        .onboarding-screenshot-card img {
-            width: 100%;
-            height: auto;
-            max-height: 340px;
-            object-fit: cover;
-            display: block;
-            transition: transform 0.3s ease;
-        }
-
-        .onboarding-screenshot-card:hover img {
-            transform: scale(1.02);
-        }
-
-        .screenshot-zoom-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(2px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-
-        .onboarding-screenshot-card:hover .screenshot-zoom-overlay {
-            opacity: 1;
-        }
-
-        .zoom-action-badge {
-            background: #FFFFFF;
-            color: #0F172A;
-            padding: 8px 16px;
-            border-radius: var(--radius-pill);
-            font-size: 12px;
-            font-weight: 700;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        @media (max-width: 900px) {
-            .onboarding-step-card {
-                grid-template-columns: 1fr;
-                gap: 24px;
-                padding: 24px;
-            }
-        }
-
-        /* Onboarding Guide Fullscreen/Large Modal */
-        .guide-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10002;
-            padding: 20px;
-        }
-
-        .guide-modal-dialog {
-            background: #FFFFFF;
-            border-radius: 20px;
-            max-width: 960px;
-            width: 100%;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            animation: modalFadeIn 0.3s ease-out;
-        }
-
-        .guide-modal-header {
-            padding: 20px 28px;
-            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-            color: #FFFFFF;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            flex-shrink: 0;
-        }
-
-        .guide-modal-progress-bar {
-            height: 4px;
-            background: #1E293B;
-            width: 100%;
-            position: relative;
-        }
-
-        .guide-modal-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #EA580C, #F97316, #10B981);
-            width: 10%;
-            transition: width 0.3s ease;
-        }
-
-        .guide-modal-pills-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 24px;
-            background: #F8FAFC;
-            border-bottom: 1px solid var(--border-subtle);
-            overflow-x: auto;
-            white-space: nowrap;
-            scrollbar-width: thin;
-            flex-shrink: 0;
-        }
-
-        .guide-step-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 12px;
-            border-radius: var(--radius-pill);
-            font-size: 11.5px;
-            font-weight: 600;
-            color: var(--text-muted);
-            background: #FFFFFF;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            flex-shrink: 0;
-        }
-
-        .guide-step-pill:hover {
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-            background: #FFF7ED;
-        }
-
-        .guide-step-pill.active {
-            background: var(--accent-primary);
-            color: #FFFFFF;
-            border-color: var(--accent-primary);
-            font-weight: 700;
-            box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
-        }
-
-        .guide-pill-num {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 17px;
-            height: 17px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.08);
-            font-size: 10px;
-            font-weight: 800;
-        }
-
-        .guide-step-pill.active .guide-pill-num {
-            background: rgba(255, 255, 255, 0.28);
-            color: #FFFFFF;
-        }
-
-        .guide-modal-body {
-            padding: 24px 28px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .guide-modal-footer {
-            padding: 16px 28px;
-            background: #F8FAFC;
-            border-top: 1px solid var(--border-subtle);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-            gap: 12px;
-        }
-
-        .btn-guide-nav {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 18px;
-            border-radius: var(--radius-pill);
-            font-size: 13px;
-            font-weight: 700;
-            border: 1px solid var(--border-color);
-            background: #FFFFFF;
-            color: var(--text-heading);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .btn-guide-nav:hover:not(:disabled) {
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-            background: #F8FAFC;
-        }
-
-        .btn-guide-nav:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        .btn-guide-nav.btn-guide-primary {
-            background: linear-gradient(135deg, #EA580C 0%, #F97316 100%);
-            color: #FFFFFF;
-            border: none;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
-        }
-
-        .btn-guide-nav.btn-guide-primary:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
-            color: #FFFFFF;
-            background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/landing.css?v=2.1">
 </head>
 <body>
 
@@ -2471,7 +116,35 @@
             <!-- Top Navigation Menus -->
             <ul class="nav-menu" id="navMenu">
                 <li><a href="#about" class="nav-link">About Us</a></li>
-                <li><a href="#product" class="nav-link">Employee Management System</a></li>
+                <li class="nav-item-dropdown" id="navProductsDropdown">
+                    <a href="javascript:void(0)" class="nav-link nav-dropdown-trigger" onclick="toggleProductsDropdown(event)" aria-haspopup="true" aria-expanded="false" id="productsMenuTrigger">
+                        <span>Products</span>
+                        <i class="fa-solid fa-chevron-down dropdown-arrow" id="productsDropdownArrow"></i>
+                    </a>
+                    <div class="nav-dropdown-menu" id="productsDropdownMenu">
+                        <a href="#product" onclick="selectProductView('attendance'); closeProductsDropdown();" class="dropdown-item" id="navSubmenuAttendance">
+                            <div class="dropdown-icon" style="background: rgba(234, 88, 12, 0.12); color: var(--accent-primary);"><i class="fa-solid fa-face-smile"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Face based Attendance System</strong>
+                                <span class="dropdown-subtext">Sub-250ms biometric recognition, anti-spoof liveness &amp; edge/cloud kiosks</span>
+                            </div>
+                        </a>
+                        <a href="#product" onclick="selectProductView('leave'); closeProductsDropdown();" class="dropdown-item" id="navSubmenuLeave">
+                            <div class="dropdown-icon" style="background: rgba(16, 185, 129, 0.12); color: var(--success-emerald);"><i class="fa-solid fa-calendar-check"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Leave Management Software</strong>
+                                <span class="dropdown-subtext">CL/SL/PL ledgers, multi-tier approvals, auto-accruals &amp; holiday master</span>
+                            </div>
+                        </a>
+                        <a href="#product" onclick="selectProductView('payroll'); closeProductsDropdown();" class="dropdown-item" id="navSubmenuPayroll">
+                            <div class="dropdown-icon" style="background: rgba(79, 70, 229, 0.12); color: var(--tech-indigo);"><i class="fa-solid fa-money-check-dollar"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Payroll Management System</strong>
+                                <span class="dropdown-subtext">Attendance-synchronized salary computation, deductions &amp; PDF payslips</span>
+                            </div>
+                        </a>
+                    </div>
+                </li>
                 <li><a href="javascript:void(0)" class="nav-link" id="navLinkOnboarding" onclick="openOnboardingModal(0); return false;">Quick Onboarding Guide</a></li>
                 <li><a href="#contact" class="nav-link">Contact Us</a></li>
             </ul>
@@ -2504,11 +177,6 @@
     <header class="hero-section">
         <div class="hero-ambient-glow"></div>
         <div class="container hero-container">
-            <div class="hero-pill-badge">
-                <span class="pulse-dot-indicator"></span>
-                <span>⚡ Fastest Onboarding &bull; Zero Dedicated Hardware &bull; Multi-Location Ready</span>
-            </div>
-            
             <h1 class="hero-headline">
                 Face Recognition <br><span class="gradient-accent">Employee Management & Payroll</span>
             </h1>
@@ -2516,17 +184,8 @@
             <!-- Detailed Justified Single-Paragraph Value Proposition Card -->
             <div class="hero-description-card">
                 <p class="hero-description-justified">
-                    Engineered in Ahmedabad by <strong>Curiosity HUB</strong>, our next-generation biometric workforce platform is purpose-built for <strong>all companies</strong> of every scale—from single-store retail outlets and fast-scaling startups to multi-branch enterprises. Experience the <strong>fastest onboarding</strong> in under 5 minutes with zero technical overhead or deployment friction. Designed with <strong>no specific hardware requirement</strong>, the software transforms standard office laptops, desktop webcams, tablets, iPads, and employee smartphones into instant, high-precision biometric attendance terminals with zero Capex and zero AMC. Centrally govern your <strong>multi-location offices</strong> and distributed workforce from one unified cloud console powered by sub-250ms 1:N Euclidean facial recognition and temporal anti-spoof liveness gating. Eliminate manual errors and time fraud with automated dynamic multi-shift scheduling, tamper-proof GPS geofencing with street verification, and multi-tier leave tracking. Attendance logs sync seamlessly with the automated payroll engine to compute salary structures, allowances, deductions, and downloadable PDF payslips—backed by <strong>bank-grade 128-dimensional vector security</strong>.
+                    Engineered in Ahmedabad by <strong>Curiosity HUB</strong>, our next-generation biometric workforce platform is purpose-built for <strong>all companies</strong> of every scale—from single retail outlets to multi-branch corporate enterprises. The software operates seamlessly on standard office computers, webcams, tablets, iPads, and employee smartphones, transforming existing devices into instant, high-precision biometric attendance terminals. Centrally govern your <strong>multi-location offices</strong> and distributed workforce from a unified cloud console powered by sub-250ms 1:N Euclidean facial recognition and temporal anti-spoof liveness gating. Eliminate manual time fraud with dynamic multi-shift scheduling, tamper-proof GPS geofencing with street verification, and multi-tier leave tracking. Attendance logs synchronize directly with the automated payroll engine to compute salary structures, allowances, deductions, and downloadable PDF payslips—backed by <strong>bank-grade 128-dimensional biometric encryption</strong>.
                 </p>
-            </div>
-
-            <!-- Hero Trust Badges -->
-            <div class="hero-trust-pills">
-                <div class="hero-trust-pill"><i class="fa-solid fa-bolt"></i> Fastest 5-Min Onboarding</div>
-                <div class="hero-trust-pill"><i class="fa-solid fa-laptop"></i> No Specific Hardware Needed</div>
-                <div class="hero-trust-pill"><i class="fa-solid fa-building-columns"></i> Multi-Location Offices</div>
-                <div class="hero-trust-pill"><i class="fa-solid fa-shield-halved"></i> 100% Secure & Anti-Spoof</div>
-                <div class="hero-trust-pill"><i class="fa-solid fa-briefcase"></i> Suitable to All Companies</div>
             </div>
 
             <!-- Hero Device Showcase Window -->
@@ -2550,34 +209,6 @@
         </div>
     </header>
 
-    <!-- Metric Ribbon -->
-    <section class="metric-ribbon">
-        <div class="container">
-            <div class="metric-grid">
-                <div class="metric-item">
-                    <div class="metric-big">&lt; 5 Mins</div>
-                    <div class="metric-name">Fastest Onboarding</div>
-                    <div class="metric-sub">Bulk employee CSV & instant face enrollment</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-big">Zero</div>
-                    <div class="metric-name">Specific Hardware</div>
-                    <div class="metric-sub">Runs on standard webcams, laptops & phones</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-big">Multi-Site</div>
-                    <div class="metric-name">Multi-Location Offices</div>
-                    <div class="metric-sub">Centralized HQ control across all branches</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-big">Bank-Grade</div>
-                    <div class="metric-name">Secure & Anti-Spoof</div>
-                    <div class="metric-sub">128-d vector encryption & tamper-proof audit</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- ========================================================================= -->
     <!-- MENU 1: ABOUT US                                                          -->
     <!-- ========================================================================= -->
@@ -2600,7 +231,7 @@
                             Pioneering AI-Driven Workforce Software & High-Impact Content Design
                         </h3>
                         <p class="about-narrative">
-                            Headquartered in <strong>Ahmedabad, Gujarat</strong>, <strong>Curiosity HUB</strong> is an engineering firm involved in bespoke software development, digital product engineering, and content design. Our flagship product—the <strong>Face Recognition Employee Management SaaS System</strong>—is engineered for <strong>all companies</strong> of every scale, delivering the <strong>fastest onboarding</strong> with <strong>no specific hardware requirement</strong>, centralized <strong>multi-location office</strong> management, and <strong>bank-grade biometric security</strong>.
+                            Headquartered in <strong>Ahmedabad, Gujarat</strong>, <strong>Curiosity HUB</strong> is an engineering firm involved in bespoke software development, digital product engineering, and content design. Our flagship product—the <strong>Face Recognition Employee Management SaaS System</strong>—is engineered for <strong>all companies</strong> of every scale, delivering <strong>advanced facial recognition</strong>, <strong>hardware-agnostic terminal deployment</strong>, centralized <strong>multi-location office</strong> management, and <strong>bank-grade biometric security</strong>.
                         </p>
                         <p class="about-narrative">
                             We eliminate cumbersome legacy biometric fingerprint terminals, buddy punching, and fragmented HR software by delivering a unified, multi-tenant cloud application with instant sub-250ms facial vector recognition, multi-shift flexibility, tamper-proof GPS geofencing, automated leaves, and comprehensive payroll management.
@@ -2637,18 +268,18 @@
                             <span>Operating out of Ahmedabad (AHD), Gujarat, India</span>
                         </div>
                         <div class="side-panel-stat">
-                            <h4>Fastest Onboarding</h4>
-                            <p>Under 5-Minute Setup</p>
-                            <span>Bulk employee CSV import, fast face registration & zero delay</span>
+                            <h4>Workforce Onboarding</h4>
+                            <p>Rapid &amp; Streamlined Setup</p>
+                            <span>Bulk employee CSV roster import &amp; instant multi-angle face enrollment</span>
                         </div>
                         <div class="side-panel-stat">
-                            <h4>Zero Specific Hardware</h4>
-                            <p>Pure Cloud SaaS Freedom</p>
+                            <h4>Hardware-Agnostic</h4>
+                            <p>Pure Cloud Flexibility</p>
                             <span>Runs on standard webcams, laptops, tablets, iPads & smartphones</span>
                         </div>
                         <div class="side-panel-stat">
-                            <h4>Multi-Location & Secure</h4>
-                            <p>Centralized HQ & Bank-Grade</p>
+                            <h4>Multi-Location Offices &amp; Secure</h4>
+                            <p>Centralized HQ &amp; Bank-Grade</p>
                             <span>Multi-branch management with 128-d vector biometric encryption</span>
                         </div>
                     </div>
@@ -2658,123 +289,268 @@
     </section>
 
     <!-- ========================================================================= -->
-    <!-- MENU 2: EMPLOYEE MANAGEMENT SYSTEM (FEATURES, ROLES & EDITIONS)           -->
+    <!-- MENU 2: PRODUCTS & EDITION TIERS SHOWCASE (ATTENDANCE, LEAVE, PAYROLL)     -->
     <!-- ========================================================================= -->
     <section class="section-block" id="product" style="background: var(--bg-subtle);">
         <div class="container">
             <div class="section-title-wrapper">
-                <span class="section-badge">Product Capabilities</span>
-                <h2 class="section-heading">Built for All Companies & Multi-Location Workforces</h2>
-                <p class="section-subtext">The complete employee management suite: fastest 5-minute onboarding, zero hardware requirement, bank-grade biometric security, and centralized multi-branch office control.</p>
+                <span class="section-badge">Products &amp; Edition Tiers</span>
+                <h2 class="section-heading">Multi-Tier Product Solutions Built for Modern Enterprises</h2>
+                <p class="section-subtext">Select any product to inspect architectural capabilities and feature availability across our Basic, Smart, and Pro editions.</p>
             </div>
 
-            <!-- Features Grid (9 Comprehensive Cards) -->
-            <div class="features-grid">
-                <!-- Feature 1: Fastest Onboarding -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-bolt"></i></div>
-                    <h3 class="feature-card-title">Fastest 5-Minute Onboarding</h3>
-                    <p class="feature-card-text">Get your entire workforce operational in minutes. Bulk import employee rosters via standard Excel/CSV templates, enroll 3-angle facial vectors with any webcam or phone, and start attendance instantly with zero IT overhead.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">5-Min Deployment</span>
-                        <span class="feature-chip">Bulk CSV Import</span>
-                        <span class="feature-chip">Zero IT Friction</span>
+            <!-- Interactive 3-Product Navigation Tabs -->
+            <div class="product-tabs-wrapper" role="tablist">
+                <button type="button" class="product-tab-btn active" id="tabBtnAttendance" onclick="selectProductView('attendance')" role="tab" aria-selected="true" aria-controls="productPanelAttendance">
+                    <span class="tab-icon" style="color: var(--accent-primary);"><i class="fa-solid fa-face-smile"></i></span>
+                    <span class="tab-text">
+                        <strong>Face based Attendance</strong>
+                        <small>Biometric Kiosks &amp; Geofencing</small>
+                    </span>
+                </button>
+                <button type="button" class="product-tab-btn" id="tabBtnLeave" onclick="selectProductView('leave')" role="tab" aria-selected="false" aria-controls="productPanelLeave">
+                    <span class="tab-icon" style="color: var(--success-emerald);"><i class="fa-solid fa-calendar-check"></i></span>
+                    <span class="tab-text">
+                        <strong>Leave Management</strong>
+                        <small>Approvals, Ledgers &amp; Accruals</small>
+                    </span>
+                </button>
+                <button type="button" class="product-tab-btn" id="tabBtnPayroll" onclick="selectProductView('payroll')" role="tab" aria-selected="false" aria-controls="productPanelPayroll">
+                    <span class="tab-icon" style="color: var(--tech-indigo);"><i class="fa-solid fa-money-check-dollar"></i></span>
+                    <span class="tab-text">
+                        <strong>Payroll Management</strong>
+                        <small>Automated Calculations &amp; Slips</small>
+                    </span>
+                </button>
+            </div>
+
+            <!-- TAB 1: Face based Attendance System -->
+            <div class="product-view-panel active" id="productPanelAttendance" role="tabpanel">
+                <div class="product-hero-strip">
+                    <div class="product-hero-info">
+                        <span class="badge" style="background: rgba(234, 88, 12, 0.12); color: var(--accent-primary); font-weight: 700; font-size: 11px; text-transform: uppercase;">
+                            <i class="fa-solid fa-camera"></i> Core Biometric Pipeline
+                        </span>
+                        <h3 style="font-size: 24px; font-weight: 800; color: var(--text-heading); margin: 8px 0 6px 0;">
+                            Face based Attendance System
+                        </h3>
+                        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin: 0; max-width: 820px;">
+                            High-speed 1:N Euclidean biometric recognition operating at sub-250ms with temporal liveness anti-spoofing. Transforms standard office laptops, webcams, tablets, and smartphones into instant, high-accuracy attendance checkpoints across single or multi-branch premises.
+                        </p>
+                        <div class="product-chip-row" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px;">
+                            <span class="feature-chip"><i class="fa-solid fa-bolt"></i> &lt; 250ms Vector Match</span>
+                            <span class="feature-chip"><i class="fa-solid fa-shield-halved"></i> Anti-Spoof Liveness</span>
+                            <span class="feature-chip"><i class="fa-solid fa-location-crosshairs"></i> Mobile GPS Geofencing</span>
+                            <span class="feature-chip"><i class="fa-solid fa-network-wired"></i> Multi-Location Offices Centralized</span>
+                        </div>
+                    </div>
+                    <div class="product-hero-action">
+                        <button type="button" class="btn btn-secondary" onclick="openProductModal('attendance')" style="font-size: 12.5px; font-weight: 700; white-space: nowrap;">
+                            <i class="fa-solid fa-table-columns"></i> View Full Tier Matrix
+                        </button>
                     </div>
                 </div>
 
-                <!-- Feature 2: No Specific Hardware -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-laptop-file"></i></div>
-                    <h3 class="feature-card-title">No Specific Hardware Needed</h3>
-                    <p class="feature-card-text">Eliminate expensive fingerprint terminals, biometric punch machines, card readers, and recurrent AMC contracts. Runs effortlessly on existing office laptops, USB webcams, tablets, iPads, and mobile smartphones.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">Zero Hardware Capex</span>
-                        <span class="feature-chip">Webcam & Laptop Ready</span>
-                        <span class="feature-chip">Zero AMC Fees</span>
+                <!-- 3 Edition Tiers Matrix for Attendance -->
+                <div class="editions-grid" style="margin-top: 24px;">
+                    <!-- Basic Edition -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Basic Edition</h4>
+                        <p class="tier-target">Single-kiosk facial attendance for startups, single retail shops, and small offices.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Single Biometric Kiosk</strong> (Laptop / Webcam)</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Sub-250ms 1:N Euclidean Vector Recognition</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Single Physical Office / Location</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Standard Daily Shift Timing &amp; Grace Period</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>CSV / Excel Attendance Logs Export</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Employee Mobile Profile View</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('attendance')" class="btn-tier-action btn-tier-secondary">Compare Basic Specs</button>
+                    </div>
+
+                    <!-- Smart Edition (Highlighted) -->
+                    <div class="edition-tier-card highlighted">
+                        <div class="popular-badge">Most Popular</div>
+                        <h4 class="tier-name">Smart Edition</h4>
+                        <p class="tier-target">Multi-location offices, rotational shifts, and field employee mobile GPS check-in.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Everything in Basic Edition</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Multi-Location Centralized Branches</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Dynamic Multi-Shift Rostering (Rotational/Night)</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Mobile GPS Geofencing with Street Verification</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Location Spoof Prevention &amp; Mock Detection</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Department &amp; Designation Attendance Filtering</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('attendance')" class="btn-tier-action btn-tier-primary">Compare Smart Specs</button>
+                    </div>
+
+                    <!-- Pro Edition -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Pro Edition</h4>
+                        <p class="tier-target">Full enterprise biometrics with anti-spoof liveness, live streaming HUD, and edge node support.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Everything in Smart Edition</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Temporal Anti-Spoof Liveness Gating</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Real-Time SSE Live Biometric Streaming HUD</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Unlimited Edge Nodes &amp; Multi-Angle Vectors</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Bank-Grade 128-d Biometric Encryption</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Offline Vector RAM Cache &amp; Dedicated SLA</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('attendance')" class="btn-tier-action btn-tier-secondary">Compare Pro Specs</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Leave Management Software -->
+            <div class="product-view-panel" id="productPanelLeave" role="tabpanel" style="display: none;">
+                <div class="product-hero-strip">
+                    <div class="product-hero-info">
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: var(--success-emerald); font-weight: 700; font-size: 11px; text-transform: uppercase;">
+                            <i class="fa-solid fa-calendar-check"></i> Workforce Absence Governance
+                        </span>
+                        <h3 style="font-size: 24px; font-weight: 800; color: var(--text-heading); margin: 8px 0 6px 0;">
+                            Leave Management Software
+                        </h3>
+                        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin: 0; max-width: 820px;">
+                            Complete lifecycle leave administration featuring automated monthly accruals, multi-tier manager approvals, balance ledgers for Casual, Sick, and Paid Leaves, and company-wide holiday calendars. Seamlessly synchronizes with attendance and payroll to eliminate manual tracking.
+                        </p>
+                        <div class="product-chip-row" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px;">
+                            <span class="feature-chip"><i class="fa-solid fa-users-gear"></i> Multi-Tier Approvals</span>
+                            <span class="feature-chip"><i class="fa-solid fa-calendar-days"></i> CL / SL / PL Ledgers</span>
+                            <span class="feature-chip"><i class="fa-solid fa-clock-rotate-left"></i> Automated Accruals</span>
+                            <span class="feature-chip"><i class="fa-solid fa-calendar-star"></i> Central Holiday Master</span>
+                        </div>
+                    </div>
+                    <div class="product-hero-action">
+                        <button type="button" class="btn btn-secondary" onclick="openProductModal('leave')" style="font-size: 12.5px; font-weight: 700; white-space: nowrap;">
+                            <i class="fa-solid fa-table-columns"></i> View Full Tier Matrix
+                        </button>
                     </div>
                 </div>
 
-                <!-- Feature 3: Multi-Location Offices -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-network-wired"></i></div>
-                    <h3 class="feature-card-title">Multi-Location Offices Centralized</h3>
-                    <p class="feature-card-text">Connect your headquarters, distributed retail branches, regional warehouses, and remote offices under one unified tenant portal. Granular branch-level filtering, localized shift timings, and centralized executive oversight.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">Multi-Branch Centralized</span>
-                        <span class="feature-chip">Retail Store Chains</span>
-                        <span class="feature-chip">Unified HQ Console</span>
+                <!-- 3 Edition Tiers Matrix for Leave -->
+                <div class="editions-grid" style="margin-top: 24px;">
+                    <!-- Basic Edition -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Basic Edition</h4>
+                        <p class="tier-target">Standard leave request logging and single-admin approval for small teams.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Employee Leave Application Portal</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Single Administrator Approval Queue</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Static Annual Leave Balance Entitlements</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Basic Leave Request History Log</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>CSV Leave Summary Export</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Email Notifications for Leave Decisions</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('leave')" class="btn-tier-action btn-tier-secondary">Compare Basic Specs</button>
+                    </div>
+
+                    <!-- Smart Edition (Highlighted) -->
+                    <div class="edition-tier-card highlighted">
+                        <div class="popular-badge">Most Popular</div>
+                        <h4 class="tier-name">Smart Edition</h4>
+                        <p class="tier-target">Automated monthly accruals, CL/SL/PL ledgers, and multi-tier approval chains.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Everything in Basic Edition</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Automated Monthly Leave Accruals</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Multi-Tier Approval Hierarchy (Manager &rarr; Admin)</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Dedicated Ledgers for CL, SL, and PL</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Centralized Institutional Holiday Master</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Negative Balance Prevention &amp; Grace Limits</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('leave')" class="btn-tier-action btn-tier-primary">Compare Smart Specs</button>
+                    </div>
+
+                    <!-- Pro Edition -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Pro Edition</h4>
+                        <p class="tier-target">Custom leave policies, payroll Loss of Pay (LOP) integration, and full compliance ledgers.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Everything in Smart Edition</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Attendance-Linked Loss of Pay (LOP) Sync</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Custom Organizational Leave Policies (Maternity/Paternity)</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Compensatory Off (Comp-Off) Crediting</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Annual Leave Encashment &amp; Rollover Engine</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Departmental Defaulter &amp; Leave Audit Trails</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('leave')" class="btn-tier-action btn-tier-secondary">Compare Pro Specs</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Payroll Management System -->
+            <div class="product-view-panel" id="productPanelPayroll" role="tabpanel" style="display: none;">
+                <div class="product-hero-strip">
+                    <div class="product-hero-info">
+                        <span class="badge" style="background: rgba(79, 70, 229, 0.12); color: var(--tech-indigo); font-weight: 700; font-size: 11px; text-transform: uppercase;">
+                            <i class="fa-solid fa-money-check-dollar"></i> Automated Compensation Engine
+                        </span>
+                        <h3 style="font-size: 24px; font-weight: 800; color: var(--text-heading); margin: 8px 0 6px 0;">
+                            Payroll Management System
+                        </h3>
+                        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin: 0; max-width: 820px;">
+                            Biometric attendance-synchronized compensation engine. Calculates salary structures, statutory deductions (PF, ESIC, PT, TDS), dynamic allowances, and net payouts based on biometric hours worked, approved leaves, and overtime. One-click monthly batch processing with PDF payslips.
+                        </p>
+                        <div class="product-chip-row" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px;">
+                            <span class="feature-chip"><i class="fa-solid fa-calculator"></i> Attendance-Linked Net Pay</span>
+                            <span class="feature-chip"><i class="fa-solid fa-file-invoice-dollar"></i> One-Click Batch Run</span>
+                            <span class="feature-chip"><i class="fa-solid fa-file-pdf"></i> Downloadable PDF Payslips</span>
+                            <span class="feature-chip"><i class="fa-solid fa-scale-balanced"></i> Statutory Deductions</span>
+                        </div>
+                    </div>
+                    <div class="product-hero-action">
+                        <button type="button" class="btn btn-secondary" onclick="openProductModal('payroll')" style="font-size: 12.5px; font-weight: 700; white-space: nowrap;">
+                            <i class="fa-solid fa-table-columns"></i> View Full Tier Matrix
+                        </button>
                     </div>
                 </div>
 
-                <!-- Feature 4: Bank-Grade Security & Anti-Spoof -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-shield-halved"></i></div>
-                    <h3 class="feature-card-title">Bank-Grade Biometric Security</h3>
-                    <p class="feature-card-text">Zero raw facial photos stored on edge capture devices—only irreversible 128-dimensional Euclidean mathematical vectors. Incorporates temporal anti-spoof liveness gating, tamper-proof logs, and strict tenant data isolation.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">128-d Vector Encryption</span>
-                        <span class="feature-chip">Anti-Spoof Liveness</span>
-                        <span class="feature-chip">Tamper-Proof Audit</span>
+                <!-- 3 Edition Tiers Matrix for Payroll -->
+                <div class="editions-grid" style="margin-top: 24px;">
+                    <!-- Basic Edition -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Basic Edition</h4>
+                        <p class="tier-target">Flat monthly salary calculations and individual payslip generation for small businesses.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Flat Base Salary Assignment</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Fixed Allowances &amp; Deductions Configuration</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Single-Employee Payslip Generation</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Monthly Payroll Register CSV Export</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Standard Printable Payslip View</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Basic Email Payslip Delivery</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('payroll')" class="btn-tier-action btn-tier-secondary">Compare Basic Specs</button>
                     </div>
-                </div>
 
-                <!-- Feature 5: Dynamic Multi-Shift Scheduling -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-clock-rotate-left"></i></div>
-                    <h3 class="feature-card-title">Dynamic Multi-Shift Scheduling</h3>
-                    <p class="feature-card-text">Configure flexible morning, evening, rotational, and overnight cross-midnight shifts with customizable grace periods, late arrival flags, half-day/full-day thresholds, and overtime calculations.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">Overnight Shifts</span>
-                        <span class="feature-chip">Grace Buffers</span>
-                        <span class="feature-chip">Rotational Rosters</span>
+                    <!-- Smart Edition (Highlighted) -->
+                    <div class="edition-tier-card highlighted">
+                        <div class="popular-badge">Most Popular</div>
+                        <h4 class="tier-name">Smart Edition</h4>
+                        <p class="tier-target">Dynamic compensation structures, automated biometric hours sync, and employee self-service.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Everything in Basic Edition</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Dynamic Salary Templates (% Basic, HRA, DA)</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Automated Biometric Attendance &amp; LOP Sync</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Statutory Deductions (PF, ESIC, PT, TDS)</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Employee Mobile Portal PDF Payslip Downloads</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Salary Revision History &amp; Effective Dates</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('payroll')" class="btn-tier-action btn-tier-primary">Compare Smart Specs</button>
                     </div>
-                </div>
 
-                <!-- Feature 6: Mobile GPS Geofencing -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-location-crosshairs"></i></div>
-                    <h3 class="feature-card-title">Mobile GPS Geofencing</h3>
-                    <p class="feature-card-text">Empower remote, sales, or field employees to mark attendance within authorized coordinates. Enforces precise Haversine perimeter fences with reverse geocoded street verification and location spoof protection.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">Haversine Perimeter</span>
-                        <span class="feature-chip">Street-Level Geocoding</span>
-                        <span class="feature-chip">Field Staff Self-Check</span>
-                    </div>
-                </div>
-
-                <!-- Feature 7: Automated Payroll System -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-money-check-dollar"></i></div>
-                    <h3 class="feature-card-title">Automated Payroll System</h3>
-                    <p class="feature-card-text">Biometric attendance hours, approved leaves, and overtime hours synchronize directly with customizable salary structures. One-click monthly batch calculations, allowance/deduction handling, and downloadable PDF payslips.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">Salary Templates</span>
-                        <span class="feature-chip">One-Click Batch Run</span>
-                        <span class="feature-chip">Downloadable PDF Slips</span>
-                    </div>
-                </div>
-
-                <!-- Feature 8: Leave & Holiday Governance -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-calendar-check"></i></div>
-                    <h3 class="feature-card-title">Leave & Holiday Ledger</h3>
-                    <p class="feature-card-text">Automated tracking for Paid Leaves (PL), Casual Leaves (CL), and Sick Leaves (SL). Features automated monthly accruals, multi-tier manager approval queues, balance ledgers, and centralized holiday calendars.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">Automated Accruals</span>
-                        <span class="feature-chip">Approval Queues</span>
-                        <span class="feature-chip">Holiday Master</span>
-                    </div>
-                </div>
-
-                <!-- Feature 9: Real-Time Biometric HUD -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper"><i class="fa-solid fa-chart-line"></i></div>
-                    <h3 class="feature-card-title">Real-Time Biometric HUD</h3>
-                    <p class="feature-card-text">Live Server-Sent Events (SSE) stream biometric clock-in events to executive dashboards instantly. Live headcount counters, department-wise attendance distribution, and one-click Excel/CSV report exports.</p>
-                    <div class="feature-chips">
-                        <span class="feature-chip">SSE Live Streaming</span>
-                        <span class="feature-chip">&lt; 250ms Vector Match</span>
-                        <span class="feature-chip">CSV / Excel Exports</span>
+                    <!-- Pro Edition -->
+                    <div class="edition-tier-card">
+                        <h4 class="tier-name">Pro Edition</h4>
+                        <p class="tier-target">Enterprise one-click batch processing, company-branded PDF payslips, and compliance registers.</p>
+                        <ul class="tier-features-list">
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>Everything in Smart Edition</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span><strong>1-Click Platform-Wide Batch Payroll Run</strong></span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Company-Branded PDF Payslips with QR Authentication</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Automated Batch Email Payslip Delivery</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Bank Transfer NEFT / RTGS Advice Sheet Generation</span></li>
+                            <li class="tier-feature-item"><i class="fa-solid fa-check"></i> <span>Statutory Compliance &amp; Multi-Department Ledgers</span></li>
+                        </ul>
+                        <button type="button" onclick="openProductModal('payroll')" class="btn-tier-action btn-tier-secondary">Compare Pro Specs</button>
                     </div>
                 </div>
             </div>
@@ -2856,16 +632,16 @@
                     <!-- Basic Tier -->
                     <div class="edition-tier-card">
                         <h4 class="tier-name">Basic Edition</h4>
-                        <p class="tier-target">Fastest 5-minute onboarding with zero specific hardware for startups & single offices.</p>
+                        <p class="tier-target">Essential facial biometric attendance and shift management for startups & single offices.</p>
                         
                         <ul class="tier-features-list">
                             <li class="tier-feature-item">
                                 <i class="fa-solid fa-check"></i>
-                                <span><strong>Fastest 5-Minute Onboarding</strong> (Bulk CSV)</span>
+                                <span><strong>Streamlined Roster Setup</strong> (Bulk CSV)</span>
                             </li>
                             <li class="tier-feature-item">
                                 <i class="fa-solid fa-check"></i>
-                                <span><strong>Zero Dedicated Hardware</strong> (Webcams & Laptops)</span>
+                                <span><strong>Standard Device Ready</strong> (Webcams & Laptops)</span>
                             </li>
                             <li class="tier-feature-item">
                                 <i class="fa-solid fa-check"></i>
@@ -3123,12 +899,12 @@
                 </div>
 
                 <div class="footer-col">
-                    <h4>Navigation</h4>
+                    <h4>Products &amp; Solutions</h4>
                     <ul class="footer-links">
+                        <li><a href="#product" onclick="selectProductView('attendance')">Face based Attendance System</a></li>
+                        <li><a href="#product" onclick="selectProductView('leave')">Leave Management Software</a></li>
+                        <li><a href="#product" onclick="selectProductView('payroll')">Payroll Management System</a></li>
                         <li><a href="#about">About Us</a></li>
-                        <li><a href="#product">Employee Management System</a></li>
-                        <li><a href="#editions">Software Edition Tiers</a></li>
-                        <li><a href="javascript:void(0)" onclick="openOnboardingModal(0)">Quick Onboarding Guide</a></li>
                         <li><a href="#contact">Contact Us</a></li>
                     </ul>
                 </div>
@@ -3168,864 +944,14 @@
         </div>
     </footer>
 
-    <!-- Screenshot Lightbox Modal -->
-    <div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox(event)">
-        <div class="lightbox-content" onclick="event.stopPropagation()">
-            <div class="lightbox-header">
-                <span class="lightbox-title" id="lightboxTitle">Module Preview</span>
-                <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close Preview">&times;</button>
-            </div>
-            <div class="lightbox-body">
-                <img src="" alt="Module Preview" class="lightbox-img" id="lightboxImg">
-            </div>
-        </div>
-    </div>
+    {% include "components/lightbox_modal.html" %}
 
-    <!-- Interactive Scripts -->
-    <script>
-        // Module Filtering Tabs
-        function filterModules(category) {
-            const cards = document.querySelectorAll('.walkthrough-card');
-            const btns = document.querySelectorAll('.demo-filter-btn');
-            
-            btns.forEach(b => b.classList.remove('active'));
-            if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
-            }
+    <script src="/static/js/landing.js?v=2.1"></script>
 
-            cards.forEach(card => {
-                if (category === 'all' || card.getAttribute('data-category') === category) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
+    {% include "components/demo_modal.html" %}
 
-        // Lightbox Modal Handlers
-        function openLightbox(imgSrc, title) {
-            const modal = document.getElementById('lightboxModal');
-            const img = document.getElementById('lightboxImg');
-            const titleEl = document.getElementById('lightboxTitle');
-            
-            img.src = imgSrc;
-            titleEl.textContent = title || 'Module Preview';
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
+    {% include "components/guide_modal.html" %}
 
-        function closeLightbox(event) {
-            const modal = document.getElementById('lightboxModal');
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-
-        // Keyboard Esc to Close Lightbox
-        window.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeLightbox();
-            }
-        });
-
-        // Mobile Nav Toggle
-        function toggleMobileNav() {
-            const menu = document.getElementById('navMenu');
-            if (menu.style.display === 'flex') {
-                menu.style.display = 'none';
-            } else {
-                menu.style.display = 'flex';
-                menu.style.flexDirection = 'column';
-                menu.style.position = 'absolute';
-                menu.style.top = '100%';
-                menu.style.left = '0';
-                menu.style.width = '100%';
-                menu.style.background = '#FFFFFF';
-                menu.style.padding = '24px';
-                menu.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
-                menu.style.zIndex = '999';
-            }
-        }
-
-        // Inquiry Form Handler
-        function handleInquirySubmit(event) {
-            event.preventDefault();
-            const btn = document.getElementById('btnSubmitInquiry');
-            const fb = document.getElementById('formFeedback');
-            const name = document.getElementById('inqName').value.trim();
-            const company = document.getElementById('inqCompany').value.trim();
-            const email = document.getElementById('inqEmail').value.trim();
-            const phone = document.getElementById('inqPhone').value.trim();
-            const edition = document.getElementById('inqEdition').value;
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Sending to Curiosity HUB...</span>';
-
-            setTimeout(() => {
-                fb.style.display = 'block';
-                fb.style.background = 'var(--success-soft)';
-                fb.style.border = '1px solid var(--success-emerald)';
-                fb.style.color = 'var(--success-emerald)';
-                fb.innerHTML = `<strong><i class="fa-solid fa-circle-check"></i> Thank you, ${name}!</strong><br>Your inquiry for the <strong>${edition} Edition</strong> has been received. Our Ahmedabad team will connect with you at <strong>${email}</strong> or <strong>${phone}</strong> shortly.`;
-                
-                document.getElementById('inquiryForm').reset();
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Inquiry Submitted Successfully</span>';
-                setTimeout(() => {
-                    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Submit Another Inquiry</span>';
-                }, 4000);
-            }, 600);
-        }
-
-        // =========================================================================
-        // Free Demo Self-Service Modal & OTP Controller
-        // =========================================================================
-        let currentDemoEmail = '';
-        let resendInterval = null;
-
-        function openFreeDemoModal() {
-            const modal = document.getElementById('freeDemoModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                goToDemoStep1();
-                setTimeout(() => {
-                    const nameInput = document.getElementById('demoName');
-                    if (nameInput) nameInput.focus();
-                }, 100);
-            }
-        }
-
-        function closeFreeDemoModal() {
-            const modal = document.getElementById('freeDemoModal');
-            if (modal) {
-                modal.style.display = 'none';
-                if (resendInterval) clearInterval(resendInterval);
-            }
-        }
-
-        function handleDemoModalOverlayClick(event) {
-            if (event.target && event.target.id === 'freeDemoModal') {
-                closeFreeDemoModal();
-            }
-        }
-
-        function goToDemoStep1() {
-            document.getElementById('demoStep1').style.display = 'block';
-            document.getElementById('demoStep2').style.display = 'none';
-            document.getElementById('demoStep1Feedback').style.display = 'none';
-            if (resendInterval) clearInterval(resendInterval);
-        }
-
-        async function handleDemoRequestOtp(event) {
-            event.preventDefault();
-            const btn = document.getElementById('btnRequestOtp');
-            const fb = document.getElementById('demoStep1Feedback');
-            const name = document.getElementById('demoName').value.trim();
-            const company = document.getElementById('demoCompany').value.trim();
-            const mobile = document.getElementById('demoMobile').value.trim();
-            const email = document.getElementById('demoEmail').value.trim().toLowerCase();
-
-            fb.style.display = 'none';
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Sending Verification Code...</span>';
-
-            try {
-                const res = await fetch('/api/v1/demo/request-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        company_name: company,
-                        mobile: mobile,
-                        email: email,
-                    }),
-                });
-
-                const data = await res.json();
-                if (res.ok) {
-                    currentDemoEmail = email;
-                    document.getElementById('displayTargetEmail').textContent = email;
-                    document.getElementById('demoStep1').style.display = 'none';
-                    document.getElementById('demoStep2').style.display = 'block';
-                    document.getElementById('demoStep2Feedback').style.display = 'none';
-                    document.getElementById('demoOtpCode').value = '';
-                    setTimeout(() => {
-                        document.getElementById('demoOtpCode').focus();
-                    }, 100);
-                    startResendTimer(60);
-                } else {
-                    fb.style.display = 'block';
-                    fb.className = 'demo-alert demo-alert-error';
-                    fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Unable to send verification code. Please check details and try again.'}`;
-                }
-            } catch (err) {
-                fb.style.display = 'block';
-                fb.className = 'demo-alert demo-alert-error';
-                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server. Please check your connection.';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send Verification Code</span>';
-            }
-        }
-
-        async function handleDemoVerifyOtp(event) {
-            event.preventDefault();
-            const btn = document.getElementById('btnVerifyOtp');
-            const fb = document.getElementById('demoStep2Feedback');
-            const otp = document.getElementById('demoOtpCode').value.trim();
-
-            if (!otp || otp.length !== 6) {
-                fb.style.display = 'block';
-                fb.className = 'demo-alert demo-alert-error';
-                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Please enter the complete 6-digit verification code.';
-                return;
-            }
-
-            fb.style.display = 'none';
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Activating 7-Day Pro Portal...</span>';
-
-            try {
-                const res = await fetch('/api/v1/demo/verify-and-provision', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: currentDemoEmail,
-                        otp: otp,
-                    }),
-                });
-
-                const data = await res.json();
-                if (res.ok) {
-                    fb.style.display = 'block';
-                    fb.className = 'demo-alert demo-alert-success';
-                    fb.innerHTML = `<strong><i class="fa-solid fa-circle-check"></i> Demo Activated!</strong><br>Credentials emailed to <strong>${currentDemoEmail}</strong>.<br>Launching your workspace in 2 seconds...`;
-
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Portal Ready! Redirecting...</span>';
-                    setTimeout(() => {
-                        window.location.href = data.redirect_url || '/dashboard';
-                    }, 1800);
-                } else {
-                    fb.style.display = 'block';
-                    fb.className = 'demo-alert demo-alert-error';
-                    fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Invalid verification code.'}`;
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Verify & Launch My Demo</span>';
-                }
-            } catch (err) {
-                fb.style.display = 'block';
-                fb.className = 'demo-alert demo-alert-error';
-                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error activating demo. Please try again.';
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Verify & Launch My Demo</span>';
-            }
-        }
-
-        function startResendTimer(seconds) {
-            if (resendInterval) clearInterval(resendInterval);
-            let remaining = seconds;
-            const timerSpan = document.getElementById('resendTimer');
-            const countdownText = document.getElementById('resendCountdownText');
-            const resendBtn = document.getElementById('btnResendOtp');
-
-            countdownText.style.display = 'inline';
-            resendBtn.style.display = 'none';
-            timerSpan.textContent = remaining;
-
-            resendInterval = setInterval(() => {
-                remaining--;
-                if (remaining <= 0) {
-                    clearInterval(resendInterval);
-                    countdownText.style.display = 'none';
-                    resendBtn.style.display = 'inline';
-                } else {
-                    timerSpan.textContent = remaining;
-                }
-            }, 1000);
-        }
-
-        async function handleResendOtp() {
-            const fb = document.getElementById('demoStep2Feedback');
-            const resendBtn = document.getElementById('btnResendOtp');
-            resendBtn.disabled = true;
-            resendBtn.textContent = 'Resending...';
-
-            try {
-                const name = document.getElementById('demoName').value.trim();
-                const company = document.getElementById('demoCompany').value.trim();
-                const mobile = document.getElementById('demoMobile').value.trim();
-
-                const res = await fetch('/api/v1/demo/request-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        company_name: company,
-                        mobile: mobile,
-                        email: currentDemoEmail,
-                    }),
-                });
-
-                const data = await res.json();
-                if (res.ok) {
-                    fb.style.display = 'block';
-                    fb.className = 'demo-alert demo-alert-success';
-                    fb.innerHTML = '<i class="fa-solid fa-paper-plane"></i> A fresh verification code has been dispatched to your email.';
-                    startResendTimer(60);
-                } else {
-                    fb.style.display = 'block';
-                    fb.className = 'demo-alert demo-alert-error';
-                    fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Unable to resend OTP.'}`;
-                    resendBtn.disabled = false;
-                    resendBtn.textContent = 'Resend Verification Code';
-                }
-            } catch (err) {
-                fb.style.display = 'block';
-                fb.className = 'demo-alert demo-alert-error';
-                fb.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error. Please try again.';
-                resendBtn.disabled = false;
-                resendBtn.textContent = 'Resend Verification Code';
-            }
-        }
-
-        // Expose Free Demo controllers globally on window
-        window.openFreeDemoModal = openFreeDemoModal;
-        window.closeFreeDemoModal = closeFreeDemoModal;
-        window.goToDemoStep1 = goToDemoStep1;
-        window.handleDemoModalOverlayClick = handleDemoModalOverlayClick;
-        window.handleDemoRequestOtp = handleDemoRequestOtp;
-        window.handleDemoVerifyOtp = handleDemoVerifyOtp;
-        window.handleResendOtp = handleResendOtp;
-
-        // Defensive event binding for Free Demo CTA buttons
-        document.addEventListener('DOMContentLoaded', function() {
-            const demoBtn = document.getElementById('btnNavFreeDemo');
-            if (demoBtn) {
-                demoBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    openFreeDemoModal();
-                });
-            }
-        });
-
-        // =========================================================================
-        // Quick Onboarding Interactive Guide Modal Controller
-        // =========================================================================
-        const ONBOARDING_STEPS = [
-            {
-                stepNum: 0,
-                title: "Step 0: Prerequisite & Administrator Login",
-                badge: "Initial Setup",
-                time: "1 Min",
-                role: "Super Admin / Tenant Admin",
-                desc: "Upon tenant provisioning, the administrator accesses the dedicated organizational portal (<code>/{tenant_id}</code> or <code>/login</code>) using the automatically dispatched credentials.",
-                checklist: [
-                    "Navigate to your company tenant login URL.",
-                    "Authenticate using the issued Admin Email and secure password.",
-                    "Verify top-right tenant badge confirming your organizational workspace."
-                ],
-                callout: "Credentials are automatically emailed to your registered administrative address upon registration.",
-                images: [
-                    { src: "/screenshots/walkthrough/01_login_portal.png", label: "Tenant Administrator Login Portal", caption: "Secure entry point with tenant-specific branding and credential validation." }
-                ]
-            },
-            {
-                stepNum: 1,
-                title: "Step 1: Organization Settings & Branch Locations",
-                badge: "Workspace Foundation",
-                time: "2 Mins",
-                role: "Tenant Admin",
-                desc: "Establish your corporate identity, upload your official company logo, specify legal business entities, and register multi-location branches with physical street addresses.",
-                checklist: [
-                    "Go to Settings -> Organization Profile.",
-                    "Upload company brand logo and verify real-time preview across portal headers.",
-                    "Define physical office branch locations, primary contact details, and local time zones."
-                ],
-                callout: "All registered branch locations are immediately linked to geofencing and multi-location attendance routing.",
-                images: [
-                    { src: "/screenshots/walkthrough/15_settings_organization_profile.png", label: "Organization Profile & Multi-Branch Setup", caption: "Configure tenant profile, corporate identity, and multi-location branch offices." }
-                ]
-            },
-            {
-                stepNum: 2,
-                title: "Step 2: Themes & Appearance Customization",
-                badge: "Branding",
-                time: "1 Min",
-                role: "Tenant Admin",
-                desc: "Align the platform with your company brand guidelines by configuring custom primary colors, accent gradients, dark/light themes, and dashboard layouts.",
-                checklist: [
-                    "Navigate to Settings -> Themes & Appearance.",
-                    "Select your preferred color theme or customize brand hex codes.",
-                    "Save changes to instantly reflect across all administrative and employee interfaces."
-                ],
-                callout: "Theme preferences persist across all browser sessions and kiosks for consistent branding.",
-                images: [
-                    { src: "/screenshots/walkthrough/16_settings_themes_appearance.png", label: "Themes & Appearance Settings", caption: "Dynamic theme switching and custom corporate color scheme configuration." }
-                ]
-            },
-            {
-                stepNum: 3,
-                title: "Step 3: Departments & Designation Hierarchy",
-                badge: "Master Data",
-                time: "2 Mins",
-                role: "HR / Operations",
-                desc: "Define organizational structure by configuring department masters (Engineering, Sales, Operations, HR) and tiered designation levels with reporting lines.",
-                checklist: [
-                    "Go to Settings -> Departments to add functional departments and assign department heads.",
-                    "Go to Settings -> Designations to establish organizational hierarchy and job roles.",
-                    "Verify department-designation linkage for streamlined employee assignment."
-                ],
-                callout: "Departmental masters automatically feed into attendance filtering, leave approvals, and payroll categorization.",
-                images: [
-                    { src: "/screenshots/walkthrough/17_settings_departments.png", label: "Department Masters Setup", caption: "Create and organize functional departments with designated department leads." },
-                    { src: "/screenshots/walkthrough/18_settings_designations.png", label: "Designation & Hierarchy Setup", caption: "Establish corporate hierarchy, title classifications, and job levels." }
-                ]
-            },
-            {
-                stepNum: 4,
-                title: "Step 4: Shifts, Timing Rules & GPS Geofencing",
-                badge: "Operational Rules",
-                time: "3 Mins",
-                role: "Operations Admin",
-                desc: "Configure work schedules, flexible timing windows, grace periods, half-day thresholds, and pin tamper-proof GPS coordinates with meter radius geofencing for remote or mobile check-ins.",
-                checklist: [
-                    "Navigate to Settings -> Shift Configuration to define start time, end time, and grace intervals.",
-                    "Configure overtime policies, half-day cutoffs, and weekly off rotations.",
-                    "Set GPS Geofencing coordinates and authorized radius (50m - 500m) for mobile attendance portals."
-                ],
-                callout: "The anti-spoofing engine cross-checks real-time browser GPS coordinates against authorized site perimeters.",
-                images: [
-                    { src: "/screenshots/walkthrough/19_settings_shifts_rules.png", label: "Shift Scheduling & Policy Configuration", caption: "Set flexible work hours, grace periods, late arrival cutoffs, and overtime rules." },
-                    { src: "/screenshots/walkthrough/21_settings_geofencing_portals.png", label: "GPS Geofencing & Location Portals", caption: "Pinpoint authorized office perimeter radiuses for zero-fraud remote and mobile attendance." }
-                ]
-            },
-            {
-                stepNum: 5,
-                title: "Step 5: Employee Registration & 3-Angle Facial Biometrics",
-                badge: "Workforce Enrollment",
-                time: "3 Mins",
-                role: "HR Admin / Employee",
-                desc: "Rapidly enroll your workforce through two flexible methods: direct administrative capture or employee smartphone self-onboarding link. Multi-angle captures (Frontal, Left, Right) ensure 99.8% sub-second match precision.",
-                checklist: [
-                    "Method A (Admin): Go to Employees -> 'Register Employee', enter profile, and capture 3 facial angles via webcam.",
-                    "Method B (Self-Onboard): Share tokenized magic link (/onboard/{uuid}/{token}) with employees for frictionless smartphone photo registration.",
-                    "High-precision 128-dimensional embedding vectors are generated and indexed in memory for sub-second recognition."
-                ],
-                callout: "Multi-angle facial enrollment guarantees lightning-fast identification even under varying lighting conditions, spectacles, or head turns.",
-                images: [
-                    { src: "/screenshots/walkthrough/05_register_new_employee.png", label: "3-Angle Biometric Employee Enrollment", caption: "Guided facial capture with real-time liveness feedback and instant feature vector extraction." }
-                ]
-            },
-            {
-                stepNum: 6,
-                title: "Step 6: Employee Directory & Profile Lifecycle",
-                badge: "Workforce Management",
-                time: "2 Mins",
-                role: "HR Admin",
-                desc: "Centrally oversee the master employee directory with real-time search, department filtering, biometric status badges, credential resets, and full lifecycle edits.",
-                checklist: [
-                    "Browse the full employee roster with biometric registration badges.",
-                    "Click 'Edit' on any profile to update salary templates, assigned shifts, reporting managers, or personal info.",
-                    "Use quick actions to toggle active/inactive status or reset employee self-service portal passwords."
-                ],
-                callout: "Soft-delete safeguards and audit trails ensure no historical attendance or payroll records are lost.",
-                images: [
-                    { src: "/screenshots/walkthrough/03_employee_directory.png", label: "Master Employee Directory", caption: "Searchable employee roster with biometric status indicators, department tags, and quick actions." },
-                    { src: "/screenshots/walkthrough/04_employee_edit_modal.png", label: "Employee Profile Lifecycle Editor", caption: "Manage salary assignment, branch location, shift policies, and contact information." }
-                ]
-            },
-            {
-                stepNum: 7,
-                title: "Step 7: Live Biometric Attendance Scanner & Real-Time HUD",
-                badge: "Daily Operations",
-                time: "Instant",
-                role: "Kiosk / Receptionist / Security",
-                desc: "Launch the zero-hardware live biometric scanner on any PC, iPad, tablet, or kiosk webcam. Real-time HUD detects faces, runs Euclidean matching in <250ms, and flashes positive confirmation.",
-                checklist: [
-                    "Open the Dashboard live scanner terminal (or dedicated fullscreen kiosk view).",
-                    "Point any USB or built-in webcam toward the entrance.",
-                    "Staff walk past the camera; system auto-detects, validates anti-spoof liveness, logs In/Out timestamps, and displays personalized greeting cues."
-                ],
-                callout: "Zero specialized biometric hardware required. Standard 720p/1080p webcams deliver institutional-grade throughput.",
-                images: [
-                    { src: "/screenshots/walkthrough/02_dashboard_live.png", label: "Live Face Recognition Terminal", caption: "Sub-250ms recognition HUD with real-time liveness detection, punch confirmation, and occupancy counts." }
-                ]
-            },
-            {
-                stepNum: 8,
-                title: "Step 8: Daily Attendance Logs, In/Out Tracking & Auditing",
-                badge: "Compliance & Auditing",
-                time: "1 Min",
-                role: "HR / Line Managers",
-                desc: "Inspect real-time daily punch records, filter by date ranges, departments, or shifts, review confidence scores, and perform administrative manual adjustments with tamper-proof audit trails.",
-                checklist: [
-                    "Access Attendance Logs to view real-time entry/exit timestamps, work durations, and status (Present, Late, Half-day).",
-                    "Filter by specific date ranges, branch offices, or employee codes.",
-                    "Perform manual time adjustments or soft deletions with mandatory audit remarks when authorized."
-                ],
-                callout: "All manual adjustments are permanently logged with administrator ID and timestamp for statutory audit compliance.",
-                images: [
-                    { src: "/screenshots/walkthrough/06_attendance_logs_active.png", label: "Comprehensive Attendance Log Ledger", caption: "Detailed punch timelines, calculated working hours, late marks, and exportable CSV reports." },
-                    { src: "/screenshots/walkthrough/07_attendance_logs_soft_delete_modal.png", label: "Audited Record Modification & Soft Delete", caption: "Secure modal requiring administrative justification for attendance record corrections." }
-                ]
-            },
-            {
-                stepNum: 9,
-                title: "Step 9: Statutory Leaves & Automated Indian Payroll",
-                badge: "Payroll Automation",
-                time: "3 Mins",
-                role: "Payroll / Finance Admin",
-                desc: "Eliminate spreadsheet chaos with 1-click payroll processing. Automatically syncs monthly attendance data, calculates paid/unpaid leaves, computes Indian statutory deductions (PF, ESIC, PT, TDS), and generates downloadable PDF payslips.",
-                checklist: [
-                    "Navigate to Leave Management to review leave ledgers, allocate quotas (CL, SL, EL), and approve employee requests.",
-                    "Open Payroll -> Monthly Batches to trigger automated salary computation synced with biometric attendance logs.",
-                    "Review component breakdown (Basic, HRA, Allowances, PF, PT, Net Payable) and dispatch digital payslips to staff."
-                ],
-                callout: "Statutory deduction tables follow latest Indian Ministry of Labour compliance guidelines.",
-                images: [
-                    { src: "/screenshots/walkthrough/14_leave_management.png", label: "Statutory Leave Ledger & Approval System", caption: "Allocate annual leave quotas, track balance consumption, and process leave applications." },
-                    { src: "/screenshots/walkthrough/09_payroll_monthly_batches.png", label: "Automated Monthly Payroll Batch Execution", caption: "One-click attendance-to-salary reconciliation with automatic deduction calculations." },
-                    { src: "/screenshots/walkthrough/10_payroll_employee_structures.png", label: "Employee Salary Structure Configuration", caption: "Granular salary component builder supporting allowances, reimbursements, and statutory compliance." }
-                ]
-            }
-        ];
-
-        let currentGuideStepIndex = 0;
-
-        function openOnboardingModal(stepIndex = 0) {
-            const modal = document.getElementById('onboardingGuideModal');
-            if (!modal) return;
-            currentGuideStepIndex = (typeof stepIndex === 'number' && stepIndex >= 0 && stepIndex < ONBOARDING_STEPS.length) ? stepIndex : 0;
-            renderGuideStep(currentGuideStepIndex);
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeOnboardingModal() {
-            const modal = document.getElementById('onboardingGuideModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            const lightbox = document.getElementById('lightboxModal');
-            const demoModal = document.getElementById('freeDemoModal');
-            const isLightboxOpen = lightbox && lightbox.style.display === 'flex';
-            const isDemoOpen = demoModal && demoModal.style.display === 'flex';
-            if (!isLightboxOpen && !isDemoOpen) {
-                document.body.style.overflow = '';
-            }
-        }
-
-        function handleGuideModalOverlayClick(event) {
-            if (event.target && event.target.id === 'onboardingGuideModal') {
-                closeOnboardingModal();
-            }
-        }
-
-        function nextGuideStep() {
-            if (currentGuideStepIndex < ONBOARDING_STEPS.length - 1) {
-                currentGuideStepIndex++;
-                renderGuideStep(currentGuideStepIndex);
-            }
-        }
-
-        function prevGuideStep() {
-            if (currentGuideStepIndex > 0) {
-                currentGuideStepIndex--;
-                renderGuideStep(currentGuideStepIndex);
-            }
-        }
-
-        function renderGuideStep(index) {
-            if (index < 0 || index >= ONBOARDING_STEPS.length) return;
-            currentGuideStepIndex = index;
-            const step = ONBOARDING_STEPS[index];
-
-            const progressPercent = Math.round(((index + 1) / ONBOARDING_STEPS.length) * 100);
-            const pFill = document.getElementById('guideProgressBar');
-            if (pFill) pFill.style.width = progressPercent + '%';
-
-            const select = document.getElementById('guideStepSelect');
-            if (select) select.value = index;
-
-            const counter = document.getElementById('guideStepCounter');
-            if (counter) counter.textContent = `Step ${index + 1} of ${ONBOARDING_STEPS.length}`;
-
-            const btnPrev = document.getElementById('btnGuidePrev');
-            const btnNext = document.getElementById('btnGuideNext');
-            if (btnPrev) btnPrev.disabled = (index === 0);
-            if (btnNext) btnNext.disabled = (index === ONBOARDING_STEPS.length - 1);
-
-            // Update In-Modal Step Pills
-            const pills = document.querySelectorAll('.guide-step-pill');
-            pills.forEach((p, i) => {
-                if (i === index) {
-                    p.classList.add('active');
-                    p.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                } else {
-                    p.classList.remove('active');
-                }
-            });
-
-            const body = document.getElementById('guideModalBody');
-            if (!body) return;
-
-            let checklistHtml = '';
-            step.checklist.forEach(item => {
-                checklistHtml += `<li><i class="fa-solid fa-circle-check" style="color: #10B981; margin-top: 3px; flex-shrink: 0;"></i> <span>${item}</span></li>`;
-            });
-
-            let imagesHtml = '';
-            step.images.forEach(img => {
-                imagesHtml += `
-                    <div style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: #FFFFFF; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onclick="openLightbox('${img.src}', '${img.label.replace(/'/g, "\\'")}')">
-                        <div style="background: #0F172A; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between;">
-                            <span style="font-size: 12px; font-weight: 700; color: #F8FAFC; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-regular fa-image" style="color: #FB923C;"></i> ${img.label}
-                            </span>
-                            <span style="font-size: 11px; color: #94A3B8; display: flex; align-items: center; gap: 4px;">
-                                <i class="fa-solid fa-magnifying-glass-plus"></i> Click to Zoom
-                            </span>
-                        </div>
-                        <img src="${img.src}" alt="${img.label}" loading="lazy" style="width: 100%; height: auto; display: block; border-bottom: 1px solid var(--border-subtle);">
-                        <div style="padding: 10px 14px; font-size: 12px; color: var(--text-muted); background: #F8FAFC; line-height: 1.4;">
-                            ${img.caption}
-                        </div>
-                    </div>
-                `;
-            });
-
-            body.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 20px;">
-                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                                <span class="step-badge" style="background: var(--accent-light); color: var(--accent-primary); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; border: 1px solid rgba(234, 88, 12, 0.2);">
-                                    ${step.badge}
-                                </span>
-                                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                                    <i class="fa-regular fa-clock" style="color: var(--accent-primary);"></i> Est. Time: ${step.time}
-                                </span>
-                                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                                    <i class="fa-regular fa-user" style="color: var(--accent-primary);"></i> Role: ${step.role}
-                                </span>
-                            </div>
-                            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-heading); margin: 0 0 8px 0;">
-                                ${step.title}
-                            </h3>
-                            <p style="font-size: 14px; color: var(--text-body); line-height: 1.6; margin: 0;">
-                                ${step.desc}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div style="background: #F8FAFC; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px 20px;">
-                        <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-list-check" style="color: var(--accent-primary);"></i> Required Setup Checklist
-                        </h4>
-                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; color: var(--text-body); line-height: 1.5;">
-                            ${checklistHtml}
-                        </ul>
-                    </div>
-
-                    <div style="background: rgba(234, 88, 12, 0.06); border-left: 4px solid var(--accent-primary); border-radius: 0 10px 10px 0; padding: 12px 18px; font-size: 13px; color: #9A3412; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
-                        <i class="fa-solid fa-lightbulb" style="color: var(--accent-primary); font-size: 15px; margin-top: 2px;"></i>
-                        <div><strong>Pro Tip:</strong> ${step.callout}</div>
-                    </div>
-
-                    <div>
-                        <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-heading); margin: 0 0 14px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-display" style="color: var(--accent-primary);"></i> Screenshot Walkthrough & UI Reference
-                        </h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-                            ${imagesHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
-            body.scrollTop = 0;
-        }
-
-        // Global Esc & Arrow Key support for Onboarding Modal
-        window.addEventListener('keydown', function(e) {
-            const guideModal = document.getElementById('onboardingGuideModal');
-            if (guideModal && guideModal.style.display === 'flex') {
-                if (e.key === 'Escape') {
-                    closeOnboardingModal();
-                } else if (e.key === 'ArrowRight') {
-                    nextGuideStep();
-                } else if (e.key === 'ArrowLeft') {
-                    prevGuideStep();
-                }
-            }
-        });
-
-        // Expose onboarding functions to window
-        window.openOnboardingModal = openOnboardingModal;
-        window.closeOnboardingModal = closeOnboardingModal;
-        window.handleGuideModalOverlayClick = handleGuideModalOverlayClick;
-        window.renderGuideStep = renderGuideStep;
-        window.nextGuideStep = nextGuideStep;
-        window.prevGuideStep = prevGuideStep;
-    </script>
-
-    <!-- Free Demo Self-Service Modal Dialog -->
-    <div id="freeDemoModal" class="demo-modal-overlay" onclick="handleDemoModalOverlayClick(event)">
-        <div class="demo-modal-dialog">
-            <div class="demo-modal-header">
-                <div class="demo-modal-title-group">
-                    <div class="demo-pill-badge">
-                        <i class="fa-solid fa-rocket"></i> 7-Day Pro Trial
-                    </div>
-                    <h3 class="demo-modal-title">Experience Curiosity HUB Free Demo</h3>
-                    <p class="demo-modal-subtitle">Instant zero-hardware facial recognition attendance and automated payroll in 60 seconds.</p>
-                </div>
-                <button type="button" class="demo-modal-close" onclick="closeFreeDemoModal()">&times;</button>
-            </div>
-
-            <!-- Step 1: User & Company Info -->
-            <div id="demoStep1" class="demo-modal-body">
-                <form id="demoRequestForm" onsubmit="handleDemoRequestOtp(event)">
-                    <div class="demo-form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="demoName">Your Full Name <span class="required">*</span></label>
-                            <input type="text" id="demoName" class="form-input" placeholder="e.g. Rajesh Shah" required minlength="2">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="demoCompany">Company / Business Name <span class="required">*</span></label>
-                            <input type="text" id="demoCompany" class="form-input" placeholder="e.g. Apex Global Logistics" required minlength="2">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="demoMobile">Mobile Number <span class="required">*</span></label>
-                            <input type="tel" id="demoMobile" class="form-input" placeholder="e.g. 9876543210" required pattern="[0-9]{10,12}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="demoEmail">Official / Work Email <span class="required">*</span></label>
-                            <input type="email" id="demoEmail" class="form-input" placeholder="e.g. rajesh@apexlogistics.com" required>
-                        </div>
-                    </div>
-
-                    <div class="demo-perks-row">
-                        <div class="demo-perk"><i class="fa-solid fa-check"></i> 7 Days Full Pro Edition</div>
-                        <div class="demo-perk"><i class="fa-solid fa-check"></i> Zero Dedicated Hardware</div>
-                        <div class="demo-perk"><i class="fa-solid fa-check"></i> Automated Email Credentials</div>
-                    </div>
-
-                    <div id="demoStep1Feedback" class="demo-alert" style="display: none;"></div>
-
-                    <button type="submit" id="btnRequestOtp" class="btn-demo-submit">
-                        <i class="fa-solid fa-paper-plane"></i>
-                        <span>Send Verification Code</span>
-                    </button>
-                </form>
-            </div>
-
-            <!-- Step 2: 6-Digit OTP Verification -->
-            <div id="demoStep2" class="demo-modal-body" style="display: none;">
-                <form id="demoVerifyForm" onsubmit="handleDemoVerifyOtp(event)">
-                    <div class="otp-instruction-card">
-                        <div class="otp-icon-wrap"><i class="fa-solid fa-envelope-circle-check"></i></div>
-                        <p class="otp-sent-text">We have sent a 6-digit verification code to <strong id="displayTargetEmail"></strong> via AWS SES. Please enter it below to launch your demo:</p>
-                    </div>
-
-                    <div class="form-group otp-group">
-                        <label class="form-label" for="demoOtpCode" style="text-align: center; display: block; margin-bottom: 8px;">Enter 6-Digit Verification Code</label>
-                        <input type="text" id="demoOtpCode" class="form-input otp-code-input" placeholder="1 2 3 4 5 6" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code">
-                    </div>
-
-                    <div id="demoStep2Feedback" class="demo-alert" style="display: none;"></div>
-
-                    <button type="submit" id="btnVerifyOtp" class="btn-demo-submit">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <span>Verify & Launch My Demo</span>
-                    </button>
-
-                    <div class="otp-resend-row">
-                        <span id="resendCountdownText">Resend code in <strong id="resendTimer">60</strong>s</span>
-                        <button type="button" id="btnResendOtp" class="btn-resend-link" onclick="handleResendOtp()" style="display: none;">
-                            Resend Verification Code
-                        </button>
-                        &bull;
-                        <button type="button" class="btn-change-email" onclick="goToDemoStep1()">Edit Details</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Onboarding Interactive Guide Modal Dialog -->
-    <div id="onboardingGuideModal" class="guide-modal-overlay" onclick="handleGuideModalOverlayClick(event)">
-        <div class="guide-modal-dialog">
-            <div class="guide-modal-header">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div class="demo-pill-badge" style="background: rgba(234, 88, 12, 0.2); color: #FB923C; border: 1px solid rgba(234, 88, 12, 0.4);">
-                        <i class="fa-solid fa-compass"></i> Interactive Walkthrough
-                    </div>
-                    <div>
-                        <h3 style="margin: 0; font-size: 17px; font-weight: 750; color: #FFFFFF;" id="guideModalTitle">Quick Onboarding Guide</h3>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #94A3B8;" id="guideModalSubtitle">Complete administrator setup &amp; operational workflow</p>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 14px;">
-                    <select id="guideStepSelect" onchange="renderGuideStep(parseInt(this.value))" style="background: #1E293B; color: #E2E8F0; border: 1px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; outline: none;">
-                        <option value="0">Step 0: Prerequisite & Login</option>
-                        <option value="1">Step 1: Organization Settings</option>
-                        <option value="2">Step 2: Themes & Appearance</option>
-                        <option value="3">Step 3: Departments & Designations</option>
-                        <option value="4">Step 4: Shifts & Geofencing</option>
-                        <option value="5">Step 5: Employee Registration</option>
-                        <option value="6">Step 6: Employee Directory</option>
-                        <option value="7">Step 7: Live Attendance Scanner</option>
-                        <option value="8">Step 8: Logs & Auditing</option>
-                        <option value="9">Step 9: Leaves & Payroll</option>
-                    </select>
-                    <button type="button" class="demo-modal-close" onclick="closeOnboardingModal()" aria-label="Close Guide">&times;</button>
-                </div>
-            </div>
-
-            <!-- Progress Bar -->
-            <div class="guide-modal-progress-bar">
-                <div class="guide-modal-progress-fill" id="guideProgressBar"></div>
-            </div>
-
-            <!-- In-Modal Step Jump Pills Bar -->
-            <div class="guide-modal-pills-bar" id="guideModalPillsBar">
-                <button type="button" class="guide-step-pill active" onclick="renderGuideStep(0)"><span class="guide-pill-num">0</span> Login</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(1)"><span class="guide-pill-num">1</span> Org & Locations</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(2)"><span class="guide-pill-num">2</span> Themes</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(3)"><span class="guide-pill-num">3</span> Departments</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(4)"><span class="guide-pill-num">4</span> Shifts & GPS</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(5)"><span class="guide-pill-num">5</span> Enrollment</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(6)"><span class="guide-pill-num">6</span> Directory</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(7)"><span class="guide-pill-num">7</span> Live Scanner</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(8)"><span class="guide-pill-num">8</span> Attendance Logs</button>
-                <button type="button" class="guide-step-pill" onclick="renderGuideStep(9)"><span class="guide-pill-num">9</span> Leaves & Payroll</button>
-            </div>
-
-            <!-- Scrollable Body with Dynamic Content -->
-            <div class="guide-modal-body" id="guideModalBody">
-                <!-- Dynamically rendered by renderGuideStep(stepIndex) -->
-            </div>
-
-            <!-- Modal Navigation Footer -->
-            <div class="guide-modal-footer">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button type="button" class="btn-guide-nav" id="btnGuidePrev" onclick="prevGuideStep()">
-                        <i class="fa-solid fa-chevron-left"></i> Previous
-                    </button>
-                    <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;" id="guideStepCounter">Step 1 of 10</span>
-                    <button type="button" class="btn-guide-nav" id="btnGuideNext" onclick="nextGuideStep()">
-                        Next <i class="fa-solid fa-chevron-right"></i>
-                    </button>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button type="button" class="btn-guide-nav" onclick="closeOnboardingModal()">
-                        Close Guide
-                    </button>
-                    <button type="button" class="btn-guide-nav btn-guide-primary" onclick="closeOnboardingModal(); openFreeDemoModal();">
-                        <i class="fa-solid fa-rocket"></i> Launch Free Demo
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include "components/product_modal.html" %}
 </body>
 </html>

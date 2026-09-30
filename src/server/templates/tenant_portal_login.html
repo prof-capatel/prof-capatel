@@ -650,9 +650,13 @@
             }
         }
 
-        // Background-resilient camera lifecycle: maintain stream during window blur and tab switches
-        window.addEventListener("pagehide", () => {
-            stopCameraStream();
+        // Visibility & Window Focus Lifecycle Listeners (Alt+Tab / Tab Switch Detection)
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                stopCameraStream();
+            } else {
+                resumeCameraStream();
+            }
         });
 
         window.addEventListener("pagehide", () => {

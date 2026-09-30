@@ -1,0 +1,12 @@
+<!-- Screenshot Lightbox Modal Component -->
+<div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+        <div class="lightbox-header">
+            <span class="lightbox-title" id="lightboxTitle">Module Preview</span>
+            <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close Preview">&times;</button>
+        </div>
+        <div class="lightbox-body">
+            <img src="" alt="Module Preview" class="lightbox-img" id="lightboxImg">
+        </div>
+    </div>
+</div>

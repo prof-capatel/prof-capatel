@@ -1,0 +1,68 @@
+<div id="editDepartmentModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> Edit Department</h3>
+            <button class="modal-close" onclick="closeEditDepartmentModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form onsubmit="submitEditDepartment(event)">
+            <div class="modal-body">
+                <input type="hidden" id="editDeptId">
+                <div class="form-group">
+                    <label class="form-label">Department Name *</label>
+                    <input type="text" id="editDeptName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Department Code</label>
+                    <input type="text" id="editDeptCode" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="editDeptDesc" class="form-control" rows="3"></textarea>
+                </div>
+                <div id="editDeptAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditDepartmentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- MODAL: EDIT CLASS                                         -->
+<!-- ========================================================= -->
+<div id="editClassModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square" style="color: var(--accent-primary);"></i> Edit Class</h3>
+            <button class="modal-close" onclick="closeEditClassModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form onsubmit="submitEditClass(event)">
+            <div class="modal-body">
+                <input type="hidden" id="editClassId">
+                <div class="form-group">
+                    <label class="form-label">Department *</label>
+                    <select id="editClassDeptSelect" class="form-control" required>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Class Name *</label>
+                    <input type="text" id="editClassName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Class Code</label>
+                    <input type="text" id="editClassCode" class="form-control">
+                </div>
+                <div id="editClassAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditClassModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>

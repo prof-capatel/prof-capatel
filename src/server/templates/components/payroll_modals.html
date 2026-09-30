@@ -1,0 +1,389 @@
+<div id="generateBatchModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary);"></i>
+                    <span>Generate Monthly Payroll Batch</span>
+                </h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Processes biometric attendance, leaves, overtime, and statutory deductions for all active employees.
+                </p>
+            </div>
+            <button class="modal-close" onclick="closeGenerateBatchModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="generateBatchForm" onsubmit="submitGenerateBatch(event)">
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Period Month *</label>
+                        <select id="batchPeriodMonth" class="form-control" required>
+                            <option value="1">1 - January</option>
+                            <option value="2">2 - February</option>
+                            <option value="3">3 - March</option>
+                            <option value="4">4 - April</option>
+                            <option value="5">5 - May</option>
+                            <option value="6">6 - June</option>
+                            <option value="7">7 - July</option>
+                            <option value="8">8 - August</option>
+                            <option value="9" selected>9 - September</option>
+                            <option value="10">10 - October</option>
+                            <option value="11">11 - November</option>
+                            <option value="12">12 - December</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Period Year *</label>
+                        <input type="number" id="batchPeriodYear" class="form-control" value="2026" min="2020" max="2030" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Total Monthly Working Days *</label>
+                    <input type="number" step="0.5" id="batchWorkingDays" class="form-control" value="26.0" required>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Standard working days in month excluding weekly offs (typically 26.0).</div>
+                </div>
+
+                <div id="batchGenerateAlert" style="display: none; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px; margin-top: 12px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeGenerateBatchModal()">Cancel</button>
+                <button type="submit" id="btnRunBatch" class="btn btn-primary">
+                    <i class="fa-solid fa-play"></i> Execute Payroll Run
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: BATCH DETAILS & ITEMIZED PAYSLIPS DRILLDOWN                        -->
+<!-- ========================================================================= -->
+<div id="batchDetailsModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 950px;">
+        <div class="modal-header">
+            <div>
+                <h3 id="batchDetailTitle">Payroll Batch Statement</h3>
+                <p id="batchDetailSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Itemized payslips & disbursement status</p>
+            </div>
+            <button class="modal-close" onclick="closeBatchDetailsModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div id="batchActionsBar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: var(--bg-subtle); padding: 12px 16px; border-radius: var(--radius-sm); flex-wrap: wrap; gap: 10px;">
+                <div id="batchStatusBadgeContainer"></div>
+                <div style="display: flex; gap: 8px;" id="batchLifecycleBtns"></div>
+            </div>
+
+            <div class="table-container">
+                <table class="custom-table" id="batchPayslipsTable">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Code</th>
+                            <th>Worked</th>
+                            <th>Gross (₹)</th>
+                            <th>EPF (₹)</th>
+                            <th>ESIC (₹)</th>
+                            <th>PT (₹)</th>
+                            <th>Net Pay (₹)</th>
+                            <th>Status</th>
+                            <th>Slip</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchPayslipsTableBody">
+                        <tr><td colspan="10" style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeBatchDetailsModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: VIEW EMPLOYEE SALARY STRUCTURE                                     -->
+<!-- ========================================================================= -->
+<div id="assignStructureModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-file-invoice-dollar" style="color: var(--accent-primary);"></i>
+                    <span>Employee Compensation Structure</span>
+                </h3>
+                <p id="assignStructureSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Review active compensation breakdown, allowances, and statutory model</p>
+            </div>
+            <button class="modal-close" onclick="closeAssignStructureModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="assignStructureForm" onsubmit="event.preventDefault(); closeAssignStructureModal();">
+            <div class="modal-body">
+                <input type="hidden" id="assignStudentId">
+
+                <div class="form-group">
+                    <label class="form-label">Employee</label>
+                    <input type="text" id="assignEmployeeName" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 600;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Salary Structure / Model</label>
+                        <select id="assignCompModel" class="form-control" disabled style="background: var(--bg-subtle);">
+                            <option value="STRUCTURED_SALARY">Structured CTC (Basic + HRA + Allowances)</option>
+                            <option value="MONTHLY_FIXED">Monthly Fixed Base</option>
+                            <option value="HOURLY">Hourly Wage</option>
+                            <option value="DAILY_WAGE">Daily Wage</option>
+                            <option value="STIPEND">Internship Fixed Stipend</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Template Blueprint</label>
+                        <select id="assignTemplateSelect" class="form-control" disabled style="background: var(--bg-subtle);">
+                            <option value="">-- Custom Individual Structure --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Annual CTC (₹)</label>
+                        <input type="number" step="1000" id="assignAnnualCtc" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 600;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Gross (₹)</label>
+                        <input type="number" step="50" id="assignMonthlyGross" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 700; color: var(--accent-emerald);">
+                    </div>
+                </div>
+
+                <!-- Breakdown fields for STRUCTURED_SALARY -->
+                <div id="structuredFieldsBox" style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 14px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">Active Monthly Breakdown (₹):</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Basic Pay</label>
+                            <input type="number" step="10" id="assignMonthlyBasic" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">HRA</label>
+                            <input type="number" step="10" id="assignMonthlyHra" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">DA</label>
+                            <input type="number" step="10" id="assignMonthlyDa" class="form-control" readonly style="background: var(--bg-card);" value="0">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">TA / Conveyance</label>
+                            <input type="number" step="10" id="assignConveyance" class="form-control" readonly style="background: var(--bg-card);" value="1600">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Medical Allowance</label>
+                            <input type="number" step="10" id="assignMedical" class="form-control" readonly style="background: var(--bg-card);" value="1250">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Other Perks</label>
+                            <input type="number" step="10" id="assignOtherPerks" class="form-control" readonly style="background: var(--bg-card);" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hourly / Daily / Stipend fields -->
+                <div id="hourlyDailyFieldsBox" style="display: none; background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 14px; border: 1px solid var(--border-color);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Hourly Rate (₹/hr)</label>
+                            <input type="number" step="0.5" id="assignHourlyRate" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted);">Daily Rate (₹/day)</label>
+                            <input type="number" step="10" id="assignDailyRate" class="form-control" readonly style="background: var(--bg-card);">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Effective From Date</label>
+                        <input type="date" id="assignEffectiveFrom" class="form-control" readonly style="background: var(--bg-subtle);">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Revision Reason</label>
+                        <input type="text" id="assignRevisionReason" class="form-control" readonly style="background: var(--bg-subtle);">
+                    </div>
+                </div>
+
+                <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 11.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-circle-info" style="color: var(--accent-primary); font-size: 14px;"></i>
+                    <span>To modify or revise employee compensation, edit the employee in <strong>Employee Directory</strong>.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeAssignStructureModal()">
+                    <i class="fa-solid fa-check"></i> Close
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: BANKING & STATUTORY DETAILS PROFILE                                -->
+<!-- ========================================================================= -->
+<div id="statutoryBankingModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-building-columns" style="color: var(--accent-primary);"></i>
+                    <span>Banking & Statutory Identity</span>
+                </h3>
+                <p id="statutoryBankingSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">PAN, UAN, ESIC & Bank Account</p>
+            </div>
+            <button class="modal-close" onclick="closeStatutoryBankingModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="statutoryBankingForm" onsubmit="submitStatutoryBanking(event)">
+            <div class="modal-body">
+                <input type="hidden" id="bankStudentId">
+
+                <div class="form-group">
+                    <label class="form-label">PAN Number (Permanent Account No)</label>
+                    <input type="text" id="bankPanNumber" class="form-control" placeholder="e.g. ABCDE1234F" maxlength="10" style="text-transform: uppercase;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">UAN (PF Number)</label>
+                        <input type="text" id="bankUanNumber" class="form-control" placeholder="12-digit UAN" maxlength="12">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ESIC IP Number</label>
+                        <input type="text" id="bankEsicNumber" class="form-control" placeholder="17-digit ESIC" maxlength="17">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Bank Name</label>
+                    <input type="text" id="bankNameInput" class="form-control" placeholder="e.g. HDFC Bank / State Bank of India">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Bank Account Number</label>
+                        <input type="text" id="bankAccountInput" class="form-control" placeholder="Account Number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IFSC Code</label>
+                        <input type="text" id="bankIfscInput" class="form-control" placeholder="e.g. HDFC0001234" maxlength="11" style="text-transform: uppercase;">
+                    </div>
+                </div>
+
+                <div id="statutoryBankingAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeStatutoryBankingModal()">Cancel</button>
+                <button type="submit" id="btnSaveBanking" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Update Details
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: REVISION HISTORY TIMELINE                                          -->
+<!-- ========================================================================= -->
+<div id="revisionHistoryModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 580px;">
+        <div class="modal-header">
+            <div>
+                <h3>
+                    <i class="fa-solid fa-timeline" style="color: var(--accent-primary);"></i>
+                    <span>Salary Revision History & Increments</span>
+                </h3>
+                <p id="revisionHistorySubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Audit log of compensation adjustments</p>
+            </div>
+            <button class="modal-close" onclick="closeRevisionHistoryModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" style="max-height: 450px; overflow-y: auto;">
+            <div id="revisionHistoryTimeline">
+                <div style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeRevisionHistoryModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ========================================================================= -->
+<!-- MODAL: MAP DESIGNATION TO SALARY STRUCTURE                                -->
+<!-- ========================================================================= -->
+<div id="designationModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <div>
+                <h3 id="designationModalTitle">
+                    <i class="fa-solid fa-user-tag" style="color: var(--accent-primary);"></i>
+                    <span>Map Designation to Salary Structure</span>
+                </h3>
+                <p id="designationModalSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Assign default salary template and compensation blueprint to designation</p>
+            </div>
+            <button class="modal-close" onclick="closeDesignationModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="designationForm" onsubmit="submitDesignationForm(event)">
+            <div class="modal-body">
+                <input type="hidden" id="desigModalId">
+                <div class="form-group">
+                    <label class="form-label">Select Designation *</label>
+                    <select id="desigModalSelect" class="form-control" onchange="onMappingDesignationSelected()" required>
+                        <option value="">-- Choose Designation from Settings --</option>
+                        {% for d in designations %}
+                        <option value="{{ d.id }}" data-code="{{ d.code or '' }}" data-dept="{{ d.department_name or 'All Departments' }}" data-template-id="{{ d.salary_template_id or '' }}" data-active="{{ 'true' if d.is_active else 'false' }}">{{ d.title }} ({{ d.code or 'N/A' }})</option>
+                        {% endfor %}
+                    </select>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        To register new designations or change role names, visit <a href="/settings#designations" target="_blank" style="color: var(--accent-primary); font-weight: 600; text-decoration: underline;">Settings &gt; Designations &amp; Roles</a>.
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Designation Code</label>
+                        <input type="text" id="desigModalCode" class="form-control" readonly style="background: var(--bg-subtle); font-family: monospace;" placeholder="Auto-populated">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Department / Unit</label>
+                        <input type="text" id="desigModalDeptName" class="form-control" readonly style="background: var(--bg-subtle);" placeholder="Auto-populated">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mapped Salary Structure Blueprint</label>
+                    <select id="desigModalSalaryTemplate" class="form-control">
+                        <option value="">-- No Default Template / Clear Mapping --</option>
+                        {% for st in salary_templates %}
+                        <option value="{{ st.id }}">{{ st.name }} ({{ st.code }}) - {{ st.compensation_model.replace('_', ' ') }}</option>
+                        {% endfor %}
+                    </select>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Automatically suggested/assigned when onboarding employees with this designation.</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Role Status</label>
+                    <input type="text" id="desigModalStatusDisplay" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 600;" value="Active">
+                </div>
+
+                <div id="designationModalAlert" style="display: none; padding: 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDesignationModal()">Cancel</button>
+                <button type="submit" id="btnSaveDesignation" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Salary Mapping
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+

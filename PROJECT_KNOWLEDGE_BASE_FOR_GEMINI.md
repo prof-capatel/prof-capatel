@@ -91,9 +91,13 @@ The database contains **6 Core Tenants** and **9 Core Administrative Users** tha
 
 ```
 D:\Attendance System\
+├── .agents\
+│   └── skills\
+│       └── attendance-system\
+│           └── SKILL.md           # Antigravity Persistent Skill (Architecture, Tokens, Maps)
 ├── src\
 │   ├── database\
-│   │   ├── models.py              # Core SQLAlchemy models
+│   │   ├── models.py              # Core SQLAlchemy models (Tenant, User, Student, Shifts, etc.)
 │   │   ├── session.py             # DB connection, engine, init_db, default seeds
 │   ├── face_engine\
 │   │   ├── recognition.py         # 128-d embedding extraction, in-memory matrix matcher
@@ -101,31 +105,60 @@ D:\Attendance System\
 │   ├── server\
 │   │   ├── app.py                 # FastAPI initialization, middleware, route mounting
 │   │   ├── rbac_middleware.py     # Auth dependencies, token creation, role gates
+│   │   ├── tenant_middleware.py   # Domain / header / slug multi-tenant scoping
+│   │   ├── services\
+│   │   │   ├── __init__.py        # Business logic & view services export
+│   │   │   └── view_service.py    # Consolidated template context, tenant branding, role resolution
 │   │   ├── routes\
+│   │   │   ├── views_public.py    # Public landing page (/), SEO sitemap/robots, demo logins
+│   │   │   ├── views_auth.py      # SaaS login, tenant portals, token logins, onboarding
+│   │   │   ├── views_employee.py  # Employee self-service dashboard, mobile check-in
+│   │   │   ├── views_dashboard.py # Admin views (/dashboard, /employees, /payroll, /settings)
 │   │   │   ├── api_auth.py        # /api/v1/auth (login, logout, session check)
+│   │   │   ├── api_demo.py        # /api/v1/demo (AWS SES OTP verification, trial provisioning)
 │   │   │   ├── api_enrollment.py  # /api/v1/enroll (webcam stream capture, batch 3-photo)
+│   │   │   ├── api_attendance.py  # /api/v1/attendance (clock-in, clock-out, records, live HUD)
 │   │   │   ├── api_payroll.py     # /api/v1/payroll (salary templates, masters, batches)
-│   │   │   ├── api_leaves.py      # /api/v1/leaves (quotas, applications, approval)
+│   │   │   ├── api_leave.py       # /api/v1/leaves (quotas, applications, approval)
 │   │   │   ├── api_nodes.py       # /api/v1/nodes (mobile check-in, edge ingestion)
-│   │   │   ├── api_academic.py    # /api/v1/academic (departments, classes, divisions)
-│   │   │   └── views_dashboard.py # Page rendering routes (/enroll, /employees, /settings, /payroll)
+│   │   │   └── api_academic.py    # /api/v1/academic (departments, classes, divisions)
 │   │   ├── templates\             # Jinja2 HTML Templates
 │   │   │   ├── base.html          # Global sidebar, topbar, theme switcher, mobile drawer
+│   │   │   ├── landing.html       # Marketing showcase (compacted with partials)
 │   │   │   ├── enroll.html        # Register New Employee (Webcam Guided & Batch 3-Photo)
 │   │   │   ├── students.html      # Employee / Student Directory with Edit Profile Modals
-│   │   │   ├── settings.html      # Org Settings, Themes, Departments, Designations, Shifts, Security, Geofencing
+│   │   │   ├── settings.html      # Org Settings, Themes, Departments, Designations, Shifts, Geofencing
 │   │   │   ├── payroll.html       # Payroll Batches, Salary Templates, Statutory Rules, Payslips
 │   │   │   ├── login.html         # Unified & Tenant-specific Clean Login Portal
-│   │   │   └── self_attendance.html # Mobile facial scan check-in portal with GPS geofencing
+│   │   │   ├── self_attendance.html # Mobile facial scan check-in portal with GPS geofencing
+│   │   │   └── components\        # Reusable Jinja2 Component Partials
+│   │   │       ├── demo_modal.html       # Free Demo modal & 6-digit OTP dialog
+│   │   │       ├── guide_modal.html      # 10-step Quick Onboarding Guide modal
+│   │   │       ├── lightbox_modal.html   # Screenshot zoom lightbox
+│   │   │       ├── settings_modals.html  # Modals for departments, designations, shifts, locations
+│   │   │       ├── payroll_modals.html   # Modals for batch generation, salary blueprints
+│   │   │       └── academic_modals.html  # Modals for department & class editing
 │   │   └── static\
-│   │       ├── css\dashboard.css  # Core design system, responsive grid, theme variables
-│   │       └── js\dashboard.js    # Global theme sync, modal handlers, dynamic audio/haptics
+│   │       ├── css\
+│   │       │   ├── landing.css    # Extracted Curiosity HUB landing page styling (~2300 lines)
+│   │       │   └── dashboard.css  # Core design system, responsive grid, theme variables
+│   │       └── js\
+│   │           ├── landing.js             # Onboarding walkthrough, modal controllers & demo logic
+│   │           ├── settings.js            # Leaflet map, geofencing, shift rules & master CRUD
+│   │           ├── payroll.js             # Salary template modals, batch runner & payslips
+│   │           ├── academic_management.js # Bulk Excel parser & class promotion handlers
+│   │           └── dashboard.js           # Live SSE stream, toast alerts & audio feedback
+│   └── utils\
+│       ├── timezone.py            # IST (Asia/Kolkata) timezone helpers (get_ist_now)
+│       └── auth_utils.py          # Password hashing, JWT token validation
 ├── scripts\
-│   ├── purge_test_records.py      # Database hygiene script
+│   ├── purge_test_records.py      # Database hygiene script (preserves 6 core tenants)
 │   └── run_server.py              # Local server launcher (FastAPI / Uvicorn on port 8000)
 └── tests\
     ├── auth\                      # Authentication & RBAC test suites
+    ├── attendance\                # Check-in, check-out, multi-shift test suites
     ├── ui\                        # Integration & UI rendering test suites
+    ├── payroll\                   # Indian statutory payroll & compensation tests
     └── integration\               # End-to-end API workflows
 ```
 
@@ -170,3 +203,27 @@ You are an autonomous engineering agent working inside `D:\Attendance System`. W
    - For routes that apply across both Corporate and Educational tiers, avoid restrictive module guards (like requiring full paid payroll flags for basic designation or department listings).
 4. **Idempotent Testing**:
    - Test suites in `tests/` must clean up any created entities by code pattern in `tearDown` or pre-creation to allow repetitive test execution without 400 Duplicate errors.
+
+---
+
+## 8. Database Schema Reference (`src/database/models.py`)
+
+Primary relational tables mapped in MySQL (`DATABASE_URL = mysql+pymysql://root:@localhost:3306/face_system`):
+
+| Table Name | Model Class | Primary & Key Columns |
+| :--- | :--- | :--- |
+| `tenants` | `Tenant` | `id` (PK), `slug` (Unique), `name`, `tenant_type` (`educational`/`corporate`), `subscription_plan`, `subscription_status`, `is_active`, `uuid`, `admin_token`, `onboarding_token`, `attendance_slug` |
+| `users` | `User` | `id` (PK), `tenant_id` (FK), `username`, `email`, `password_hash`, `role` (`SUPER_ADMIN`/`TENANT_ADMIN`/`TEACHER`/`STUDENT`), `full_name`, `phone_number`, `is_active` |
+| `students` | `Student` | `id` (PK), `tenant_id` (FK), `roll_number`, `name`, `gender`, `department_id` (FK), `email`, `phone_number`, `user_role` (`employee`/`student`), `joining_date`, `is_active` |
+| `face_encodings` | `FaceEncoding` | `id` (PK), `tenant_id` (FK), `student_id` (FK), `sample_angle` (`Front`/`Left`/`Right`), `vector_json` (Text 128-d/512-d), `photo_path` |
+| `attendance_records` | `AttendanceRecord` | `id` (PK), `tenant_id` (FK), `student_id` (FK), `node_id`, `timestamp` (IST), `confidence_distance`, `status` (`PRESENT`/`LATE`/`HALF_DAY`), `snapshot_path`, `is_manual_override` |
+| `node_devices` | `NodeDevice` | `node_id` (PK), `tenant_id` (FK), `name`, `location`, `last_heartbeat`, `is_online`, `fps` |
+| `departments` | `Department` | `id` (PK), `tenant_id` (FK), `name`, `code`, `description` |
+| `work_shifts` | `WorkShift` | `id` (PK), `tenant_id` (FK), `name`, `code`, `start_time`, `end_time`, `grace_period_minutes`, `break_duration_minutes` |
+| `company_locations` | `CompanyLocation` | `id` (PK), `tenant_id` (FK), `name`, `code`, `latitude`, `longitude`, `geofence_radius_meters` |
+| `leave_types` | `LeaveType` | `id` (PK), `tenant_id` (FK), `name`, `code`, `is_paid`, `default_days_per_year` |
+| `leave_requests` | `LeaveRequest` | `id` (PK), `tenant_id` (FK), `student_id` (FK), `leave_type_id` (FK), `start_date`, `end_date`, `status` (`PENDING`/`APPROVED`/`REJECTED`) |
+| `salary_templates` | `SalaryTemplate` | `id` (PK), `tenant_id` (FK), `name`, `code`, `compensation_model`, `basic_percentage`, `hra_percentage` |
+| `payroll_batches` | `PayrollBatch` | `id` (PK), `tenant_id` (FK), `batch_number`, `period_month`, `period_year`, `status` (`DRAFT`/`CALCULATED`/`FINALIZED`) |
+| `payroll_payslips` | `PayrollPayslip` | `id` (PK), `tenant_id` (FK), `batch_id` (FK), `student_id` (FK), `gross_salary`, `net_salary`, `status` |
+

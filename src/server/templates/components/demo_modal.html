@@ -1,0 +1,89 @@
+<!-- Free Demo Self-Service Modal Dialog Component -->
+<div id="freeDemoModal" class="demo-modal-overlay" onclick="handleDemoModalOverlayClick(event)">
+    <div class="demo-modal-dialog">
+        <!-- Harmonized Clean Crisp Header -->
+        <div class="demo-modal-header">
+            <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1;">
+                <div class="demo-header-icon-wrap">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <div class="demo-modal-title-group">
+                    <div class="demo-pill-badge">
+                        <i class="fa-solid fa-rocket"></i> 7-Day Pro Trial
+                    </div>
+                    <h3 class="demo-modal-title">Experience Curiosity HUB Free Demo</h3>
+                    <p class="demo-modal-subtitle">Instant zero-hardware facial recognition attendance and automated payroll in 60 seconds.</p>
+                </div>
+            </div>
+            <button type="button" class="demo-modal-close" onclick="closeFreeDemoModal()" aria-label="Close Modal">&times;</button>
+        </div>
+
+        <!-- Step 1: User & Company Info -->
+        <div id="demoStep1" class="demo-modal-body">
+            <form id="demoRequestForm" onsubmit="handleDemoRequestOtp(event)">
+                <div class="demo-form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="demoName">Your Full Name <span class="required" style="color: var(--accent-primary);">*</span></label>
+                        <input type="text" id="demoName" class="form-input" placeholder="e.g. Rajesh Shah" required minlength="2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="demoCompany">Company / Business Name <span class="required" style="color: var(--accent-primary);">*</span></label>
+                        <input type="text" id="demoCompany" class="form-input" placeholder="e.g. Apex Global Logistics" required minlength="2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="demoMobile">Mobile Number <span class="required" style="color: var(--accent-primary);">*</span></label>
+                        <input type="tel" id="demoMobile" class="form-input" placeholder="e.g. 9876543210" required pattern="[0-9]{10,12}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="demoEmail">Official / Work Email <span class="required" style="color: var(--accent-primary);">*</span></label>
+                        <input type="email" id="demoEmail" class="form-input" placeholder="e.g. rajesh@apexlogistics.com" required>
+                    </div>
+                </div>
+
+                <div class="demo-perks-row">
+                    <div class="demo-perk"><i class="fa-solid fa-circle-check"></i> 7 Days Full Pro Edition</div>
+                    <div class="demo-perk"><i class="fa-solid fa-circle-check"></i> Zero Dedicated Hardware</div>
+                    <div class="demo-perk"><i class="fa-solid fa-circle-check"></i> Automated Email Credentials</div>
+                </div>
+
+                <div id="demoStep1Feedback" class="demo-alert" style="display: none;"></div>
+
+                <button type="submit" id="btnRequestOtp" class="btn-demo-submit">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Send Verification Code</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Step 2: 6-Digit OTP Verification -->
+        <div id="demoStep2" class="demo-modal-body" style="display: none;">
+            <form id="demoVerifyForm" onsubmit="handleDemoVerifyOtp(event)">
+                <div class="otp-instruction-card">
+                    <div class="otp-icon-wrap"><i class="fa-solid fa-envelope-circle-check"></i></div>
+                    <p class="otp-sent-text">We have sent a 6-digit verification code to <strong id="displayTargetEmail"></strong> via AWS SES. Please enter it below to launch your demo:</p>
+                </div>
+
+                <div class="form-group otp-group">
+                    <label class="form-label" for="demoOtpCode" style="text-align: center; display: block; margin-bottom: 8px;">Enter 6-Digit Verification Code</label>
+                    <input type="text" id="demoOtpCode" class="form-input otp-code-input" placeholder="1 2 3 4 5 6" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code">
+                </div>
+
+                <div id="demoStep2Feedback" class="demo-alert" style="display: none;"></div>
+
+                <button type="submit" id="btnVerifyOtp" class="btn-demo-submit">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Verify & Launch My Demo</span>
+                </button>
+
+                <div class="otp-resend-row">
+                    <span id="resendCountdownText">Resend code in <strong id="resendTimer">60</strong>s</span>
+                    <button type="button" id="btnResendOtp" class="btn-resend-link" onclick="handleResendOtp()" style="display: none;">
+                        Resend Verification Code
+                    </button>
+                    &bull;
+                    <button type="button" class="btn-change-email" onclick="goToDemoStep1()">Edit Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

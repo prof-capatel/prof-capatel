@@ -9,6 +9,9 @@ from src.config import DATA_DIR, FACES_DIR, SNAPSHOTS_DIR
 from src.core.face_engine import face_engine
 from src.database.session import init_db
 from src.server.routes import (
+    views_public,
+    views_auth,
+    views_employee,
     views_dashboard,
     api_auth,
     api_super_admin,
