@@ -1219,15 +1219,7 @@
     <!-- Live Toast / Global Alert Box -->
     <div id="brandingSaveAlert" style="display: none; position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 13px; box-shadow: var(--shadow-lg); transition: all 0.3s ease;"></div>
 </form>
-{% endblock %}
 
-{% block scripts %}
-<script>
-window.allTenantDepartments = {{ departments|tojson|safe }};
-window.allTenantDesignations = {{ designations|tojson|safe }};
-window.allTenantShifts = {{ work_shifts|tojson|safe }};
-
-</script>
 <!-- Office Location Modal (Create / Edit in Settings) -->
 <div id="settingsLocationModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
     <div class="card" style="width: 100%; max-width: 520px; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-color);">
@@ -1299,3 +1291,14 @@ window.allTenantShifts = {{ work_shifts|tojson|safe }};
 
 {% include "components/settings_modals.html" %}
 {% endblock %}
+
+{% block scripts %}
+<script>
+    window.allTenantDepartments = {{ departments|tojson|safe }};
+    window.allTenantDesignations = {{ designations|tojson|safe }};
+    window.allTenantShifts = {{ work_shifts|tojson|safe }};
+    window.currentTenantSlug = "{{ current_tenant.slug if current_tenant else 'default' }}";
+</script>
+<script src="/static/js/settings.js?v=2.2"></script>
+{% endblock %}
+

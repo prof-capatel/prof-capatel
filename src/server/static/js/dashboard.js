@@ -1,3 +1,134 @@
+    /* ==========================================================
+       Mobile Navigation Drawer Handlers
+       ========================================================== */
+    function toggleMobileMenu() {
+        const sidebar = document.getElementById("mainSidebar");
+        const backdrop = document.getElementById("sidebarBackdrop");
+        if (!sidebar) return;
+
+        sidebar.classList.toggle("open");
+        if (backdrop) {
+            backdrop.classList.toggle("active", sidebar.classList.contains("open"));
+        }
+    }
+
+    function closeMobileMenu() {
+        const sidebar = document.getElementById("mainSidebar");
+        const backdrop = document.getElementById("sidebarBackdrop");
+        if (!sidebar) return;
+        sidebar.classList.remove("open");
+        if (backdrop) backdrop.classList.remove("active");
+    }
+
+    // Close drawer & modals on Escape key
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            closeMobileMenu();
+            if (typeof closeLightbox === "function") closeLightbox();
+            if (typeof closeEditModal === "function") closeEditModal();
+            if (typeof closeRetakeModal === "function") closeRetakeModal();
+            if (typeof closeManualOverrideModal === "function") closeManualOverrideModal();
+        }
+    });
+
+    /* ==========================================================
+       Multi-Theme Engine Handlers
+       ========================================================== */
+    function initThemeSwitcher() {
+        const currentTheme = document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
+        if (typeof updateQuickThemeButton === "function") {
+            updateQuickThemeButton(currentTheme);
+        }
+        updateThemeSelectionCards(currentTheme);
+        updateThemeDropdown(currentTheme);
+    }
+
+    function setAppTheme(themeName) {
+        let normalized = themeName;
+        if (normalized === "academic") normalized = "warm";
+        if (normalized === "corporate" || normalized === "slate") normalized = "warm";
+        if (!["light", "dark", "warm"].includes(normalized)) {
+            normalized = "light";
+        }
+        document.documentElement.setAttribute("data-theme", normalized);
+        try {
+            localStorage.setItem("app_theme", normalized);
+        } catch (e) {}
+
+        updateThemeSelectionCards(normalized);
+        updateThemeDropdown(normalized);
+    }
+
+    function cycleAppTheme() {
+        const currentTheme = document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
+        let nextTheme = "light";
+        if (currentTheme === "light") nextTheme = "dark";
+        else if (currentTheme === "dark") nextTheme = "warm";
+        else nextTheme = "light";
+
+        setAppTheme(nextTheme);
+    }
+
+    function updateThemeDropdown(theme) {
+        let current = theme || document.documentElement.getAttribute("data-theme") || localStorage.getItem("app_theme") || "light";
+        if (current === "academic" || current === "corporate" || current === "slate") current = "warm";
+        const select = document.getElementById("appThemeSelect");
+        const mobileSelect = document.getElementById("mobileAppThemeSelect");
+        const icon = document.getElementById("themeIconIndicator");
+        if (select) select.value = current;
+        if (mobileSelect) mobileSelect.value = current;
+        if (icon) {
+            if (current === "dark") {
+                icon.className = "fa-solid fa-moon";
+                icon.style.color = "#38bdf8";
+            } else if (current === "warm") {
+                icon.className = "fa-solid fa-fire-flame-curved";
+                icon.style.color = "#ea580c";
+            } else {
+                icon.className = "fa-solid fa-sun";
+                icon.style.color = "#f59e0b";
+            }
+        }
+    }
+
+    function updateThemeSelectionCards(theme) {
+        let current = theme || document.documentElement.getAttribute("data-theme") || "light";
+        if (current === "academic" || current === "corporate" || current === "slate") current = "warm";
+        const cardLight = document.getElementById("themeCardLight");
+        const cardDark = document.getElementById("themeCardDark");
+        const cardWarm = document.getElementById("themeCardWarm") || document.getElementById("themeCardAcademic");
+        const badge = document.getElementById("activeThemeBadge");
+
+        if (cardLight) cardLight.classList.toggle("active", current === "light");
+        if (cardDark) cardDark.classList.toggle("active", current === "dark");
+        if (cardWarm) cardWarm.classList.toggle("active", current === "warm");
+
+        if (badge) {
+            if (current === "dark") {
+                badge.className = "badge badge-sky";
+                badge.innerHTML = '<i class="fa-solid fa-moon"></i> Active: Midnight Dark';
+            } else if (current === "warm") {
+                badge.className = "badge badge-amber";
+                badge.innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i> Active: Warm';
+            } else {
+                badge.className = "badge badge-present";
+                badge.innerHTML = '<i class="fa-solid fa-sun"></i> Active: Clean Light';
+            }
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        initThemeSwitcher();
+    });
+
+    window.setAppTheme = setAppTheme;
+    window.cycleAppTheme = cycleAppTheme;
+    window.updateThemeDropdown = updateThemeDropdown;
+    window.updateThemeSelectionCards = updateThemeSelectionCards;
+    window.initThemeSwitcher = initThemeSwitcher;
+    window.toggleMobileMenu = toggleMobileMenu;
+    window.closeMobileMenu = closeMobileMenu;
+
     // ==========================================================
     // Collapsible Biometric Terminal Gateway Handler
     // ==========================================================

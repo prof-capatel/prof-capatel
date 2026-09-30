@@ -10,7 +10,9 @@ function escapeHtml(str) {
 
 document.addEventListener("DOMContentLoaded", () => {
     handleInitialTabFromHash();
-    updateThemeSelectionCards();
+    if (typeof updateThemeSelectionCards === "function") {
+        updateThemeSelectionCards();
+    }
     loadSavedSystemPreferences();
 
     // Initialize Employee Portal full URL and QR
@@ -18,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const empPortalOpenBtn = document.getElementById("btnUniversalEmpPortalOpen");
     const empPortalQrImg = document.getElementById("universalEmpPortalQrImg");
     if (empPortalSpan) {
-        const slug = "{{ current_tenant.slug if current_tenant else 'default' }}";
+        const slug = window.currentTenantSlug || "default";
         const relativeUrl = `/employee/${slug}`;
         const fullUrl = window.location.origin + relativeUrl;
         empPortalSpan.innerText = fullUrl;
@@ -1363,3 +1365,46 @@ async function deleteSettingsLocation(locId, name) {
         alert("Network error while deleting location.");
     }
 }
+
+// Explicit window bindings for inline HTML handlers
+window.switchSettingsTab = switchSettingsTab;
+window.handleInitialTabFromHash = handleInitialTabFromHash;
+window.updateBrandingLivePreview = updateBrandingLivePreview;
+window.syncColorInput = syncColorInput;
+window.syncColorPicker = syncColorPicker;
+window.setCooldownPreset = setCooldownPreset;
+window.updateThresholdDisplay = updateThresholdDisplay;
+window.updateToleranceDisplay = updateToleranceDisplay;
+window.setLivenessPreset = setLivenessPreset;
+window.saveBrandingDetails = saveBrandingDetails;
+window.resetBrandColor = resetBrandColor;
+window.resetInstituteLogo = resetInstituteLogo;
+window.copyUniversalEmployeePortalLink = copyUniversalEmployeePortalLink;
+window.copyPermanentCheckinLink = copyPermanentCheckinLink;
+window.copyEmployeeOnboardLink = copyEmployeeOnboardLink;
+window.initOfficeMap = initOfficeMap;
+window.searchMapLocation = searchMapLocation;
+window.fetchAdminGpsLocation = fetchAdminGpsLocation;
+window.openAddLocationModal = openAddLocationModal;
+window.openEditLocationModal = openEditLocationModal;
+window.closeSettingsLocationModal = closeSettingsLocationModal;
+window.submitSettingsLocationModal = submitSettingsLocationModal;
+window.deleteSettingsLocation = deleteSettingsLocation;
+window.openAddDepartmentModal = openAddDepartmentModal;
+window.openEditDeptModal = openEditDeptModal;
+window.closeDeptModal = closeDeptModal;
+window.submitDeptModal = submitDeptModal;
+window.deleteDepartment = deleteDepartment;
+window.openAddDesignationModal = openAddDesignationModal;
+window.openEditDesignationModal = openEditDesignationModal;
+window.closeDesignationModal = closeDesignationModal;
+window.submitDesignationModal = submitDesignationModal;
+window.deleteSettingsDesignation = deleteSettingsDesignation;
+window.openAddShiftModal = openAddShiftModal;
+window.openEditShiftModal = openEditShiftModal;
+window.closeShiftModal = closeShiftModal;
+window.submitShiftModal = submitShiftModal;
+window.deleteShift = deleteShift;
+window.setDefaultShift = setDefaultShift;
+window.saveSystemPreferences = saveSystemPreferences;
+
