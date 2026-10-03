@@ -22,7 +22,7 @@ from src.database.session import get_db
 from src.server.rbac_middleware import require_roles, get_current_user
 from src.utils.auth_utils import hash_password
 from src.utils.timezone import get_ist_now
-from src.server.services import seo_service
+from src.server.services import seo_service, traffic_analytics
 
 
 logger = logging.getLogger("api_super_admin")
@@ -1000,4 +1000,46 @@ def regenerate_sitemap(
         "sitemap_url": sitemap_url,
         "xml_snippet": xml[:200] + "...",
     }
+
+
+@router.get("/traffic-analytics")
+def get_website_traffic_analytics():
+    """
+    Returns aggregated website access statistics, visitor counts,
+    search engine bot crawling activity, and top visited pages.
+    """
+    return traffic_analytics.get_traffic_summary()
+
+
+@router.post("/traffic-analytics/clear")
+def clear_website_traffic_logs(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Purges website access logs with Super Admin audit logging.
+    """
+    traffic_analytics.clear_traffic_logs()
+
+    audit = AuditLog(
+        tenant_id=None,
+        user_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role=current_user.role,
+        action_type="TRAFFIC_LOGS_CLEARED",
+        target_type="PLATFORM_SEO",
+        target_id="access_logs",
+        description="Purged historical website access & SEO traffic log records.",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Access log records purged successfully.",
+        "summary": traffic_analytics.get_traffic_summary(),
+    }
+
 

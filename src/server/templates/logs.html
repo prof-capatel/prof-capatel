@@ -293,16 +293,6 @@
 {% block scripts %}
 <script>
     window.IS_CORPORATE = {{ 'true' if is_corporate else 'false' }};
-
-    document.addEventListener("DOMContentLoaded", () => {
-        applyLogFilters();
-        populateStudentDropdown();
-
-        // Default timestamp to now
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        const el = document.getElementById("overrideTimestamp");
-        if (el) el.value = now.toISOString().slice(0, 16);
-    });
 </script>
+<script src="/static/js/logs.js?v=2.2"></script>
 {% endblock %}

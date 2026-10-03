@@ -40,7 +40,7 @@
         <div class="stat-split-row">
             <div class="stat-split-col">
                 <span class="stat-sublabel">{% if is_corporate %}Checked-In{% else %}Present{% endif %}</span>
-                <h3 id="statPresentCount" style="color: var(--accent-emerald, #10b981);">0</h3>
+                <h3 id="statPresentCount" style="color: var(--accent-emerald, #10b981);">{{ present_today | default(0) }}</h3>
                 <div class="stat-footnote" style="color: var(--accent-emerald, #10b981);">
                     <span class="pulse-dot" style="width: 5px; height: 5px; background: var(--accent-emerald, #10b981);"></span>
                     <span>Active Today</span>
@@ -50,14 +50,14 @@
             <div class="stat-split-col" style="padding-left: 10px;">
                 {% if is_corporate %}
                 <span class="stat-sublabel">Checked-Out</span>
-                <h3 id="statCheckedOutCount" style="color: var(--accent-cyan, #0284c7);">0</h3>
+                <h3 id="statCheckedOutCount" style="color: var(--accent-cyan, #0284c7);">{{ checked_out_today | default(0) }}</h3>
                 <div class="stat-footnote" style="color: var(--text-muted);">
                     <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 10px;"></i>
                     <span>Clocked Out</span>
                 </div>
                 {% else %}
                 <span class="stat-sublabel">Absent</span>
-                <h3 id="statAbsentCount" style="color: var(--accent-rose, #ef4444);">0</h3>
+                <h3 id="statAbsentCount" style="color: var(--accent-rose, #ef4444);">{{ absent_today | default(0) }}</h3>
                 <div class="stat-footnote" style="color: var(--text-muted);">
                     <i class="fa-solid fa-user-xmark" style="font-size: 10px;"></i>
                     <span>Not Reported</span>
@@ -366,6 +366,10 @@
                 <strong style="font-size: 13.5px; color: var(--text-heading);">Live Recognition Feed</strong>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" id="btnRefreshLiveFeed" class="btn btn-secondary" onclick="refreshLiveRecognitionFeed()" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; border-color: var(--border-color);" title="Refresh Live Recognition Feed">
+                    <i id="btnRefreshLiveFeedIcon" class="fa-solid fa-rotate"></i>
+                    <span>Refresh</span>
+                </button>
                 <button type="button" class="btn btn-secondary" onclick="openManualOverrideModal()" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--accent-primary); border-color: var(--border-color);" title="Manual check in/out">
                     <i class="fa-solid fa-user-check"></i>
                     <span>Manual check in/out</span>
@@ -636,42 +640,7 @@
 
 {% block scripts %}
 <script>
-    // Continuous Background Attendance Feed Lifecycle:
-    // Live attendance feed continues running seamlessly across window focus, blur, and tab switching.
-    // Cleanup is only triggered when navigating away from the page or closing the window.
-    window.isInterruptedState = false;
-
-    function handleCaptureInterrupted(err) {
-        if (typeof window.handleCaptureInterrupted === "function") {
-            window.handleCaptureInterrupted(err);
-        }
-    }
-
-    function pauseForSecondaryCamera() {
-        if (typeof window.pauseForSecondaryCamera === "function") {
-            window.pauseForSecondaryCamera();
-        }
-    }
-
-    function resumeFromSecondaryCamera() {
-        if (typeof window.resumeFromSecondaryCamera === "function") {
-            window.resumeFromSecondaryCamera();
-        }
-    }
-
-    window.pauseForSecondaryCamera = pauseForSecondaryCamera;
-    window.resumeFromSecondaryCamera = resumeFromSecondaryCamera;
-
-    function monitorVideoTrackLifecycle(videoTrack) {
-        if (!videoTrack) return;
-        videoTrack.onended = () => {
-            handleCaptureInterrupted("Feed Interrupted: Video track ended. ⚠️ INTERRUPTED. Click to Restart Attendance Feed.");
-        };
-        videoTrack.onmute = () => {
-            handleCaptureInterrupted("Feed Interrupted: Video track muted. ⚠️ INTERRUPTED. Click to Restart Attendance Feed.");
-        };
-    }
-
+    // Page unload lifecycle: gracefully stop capture media stream when navigating away
     window.addEventListener("pagehide", () => {
         if (typeof stopContinuousCapture === "function") stopContinuousCapture();
     });
@@ -680,5 +649,4 @@
         if (typeof stopContinuousCapture === "function") stopContinuousCapture();
     });
 </script>
-<script src="/static/js/dashboard.js?v=2.1"></script>
 {% endblock %}

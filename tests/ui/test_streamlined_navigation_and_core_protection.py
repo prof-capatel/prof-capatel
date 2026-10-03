@@ -182,8 +182,8 @@ class TestStreamlinedNavigationAndCoreProtection(unittest.TestCase):
         self.assertIn('id="captureMatchToast"', html)
 
     def test_core_tenants_and_users_protection_constants(self):
-        """Verify strict core entity protection lists include all 6 required core tenants and core users."""
-        expected_tenants = ["default", "pulin1", "ssec", "gecm", "raymond-store-1", "the-retail-store"]
+        """Verify strict core entity protection lists include all 7 required core tenants and core users."""
+        expected_tenants = ["default", "pulin1", "ssec", "gecm", "raymond-store-1", "the-retail-store", "demo-store"]
         for t_slug in expected_tenants:
             self.assertIn(t_slug, CORE_TENANT_SLUGS, f"Missing {t_slug} in CORE_TENANT_SLUGS")
 
@@ -193,6 +193,7 @@ class TestStreamlinedNavigationAndCoreProtection(unittest.TestCase):
 
         self.assertIn("raymond", CORE_USERNAMES)
         self.assertIn("admin_retail", CORE_USERNAMES)
+        self.assertIn("demostore", CORE_USERNAMES)
         self.assertIn("superadmin", CORE_USERNAMES)
         self.assertIn("admin", CORE_USERNAMES)
 

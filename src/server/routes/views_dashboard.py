@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime, date, time as dt_time
 from typing import List, Tuple, Optional
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -103,17 +103,35 @@ def page_dashboard(
 
     recent_logs = (
         db.query(AttendanceRecord)
-        .filter(AttendanceRecord.tenant_id == current_tenant.id)
+        .filter(AttendanceRecord.tenant_id == current_tenant.id, AttendanceRecord.is_deleted == False)
         .order_by(AttendanceRecord.timestamp.desc())
-        .limit(10)
+        .limit(15)
         .all()
     )
     nodes = db.query(NodeDevice).filter(NodeDevice.tenant_id == current_tenant.id).all()
     branding = get_branding_dict(db, current_tenant.id)
     all_tenants = get_all_active_tenants(db)
 
-    # Modular SaaS leave metrics
+    # Modular SaaS leave metrics and Today's Attendance stats
     today_date = get_ist_now().date()
+    start_today = datetime.combine(today_date, datetime.min.time())
+    end_today = datetime.combine(today_date, datetime.max.time())
+
+    today_records = (
+        db.query(AttendanceRecord)
+        .filter(
+            AttendanceRecord.tenant_id == current_tenant.id,
+            AttendanceRecord.timestamp.between(start_today, end_today),
+            AttendanceRecord.is_deleted == False,
+        )
+        .all()
+    )
+
+    checked_in_today = len(set(r.student_id for r in today_records if r.student_id))
+    checked_out_today = len(set(r.student_id for r in today_records if r.student_id and r.check_out_time))
+    present_today = checked_in_today
+    absent_today = max(0, total_students - present_today)
+
     today_leaves_count = 0
     pending_leaves_count = 0
     if current_tenant.has_leave_module:
@@ -143,6 +161,10 @@ def page_dashboard(
             "page_title": "Dashboard",
             "active_page": "dashboard",
             "total_students": total_students,
+            "present_today": present_today,
+            "checked_in_today": checked_in_today,
+            "checked_out_today": checked_out_today,
+            "absent_today": absent_today,
             "is_corporate": is_corporate,
             "member_label": member_label,
             "today_leaves_count": today_leaves_count,

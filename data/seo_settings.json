@@ -9,5 +9,5 @@
   "twitter_card": "summary_large_image",
   "author": "Curiosity HUB",
   "robots_directives": "User-agent: *\nAllow: /$\nAllow: /screenshots/\nAllow: /static/\nDisallow: /saas\nDisallow: /super-admin\nDisallow: /dashboard\nDisallow: /api/\n\nSitemap: https://curiosityhub.co.in/sitemap.xml\n",
-  "updated_at": "2026-09-30T16:26:48.480331"
+  "updated_at": "2026-10-03T15:38:42.125983"
 }

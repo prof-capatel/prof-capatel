@@ -684,20 +684,47 @@ class AttendanceRecord(Base):
         if not desig_title and self.student and self.student.designation_rel:
             desig_title = self.student.designation_rel.title
 
+        s_name = self.student.name if self.student else (self.override_by if self.is_manual_override else "Unknown Member")
+        s_roll = self.student.roll_number if self.student else "N/A"
+        s_email = self.student.email if self.student else ""
+        s_dept = self.student.department if self.student else "N/A"
+        s_role = self.student.user_role if self.student else "student"
+        
+        c_in_formatted = f"{c_in_str} IST" if c_in_str else "--"
+        c_out_formatted = f"{c_out_str} IST" if c_out_str else "--"
+        ts_formatted = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')} IST" if self.timestamp else "N/A"
+
+        student_dict = None
+        if self.student:
+            student_dict = {
+                "id": self.student.id,
+                "name": s_name,
+                "roll_number": s_roll,
+                "email": s_email,
+                "department": s_dept,
+                "designation": desig_title or "Staff",
+                "user_role": s_role,
+            }
+
         return {
             "id": self.id,
             "tenant_id": self.tenant_id,
             "student_id": self.student_id,
-            "student_name": self.student.name if self.student else "Unknown",
-            "roll_number": self.student.roll_number if self.student else "N/A",
-            "department": self.student.department if self.student else "N/A",
-            "user_role": self.student.user_role if self.student else "student",
+            "student_name": s_name,
+            "name": s_name,
+            "email": s_email,
+            "student_email": s_email,
+            "student": student_dict,
+            "roll_number": s_roll,
+            "department": s_dept,
+            "user_role": s_role,
             "designation_id": self.student.designation_id if self.student else None,
             "designation": desig_title or "Staff",
             "class_semester": class_name,
             "division_name": div_name,
             "node_id": self.node_id,
             "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S") if self.timestamp else None,
+            "timestamp_formatted": ts_formatted,
             "confidence_distance": round(self.confidence_distance, 4) if self.confidence_distance is not None else 0.0,
             "match_confidence_pct": round(max(0.0, (1.0 - (self.confidence_distance / 0.6))) * 100, 1) if self.confidence_distance is not None else 0.0,
             "status": self.status,
@@ -712,8 +739,10 @@ class AttendanceRecord(Base):
             "punch_type": self.punch_type or "CHECK_IN",
             "check_in_time": c_in_str,
             "check_in_short": c_in_short,
+            "check_in_formatted": c_in_formatted,
             "check_out_time": c_out_str,
             "check_out_short": c_out_short,
+            "check_out_formatted": c_out_formatted,
             "work_duration_minutes": self.work_duration_minutes,
             "work_duration_formatted": duration_formatted,
             "shift_status": self.shift_status or "ON_TIME",

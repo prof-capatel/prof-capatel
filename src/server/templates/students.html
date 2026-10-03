@@ -330,10 +330,15 @@
 
                 <!-- Enrolled Reference Photos Gallery -->
                 <div style="margin-bottom: 18px;">
-                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>Enrolled Face Samples</span>
-                        <span id="editPhotosCountBadge" class="badge badge-present" style="font-size: 11px;">3 Photos</span>
-                    </label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label class="form-label" style="margin-bottom: 0;">
+                            <span>Enrolled Face Samples</span>
+                            <span id="editPhotosCountBadge" class="badge badge-present" style="font-size: 11px; margin-left: 6px;">3 Photos</span>
+                        </label>
+                        <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px; color: var(--accent-primary);" onclick="triggerRetakeFromEdit()">
+                            <i class="fa-solid fa-camera-rotate"></i> Retake Face Images
+                        </button>
+                    </div>
                     <div id="editStudentPhotosPreview" class="photo-preview-grid" style="margin-top: 6px;">
                         <!-- Dynamically populated on modal open -->
                     </div>
@@ -462,19 +467,19 @@
                         <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Template defines compensation model and components (HRA, DA, etc.).</div>
                     </div>
                     <div class="form-group" id="editMonthlySalaryGroup" style="margin-bottom: 0;">
-                        <label class="form-label" style="font-size: 11px;">Monthly Basic Salary (₹) *</label>
+                        <label class="form-label" id="editMonthlySalaryLabel" style="font-size: 11px;">Monthly Basic Salary (₹) *</label>
                         <input type="number" step="50" min="0" id="editMonthlyBaseSalary" class="form-control" placeholder="e.g. 35000">
-                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Base compensation; components (HRA, DA, etc.) calculate automatically based on designation template.</div>
+                        <div id="editMonthlySalaryHelp" style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Base compensation; components (HRA, DA, etc.) calculate automatically based on designation template.</div>
                     </div>
                     <div class="form-group" id="editDailyRateGroup" style="display: none; margin-bottom: 0;">
-                        <label class="form-label" style="font-size: 11px;">Daily Wage Rate (₹/day) *</label>
+                        <label class="form-label" id="editDailyRateLabel" style="font-size: 11px;">Daily Salary Rate (₹/day) *</label>
                         <input type="number" step="10" min="0" id="editDailyRate" class="form-control" placeholder="e.g. 750">
-                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Daily wage rate applied per present day & paid leave.</div>
+                        <div id="editDailyRateHelp" style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Daily salary wage rate applied per present day & paid leave.</div>
                     </div>
                     <div class="form-group" id="editHourlyRateGroup" style="display: none; margin-bottom: 0;">
-                        <label class="form-label" style="font-size: 11px;">Hourly Rate (₹/hr) *</label>
+                        <label class="form-label" id="editHourlyRateLabel" style="font-size: 11px;">Hourly Salary Rate (₹/hr) *</label>
                         <input type="number" step="1" min="0" id="editHourlyRate" class="form-control" placeholder="e.g. 200">
-                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Hourly rate applied to billed working hours.</div>
+                        <div id="editHourlyRateHelp" style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">Hourly rate applied to billed working hours.</div>
                     </div>
                 </div>
                 {% endif %}
@@ -536,7 +541,7 @@
                 <div id="retakeDropzone" class="upload-dropzone" onclick="document.getElementById('retakeFileInput').click()">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
                     <h4 style="font-size: 14px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">Click or Drag & Drop 3 Photos Here</h4>
-                    <p style="font-size: 12px; color: var(--text-muted);">Frontal, Left Angle, Right Angle photos</p>
+                    <p style="font-size: 12px; color: var(--text-muted);">Frontal, Left Angle (~15°), Right Angle (~15°) photos (All 3 required)</p>
                     <input type="file" id="retakeFileInput" accept="image/jpeg,image/png,image/jpg" multiple style="display: none;">
                 </div>
 
@@ -557,12 +562,6 @@
                         <div class="photo-preview-label">3. Right (~15°)</div>
                     </div>
                 </div>
-
-                <div style="display: flex; gap: 10px; margin-top: 16px;">
-                    <button type="button" id="btnSubmitRetakeUpload" class="btn btn-primary" style="flex: 1;" onclick="submitRetakeUpload()" disabled>
-                        <i class="fa-solid fa-upload"></i> Upload & Replace Enrolled Vectors
-                    </button>
-                </div>
             </div>
 
             <!-- Tab 2: Live Webcam Retake -->
@@ -578,7 +577,7 @@
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                    <button type="button" id="btnRetakeCapFrontal" class="btn btn-secondary" style="padding: 8px 4px; font-size: 11.5px;" onclick="captureRetakeSample('frontal')">
+                    <button type="button" id="btnRetakeCapFrontal" class="btn btn-secondary" style="padding: 8px 4px; font-size: 11.5px;" onclick="captureRetakeSample('frontal')" disabled>
                         <i class="fa-solid fa-camera"></i> 1. Frontal
                     </button>
                     <button type="button" id="btnRetakeCapLeft" class="btn btn-secondary" style="padding: 8px 4px; font-size: 11.5px;" onclick="captureRetakeSample('left')" disabled>
@@ -589,6 +588,24 @@
                     </button>
                 </div>
 
+                <div class="photo-preview-grid" style="margin-top: 14px;">
+                    <div class="photo-preview-card">
+                        <img id="retakeCamPrevImg0" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakeCamPh0" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
+                        <div class="photo-preview-label">1. Frontal</div>
+                    </div>
+                    <div class="photo-preview-card">
+                        <img id="retakeCamPrevImg1" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakeCamPh1" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
+                        <div class="photo-preview-label">2. Left (~15°)</div>
+                    </div>
+                    <div class="photo-preview-card">
+                        <img id="retakeCamPrevImg2" class="photo-preview-img" src="" style="display: none;">
+                        <div id="retakeCamPh2" style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 24px;"><i class="fa-regular fa-image"></i></div>
+                        <div class="photo-preview-label">3. Right (~15°)</div>
+                    </div>
+                </div>
+
                 <div id="retakeCamFeedback" style="display: none; margin-top: 10px; padding: 10px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
             </div>
 
@@ -597,8 +614,11 @@
 
             <div id="retakeResultAlert" style="display: none; margin-top: 14px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeRetakeModal()">Close</button>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn btn-secondary" onclick="closeRetakeModal()">Cancel</button>
+            <button type="button" id="btnSubmitRetakeUpload" class="btn btn-primary" onclick="submitRetakeUpload()" disabled>
+                <i class="fa-solid fa-cloud-arrow-up"></i> Save & Replace Face Vectors (0/3 Ready)
+            </button>
         </div>
     </div>
 </div>
@@ -862,4 +882,5 @@
     window.allTenantSalaryTemplates = {{ salary_templates | tojson | safe }};
     window.IS_CORPORATE = {{ 'true' if current_tenant and current_tenant.tenant_type == 'corporate' else 'false' }};
 </script>
+<script src="/static/js/students.js?v=2.3"></script>
 {% endblock %}

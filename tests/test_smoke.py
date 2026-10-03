@@ -55,8 +55,8 @@ class FastSmokeTests(unittest.TestCase):
         self.assertTrue("/login" in loc or "/saas" in loc)
 
     def test_04_core_tenants_integrity(self):
-        """Verify all 6 core SaaS tenants exist and are active in database."""
-        core_slugs = ["default", "pulin1", "ssec", "gecm", "raymond-store-1", "the-retail-store"]
+        """Verify all 7 core SaaS tenants exist and are active in database."""
+        core_slugs = ["default", "pulin1", "ssec", "gecm", "raymond-store-1", "the-retail-store", "demo-store"]
         with get_db_context() as db:
             active_tenants = db.query(Tenant).filter(Tenant.slug.in_(core_slugs)).all()
             found_slugs = [t.slug for t in active_tenants if t.is_active]

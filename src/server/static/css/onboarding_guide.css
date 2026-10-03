@@ -1,0 +1,319 @@
+/* =========================================================================
+   Curiosity HUB — Quick Onboarding Interactive Guide & Lightbox Styles
+   Self-contained styling for Landing Page and Admin Dashboard environments
+   ========================================================================= */
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Modal Overlay Backdrop */
+.guide-modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.82) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    display: none;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10002 !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+/* Modal Window Container */
+.guide-modal-dialog {
+    background: #FFFFFF !important;
+    border-radius: 18px !important;
+    max-width: 960px !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45) !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    animation: modalFadeIn 0.25s ease-out !important;
+    box-sizing: border-box !important;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* Modal Header */
+.guide-modal-header {
+    padding: 16px 24px !important;
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
+    color: #FFFFFF !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.demo-pill-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 4px 10px !important;
+    border-radius: 9999px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.3px !important;
+    text-transform: uppercase !important;
+}
+
+.demo-modal-close {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: none !important;
+    color: #FFFFFF !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: background 0.2s ease !important;
+}
+
+.demo-modal-close:hover {
+    background: rgba(239, 68, 68, 0.85) !important;
+}
+
+/* Progress Bar */
+.guide-modal-progress-bar {
+    height: 4px !important;
+    background: #1E293B !important;
+    width: 100% !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+}
+
+.guide-modal-progress-fill {
+    height: 100% !important;
+    background: linear-gradient(90deg, #EA580C, #F97316, #10B981) !important;
+    width: 10% !important;
+    transition: width 0.3s ease !important;
+}
+
+/* Horizontal Step Navigation Pills Bar */
+.guide-modal-pills-bar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 10px 20px !important;
+    background: #F8FAFC !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    scrollbar-width: thin !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.guide-step-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 5px 12px !important;
+    border-radius: 9999px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    color: #64748B !important;
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    flex-shrink: 0 !important;
+}
+
+.guide-step-pill:hover {
+    border-color: #EA580C !important;
+    color: #EA580C !important;
+    background: #FFF7ED !important;
+}
+
+.guide-step-pill.active {
+    background: #EA580C !important;
+    color: #FFFFFF !important;
+    border-color: #EA580C !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25) !important;
+}
+
+.guide-pill-num {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 17px !important;
+    height: 17px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.08) !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+}
+
+.guide-step-pill.active .guide-pill-num {
+    background: rgba(255, 255, 255, 0.28) !important;
+    color: #FFFFFF !important;
+}
+
+/* Scrollable Modal Body */
+.guide-modal-body {
+    padding: 22px 26px !important;
+    overflow-y: auto !important;
+    flex: 1 !important;
+    background: #FFFFFF !important;
+    color: #334155 !important;
+    box-sizing: border-box !important;
+}
+
+/* Modal Navigation Footer */
+.guide-modal-footer {
+    padding: 14px 24px !important;
+    background: #F8FAFC !important;
+    border-top: 1px solid #E2E8F0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-shrink: 0 !important;
+    gap: 12px !important;
+    box-sizing: border-box !important;
+}
+
+.btn-guide-nav {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 16px !important;
+    border-radius: 9999px !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    border: 1px solid #CBD5E1 !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-guide-nav:hover:not(:disabled) {
+    border-color: #EA580C !important;
+    color: #EA580C !important;
+    background: #FFF7ED !important;
+}
+
+.btn-guide-nav:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+}
+
+.btn-guide-primary {
+    background: linear-gradient(135deg, #EA580C 0%, #C2410C 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3) !important;
+}
+
+.btn-guide-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #F97316 0%, #EA580C 100%) !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Lightbox Modal */
+.lightbox-modal {
+    display: none;
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 10005 !important;
+    background: rgba(15, 23, 42, 0.88) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+}
+
+.lightbox-content {
+    background: #FFFFFF !important;
+    border-radius: 16px !important;
+    max-width: 1080px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    animation: modalFadeIn 0.25s ease-out !important;
+}
+
+.lightbox-header {
+    padding: 14px 20px !important;
+    background: #0F172A !important;
+    color: #F8FAFC !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.lightbox-title {
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    color: #F8FAFC !important;
+}
+
+.lightbox-close {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: none !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    color: #FFFFFF !important;
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background 0.2s !important;
+}
+
+.lightbox-close:hover {
+    background: rgba(239, 68, 68, 0.85) !important;
+}
+
+.lightbox-body {
+    padding: 16px !important;
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+    text-align: center !important;
+    background: #F1F5F9 !important;
+}
+
+.lightbox-img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1) !important;
+}

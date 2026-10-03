@@ -11,7 +11,8 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.7.2">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.8.1">
+    <link rel="stylesheet" href="/static/css/onboarding_guide.css?v=2.1">
     
     <!-- Dynamic Custom Accent Color if configured -->
     {% if branding and branding.primary_accent_color and branding.primary_accent_color != '#c2410c' and branding.primary_accent_color != '#6366f1' and branding.primary_accent_color != '#1e40af' %}
@@ -140,6 +141,12 @@
                     <span>Settings & Themes</span>
                 </a>
             </li>
+            <li>
+                <a href="javascript:void(0)" onclick="openOnboardingModal(0); closeMobileMenu();" class="nav-link" style="border-left: 3px solid #ea580c;">
+                    <i class="fa-solid fa-compass" style="color: #ea580c;"></i>
+                    <span>Quick Onboarding Guide</span>
+                </a>
+            </li>
 
             <!-- 2. TENANT ADMIN MENU -->
             {% elif current_user and current_user.role == 'TENANT_ADMIN' %}
@@ -210,6 +217,12 @@
                 <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}" onclick="closeMobileMenu()">
                     <i class="fa-solid fa-gear"></i>
                     <span>Settings & Themes</span>
+                </a>
+            </li>
+            <li>
+                <a href="javascript:void(0)" onclick="openOnboardingModal(0); closeMobileMenu();" class="nav-link" style="border-left: 3px solid #ea580c;">
+                    <i class="fa-solid fa-compass" style="color: #ea580c;"></i>
+                    <span>Quick Onboarding Guide</span>
                 </a>
             </li>
 
@@ -413,7 +426,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/static/js/dashboard.js?v=2.7.2"></script>
+    <script src="/static/js/dashboard.js?v=2.8.0"></script>
     <script>
         function switchActiveTenant(tenantId) {
             document.cookie = "active_tenant_id=" + tenantId + "; path=/; max-age=31536000";
@@ -443,6 +456,9 @@
             window.location.href = redirectUrl;
         }
     </script>
+    <script src="/static/js/onboarding_guide.js?v=2.1"></script>
+    {% include "components/lightbox_modal.html" %}
+    {% include "components/guide_modal.html" %}
     {% block scripts %}{% endblock %}
 </body>
 </html>

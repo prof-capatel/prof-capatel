@@ -372,6 +372,80 @@ def seed_default_locations_and_designations(db: Session, tenant_id: int):
     db.flush()
 
 
+def seed_demo_store_core_tenant(db: Session):
+    """Ensures Demo Store is seeded permanently as a core corporate tenant with user 'demostore' (password: 123)."""
+    demo_tenant = db.query(Tenant).filter(Tenant.slug == "demo-store").first()
+    if not demo_tenant:
+        demo_tenant = Tenant(
+            slug="demo-store",
+            name="Demo Store",
+            tenant_type="corporate",
+            contact_email="demostore@curiosityhub.co.in",
+            is_active=True,
+            subscription_plan="ENTERPRISE",
+            subscription_status="ACTIVE",
+            max_face_encodings=5000,
+            max_nodes=50,
+            uuid=str(uuid.uuid4()),
+            admin_token=secrets.token_urlsafe(32),
+            onboarding_token=secrets.token_urlsafe(32),
+            attendance_slug=secrets.token_urlsafe(24),
+        )
+        db.add(demo_tenant)
+        db.flush()
+        logger.info(f"Seeded core Tenant 'demo-store' (ID #{demo_tenant.id}).")
+    else:
+        demo_tenant.is_active = True
+        demo_tenant.tenant_type = "corporate"
+        demo_tenant.name = "Demo Store"
+        db.flush()
+
+    # System Branding for Demo Store
+    branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == demo_tenant.id).first()
+    if not branding:
+        branding = SystemBranding(
+            tenant_id=demo_tenant.id,
+            institution_name="Demo Store",
+            short_code="DEMO-STORE",
+            tagline="Enterprise Retail Biometric Attendance & Payroll Hub",
+            primary_accent_color="#4f46e5",
+            header_badge_text="Corporate Retail Portal",
+            cooldown_minutes=60,
+            enable_anti_spoofing=False,
+            liveness_mode="off",
+            enable_self_attendance=False,
+        )
+        db.add(branding)
+        db.flush()
+
+    # Admin User 'demostore' with password '123'
+    demo_user = db.query(User).filter(User.username == "demostore").first()
+    if not demo_user:
+        demo_user = User(
+            tenant_id=demo_tenant.id,
+            username="demostore",
+            email="demostore@curiosityhub.co.in",
+            password_hash=hash_password("123"),
+            role="TENANT_ADMIN",
+            full_name="Demo Store Administrator",
+            is_active=True,
+        )
+        db.add(demo_user)
+        db.flush()
+        logger.info(f"Seeded core User 'demostore' for Tenant #{demo_tenant.id}.")
+    else:
+        demo_user.tenant_id = demo_tenant.id
+        demo_user.role = "TENANT_ADMIN"
+        demo_user.is_active = True
+        demo_user.password_hash = hash_password("123")
+        db.flush()
+
+    seed_default_leave_types(db, demo_tenant.id)
+    seed_default_salary_components(db, demo_tenant.id)
+    seed_default_salary_templates(db, demo_tenant.id)
+    seed_default_locations_and_designations(db, demo_tenant.id)
+
+
 def seed_default_tenant_and_branding():
     """Seeds default tenant, branding, RBAC users, and academic structure if database is fresh."""
     with SessionLocal() as db:
@@ -662,6 +736,9 @@ def seed_default_tenant_and_branding():
                     std.division_id = div_a.id
                 if std.academic_year_id is None and acad_year:
                     std.academic_year_id = acad_year.id
+
+            # 5. Seed Core Demo Store Tenant
+            seed_demo_store_core_tenant(db)
 
             db.commit()
             logger.info("Database default seeds and referential links completed successfully.")

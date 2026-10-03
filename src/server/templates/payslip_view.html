@@ -891,7 +891,7 @@
                         {% elif is_daily and (p.daily_rate or p.daily_salary_rate) %}
                             ₹ {{ "{:,.2f}".format(p.daily_rate or p.daily_salary_rate) }} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">/day</span>
                         {% elif not is_daily and (p.daily_salary_rate or p.monthly_gross or payslip.gross_earnings) %}
-                            ₹ {{ "{:,.2f}".format(p.daily_salary_rate or ((p.monthly_gross or payslip.gross_earnings or 0.0) / (payslip.calendar_days or 30))) }} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">/day</span>
+                            ₹ {{ "{:,.2f}".format(p.daily_salary_rate or ((p.monthly_gross or payslip.gross_earnings or 0.0) / (payslip.working_days or 26.0))) }} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">/day</span>
                         {% else %}
                             <span style="color: var(--text-muted); font-size: 13px;">NA</span>
                         {% endif %}

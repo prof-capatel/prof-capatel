@@ -548,14 +548,14 @@ class TestPayrollStructureAndTemplateMapping(unittest.TestCase):
         self.assertEqual(calc["compensation_model"], "STRUCTURED_SALARY")
         self.assertEqual(calc["present_days"], 25.0)
         self.assertEqual(calc["calendar_days_count"], 31)
-        expected_ratio = 25.0 / 31.0
+        expected_ratio = 25.0 / 26.0
         self.assertAlmostEqual(calc["basic_earned"], round(60000.0 * expected_ratio, 2), places=2)
         self.assertAlmostEqual(calc["hra_earned"], round(12000.0 * expected_ratio, 2), places=2)
         self.assertAlmostEqual(calc["da_earned"], round(6000.0 * expected_ratio, 2), places=2)
         self.assertAlmostEqual(calc["conveyance_earned"], round(1600.0 * expected_ratio, 2), places=2)
         self.assertAlmostEqual(calc["medical_earned"], round(1250.0 * expected_ratio, 2), places=2)
         self.assertAlmostEqual(calc["other_allowance_earned"], round(1000.0 * expected_ratio, 2), places=2)
-        # EPF ceiling: 12% * min(basic + da, 15000 * ratio) = 12% * (15000 * 25/31) = 1451.61
+        # EPF ceiling: 12% * min(basic + da, 15000 * ratio) = 12% * (15000 * 25/26) = 1730.77
         self.assertAlmostEqual(calc["epf_employee"], round(1800.0 * expected_ratio, 2), places=2)
         self.assertEqual(calc["pt"], 200.0)
 

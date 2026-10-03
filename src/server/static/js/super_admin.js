@@ -11,6 +11,7 @@
             loadSuperAdminMetrics(),
             loadTenantsList(),
             loadSeoData(),
+            loadTrafficAnalytics(),
         ]);
     }
 
@@ -1019,3 +1020,153 @@
             }
         }
     }
+
+    // =========================================================================
+    // Website Access & SEO Traffic Analytics Controller
+    // =========================================================================
+    async function loadTrafficAnalytics() {
+        try {
+            const res = await fetch("/api/v1/super-admin/traffic-analytics");
+            if (!res.ok) return;
+            const data = await res.json();
+            renderTrafficAnalytics(data);
+        } catch (e) {
+            console.error("Error loading traffic analytics:", e);
+        }
+    }
+
+    function renderTrafficAnalytics(data) {
+        if (!data) return;
+
+        // KPI Numbers
+        const totalEl = document.getElementById("trafficTotalRequests");
+        if (totalEl) totalEl.innerText = (data.total_requests || 0).toLocaleString();
+
+        const req24hEl = document.getElementById("traffic24hRequests");
+        if (req24hEl) req24hEl.innerText = `+${(data.requests_24h || 0).toLocaleString()} in last 24h`;
+
+        const uniqueEl = document.getElementById("trafficUniqueVisitors");
+        if (uniqueEl) uniqueEl.innerText = (data.unique_visitors || 0).toLocaleString();
+
+        const unique24hEl = document.getElementById("trafficUnique24h");
+        if (unique24hEl) unique24hEl.innerText = `${(data.unique_visitors_24h || 0).toLocaleString()} today`;
+
+        const crawlerEl = document.getElementById("trafficCrawlerHits");
+        if (crawlerEl) crawlerEl.innerText = (data.crawler_hits || 0).toLocaleString();
+
+        const humanEl = document.getElementById("trafficHumanVisits");
+        if (humanEl) humanEl.innerText = (data.human_visits || 0).toLocaleString();
+
+        // Top Visited Pages Table
+        const topPagesBody = document.getElementById("trafficTopPagesBody");
+        if (topPagesBody) {
+            if (!data.top_pages || data.top_pages.length === 0) {
+                topPagesBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 12px; color: var(--text-muted); font-size: 11.5px;">No traffic recorded yet.</td></tr>`;
+            } else {
+                topPagesBody.innerHTML = data.top_pages.map(p => `
+                    <tr style="border-bottom: 1px solid var(--border-subtle);">
+                        <td style="padding: 6px 10px; font-family: monospace; font-size: 11.5px; color: var(--text-primary); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${p.path}">
+                            ${p.path}
+                        </td>
+                        <td style="padding: 6px 10px; font-weight: 700; text-align: right; font-size: 11.5px;">${p.views}</td>
+                        <td style="padding: 6px 10px; text-align: right; font-size: 11px; color: var(--text-muted);">${p.percentage}%</td>
+                    </tr>
+                `).join("");
+            }
+        }
+
+        // Search Bots & Traffic Sources
+        const sourcesBody = document.getElementById("trafficSourcesBody");
+        if (sourcesBody) {
+            const combinedSources = [];
+            if (data.top_bots && data.top_bots.length > 0) {
+                data.top_bots.forEach(b => combinedSources.push({ name: `🤖 ${b.bot}`, count: b.hits, type: "bot" }));
+            }
+            if (data.top_referrers && data.top_referrers.length > 0) {
+                data.top_referrers.forEach(r => combinedSources.push({ name: `🌐 ${r.source}`, count: r.visits, type: "referrer" }));
+            }
+
+            if (combinedSources.length === 0) {
+                sourcesBody.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 12px; color: var(--text-muted); font-size: 11.5px;">No visitor activity yet.</td></tr>`;
+            } else {
+                sourcesBody.innerHTML = combinedSources.slice(0, 6).map(s => `
+                    <tr style="border-bottom: 1px solid var(--border-subtle);">
+                        <td style="padding: 6px 10px; font-size: 11.5px; color: var(--text-primary);">${s.name}</td>
+                        <td style="padding: 6px 10px; font-weight: 700; text-align: right; font-size: 11.5px;">${s.count}</td>
+                    </tr>
+                `).join("");
+            }
+        }
+
+        // Recent Requests Live Stream Table
+        const recentLogsBody = document.getElementById("trafficRecentLogsBody");
+        const countLabel = document.getElementById("trafficRecentCount");
+        if (recentLogsBody) {
+            if (!data.recent_logs || data.recent_logs.length === 0) {
+                recentLogsBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 11.5px;">No requests recorded yet.</td></tr>`;
+                if (countLabel) countLabel.innerText = "Showing 0 events";
+            } else {
+                if (countLabel) countLabel.innerText = `Showing ${data.recent_logs.length} latest events`;
+                recentLogsBody.innerHTML = data.recent_logs.map(log => {
+                    const statusClass = log.status_code >= 400 ? "badge-absent" : "badge-present";
+                    const visitorBadge = log.is_crawler
+                        ? `<span class="badge" style="background: rgba(234, 88, 12, 0.15); color: #ea580c; font-size: 10px; font-weight: 700;"><i class="fa-solid fa-robot"></i> ${log.bot_name || 'Bot'}</span>`
+                        : `<span class="badge" style="background: var(--badge-emerald-bg); color: var(--accent-emerald); font-size: 10px; font-weight: 700;"><i class="fa-solid fa-user"></i> Human</span>`;
+
+                    let timeFormatted = log.timestamp;
+                    try {
+                        const d = new Date(log.timestamp);
+                        timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    } catch (_) {}
+
+                    return `
+                        <tr style="border-bottom: 1px solid var(--border-subtle);">
+                            <td style="padding: 8px 12px; font-size: 11px; color: var(--text-muted); white-space: nowrap;">${timeFormatted}</td>
+                            <td style="padding: 8px 12px; font-size: 11.5px; font-family: monospace; font-weight: 600; color: var(--text-primary);">
+                                <span style="color: var(--accent-primary); font-weight: 700; margin-right: 4px;">${log.method}</span>
+                                <span title="${log.path}">${log.path}</span>
+                            </td>
+                            <td style="padding: 8px 12px; font-size: 11px; font-family: monospace; color: var(--text-muted);">${log.ip}</td>
+                            <td style="padding: 8px 12px;">${visitorBadge}</td>
+                            <td style="padding: 8px 12px; text-align: center;">
+                                <span class="badge ${statusClass}" style="font-size: 10px; font-weight: 700;">${log.status_code}</span>
+                            </td>
+                            <td style="padding: 8px 12px; text-align: right; font-size: 11px; color: var(--text-muted);">${log.duration_ms} ms</td>
+                        </tr>
+                    `;
+                }).join("");
+            }
+        }
+    }
+
+    async function triggerClearTrafficLogs() {
+        if (!confirm("Are you sure you want to purge all historical website access & SEO traffic logs? This action cannot be undone.")) {
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/v1/super-admin/traffic-analytics/clear", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Traffic access logs have been purged.");
+                if (data.summary) {
+                    renderTrafficAnalytics(data.summary);
+                } else {
+                    await loadTrafficAnalytics();
+                }
+            } else {
+                alert(`Error purging traffic logs: ${data.detail || "Server error"}`);
+            }
+        } catch (e) {
+            console.error("Purge traffic logs error:", e);
+            alert("Network error while purging traffic logs.");
+        }
+    }
+
+    // Expose to window for inline onclick handlers
+    window.loadTrafficAnalytics = loadTrafficAnalytics;
+    window.triggerClearTrafficLogs = triggerClearTrafficLogs;
+

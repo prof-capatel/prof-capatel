@@ -2095,3 +2095,195 @@ input[type="number"] {
   appearance: textfield !important;
 }
 
+/* ==========================================================
+   Quick Onboarding Guide Modal & Lightbox Styles
+   ========================================================== */
+.guide-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10002;
+  padding: 20px;
+}
+
+.guide-modal-dialog {
+  background: #FFFFFF;
+  border-radius: 20px;
+  max-width: 960px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+.guide-modal-header {
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.guide-modal-progress-bar {
+  height: 4px;
+  background: #1E293B;
+  width: 100%;
+  position: relative;
+}
+
+.guide-modal-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #EA580C, #F97316, #10B981);
+  width: 10%;
+  transition: width 0.3s ease;
+}
+
+.guide-modal-pills-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: #F8FAFC;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  flex-shrink: 0;
+}
+
+.guide-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.guide-step-pill:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: #FFF7ED;
+}
+
+.guide-step-pill.active {
+  background: var(--accent-primary, #EA580C);
+  color: #FFFFFF !important;
+  border-color: var(--accent-primary, #EA580C);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+}
+
+.guide-pill-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.guide-step-pill.active .guide-pill-num {
+  background: rgba(255, 255, 255, 0.28);
+  color: #FFFFFF;
+}
+
+.guide-modal-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.guide-modal-footer {
+  padding: 16px 28px;
+  background: #F8FAFC;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.btn-guide-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1px solid var(--border-color);
+  background: #FFFFFF;
+  color: var(--text-heading);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-guide-nav:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: #F8FAFC;
+}
+
+.btn-guide-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-guide-primary {
+  background: linear-gradient(135deg, #EA580C, #C2410C);
+  color: #FFFFFF !important;
+  border-color: transparent;
+}
+
+.btn-guide-primary:hover {
+  background: linear-gradient(135deg, #C2410C, #9A3412);
+}
+
+.demo-modal-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #FFFFFF;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.demo-modal-close:hover {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+

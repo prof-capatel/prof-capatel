@@ -164,10 +164,16 @@
                     loadPayrollBatches();
                 }, 700);
             } else {
+                let errorMsg = data.detail || data.message || "Generation failed.";
+                if (Array.isArray(errorMsg)) {
+                    errorMsg = errorMsg.map(err => err.msg || JSON.stringify(err)).join(", ");
+                } else if (typeof errorMsg === "object") {
+                    errorMsg = JSON.stringify(errorMsg);
+                }
                 alertBox.style.display = "block";
                 alertBox.style.background = "var(--badge-rose-bg)";
                 alertBox.style.color = "var(--badge-rose-text)";
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + (data.detail || "Generation failed.");
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + errorMsg;
                 runBtn.disabled = false;
                 runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Execute Payroll Run';
             }
@@ -175,7 +181,7 @@
             alertBox.style.display = "block";
             alertBox.style.background = "var(--badge-rose-bg)";
             alertBox.style.color = "var(--badge-rose-text)";
-            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error.';
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network or server error: ' + (e.message || "Please check connection.");
             runBtn.disabled = false;
             runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Execute Payroll Run';
         }

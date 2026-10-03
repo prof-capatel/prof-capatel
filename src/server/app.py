@@ -73,6 +73,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Website Access & SEO Traffic Logging Middleware
+@app.middleware("http")
+async def track_access_logs(request, call_next):
+    import time
+    from src.server.services import traffic_analytics
+    
+    start_time = time.time()
+    response = await call_next(request)
+    duration_ms = (time.time() - start_time) * 1000
+
+    try:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        user_agent = request.headers.get("user-agent", "")
+        referer = request.headers.get("referer", "")
+        path = request.url.path
+        method = request.method
+        status_code = response.status_code
+
+        traffic_analytics.record_request(
+            method=method,
+            path=path,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            referer=referer,
+            status_code=status_code,
+            duration_ms=duration_ms,
+        )
+    except Exception:
+        pass
+
+    return response
+
 # Mount Static Assets & Data Storage
 app.mount("/static", StaticFiles(directory="src/server/static"), name="static")
 app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")

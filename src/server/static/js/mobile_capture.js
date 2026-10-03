@@ -237,9 +237,6 @@
                 startStreaming();
             }
         }
-
-        let streamTimer = null;
-
         function createMobileWorkerTimer(callback, intervalMs) {
             if (typeof Worker !== "undefined" && typeof Blob !== "undefined") {
                 try {

@@ -13,6 +13,7 @@ __pycache__/
 # Data artifacts, snapshots & runtime face crops
 data/snapshots/
 data/crops/
+data/access_logs.jsonl
 videos/
 screenshots/*
 !screenshots/walkthrough/

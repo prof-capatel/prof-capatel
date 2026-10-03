@@ -414,10 +414,18 @@
     }
 
     // Expose control functions globally
+    window.toggleContinuousCapture = toggleContinuousCapture;
     window.startContinuousCapture = startContinuousCapture;
     window.stopContinuousCapture = stopContinuousCapture;
     window.pauseForSecondaryCamera = pauseForSecondaryCamera;
     window.resumeFromSecondaryCamera = resumeFromSecondaryCamera;
+    window.captureManualSingleShot = captureManualSingleShot;
+    window.toggleScannerSound = toggleScannerSound;
+    window.resetCameraCardDock = resetCameraCardDock;
+    window.switchCaptureCamera = switchCaptureCamera;
+    window.handleCaptureInterrupted = handleCaptureInterrupted;
+    window.copyDashLink = copyDashLink;
+    window.loadStats = loadStats;
 
     function handleCaptureInterrupted(reason) {
         if (!isContinuousActive && isInterruptedState) return;
@@ -584,7 +592,19 @@
                 video: deviceId ? { deviceId: { exact: deviceId } } : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
                 audio: false
             };
-            captureMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            try {
+                captureMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (deviceErr) {
+                if (deviceId) {
+                    console.warn("[Camera] Specific deviceId capture failed, falling back to default camera:", deviceErr);
+                    captureMediaStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+                        audio: false
+                    });
+                } else {
+                    throw deviceErr;
+                }
+            }
             video.srcObject = captureMediaStream;
             await video.play();
 
@@ -892,10 +912,111 @@
                 }
             }, 250);
         }, FLASH_DURATION_MS);
+
+        // Auto-refresh the live recognition feed list and dashboard KPI metrics
+        if (typeof refreshLiveRecognitionFeed === "function") {
+            refreshLiveRecognitionFeed();
+        }
     }
 
     // Expose on window for external triggers
     window.showCaptureToast = showCaptureToast;
+
+    // ==========================================================
+    // Live Recognition Feed Dynamic Fetcher & Manual Refresh
+    // ==========================================================
+    async function refreshLiveRecognitionFeed() {
+        const feedContainer = document.getElementById("liveFeedContainer");
+        const refreshIcon = document.getElementById("btnRefreshLiveFeedIcon");
+
+        if (refreshIcon) refreshIcon.classList.add("fa-spin");
+
+        try {
+            const res = await fetch("/api/v1/attendance/records?limit=15&view_mode=active");
+            if (res.ok) {
+                const data = await res.json();
+                const records = data.records || [];
+                if (feedContainer) {
+                    if (records.length === 0) {
+                        feedContainer.innerHTML = `
+                            <div id="emptyFeedState" style="text-align: center; padding: 40px 16px; color: var(--text-muted); background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px dashed var(--border-color); margin: auto 0;">
+                                <i class="fa-solid fa-video" style="font-size: 28px; margin-bottom: 10px; color: var(--accent-primary); opacity: 0.8;"></i>
+                                <p style="font-weight: 600; font-size: 13px; color: var(--text-heading);">Awaiting face recognition events...</p>
+                                <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">Click <strong>Start Attendance Capture</strong> on the camera feed card to mark attendance.</p>
+                            </div>
+                        `;
+                    } else {
+                        let html = "";
+                        records.forEach(r => {
+                            const name = r.student_name || r.name || (r.student && r.student.name) || "Unknown Member";
+                            const roll = r.roll_number || (r.student && r.student.roll_number) || "N/A";
+                            const node = r.node_id || "GATEWAY";
+                            const isOverride = r.is_manual_override;
+                            const initial = name.charAt(0).toUpperCase();
+                            const pType = (r.punch_type || "CHECK_IN").toUpperCase();
+                            const isCheckOut = pType.includes("OUT") || pType === "CHECK_OUT";
+                            const confPct = r.match_confidence_pct || 98;
+                            const timeDisplay = r.check_in_formatted || r.timestamp_formatted || (r.timestamp ? `${r.timestamp} IST` : "Just now");
+
+                            let punchBadge = isCheckOut
+                                ? `<span class="badge badge-sky" style="font-size: 10px;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Check-Out</span>`
+                                : `<span class="badge badge-present" style="font-size: 10px;"><i class="fa-solid fa-circle-check"></i> Check-In</span>`;
+                            if (isOverride) {
+                                punchBadge = `<span class="badge badge-amber" style="font-size: 10px;"><i class="fa-solid fa-user-check"></i> Override</span>`;
+                            }
+
+                            html += `
+                                <div class="feed-item" style="padding: 10px 12px; margin-bottom: 8px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <div class="feed-item-left" style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                                        <div class="feed-avatar" style="width: 36px; height: 36px; font-size: 13px; flex-shrink: 0;">
+                                            ${r.snapshot_path ? `<img src="/data/${r.snapshot_path}" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` : `<span>${initial}</span>`}
+                                        </div>
+                                        <div class="feed-details" style="overflow: hidden;">
+                                            <h4 style="font-size: 13px; font-weight: 700; color: var(--text-heading); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(name)}</h4>
+                                            <div class="feed-meta" style="font-size: 11px; color: var(--text-muted); display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+                                                <span>Roll: <strong>${escapeHtml(roll)}</strong></span>
+                                                <span>•</span>
+                                                <span>Node: <strong>${escapeHtml(node)}</strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="feed-item-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0;">
+                                        ${punchBadge}
+                                        <div class="feed-timestamp" style="font-size: 11px; font-family: monospace; color: var(--text-secondary);">${escapeHtml(timeDisplay)}</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        feedContainer.innerHTML = html;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to refresh live feed:", e);
+        } finally {
+            if (refreshIcon) {
+                setTimeout(() => {
+                    refreshIcon.classList.remove("fa-spin");
+                }, 350);
+            }
+        }
+
+        if (typeof loadStats === "function") {
+            loadStats();
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    window.refreshLiveRecognitionFeed = refreshLiveRecognitionFeed;
 
     // ==========================================================
     // DRAGGABLE CAMERA CARD IMPLEMENTATION (Desktop-Only Dragging)

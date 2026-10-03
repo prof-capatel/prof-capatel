@@ -43,8 +43,8 @@ from src.database.models import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("purge_test_theme_artifacts")
 
-CORE_TENANT_SLUGS = ["default", "pulin1", "ssec", "gecm", "raymond-store-1", "the-retail-store"]
-CORE_USERNAMES = ["superadmin", "admin", "teacher1", "student1", "ssec", "gecm", "raymond", "admin_retail"]
+CORE_TENANT_SLUGS = ["default", "pulin1", "ssec", "gecm", "raymond-store-1", "the-retail-store", "demo-store"]
+CORE_USERNAMES = ["superadmin", "admin", "teacher1", "student1", "ssec", "gecm", "raymond", "admin_retail", "demostore"]
 
 
 def run_theme_test_purge():
