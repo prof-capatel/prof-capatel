@@ -2761,3 +2761,627 @@
             color: #FFFFFF;
             background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
         }
+
+        /* ==========================================================================
+           SEO LANDING PAGES & CONTENT HUB EXTENSIONS
+           Breadcrumbs, Hero Banners, Comparison Tables, ROI Calculator & FAQs
+           ========================================================================== */
+
+        /* SEO Breadcrumbs */
+        .seo-breadcrumb {
+            padding: 16px 0 8px;
+            font-size: 13.5px;
+            color: var(--text-muted);
+        }
+        .breadcrumb-list {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .breadcrumb-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .breadcrumb-list li a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .breadcrumb-list li a:hover {
+            color: var(--accent-primary);
+        }
+        .breadcrumb-list li.active {
+            color: var(--text-heading);
+            font-weight: 600;
+        }
+        .breadcrumb-sep {
+            color: var(--text-light);
+            font-size: 11px;
+        }
+
+        /* Dedicated Product Hero Section */
+        .product-hero-section {
+            padding: 40px 0 60px;
+            position: relative;
+            background: radial-gradient(circle at 50% 0%, rgba(234, 88, 12, 0.08) 0%, transparent 60%);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .product-hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: var(--radius-pill);
+            background: var(--accent-soft);
+            color: var(--accent-primary);
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 18px;
+            border: 1px solid rgba(234, 88, 12, 0.2);
+        }
+        .product-hero-headline {
+            font-size: clamp(32px, 4.2vw, 52px);
+            font-weight: 800;
+            line-height: 1.15;
+            color: var(--text-heading);
+            margin-bottom: 20px;
+            letter-spacing: -0.03em;
+        }
+        .product-hero-sub {
+            font-size: clamp(16px, 1.3vw, 19px);
+            color: var(--text-body);
+            max-width: 820px;
+            line-height: 1.65;
+            margin-bottom: 32px;
+        }
+        .product-hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .hero-trust-bar {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            margin-top: 36px;
+            padding-top: 24px;
+            border-top: 1px dashed var(--border-subtle);
+            flex-wrap: wrap;
+        }
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+        .trust-item i {
+            color: var(--success-emerald);
+        }
+
+        /* Solution Grid & Cards */
+        .solution-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 28px;
+            margin-top: 36px;
+        }
+        .solution-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+        }
+        .solution-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-primary);
+        }
+        .solution-icon-box {
+            width: 54px;
+            height: 54px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .solution-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin-bottom: 12px;
+        }
+        .solution-card p {
+            font-size: 14.5px;
+            color: var(--text-body);
+            line-height: 1.6;
+            margin-bottom: 18px;
+            flex-grow: 1;
+        }
+        .solution-feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .solution-feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            color: var(--text-body);
+        }
+        .solution-feature-list li i {
+            color: var(--success-emerald);
+            font-size: 12px;
+        }
+
+        /* Technical Specs Table */
+        .specs-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+            margin-top: 36px;
+        }
+        .specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14.5px;
+        }
+        .specs-table th {
+            text-align: left;
+            padding: 14px 18px;
+            background: var(--bg-subtle);
+            color: var(--text-heading);
+            font-weight: 700;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+        .specs-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-body);
+        }
+        .specs-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* SaaS vs Hardware Comparison Table */
+        .comparison-table-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            overflow-x: auto;
+            box-shadow: var(--shadow-md);
+            margin-top: 36px;
+        }
+        .comparison-table {
+            width: 100%;
+            min-width: 720px;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        .comparison-table th {
+            padding: 22px 24px;
+            font-size: 16px;
+            font-weight: 700;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+        .comparison-table th.col-feature {
+            width: 34%;
+            background: var(--bg-subtle);
+            color: var(--text-heading);
+        }
+        .comparison-table th.col-saas {
+            width: 33%;
+            background: linear-gradient(180deg, rgba(234, 88, 12, 0.08) 0%, rgba(234, 88, 12, 0.03) 100%);
+            color: var(--accent-primary);
+            border-top: 3px solid var(--accent-primary);
+        }
+        .comparison-table th.col-hardware {
+            width: 33%;
+            background: #F1F5F9;
+            color: var(--text-muted);
+        }
+        .comparison-table td {
+            padding: 18px 24px;
+            font-size: 14.5px;
+            border-bottom: 1px solid var(--border-subtle);
+            vertical-align: top;
+        }
+        .comparison-table tr:hover td {
+            background: rgba(248, 250, 252, 0.7);
+        }
+        .comparison-table td.col-saas-body {
+            background: rgba(234, 88, 12, 0.02);
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+        .comparison-table tr:hover td.col-saas-body {
+            background: rgba(234, 88, 12, 0.05);
+        }
+        .badge-win {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            background: var(--success-soft);
+            color: var(--success-emerald);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .badge-loss {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            background: #FEF2F2;
+            color: #DC2626;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* TCO Breakdown Grid */
+        .tco-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-top: 32px;
+        }
+        .tco-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+        .tco-card.highlight {
+            border-color: var(--accent-primary);
+            background: linear-gradient(180deg, #FFFFFF 0%, #FFF7ED 100%);
+            box-shadow: var(--shadow-md);
+        }
+        .tco-cost-val {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin: 14px 0 8px;
+            letter-spacing: -0.03em;
+        }
+        .tco-cost-val.text-green {
+            color: var(--success-emerald);
+        }
+
+        /* Interactive ROI Calculator Styles */
+        .calc-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: clamp(24px, 3vw, 44px);
+            box-shadow: var(--shadow-lg);
+            margin-top: 36px;
+        }
+        .calc-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 40px;
+        }
+        @media (max-width: 900px) {
+            .calc-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .calc-input-group {
+            margin-bottom: 24px;
+        }
+        .calc-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .calc-label {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+        .calc-value-badge {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--accent-primary);
+            background: var(--accent-soft);
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+        }
+        .calc-range-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--bg-muted);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+        .calc-range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(234, 88, 12, 0.4);
+            border: 2px solid #FFFFFF;
+            transition: transform 0.15s ease;
+        }
+        .calc-range-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        .calc-results-card {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            color: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--shadow-lg);
+        }
+        .calc-kpi-block {
+            margin-bottom: 24px;
+        }
+        .calc-kpi-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94A3B8;
+            margin-bottom: 6px;
+        }
+        .calc-kpi-huge {
+            font-size: clamp(32px, 3.5vw, 44px);
+            font-weight: 800;
+            color: #10B981;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+        .calc-sub-kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .calc-mini-kpi-label {
+            font-size: 12px;
+            color: #94A3B8;
+        }
+        .calc-mini-kpi-val {
+            font-size: 18px;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin-top: 4px;
+        }
+
+        /* Downloadable Policy Viewer */
+        .policy-viewer-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-top: 36px;
+        }
+        .policy-toolbar {
+            background: var(--bg-subtle);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .policy-doc-body {
+            padding: clamp(24px, 3.5vw, 48px);
+            max-height: 650px;
+            overflow-y: auto;
+            line-height: 1.7;
+            font-size: 15px;
+            color: var(--text-body);
+        }
+        .policy-doc-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 8px;
+        }
+        .policy-meta-line {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .policy-section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin: 24px 0 10px;
+        }
+        .policy-section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        /* 2026 Holiday Calendar Table & Filters */
+        .holiday-container {
+            margin-top: 36px;
+        }
+        .holiday-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .holiday-filter-btn {
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-card);
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-body);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .holiday-filter-btn:hover,
+        .holiday-filter-btn.active {
+            background: var(--accent-primary);
+            color: #FFFFFF;
+            border-color: var(--accent-primary);
+        }
+        .holiday-table-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            overflow-x: auto;
+            box-shadow: var(--shadow-sm);
+        }
+        .holiday-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14.5px;
+        }
+        .holiday-table th {
+            text-align: left;
+            padding: 16px 20px;
+            background: var(--bg-subtle);
+            color: var(--text-heading);
+            font-weight: 700;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+        .holiday-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-body);
+        }
+        .holiday-table tr:hover td {
+            background: var(--bg-subtle);
+        }
+        .holiday-type-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .holiday-gazetted {
+            background: #EFF6FF;
+            color: #1D4ED8;
+        }
+        .holiday-restricted {
+            background: #FDF2F8;
+            color: #BE185D;
+        }
+
+        /* FAQ Accordion Component */
+        .faq-section-block {
+            padding: 60px 0 80px;
+            background: var(--bg-page);
+        }
+        .faq-accordion-container {
+            max-width: 900px;
+            margin: 36px auto 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .faq-accordion-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            transition: var(--transition);
+            box-shadow: var(--shadow-xs);
+        }
+        .faq-accordion-item.active {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-sm);
+        }
+        .faq-question-btn {
+            width: 100%;
+            text-align: left;
+            padding: 20px 24px;
+            background: none;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-family: var(--font-display);
+            font-size: 16.5px;
+            font-weight: 700;
+            color: var(--text-heading);
+            transition: var(--transition);
+        }
+        .faq-question-btn:hover {
+            color: var(--accent-primary);
+        }
+        .faq-toggle-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--bg-subtle);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: transform 0.25s ease, background-color 0.25s ease;
+            flex-shrink: 0;
+        }
+        .faq-accordion-item.active .faq-toggle-icon {
+            transform: rotate(180deg);
+            background: var(--accent-soft);
+            color: var(--accent-primary);
+        }
+        .faq-answer-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0, 1, 0, 1);
+            background: var(--bg-card);
+        }
+        .faq-accordion-item.active .faq-answer-panel {
+            max-height: 1000px;
+            transition: max-height 0.4s ease-in-out;
+        }
+        .faq-answer-content {
+            padding: 0 24px 22px;
+            font-size: 15px;
+            color: var(--text-body);
+            line-height: 1.65;
+            border-top: 1px solid var(--bg-subtle);
+            margin-top: 4px;
+            padding-top: 16px;
+        }
+

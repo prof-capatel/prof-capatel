@@ -350,6 +350,7 @@
                 event.stopPropagation();
                 event.preventDefault();
             }
+            closeResourcesDropdown();
             const dropdown = document.getElementById('productsDropdownMenu');
             const navItem = document.getElementById('navProductsDropdown');
             const trigger = document.getElementById('productsMenuTrigger');
@@ -376,11 +377,47 @@
             if (trigger) trigger.setAttribute('aria-expanded', 'false');
         }
 
-        // Click outside closes dropdown
+        function toggleResourcesDropdown(event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            closeProductsDropdown();
+            const dropdown = document.getElementById('resourcesDropdownMenu');
+            const navItem = document.getElementById('navResourcesDropdown');
+            const trigger = document.getElementById('resourcesMenuTrigger');
+            if (!dropdown) return;
+
+            const isShown = dropdown.classList.contains('show');
+            if (isShown) {
+                dropdown.classList.remove('show');
+                if (navItem) navItem.classList.remove('active');
+                if (trigger) trigger.setAttribute('aria-expanded', 'false');
+            } else {
+                dropdown.classList.add('show');
+                if (navItem) navItem.classList.add('active');
+                if (trigger) trigger.setAttribute('aria-expanded', 'true');
+            }
+        }
+
+        function closeResourcesDropdown() {
+            const dropdown = document.getElementById('resourcesDropdownMenu');
+            const navItem = document.getElementById('navResourcesDropdown');
+            const trigger = document.getElementById('resourcesMenuTrigger');
+            if (dropdown) dropdown.classList.remove('show');
+            if (navItem) navItem.classList.remove('active');
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        // Click outside closes dropdowns
         document.addEventListener('click', function(e) {
-            const navItem = document.getElementById('navProductsDropdown');
-            if (navItem && !navItem.contains(e.target)) {
+            const navProducts = document.getElementById('navProductsDropdown');
+            if (navProducts && !navProducts.contains(e.target)) {
                 closeProductsDropdown();
+            }
+            const navResources = document.getElementById('navResourcesDropdown');
+            if (navResources && !navResources.contains(e.target)) {
+                closeResourcesDropdown();
             }
         });
 
@@ -563,9 +600,12 @@
             }
         });
 
-        // Expose product functions to window
+        // Expose product and resources functions to window
         window.toggleProductsDropdown = toggleProductsDropdown;
         window.closeProductsDropdown = closeProductsDropdown;
+        window.toggleResourcesDropdown = toggleResourcesDropdown;
+        window.closeResourcesDropdown = closeResourcesDropdown;
         window.selectProductView = selectProductView;
         window.openProductModal = openProductModal;
         window.closeProductModal = closeProductModal;
+

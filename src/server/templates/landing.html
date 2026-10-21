@@ -156,6 +156,42 @@
                         </a>
                     </div>
                 </li>
+                <li class="nav-item-dropdown" id="navResourcesDropdown">
+                    <a href="javascript:void(0)" class="nav-link nav-dropdown-trigger" onclick="toggleResourcesDropdown(event)" aria-haspopup="true" aria-expanded="false" id="resourcesMenuTrigger">
+                        <span>Resources</span>
+                        <i class="fa-solid fa-chevron-down dropdown-arrow" id="resourcesDropdownArrow"></i>
+                    </a>
+                    <div class="nav-dropdown-menu" id="resourcesDropdownMenu">
+                        <a href="/saas-vs-hardware-attendance" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(234, 88, 12, 0.12); color: var(--accent-primary);"><i class="fa-solid fa-scale-balanced"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">SaaS vs. Biometric Machine</strong>
+                                <span class="dropdown-subtext">Detailed TCO comparison, cost breakdown &amp; AMC analysis</span>
+                            </div>
+                        </a>
+                        <a href="/tools/attendance-roi-calculator" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(16, 185, 129, 0.12); color: var(--success-emerald);"><i class="fa-solid fa-calculator"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Attendance ROI Calculator</strong>
+                                <span class="dropdown-subtext">Calculate monthly savings from eliminating buddy-punching</span>
+                            </div>
+                        </a>
+                        <a href="/resources/attendance-policy-template" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(79, 70, 229, 0.12); color: var(--tech-indigo);"><i class="fa-solid fa-file-contract"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">HR Attendance Policy Template</strong>
+                                <span class="dropdown-subtext">Free customizable 2026 employee punctuality &amp; leave draft</span>
+                            </div>
+                        </a>
+                        <a href="/resources/holiday-calendar-2026" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(245, 158, 11, 0.12); color: var(--warning-amber);"><i class="fa-solid fa-calendar-days"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">2026 Holiday Calendar India</strong>
+                                <span class="dropdown-subtext">Complete gazetted &amp; state list for leave planning</span>
+                            </div>
+                        </a>
+                    </div>
+                </li>
                 <li><a href="javascript:void(0)" class="nav-link" id="navLinkOnboarding" onclick="openOnboardingModal(0); return false;">Quick Onboarding Guide</a></li>
                 <li><a href="#contact" class="nav-link">Contact Us</a></li>
             </ul>
@@ -633,6 +669,9 @@
         </div>
     </section>
 
+    <!-- Structured SEO FAQ Section with Schema.org FAQPage -->
+    {% include "components/seo_faq_section.html" %}
+
     <!-- ========================================================================= -->
     <!-- CONTACT US (AHMEDABAD, GUJARAT)                                           -->
     <!-- ========================================================================= -->
@@ -780,10 +819,25 @@
                     <h4>Products &amp; Solutions</h4>
                     <ul class="footer-links">
                         <li><a href="#product" onclick="selectProductView('attendance')">Face based Attendance System</a></li>
-                        <li><a href="#product" onclick="selectProductView('leave')">Leave Management Software</a></li>
-                        <li><a href="#product" onclick="selectProductView('payroll')">Payroll Management System</a></li>
+                        <li><a href="/cloud-face-recognition-attendance">Cloud Face Attendance</a></li>
+                        <li><a href="/tablet-mobile-attendance-kiosk">Tablet &amp; Mobile Kiosk</a></li>
+                        <li><a href="/zero-hardware-time-tracking">Zero-Hardware Time Tracking</a></li>
+                        <li><a href="/leave-management-software">Leave Management Software</a></li>
+                        <li><a href="/automated-payroll-software">Payroll Management System</a></li>
                         <li><a href="#about">About Us</a></li>
                         <li><a href="#contact">Contact Us</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Comparison &amp; Free Tools</h4>
+                    <ul class="footer-links">
+                        <li><a href="/saas-vs-hardware-attendance">SaaS vs. Biometric Machine</a></li>
+                        <li><a href="/tools/attendance-roi-calculator">Attendance ROI Calculator</a></li>
+                        <li><a href="/resources/attendance-policy-template">Attendance Policy Template</a></li>
+                        <li><a href="/resources/holiday-calendar-2026">2026 Holiday Calendar</a></li>
+                        <li><a href="#product">Role-Based Access Control</a></li>
+                        <li><a href="javascript:void(0)" onclick="openOnboardingModal(7)">Live Operational HUD</a></li>
                     </ul>
                 </div>
 
@@ -791,10 +845,10 @@
                     <h4>Product Editions</h4>
                     <ul class="footer-links">
                         <li><a href="#product" onclick="openProductModal('attendance')">Basic Edition (Core Attendance)</a></li>
-                        <li><a href="#product" onclick="openProductModal('leave')">Smart Edition (Shifts & GPS)</a></li>
+                        <li><a href="#product" onclick="openProductModal('leave')">Smart Edition (Shifts &amp; GPS)</a></li>
                         <li><a href="#product" onclick="openProductModal('payroll')">Pro Edition (Payroll System)</a></li>
-                        <li><a href="javascript:void(0)" onclick="openOnboardingModal(7)">Live Operational HUD</a></li>
-                        <li><a href="#product">Role-Based Access Control</a></li>
+                        <li><a href="javascript:void(0)" onclick="openFreeDemoModal()">7-Day Free Trial</a></li>
+                        <li><a href="#faq">Frequently Asked Questions</a></li>
                     </ul>
                 </div>
 
@@ -805,6 +859,7 @@
                         <li><a href="/login/demo-store" target="_blank" rel="noopener noreferrer">Demo Store Portal</a></li>
                         <li><a href="/super-admin/login" target="_blank" rel="noopener noreferrer">Super Admin Console</a></li>
                         <li><a href="#contact">Inquire for Deployment</a></li>
+                        <li><a href="/sitemap.xml" target="_blank">XML Sitemap</a></li>
                     </ul>
                 </div>
             </div>

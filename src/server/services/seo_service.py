@@ -29,6 +29,14 @@ DEFAULT_SEO = {
     "robots_directives": (
         "User-agent: *\n"
         "Allow: /$\n"
+        "Allow: /cloud-face-recognition-attendance\n"
+        "Allow: /tablet-mobile-attendance-kiosk\n"
+        "Allow: /zero-hardware-time-tracking\n"
+        "Allow: /leave-management-software\n"
+        "Allow: /automated-payroll-software\n"
+        "Allow: /saas-vs-hardware-attendance\n"
+        "Allow: /tools/\n"
+        "Allow: /resources/\n"
         "Allow: /screenshots/\n"
         "Allow: /static/\n"
         "Disallow: /saas\n"
@@ -45,8 +53,23 @@ DEFAULT_SEO = {
         "\n"
         "Sitemap: https://curiosityhub.co.in/sitemap.xml\n"
     ),
-    "updated_at": "2026-09-30T12:00:00",
+    "updated_at": "2026-10-13T10:00:00",
 }
+
+PUBLIC_SITEMAP_ROUTES = [
+    {"path": "/", "changefreq": "daily", "priority": "1.0"},
+    {"path": "/cloud-face-recognition-attendance", "changefreq": "weekly", "priority": "0.9"},
+    {"path": "/tablet-mobile-attendance-kiosk", "changefreq": "weekly", "priority": "0.9"},
+    {"path": "/zero-hardware-time-tracking", "changefreq": "weekly", "priority": "0.9"},
+    {"path": "/leave-management-software", "changefreq": "weekly", "priority": "0.9"},
+    {"path": "/automated-payroll-software", "changefreq": "weekly", "priority": "0.9"},
+    {"path": "/saas-vs-hardware-attendance", "changefreq": "weekly", "priority": "0.9"},
+    {"path": "/tools/attendance-roi-calculator", "changefreq": "monthly", "priority": "0.8"},
+    {"path": "/resources/attendance-policy-template", "changefreq": "monthly", "priority": "0.8"},
+    {"path": "/resources/holiday-calendar-2026", "changefreq": "monthly", "priority": "0.8"},
+    {"path": "/saas", "changefreq": "monthly", "priority": "0.7"},
+    {"path": "/login", "changefreq": "monthly", "priority": "0.7"},
+]
 
 
 def get_seo_settings() -> Dict[str, Any]:
@@ -94,28 +117,23 @@ def get_sitemap_xml() -> str:
     base_url = settings.get("canonical_url", "https://curiosityhub.co.in/").rstrip("/")
     now_date = datetime.now().strftime("%Y-%m-%d")
 
+    url_entries = []
+    for r in PUBLIC_SITEMAP_ROUTES:
+        loc = f"{base_url}{r['path']}" if r['path'] != "/" else f"{base_url}/"
+        url_entries.append(
+            f"  <url>\n"
+            f"    <loc>{loc}</loc>\n"
+            f"    <lastmod>{now_date}</lastmod>\n"
+            f"    <changefreq>{r['changefreq']}</changefreq>\n"
+            f"    <priority>{r['priority']}</priority>\n"
+            f"  </url>"
+        )
+
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        f"  <url>\n"
-        f"    <loc>{base_url}/</loc>\n"
-        f"    <lastmod>{now_date}</lastmod>\n"
-        f"    <changefreq>daily</changefreq>\n"
-        f"    <priority>1.0</priority>\n"
-        f"  </url>\n"
-        f"  <url>\n"
-        f"    <loc>{base_url}/saas</loc>\n"
-        f"    <lastmod>{now_date}</lastmod>\n"
-        f"    <changefreq>monthly</changefreq>\n"
-        f"    <priority>0.8</priority>\n"
-        f"  </url>\n"
-        f"  <url>\n"
-        f"    <loc>{base_url}/login</loc>\n"
-        f"    <lastmod>{now_date}</lastmod>\n"
-        f"    <changefreq>monthly</changefreq>\n"
-        f"    <priority>0.8</priority>\n"
-        f"  </url>\n"
-        f"</urlset>\n"
+        + "\n".join(url_entries)
+        + "\n</urlset>\n"
     )
     return xml
 
@@ -177,7 +195,7 @@ def get_seo_health_report() -> Dict[str, Any]:
     items.append({"param": "Structured Data (JSON-LD)", "status": "EXCELLENT", "detail": "Organization & SoftwareApplication schema active", "weight": 10})
 
     # 7. Sitemap & Robots
-    items.append({"param": "Sitemap & Indexing Robots", "status": "EXCELLENT", "detail": "Valid XML sitemap with 3 core routes, strict robots rules", "weight": 10})
+    items.append({"param": "Sitemap & Indexing Robots", "status": "EXCELLENT", "detail": f"Valid XML sitemap with {len(PUBLIC_SITEMAP_ROUTES)} indexed URLs and strict robots rules", "weight": 10})
 
     score = max(10, min(100, score))
 
@@ -202,7 +220,7 @@ def get_seo_health_report() -> Dict[str, Any]:
         "audit_items": items,
         "serp_preview": serp_preview,
         "social_preview": social_preview,
-        "indexed_urls_count": 3,
+        "indexed_urls_count": len(PUBLIC_SITEMAP_ROUTES),
         "sitemap_url": f"{canonical.rstrip('/')}/sitemap.xml",
         "robots_url": f"{canonical.rstrip('/')}/robots.txt",
     }

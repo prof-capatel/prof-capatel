@@ -1,0 +1,272 @@
+<!-- Structured FAQ Section with Schema.org FAQPage JSON-LD -->
+<section class="section-block faq-section-block" id="faq">
+    <div class="container">
+        <div class="section-title-wrapper">
+            <span class="section-badge">Frequently Asked Questions</span>
+            <h2 class="section-heading">Everything You Need to Know About Zero-Hardware Attendance</h2>
+            <p class="section-subtext">Clear, transparent answers on biometric accuracy, zero-hardware deployment, offline mode, and payroll automation.</p>
+        </div>
+
+        <div class="faq-accordion-container" id="seoFaqAccordion">
+            <!-- FAQ Item 1 -->
+            <div class="faq-accordion-item active">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>How can Curiosity HUB operate with zero dedicated biometric hardware?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel" style="max-height: 1000px;">
+                    <div class="faq-answer-content">
+                        Curiosity HUB is a pure cloud-native SaaS platform. Instead of requiring proprietary fingerprint scanners or expensive dedicated facial terminals (₹15,000–₹35,000 each), our AI recognition engine runs directly on standard hardware you already own—such as office laptop webcams, iPad/Android tablets mounted at entryways, or employee smartphones with GPS geofencing. All processing connects securely to our cloud console without special wiring or maintenance contracts.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 2 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>What is the recognition accuracy and clock-in latency?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        Our engine delivers <strong>99.8% verification precision</strong> with sub-250ms vector matching. It utilizes high-dimensional Euclidean embeddings (dlib ResNet 128-dimensional vectors) with in-memory RAM caching. Employees simply glance at the camera for less than half a second to verify clock-in or clock-out without bottlenecks at entrances.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 3 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>Can employees trick the system using photos, videos, or masks?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        No. Curiosity HUB incorporates multi-stage <strong>Anti-Spoofing and Liveness Verification</strong>. This includes 2D Fast Fourier Transform (FFT) spectral texture frequency analysis to detect printed paper or smartphone screens, specular reflection checking, and multi-frame temporal micro-motion tracking. Still photos, screen replays, and cutouts are instantly rejected.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 4 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>Does attendance tracking continue to work during internet outages?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        Yes. Tablet and mobile kiosk modes feature local offline caching. Face verification and timestamp capture execute locally on the device even without active internet. When Wi-Fi or mobile connectivity is restored, all buffered attendance logs automatically synchronize to the central cloud server with tamper-proof timestamps.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 5 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>How is employee biometric data protected and encrypted?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        We prioritize privacy by design. We do not store raw face photos on public servers. Instead, enrolled facial features are converted into irreversible, 128-dimensional mathematical vector arrays stored in encrypted databases partitioned by tenant ID. It is cryptographically impossible to reverse-engineer a face image from these vector embeddings.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 6 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>Can we track multi-location branches and field workforce simultaneously?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        Yes. Administrators can set up unlimited branch offices, warehouses, retail stores, and remote work zones within a single organization account. For roaming or remote employees, our mobile check-in portal enforces GPS geofencing with street-level accuracy, ensuring workers can only clock in within authorized geographic perimeters.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 7 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>How are employee leaves, holidays, and shifts managed?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        Our integrated <strong>Leave Management Software</strong> tracks Casual Leave (CL), Sick Leave (SL), Paid Leave (PL), and custom compensatory balances. Employees apply through a passwordless self-service portal, managers approve in 1 click, and public holiday calendars automatically calculate payable days and late-arrival grace periods.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 8 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>How does biometric attendance synchronize with the automated payroll engine?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        Biometric clock-in timestamps, shift durations, half-day thresholds, and approved leaves flow directly into the <strong>Automated Payroll System</strong> without manual Excel export/import. The engine automatically computes payable workdays, overtime allowances, unpaid leave deductions, and Indian statutory requirements (PF, ESI, Professional Tax, TDS) with 1-click downloadable PDF payslips.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 9 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>Which devices can be used as touchless attendance kiosks?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        Any device with a standard camera and modern web browser is supported. This includes Apple iPads, Android tablets (Samsung, Lenovo, etc.), Windows or macOS laptops/desktops with USB webcams, employee Android/iOS phones, and even edge node hardware (like Raspberry Pi 4 with RTSP IP camera streams).
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 10 -->
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-question-btn" onclick="toggleFaqItem(this)">
+                    <span>How quick is onboarding and migration from legacy fingerprint machines?</span>
+                    <span class="faq-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer-panel">
+                    <div class="faq-answer-content">
+                        Migration takes under 10 minutes. You can bulk-import employee profiles from your existing HRMS or Excel roster. Employees then receive a self-enrollment link or QR code to upload 3 quick face verification photos (Front, Left, Right) from their smartphone. You can go live immediately without sending technicians or installing software drivers.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <p style="font-size: 15px; color: var(--text-muted); margin-bottom: 16px;">Have a specific requirement or architecture question?</p>
+            <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" class="btn-nav-demo" onclick="openFreeDemoModal()" style="display: inline-flex;">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Start 7-Day Free Trial</span>
+                </button>
+                <a href="#contact" class="btn-nav-signin" style="display: inline-flex; border: 1px solid var(--border-subtle); color: var(--text-heading); background: #FFFFFF;">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span>Speak with Technical Team</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- JSON-LD FAQPage Schema for Search Engines -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How can Curiosity HUB operate with zero dedicated biometric hardware?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Curiosity HUB is a pure cloud-native SaaS platform. Instead of requiring proprietary fingerprint scanners or dedicated facial terminals (₹15,000–₹35,000 each), our AI recognition engine runs directly on standard office webcams, iPad/Android tablets, and employee smartphones with GPS geofencing."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the recognition accuracy and clock-in latency?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Our engine delivers 99.8% verification precision with sub-250ms vector matching. It utilizes high-dimensional Euclidean embeddings (dlib ResNet 128-dimensional vectors) with in-memory RAM caching for instant touchless verification."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can employees trick the system using photos, videos, or masks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Curiosity HUB incorporates multi-stage Anti-Spoofing and Liveness Verification including 2D FFT spectral texture frequency analysis, specular reflection checking, and temporal micro-motion tracking. Printed photos and phone screens are rejected."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does attendance tracking continue to work during internet outages?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Tablet and mobile kiosk modes feature local offline caching. Face verification and timestamp capture execute locally on the device and automatically synchronize to the cloud server when connectivity is restored."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is employee biometric data protected and encrypted?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Raw face photos are never stored or exposed. Enrolled facial features are converted into irreversible, 128-dimensional mathematical vector arrays stored in encrypted databases partitioned by tenant ID."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can we track multi-location branches and field workforce simultaneously?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Administrators can set up unlimited branch offices within a single cloud account. For field employees, our mobile check-in portal enforces GPS geofencing with street-level accuracy."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How are employee leaves, holidays, and shifts managed?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Our integrated Leave Management Software tracks Casual Leave (CL), Sick Leave (SL), Paid Leave (PL), and compensatory balances with 1-click manager approvals and public holiday calendar sync."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does biometric attendance synchronize with the automated payroll engine?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Biometric clock-in timestamps, shift durations, and approved leaves flow directly into the Automated Payroll System to compute payable workdays, overtime, and Indian statutory deductions (PF, ESI, PT, TDS) with 1-click PDF payslips."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which devices can be used as touchless attendance kiosks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Any device with a standard camera and web browser is supported, including Apple iPads, Android tablets, Windows or macOS laptops/webcams, employee smartphones, and IP CCTV camera streams."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How quick is onboarding and migration from legacy fingerprint machines?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Migration takes under 10 minutes. You can bulk-import employee profiles from Excel, send self-enrollment links, and go live immediately with zero driver installation or technical visits."
+      }
+    }
+  ]
+}
+</script>
+
+<script>
+function toggleFaqItem(btn) {
+    const item = btn.closest('.faq-accordion-item');
+    const panel = item.querySelector('.faq-answer-panel');
+    const isActive = item.classList.contains('active');
+
+    // Close all other items in same accordion
+    const parent = item.parentElement;
+    parent.querySelectorAll('.faq-accordion-item').forEach(other => {
+        if (other !== item) {
+            other.classList.remove('active');
+            const otherPanel = other.querySelector('.faq-answer-panel');
+            if (otherPanel) otherPanel.style.maxHeight = null;
+        }
+    });
+
+    if (isActive) {
+        item.classList.remove('active');
+        panel.style.maxHeight = null;
+    } else {
+        item.classList.add('active');
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+    }
+}
+</script>

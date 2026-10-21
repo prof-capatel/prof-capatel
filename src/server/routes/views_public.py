@@ -171,3 +171,129 @@ def page_demo_login(
             },
         },
     )
+
+
+# =========================================================================
+# TARGETED HIGH-INTENT SAAS LANDING & RESOURCE HUB ROUTES
+# =========================================================================
+
+def _get_public_page_context(request: Request, db: Session, active_page: str, page_title: str):
+    """Helper to assemble shared branding, SEO, tenants and session context."""
+    all_tenants = get_all_active_tenants(db)
+    branding = {
+        "institution_name": "Curiosity HUB",
+        "short_code": "CURIOSITY-HUB",
+        "tagline": "AI Biometric Attendance & Employee Management SaaS Platform",
+        "primary_accent_color": "#c2410c",
+        "header_badge_text": "Enterprise SaaS Platform",
+    }
+    seo_config = seo_service.get_seo_settings()
+    current_user = get_current_user_optional(request, db)
+    return {
+        "page_title": page_title,
+        "active_page": active_page,
+        "branding": branding,
+        "seo": seo_config,
+        "all_tenants": all_tenants,
+        "current_user": current_user.to_dict() if current_user else None,
+    }
+
+
+@router.get("/cloud-face-recognition-attendance", response_class=HTMLResponse)
+def page_cloud_face_attendance(request: Request, db: Session = Depends(get_db)):
+    """Dedicated landing page for Cloud Face Recognition Attendance System."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="cloud_face_attendance",
+        page_title="Cloud Face Recognition Attendance System | Curiosity HUB",
+    )
+    return render_template(request, "cloud_face_attendance.html", ctx)
+
+
+@router.get("/tablet-mobile-attendance-kiosk", response_class=HTMLResponse)
+def page_tablet_mobile_kiosk(request: Request, db: Session = Depends(get_db)):
+    """Dedicated landing page for Tablet & Mobile Attendance Kiosk Software."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="tablet_mobile_kiosk",
+        page_title="Tablet & Mobile Attendance Kiosk Software | Curiosity HUB",
+    )
+    return render_template(request, "tablet_mobile_kiosk.html", ctx)
+
+
+@router.get("/zero-hardware-time-tracking", response_class=HTMLResponse)
+def page_zero_hardware_time_tracking(request: Request, db: Session = Depends(get_db)):
+    """Dedicated landing page for Zero-Hardware Time Tracking Software."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="zero_hardware_time_tracking",
+        page_title="Zero-Hardware Time Tracking Software | Curiosity HUB SaaS",
+    )
+    return render_template(request, "zero_hardware_time_tracking.html", ctx)
+
+
+@router.get("/leave-management-software", response_class=HTMLResponse)
+def page_leave_management_product(request: Request, db: Session = Depends(get_db)):
+    """Dedicated product page for Leave Management Software."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="leave_management_product",
+        page_title="Leave Management Software & Attendance Sync | Curiosity HUB",
+    )
+    return render_template(request, "leave_management_product.html", ctx)
+
+
+@router.get("/automated-payroll-software", response_class=HTMLResponse)
+def page_automated_payroll_product(request: Request, db: Session = Depends(get_db)):
+    """Dedicated product page for Automated Payroll Software."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="automated_payroll_product",
+        page_title="Automated Payroll Software with Attendance | Curiosity HUB",
+    )
+    return render_template(request, "automated_payroll_product.html", ctx)
+
+
+@router.get("/saas-vs-hardware-attendance", response_class=HTMLResponse)
+def page_saas_vs_hardware(request: Request, db: Session = Depends(get_db)):
+    """Dedicated comparison page: Cloud SaaS vs. Traditional Biometric Machines."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="saas_vs_hardware",
+        page_title="SaaS vs Biometric Machine: Attendance Cost Comparison Guide",
+    )
+    return render_template(request, "saas_vs_hardware.html", ctx)
+
+
+@router.get("/tools/attendance-roi-calculator", response_class=HTMLResponse)
+def page_roi_calculator(request: Request, db: Session = Depends(get_db)):
+    """Interactive Attendance ROI & Buddy-Punching Cost Savings Calculator."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="roi_calculator",
+        page_title="Attendance ROI & Buddy Punching Calculator | Curiosity HUB",
+    )
+    return render_template(request, "roi_calculator.html", ctx)
+
+
+@router.get("/resources/attendance-policy-template", response_class=HTMLResponse)
+def page_attendance_policy_template(request: Request, db: Session = Depends(get_db)):
+    """Downloadable Corporate HR Attendance & Punctuality Policy Template."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="attendance_policy_template",
+        page_title="Employee Attendance Policy Template (2026) | Curiosity HUB",
+    )
+    return render_template(request, "attendance_policy_template.html", ctx)
+
+
+@router.get("/resources/holiday-calendar-2026", response_class=HTMLResponse)
+def page_holiday_calendar_2026(request: Request, db: Session = Depends(get_db)):
+    """2026 Indian Public, Gazetted & Regional Holiday Calendar Resource Hub."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="holiday_calendar_2026",
+        page_title="Indian Public & Bank Holiday Calendar 2026 | Curiosity HUB",
+    )
+    return render_template(request, "holiday_calendar_2026.html", ctx)
+

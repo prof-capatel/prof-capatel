@@ -26,6 +26,7 @@ SSH_KEY_CANDIDATES = [
 REMOTE_APP_DIR = "/home/ubuntu/attendance-system"
 REMOTE_COMMANDS = (
     f"cd {REMOTE_APP_DIR} && "
+    f"git checkout -- data/seo_settings.json 2>/dev/null || true && "
     f"git pull origin master && "
     f"{REMOTE_APP_DIR}/venv/bin/python scripts/purge_test_records.py && "
     f"sudo systemctl restart attendance"
@@ -107,6 +108,7 @@ def main():
         ssh_cmd = (
             f'ssh -i "{ssh_key}" '
             f'-o StrictHostKeyChecking=no '
+            f'-o BatchMode=yes '
             f'-o ConnectTimeout=10 '
             f'{SSH_USER}@{SSH_HOST} "{REMOTE_COMMANDS}"'
         )

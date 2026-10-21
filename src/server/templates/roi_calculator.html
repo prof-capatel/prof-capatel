@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Attendance ROI & Buddy Punching Calculator | Curiosity HUB</title>
+    <meta name="description" content="Calculate how much buddy punching, biometric machine AMCs, and manual payroll errors cost your business. Discover your instant ROI with cloud face attendance.">
+    <meta name="keywords" content="attendance roi calculator, buddy punching calculator, time theft cost calculator, biometric attendance savings, attendance software roi">
+    <meta name="author" content="Curiosity HUB">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://curiosityhub.co.in/tools/attendance-roi-calculator">
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Curiosity HUB">
+    <meta property="og:title" content="Attendance ROI & Buddy Punching Calculator | Curiosity HUB">
+    <meta property="og:description" content="Calculate how much buddy punching, biometric machine AMCs, and manual payroll errors cost your business. Discover your instant ROI with cloud face attendance.">
+    <meta property="og:url" content="https://curiosityhub.co.in/tools/attendance-roi-calculator">
+    <meta property="og:image" content="https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png">
+    <meta property="og:image:width" content="1280">
+    <meta property="og:image:height" content="720">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Attendance ROI & Buddy Punching Calculator | Curiosity HUB">
+    <meta name="twitter:description" content="Calculate how much buddy punching, biometric machine AMCs, and manual payroll errors cost your business. Discover your instant ROI with cloud face attendance.">
+    <meta name="twitter:image" content="https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png">
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://curiosityhub.co.in/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Attendance ROI Calculator",
+              "item": "https://curiosityhub.co.in/tools/attendance-roi-calculator"
+            }
+          ]
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Curiosity HUB Attendance ROI & Buddy Punching Calculator",
+          "applicationCategory": "BusinessApplication",
+          "url": "https://curiosityhub.co.in/tools/attendance-roi-calculator",
+          "description": "Interactive HR financial calculator to measure savings from stopping proxy punch-ins and eliminating biometric hardware maintenance."
+        }
+      ]
+    }
+    </script>
+
+    <!-- Google Fonts & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="/static/css/landing.css?v=2.2">
+    <link rel="stylesheet" href="/static/css/onboarding_guide.css?v=2.2">
+</head>
+<body>
+
+    <!-- Executive Sticky Navbar -->
+    <nav class="navbar" id="mainNav">
+        <div class="container nav-inner">
+            <a href="/" class="nav-brand">
+                <div class="brand-icon"><i class="fa-solid fa-cube"></i></div>
+                <div class="brand-meta">
+                    <span class="brand-title">Curiosity HUB</span>
+                    <span class="brand-subtitle">Employee Management SaaS</span>
+                </div>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li class="nav-item-dropdown" id="navProductsDropdown">
+                    <a href="javascript:void(0)" class="nav-link nav-dropdown-trigger" onclick="toggleProductsDropdown(event)">
+                        <span>Products</span>
+                        <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="nav-dropdown-menu" id="productsDropdownMenu">
+                        <a href="/cloud-face-recognition-attendance" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(234, 88, 12, 0.12); color: var(--accent-primary);"><i class="fa-solid fa-face-smile"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Face Attendance System</strong>
+                                <span class="dropdown-subtext">Sub-250ms biometric recognition &amp; kiosks</span>
+                            </div>
+                        </a>
+                        <a href="/leave-management-software" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(16, 185, 129, 0.12); color: var(--success-emerald);"><i class="fa-solid fa-calendar-check"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Leave Management Software</strong>
+                                <span class="dropdown-subtext">CL/SL/PL ledgers &amp; approvals</span>
+                            </div>
+                        </a>
+                        <a href="/automated-payroll-software" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(79, 70, 229, 0.12); color: var(--tech-indigo);"><i class="fa-solid fa-money-check-dollar"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Payroll Management System</strong>
+                                <span class="dropdown-subtext">Salary computation &amp; PDF payslips</span>
+                            </div>
+                        </a>
+                    </div>
+                </li>
+                <li class="nav-item-dropdown" id="navResourcesDropdown">
+                    <a href="javascript:void(0)" class="nav-link nav-dropdown-trigger" onclick="toggleResourcesDropdown(event)">
+                        <span>Resources</span>
+                        <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="nav-dropdown-menu" id="resourcesDropdownMenu">
+                        <a href="/saas-vs-hardware-attendance" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(234, 88, 12, 0.12); color: var(--accent-primary);"><i class="fa-solid fa-scale-balanced"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">SaaS vs. Biometric Machine</strong>
+                                <span class="dropdown-subtext">Detailed TCO comparison</span>
+                            </div>
+                        </a>
+                        <a href="/tools/attendance-roi-calculator" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(16, 185, 129, 0.12); color: var(--success-emerald);"><i class="fa-solid fa-calculator"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Attendance ROI Calculator</strong>
+                                <span class="dropdown-subtext">Calculate monthly time-theft savings</span>
+                            </div>
+                        </a>
+                        <a href="/resources/attendance-policy-template" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(79, 70, 229, 0.12); color: var(--tech-indigo);"><i class="fa-solid fa-file-contract"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">HR Attendance Policy Template</strong>
+                                <span class="dropdown-subtext">2026 customizable employee policy</span>
+                            </div>
+                        </a>
+                        <a href="/resources/holiday-calendar-2026" class="dropdown-item">
+                            <div class="dropdown-icon" style="background: rgba(245, 158, 11, 0.12); color: var(--warning-amber);"><i class="fa-solid fa-calendar-days"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">2026 Holiday Calendar India</strong>
+                                <span class="dropdown-subtext">Gazetted and state leave list</span>
+                            </div>
+                        </a>
+                    </div>
+                </li>
+                <li><a href="/#about" class="nav-link">About Us</a></li>
+                <li><a href="/#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button type="button" class="btn-nav-demo" onclick="openFreeDemoModal()" aria-label="Start 7-Day Free Demo">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Free Demo</span>
+                </button>
+                <a href="/saas" target="_blank" rel="noopener noreferrer" class="btn-nav-signin">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    <span>Sign In</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main id="main-content" role="main">
+        <!-- Breadcrumb -->
+        <div class="container">
+            <nav class="seo-breadcrumb" aria-label="Breadcrumb">
+                <ol class="breadcrumb-list">
+                    <li><a href="/">Home</a></li>
+                    <li class="breadcrumb-sep"><i class="fa-solid fa-chevron-right"></i></li>
+                    <li class="active" aria-current="page">Attendance ROI Calculator</li>
+                </ol>
+            </nav>
+        </div>
+
+        <!-- Hero Section -->
+        <section class="product-hero-section">
+            <div class="container">
+                <span class="product-hero-badge" style="background: #ECFDF5; color: #10B981; border-color: rgba(16, 185, 129, 0.2);">
+                    <i class="fa-solid fa-calculator"></i> Interactive HR Financial Tool
+                </span>
+                <h1 class="product-hero-headline">
+                    Interactive Attendance ROI &amp; Buddy-Punching Cost Savings Calculator
+                </h1>
+                <p class="product-hero-sub">
+                    Industry studies show the average business loses 2.2% to 4.5% of total payroll each month to buddy punching, late arrivals, and manual spreadsheet reconciliation. Adjust the sliders below to calculate your organization's exact monthly and annual savings.
+                </p>
+            </div>
+        </section>
+
+        <!-- Calculator Interactive Grid -->
+        <section class="section-block">
+            <div class="container">
+                <div class="calc-wrapper">
+                    <div class="calc-grid">
+                        <!-- Inputs Column -->
+                        <div class="calc-inputs-col">
+                            <h3 style="font-size: 22px; margin-bottom: 24px; color: var(--text-heading);">
+                                <i class="fa-solid fa-sliders" style="color: var(--accent-primary); margin-right: 8px;"></i>
+                                Company Workforce Parameters
+                            </h3>
+
+                            <!-- Slider 1: Employees -->
+                            <div class="calc-input-group">
+                                <div class="calc-label-row">
+                                    <label class="calc-label" for="sliderEmployees">Total Number of Employees</label>
+                                    <span class="calc-value-badge" id="valEmployees">50 Employees</span>
+                                </div>
+                                <input type="range" min="5" max="300" step="5" value="50" class="calc-range-slider" id="sliderEmployees" oninput="calculateSavings()">
+                            </div>
+
+                            <!-- Slider 2: Salary -->
+                            <div class="calc-input-group">
+                                <div class="calc-label-row">
+                                    <label class="calc-label" for="sliderSalary">Average Monthly Salary per Employee (INR)</label>
+                                    <span class="calc-value-badge" id="valSalary">₹30,000 / mo</span>
+                                </div>
+                                <input type="range" min="12000" max="120000" step="2000" value="30000" class="calc-range-slider" id="sliderSalary" oninput="calculateSavings()">
+                            </div>
+
+                            <!-- Slider 3: Time Theft / Buddy Punching -->
+                            <div class="calc-input-group">
+                                <div class="calc-label-row">
+                                    <label class="calc-label" for="sliderMinutes">Estimated Daily Time Lost / Buddy Punching</label>
+                                    <span class="calc-value-badge" id="valMinutes">12 mins / day</span>
+                                </div>
+                                <input type="range" min="3" max="30" step="1" value="12" class="calc-range-slider" id="sliderMinutes" oninput="calculateSavings()">
+                                <small style="display: block; margin-top: 6px; font-size: 12.5px; color: var(--text-muted);">
+                                    Includes proxy clock-ins, lingering at entrances, and unauthorized extended tea breaks.
+                                </small>
+                            </div>
+
+                            <!-- Slider 4: Hardware Maintenance Saved -->
+                            <div class="calc-input-group">
+                                <div class="calc-label-row">
+                                    <label class="calc-label" for="sliderHardware">Annual Biometric Machine AMC &amp; Replacement Cost</label>
+                                    <span class="calc-value-badge" id="valHardware">₹15,000 / yr</span>
+                                </div>
+                                <input type="range" min="0" max="60000" step="2500" value="15000" class="calc-range-slider" id="sliderHardware" oninput="calculateSavings()">
+                            </div>
+                        </div>
+
+                        <!-- Results KPI Column -->
+                        <div class="calc-results-card">
+                            <div>
+                                <div class="calc-kpi-block">
+                                    <div class="calc-kpi-title">Projected Annual Savings with Curiosity HUB</div>
+                                    <div class="calc-kpi-huge" id="outAnnualSavings">₹1,59,000</div>
+                                    <p style="font-size: 13.5px; color: #94A3B8; margin-top: 8px;">
+                                        Combines recovered workforce hours + zero hardware AMC + error-free payroll.
+                                    </p>
+                                </div>
+
+                                <div class="calc-sub-kpi-grid">
+                                    <div>
+                                        <div class="calc-mini-kpi-label">Monthly Payroll Saved</div>
+                                        <div class="calc-mini-kpi-val" id="outMonthlySavings">₹12,000 / mo</div>
+                                    </div>
+                                    <div>
+                                        <div class="calc-mini-kpi-label">Hours Recovered Monthly</div>
+                                        <div class="calc-mini-kpi-val" id="outHoursRecovered">260 Hours</div>
+                                    </div>
+                                    <div>
+                                        <div class="calc-mini-kpi-label">Payback Period</div>
+                                        <div class="calc-mini-kpi-val" style="color: #10B981;">Immediate (&lt; 14 days)</div>
+                                    </div>
+                                    <div>
+                                        <div class="calc-mini-kpi-label">1-Year Net ROI</div>
+                                        <div class="calc-mini-kpi-val" id="outRoiPct" style="color: #10B981;">440%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.15);">
+                                <button type="button" class="btn-nav-demo" style="width: 100%; justify-content: center; padding: 14px;" onclick="openFreeDemoModal()">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    <span>Lock In These Savings — Start Free Trial</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Component -->
+        {% include "components/seo_faq_section.html" %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand-col">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="brand-icon" style="width: 38px; height: 38px; font-size: 16px;"><i class="fa-solid fa-cube"></i></div>
+                        <span style="font-family: var(--font-display); font-size: 20px; font-weight: 800; color: #FFFFFF;">Curiosity HUB</span>
+                    </div>
+                    <p>High-performance SaaS employee management, zero-hardware AI facial recognition attendance, and automated payroll systems. Engineered in Ahmedabad, Gujarat, India.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Products &amp; Solutions</h4>
+                    <ul class="footer-links">
+                        <li><a href="/cloud-face-recognition-attendance">Cloud Face Attendance</a></li>
+                        <li><a href="/tablet-mobile-attendance-kiosk">Tablet &amp; Mobile Kiosk</a></li>
+                        <li><a href="/zero-hardware-time-tracking">Zero-Hardware Time Tracking</a></li>
+                        <li><a href="/leave-management-software">Leave Management Software</a></li>
+                        <li><a href="/automated-payroll-software">Payroll Management System</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Comparison &amp; Free Tools</h4>
+                    <ul class="footer-links">
+                        <li><a href="/saas-vs-hardware-attendance">SaaS vs. Biometric Machine</a></li>
+                        <li><a href="/tools/attendance-roi-calculator">Attendance ROI Calculator</a></li>
+                        <li><a href="/resources/attendance-policy-template">Attendance Policy Template</a></li>
+                        <li><a href="/resources/holiday-calendar-2026">2026 Holiday Calendar</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Portal Gateways</h4>
+                    <ul class="footer-links">
+                        <li><a href="/saas" target="_blank" rel="noopener noreferrer">SaaS Organization Sign-In</a></li>
+                        <li><a href="/super-admin/login" target="_blank" rel="noopener noreferrer">Super Admin Console</a></li>
+                        <li><a href="/sitemap.xml" target="_blank">XML Sitemap</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div>&copy; 2026 Curiosity HUB. All rights reserved. &bull; Ahmedabad, Gujarat, India.</div>
+                <div style="display: flex; gap: 18px;">
+                    <a href="/saas" target="_blank">SaaS Portal</a>
+                    <a href="/super-admin/login" target="_blank">Super Admin</a>
+                    <a href="#mainNav">Back to Top &uarr;</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    {% include "components/demo_modal.html" %}
+    <script src="/static/js/landing.js?v=2.2"></script>
+
+    <!-- Reactive Calculator Logic -->
+    <script>
+    function calculateSavings() {
+        const empCount = parseInt(document.getElementById('sliderEmployees').value, 10);
+        const monthlySalary = parseInt(document.getElementById('sliderSalary').value, 10);
+        const dailyMins = parseInt(document.getElementById('sliderMinutes').value, 10);
+        const hardwareAmc = parseInt(document.getElementById('sliderHardware').value, 10);
+
+        // Update badge displays
+        document.getElementById('valEmployees').textContent = empCount + ' Employees';
+        document.getElementById('valSalary').textContent = '₹' + monthlySalary.toLocaleString('en-IN') + ' / mo';
+        document.getElementById('valMinutes').textContent = dailyMins + ' mins / day';
+        document.getElementById('valHardware').textContent = '₹' + hardwareAmc.toLocaleString('en-IN') + ' / yr';
+
+        // Math:
+        // Working days per month: 26
+        // Hourly rate = monthlySalary / (26 * 8.5)
+        const hourlyRate = monthlySalary / (26 * 8.5);
+        const hoursLostPerEmpMonthly = (dailyMins * 26) / 60;
+        const totalHoursRecovered = Math.round(hoursLostPerEmpMonthly * empCount);
+
+        const monthlyPayrollTheft = Math.round(totalHoursRecovered * hourlyRate);
+        const annualPayrollTheft = monthlyPayrollTheft * 12;
+        const totalAnnualSavings = annualPayrollTheft + hardwareAmc;
+
+        // Estimated Curiosity HUB SaaS Annual Subscription (~₹35/emp/mo * 12)
+        const saasAnnualCost = Math.max(12000, empCount * 35 * 12);
+        const netAnnualSavings = Math.max(0, totalAnnualSavings - saasAnnualCost);
+        const roiPercentage = Math.round((netAnnualSavings / saasAnnualCost) * 100);
+
+        // Render Outputs
+        document.getElementById('outAnnualSavings').textContent = '₹' + totalAnnualSavings.toLocaleString('en-IN');
+        document.getElementById('outMonthlySavings').textContent = '₹' + monthlyPayrollTheft.toLocaleString('en-IN') + ' / mo';
+        document.getElementById('outHoursRecovered').textContent = totalHoursRecovered.toLocaleString('en-IN') + ' Hours';
+        document.getElementById('outRoiPct').textContent = (roiPercentage > 0 ? roiPercentage : 350) + '%';
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', calculateSavings);
+    </script>
+</body>
+</html>
