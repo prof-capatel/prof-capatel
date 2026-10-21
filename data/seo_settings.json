@@ -1,13 +1,12 @@
 {
-  "site_title": "Curiosity HUB — Face Recognition Attendance & Payroll SaaS",
-  "meta_description": "Enterprise AI facial recognition attendance & automated payroll SaaS for modern companies. Centralize multi-location offices with mobile GPS geofencing and bank-grade security.",
-  "meta_keywords": "facial recognition attendance, multi location attendance, automated payroll saas, ahmedabad hr software",
+  "site_title": "Curiosity HUB — AI Face Attendance & Payroll SaaS",
+  "meta_description": "AI face recognition attendance, GPS mobile geofencing, and automated payroll SaaS for modern companies. Zero biometric hardware needed. Built in Ahmedabad.",
   "canonical_url": "https://curiosityhub.co.in/",
-  "og_title": "Curiosity HUB — Enterprise AI Attendance & Payroll SaaS",
-  "og_description": "Enterprise AI facial recognition attendance & automated payroll SaaS for companies. Multi-location offices and bank-grade security.",
+  "og_title": "Curiosity HUB — AI Face Attendance & Payroll SaaS",
+  "og_description": "AI face recognition attendance, GPS mobile geofencing, and automated payroll SaaS for modern companies. Zero biometric hardware needed. Built in Ahmedabad.",
   "og_image": "https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png",
   "twitter_card": "summary_large_image",
   "author": "Curiosity HUB",
-  "robots_directives": "User-agent: *\nAllow: /$\nAllow: /cloud-face-recognition-attendance\nAllow: /tablet-mobile-attendance-kiosk\nAllow: /zero-hardware-time-tracking\nAllow: /leave-management-software\nAllow: /automated-payroll-software\nAllow: /saas-vs-hardware-attendance\nAllow: /tools/\nAllow: /resources/\nAllow: /screenshots/\nAllow: /static/\nDisallow: /saas\nDisallow: /super-admin\nDisallow: /dashboard\nDisallow: /api/\n\nSitemap: https://curiosityhub.co.in/sitemap.xml\n",
-  "updated_at": "2026-10-13T10:00:00.000000"
+  "robots_directives": "User-agent: *\nAllow: /$\nAllow: /cloud-face-recognition-attendance\nAllow: /tablet-mobile-attendance-kiosk\nAllow: /zero-hardware-time-tracking\nAllow: /leave-management-software\nAllow: /automated-payroll-software\nAllow: /saas-vs-hardware-attendance\nAllow: /onboarding-guide\nAllow: /compare-editions\nAllow: /face-attendance-for-retail\nAllow: /face-attendance-for-factories\nAllow: /face-attendance-for-corporate-offices\nAllow: /face-attendance-for-field-teams\nAllow: /face-attendance-software-ahmedabad\nAllow: /privacy-policy\nAllow: /terms\nAllow: /biometric-data-policy\nAllow: /tools/\nAllow: /resources/\nAllow: /screenshots/\nAllow: /static/\nDisallow: /saas\nDisallow: /login\nDisallow: /super-admin\nDisallow: /dashboard\nDisallow: /employees\nDisallow: /students\nDisallow: /settings\nDisallow: /payroll\nDisallow: /academic-management\nDisallow: /api/\nDisallow: /onboard/\nDisallow: /check-in/\nDisallow: /employee/\nDisallow: /portal/\n\nSitemap: https://curiosityhub.co.in/sitemap.xml\n",
+  "updated_at": "2026-10-21T10:00:00"
 }

@@ -17,12 +17,11 @@ DATA_DIR = BASE_DIR / "data"
 SEO_FILE = DATA_DIR / "seo_settings.json"
 
 DEFAULT_SEO = {
-    "site_title": "Curiosity HUB — Face Recognition Employee Management & Payroll SaaS",
-    "meta_description": "Curiosity HUB (Ahmedabad, Gujarat): Enterprise AI facial recognition employee management SaaS for modern companies. Centralize multi-location offices with dynamic multi-shift scheduling, mobile GPS geofencing, automated leaves, bank-grade security, and automated payroll.",
-    "meta_keywords": "face recognition attendance, employee management system, biometric attendance software, multi location attendance, automated payroll software, attendance saas, ahmedabad hr software, curiosity hub, gps geofence attendance, shift scheduling software",
+    "site_title": "Curiosity HUB — AI Face Attendance & Payroll SaaS",
+    "meta_description": "AI face recognition attendance, GPS mobile geofencing, and automated payroll SaaS for modern companies. Zero biometric hardware needed. Built in Ahmedabad.",
     "canonical_url": "https://curiosityhub.co.in/",
-    "og_title": "Curiosity HUB — Face Recognition Employee Management & Payroll SaaS",
-    "og_description": "Enterprise AI facial recognition employee management & automated payroll SaaS for companies. Multi-location offices, dynamic shifts, and bank-grade security.",
+    "og_title": "Curiosity HUB — AI Face Attendance & Payroll SaaS",
+    "og_description": "AI face recognition attendance, GPS mobile geofencing, and automated payroll SaaS for modern companies. Zero biometric hardware needed. Built in Ahmedabad.",
     "og_image": "https://curiosityhub.co.in/screenshots/walkthrough/02_dashboard_live.png",
     "twitter_card": "summary_large_image",
     "author": "Curiosity HUB",
@@ -35,6 +34,16 @@ DEFAULT_SEO = {
         "Allow: /leave-management-software\n"
         "Allow: /automated-payroll-software\n"
         "Allow: /saas-vs-hardware-attendance\n"
+        "Allow: /onboarding-guide\n"
+        "Allow: /compare-editions\n"
+        "Allow: /face-attendance-for-retail\n"
+        "Allow: /face-attendance-for-factories\n"
+        "Allow: /face-attendance-for-corporate-offices\n"
+        "Allow: /face-attendance-for-field-teams\n"
+        "Allow: /face-attendance-software-ahmedabad\n"
+        "Allow: /privacy-policy\n"
+        "Allow: /terms\n"
+        "Allow: /biometric-data-policy\n"
         "Allow: /tools/\n"
         "Allow: /resources/\n"
         "Allow: /screenshots/\n"
@@ -43,32 +52,43 @@ DEFAULT_SEO = {
         "Disallow: /login\n"
         "Disallow: /super-admin\n"
         "Disallow: /dashboard\n"
+        "Disallow: /employees\n"
+        "Disallow: /students\n"
         "Disallow: /settings\n"
         "Disallow: /payroll\n"
-        "Disallow: /leave-management\n"
-        "Disallow: /attendance\n"
-        "Disallow: /analytics\n"
+        "Disallow: /academic-management\n"
         "Disallow: /api/\n"
+        "Disallow: /onboard/\n"
+        "Disallow: /check-in/\n"
         "Disallow: /employee/\n"
+        "Disallow: /portal/\n"
         "\n"
         "Sitemap: https://curiosityhub.co.in/sitemap.xml\n"
     ),
-    "updated_at": "2026-10-13T10:00:00",
+    "updated_at": "2026-10-21T10:00:00",
 }
 
 PUBLIC_SITEMAP_ROUTES = [
-    {"path": "/", "changefreq": "daily", "priority": "1.0"},
-    {"path": "/cloud-face-recognition-attendance", "changefreq": "weekly", "priority": "0.9"},
-    {"path": "/tablet-mobile-attendance-kiosk", "changefreq": "weekly", "priority": "0.9"},
-    {"path": "/zero-hardware-time-tracking", "changefreq": "weekly", "priority": "0.9"},
-    {"path": "/leave-management-software", "changefreq": "weekly", "priority": "0.9"},
-    {"path": "/automated-payroll-software", "changefreq": "weekly", "priority": "0.9"},
-    {"path": "/saas-vs-hardware-attendance", "changefreq": "weekly", "priority": "0.9"},
-    {"path": "/tools/attendance-roi-calculator", "changefreq": "monthly", "priority": "0.8"},
-    {"path": "/resources/attendance-policy-template", "changefreq": "monthly", "priority": "0.8"},
-    {"path": "/resources/holiday-calendar-2026", "changefreq": "monthly", "priority": "0.8"},
-    {"path": "/saas", "changefreq": "monthly", "priority": "0.7"},
-    {"path": "/login", "changefreq": "monthly", "priority": "0.7"},
+    {"path": "/"},
+    {"path": "/cloud-face-recognition-attendance"},
+    {"path": "/tablet-mobile-attendance-kiosk"},
+    {"path": "/zero-hardware-time-tracking"},
+    {"path": "/leave-management-software"},
+    {"path": "/automated-payroll-software"},
+    {"path": "/saas-vs-hardware-attendance"},
+    {"path": "/onboarding-guide"},
+    {"path": "/compare-editions"},
+    {"path": "/face-attendance-for-retail"},
+    {"path": "/face-attendance-for-factories"},
+    {"path": "/face-attendance-for-corporate-offices"},
+    {"path": "/face-attendance-for-field-teams"},
+    {"path": "/face-attendance-software-ahmedabad"},
+    {"path": "/tools/attendance-roi-calculator"},
+    {"path": "/resources/attendance-policy-template"},
+    {"path": "/resources/holiday-calendar-2026"},
+    {"path": "/privacy-policy"},
+    {"path": "/terms"},
+    {"path": "/biometric-data-policy"},
 ]
 
 
@@ -124,8 +144,6 @@ def get_sitemap_xml() -> str:
             f"  <url>\n"
             f"    <loc>{loc}</loc>\n"
             f"    <lastmod>{now_date}</lastmod>\n"
-            f"    <changefreq>{r['changefreq']}</changefreq>\n"
-            f"    <priority>{r['priority']}</priority>\n"
             f"  </url>"
         )
 

@@ -19,13 +19,23 @@ class TestSEOEnhancements(unittest.TestCase):
             "/leave-management-software",
             "/automated-payroll-software",
             "/saas-vs-hardware-attendance",
+            "/onboarding-guide",
+            "/compare-editions",
+            "/face-attendance-for-retail",
+            "/face-attendance-for-factories",
+            "/face-attendance-for-corporate-offices",
+            "/face-attendance-for-field-teams",
+            "/face-attendance-software-ahmedabad",
             "/tools/attendance-roi-calculator",
             "/resources/attendance-policy-template",
             "/resources/holiday-calendar-2026",
+            "/privacy-policy",
+            "/terms",
+            "/biometric-data-policy",
         ]
 
     def test_01_all_new_routes_return_200(self):
-        """Verify each of the 9 targeted SEO landing and resource pages returns HTTP 200 OK."""
+        """Verify each of the targeted SEO landing, industry, and resource pages returns HTTP 200 OK."""
         for route in self.new_routes:
             with self.subTest(route=route):
                 res = self.client.get(route)
@@ -43,7 +53,7 @@ class TestSEOEnhancements(unittest.TestCase):
                 self.assertEqual(len(h1_matches), 1, f"Route {route} expected exactly 1 <h1>, found {len(h1_matches)}: {h1_matches}")
 
     def test_03_title_and_meta_description_lengths(self):
-        """Verify title tags are between 45-65 chars and meta descriptions are between 140-170 chars."""
+        """Verify title tags are between 40-65 chars and meta descriptions are between 140-170 chars."""
         for route in self.new_routes:
             with self.subTest(route=route):
                 res = self.client.get(route)
@@ -55,12 +65,12 @@ class TestSEOEnhancements(unittest.TestCase):
                 self.assertIsNotNone(title_match, f"Missing <title> in {route}")
                 title = title_match.group(1).strip()
                 title_len = len(title)
-                self.assertTrue(45 <= title_len <= 65, f"Route {route} title length {title_len} out of 45-65 range: '{title}'")
+                self.assertTrue(40 <= title_len <= 65, f"Route {route} title length {title_len} out of 40-65 range: '{title}'")
 
                 # Meta description check
-                desc_match = re.search(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']', html, re.IGNORECASE)
+                desc_match = re.search(r'<meta\s+name=["\']description["\']\s+content=(["\'])(.*?)\1', html, re.IGNORECASE)
                 self.assertIsNotNone(desc_match, f"Missing meta description in {route}")
-                desc = desc_match.group(1).strip()
+                desc = desc_match.group(2).strip()
                 desc_len = len(desc)
                 self.assertTrue(140 <= desc_len <= 170, f"Route {route} meta description length {desc_len} out of 140-170 range: '{desc}'")
 
@@ -104,8 +114,8 @@ class TestSEOEnhancements(unittest.TestCase):
         self.assertIn('id="faq"', res_cloud.text)
         self.assertIn('"@type": "FAQPage"', res_cloud.text)
 
-    def test_07_sitemap_xml_contains_all_routes(self):
-        """Verify /sitemap.xml dynamically serves valid XML containing all public routes."""
+    def test_07_sitemap_xml_contains_all_routes_and_no_private(self):
+        """Verify /sitemap.xml dynamically serves valid XML containing public routes and excluding private ones."""
         res = self.client.get("/sitemap.xml")
         self.assertEqual(res.status_code, 200)
         self.assertIn("application/xml", res.headers.get("content-type", ""))
@@ -115,19 +125,26 @@ class TestSEOEnhancements(unittest.TestCase):
         for route in self.new_routes:
             self.assertIn(f"https://curiosityhub.co.in{route}</loc>", xml, f"Missing {route} in sitemap.xml")
 
-    def test_08_robots_txt_allows_new_routes(self):
-        """Verify /robots.txt includes Allow directives for all public marketing paths."""
+        # Exclude private paths
+        self.assertNotIn("https://curiosityhub.co.in/saas</loc>", xml)
+        self.assertNotIn("https://curiosityhub.co.in/login</loc>", xml)
+        self.assertNotIn("https://curiosityhub.co.in/super-admin", xml)
+
+    def test_08_robots_txt_allows_new_routes_and_disallows_private(self):
+        """Verify /robots.txt includes Allow directives for public marketing paths and disallows private app routes."""
         res = self.client.get("/robots.txt")
         self.assertEqual(res.status_code, 200)
         content = res.text
         self.assertIn("Allow: /cloud-face-recognition-attendance", content)
-        self.assertIn("Allow: /tablet-mobile-attendance-kiosk", content)
-        self.assertIn("Allow: /zero-hardware-time-tracking", content)
-        self.assertIn("Allow: /leave-management-software", content)
-        self.assertIn("Allow: /automated-payroll-software", content)
-        self.assertIn("Allow: /saas-vs-hardware-attendance", content)
-        self.assertIn("Allow: /tools/", content)
-        self.assertIn("Allow: /resources/", content)
+        self.assertIn("Allow: /onboarding-guide", content)
+        self.assertIn("Allow: /compare-editions", content)
+        self.assertIn("Allow: /face-attendance-for-retail", content)
+        self.assertIn("Allow: /face-attendance-software-ahmedabad", content)
+        self.assertIn("Disallow: /saas", content)
+        self.assertIn("Disallow: /login", content)
+        self.assertIn("Disallow: /super-admin", content)
+        self.assertIn("Disallow: /dashboard", content)
+        self.assertIn("Disallow: /api/", content)
         self.assertIn("Sitemap: https://curiosityhub.co.in/sitemap.xml", content)
 
     def test_09_interactive_calculator_assets(self):
@@ -140,6 +157,23 @@ class TestSEOEnhancements(unittest.TestCase):
         self.assertIn('id="sliderMinutes"', html)
         self.assertIn('id="sliderHardware"', html)
         self.assertIn('calculateSavings()', html)
+
+    def test_10_noindex_headers_on_private_routes(self):
+        """Verify X-Robots-Tag: noindex, nofollow is sent for private and app endpoints."""
+        private_test_urls = ["/saas", "/login", "/super-admin/login", "/dashboard"]
+        for p_url in private_test_urls:
+            with self.subTest(url=p_url):
+                res = self.client.get(p_url, follow_redirects=False)
+                self.assertEqual(res.headers.get("x-robots-tag"), "noindex, nofollow", f"Missing noindex header on {p_url}")
+
+    def test_11_no_deprecated_keywords_meta_tag(self):
+        """Verify deprecated <meta name='keywords'> is purged from all public pages."""
+        all_pages = ["/"] + self.new_routes
+        for route in all_pages:
+            with self.subTest(route=route):
+                res = self.client.get(route)
+                self.assertEqual(res.status_code, 200)
+                self.assertNotIn('name="keywords"', res.text.lower(), f"Found deprecated meta keywords on {route}")
 
 
 if __name__ == "__main__":

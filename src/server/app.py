@@ -105,6 +105,33 @@ async def track_access_logs(request, call_next):
 
     return response
 
+
+# Technical SEO: Enforce X-Robots-Tag noindex, nofollow on private, auth, and application routes
+PRIVATE_NOINDEX_PREFIXES = (
+    "/saas",
+    "/login",
+    "/super-admin",
+    "/dashboard",
+    "/employees",
+    "/students",
+    "/payroll",
+    "/settings",
+    "/academic-management",
+    "/api/",
+    "/onboard/",
+    "/check-in/",
+    "/portal/",
+    "/employee/",
+)
+
+@app.middleware("http")
+async def apply_noindex_headers(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if any(path == prefix or path.startswith(prefix + "/") or (prefix.endswith("/") and path.startswith(prefix)) for prefix in PRIVATE_NOINDEX_PREFIXES):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
 # Mount Static Assets & Data Storage
 app.mount("/static", StaticFiles(directory="src/server/static"), name="static")
 app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")

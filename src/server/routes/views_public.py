@@ -297,3 +297,114 @@ def page_holiday_calendar_2026(request: Request, db: Session = Depends(get_db)):
     )
     return render_template(request, "holiday_calendar_2026.html", ctx)
 
+
+@router.get("/onboarding-guide", response_class=HTMLResponse)
+def page_onboarding_guide(request: Request, db: Session = Depends(get_db)):
+    """Crawlable full-length 10-step administrator onboarding and setup guide."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="onboarding_guide",
+        page_title="Curiosity HUB SaaS Quick Onboarding & Setup Guide (2026)",
+    )
+    return render_template(request, "onboarding_guide_page.html", ctx)
+
+
+@router.get("/compare-editions", response_class=HTMLResponse)
+def page_compare_editions(request: Request, db: Session = Depends(get_db)):
+    """Full architectural specification comparison across Basic, Smart, and Pro editions."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="compare_editions",
+        page_title="Curiosity HUB Edition Comparison: Basic vs Smart vs Pro",
+    )
+    return render_template(request, "compare_editions_page.html", ctx)
+
+
+@router.get("/face-attendance-for-retail", response_class=HTMLResponse)
+def page_retail_attendance(request: Request, db: Session = Depends(get_db)):
+    """Dedicated retail store & multi-outlet attendance solution page."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="retail_attendance",
+        page_title="Face Attendance for Retail Shops & Chains | Curiosity HUB",
+    )
+    return render_template(request, "retail_attendance.html", ctx)
+
+
+@router.get("/face-attendance-for-factories", response_class=HTMLResponse)
+def page_factory_attendance(request: Request, db: Session = Depends(get_db)):
+    """Industrial manufacturing plant and factory shift attendance solution page."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="factory_attendance",
+        page_title="Face Attendance for Factories & Manufacturing | Curiosity HUB",
+    )
+    return render_template(request, "factory_attendance.html", ctx)
+
+
+@router.get("/face-attendance-for-corporate-offices", response_class=HTMLResponse)
+def page_corporate_attendance(request: Request, db: Session = Depends(get_db)):
+    """Corporate office, multi-branch, and tech park attendance solution page."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="corporate_attendance",
+        page_title="Face Attendance for Corporate Offices | Curiosity HUB",
+    )
+    return render_template(request, "corporate_attendance.html", ctx)
+
+
+@router.get("/face-attendance-for-field-teams", response_class=HTMLResponse)
+def page_field_attendance(request: Request, db: Session = Depends(get_db)):
+    """Field sales, remote workers, and mobile GPS geofenced attendance solution page."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="field_attendance",
+        page_title="Face Attendance for Field Teams & Remote Staff | Curiosity HUB",
+    )
+    return render_template(request, "field_attendance.html", ctx)
+
+
+@router.get("/face-attendance-software-ahmedabad", response_class=HTMLResponse)
+def page_ahmedabad_attendance(request: Request, db: Session = Depends(get_db)):
+    """Local landing page for Ahmedabad and Gujarat commercial & industrial enterprises."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="ahmedabad_attendance",
+        page_title="Face Attendance Software in Ahmedabad | Curiosity HUB",
+    )
+    return render_template(request, "ahmedabad_attendance.html", ctx)
+
+
+@router.get("/biometric-data-policy", response_class=HTMLResponse)
+def page_biometric_data_policy(request: Request, db: Session = Depends(get_db)):
+    """Biometric data protection, mathematical vector non-reversibility, and DPDP Act 2023 policy."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="biometric_data_policy",
+        page_title="Biometric Data & DPDP Compliance Policy | Curiosity HUB",
+    )
+    return render_template(request, "biometric_data_policy.html", ctx)
+
+
+@router.get("/privacy-policy", response_class=HTMLResponse)
+def page_privacy_policy(request: Request, db: Session = Depends(get_db)):
+    """Curiosity HUB platform Privacy Policy."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="privacy_policy",
+        page_title="Privacy Policy | Curiosity HUB Attendance SaaS",
+    )
+    return render_template(request, "privacy_policy.html", ctx)
+
+
+@router.get("/terms", response_class=HTMLResponse)
+def page_terms(request: Request, db: Session = Depends(get_db)):
+    """Curiosity HUB platform Terms of Service."""
+    ctx = _get_public_page_context(
+        request, db,
+        active_page="terms",
+        page_title="Terms of Service | Curiosity HUB Attendance SaaS",
+    )
+    return render_template(request, "terms_of_service.html", ctx)
+
+

@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>{{ seo.site_title if seo and seo.site_title else 'Curiosity HUB — Face Recognition Employee Management & Payroll SaaS' }}</title>
-    <meta name="description" content="{{ seo.meta_description if seo and seo.meta_description else 'Enterprise AI facial recognition employee management & automated payroll SaaS for companies. Centralize multi-location offices with dynamic multi-shift scheduling, mobile GPS geofencing, automated leaves, bank-grade security, and automated payroll.' }}">
-    <meta name="keywords" content="{{ seo.meta_keywords if seo and seo.meta_keywords else 'face recognition attendance, employee management system, biometric attendance software, multi location attendance, automated payroll software, attendance saas, ahmedabad hr software, curiosity hub, gps geofence attendance, shift scheduling software' }}">
+    <title>{{ seo.site_title if seo and seo.site_title else 'Curiosity HUB — Face Recognition Attendance & Payroll SaaS' }}</title>
+    <meta name="description" content="{{ seo.meta_description if seo and seo.meta_description else 'AI face recognition attendance, GPS mobile geofencing, and automated payroll SaaS for modern companies. Zero biometric hardware needed. Built in Ahmedabad.' }}">
     <meta name="author" content="{{ seo.author if seo and seo.author else 'Curiosity HUB' }}">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="{{ seo.canonical_url if seo and seo.canonical_url else 'https://curiosityhub.co.in/' }}">
@@ -133,25 +132,32 @@
                         <i class="fa-solid fa-chevron-down dropdown-arrow" id="productsDropdownArrow"></i>
                     </a>
                     <div class="nav-dropdown-menu" id="productsDropdownMenu">
-                        <a href="#product" onclick="selectProductView('attendance'); closeProductsDropdown();" class="dropdown-item" id="navSubmenuAttendance">
+                        <a href="/cloud-face-recognition-attendance" class="dropdown-item" id="navSubmenuAttendance">
                             <div class="dropdown-icon" style="background: rgba(234, 88, 12, 0.12); color: var(--accent-primary);"><i class="fa-solid fa-face-smile"></i></div>
                             <div class="dropdown-meta">
                                 <strong class="dropdown-title">Face based Attendance System</strong>
                                 <span class="dropdown-subtext">Sub-250ms biometric recognition, anti-spoof liveness &amp; edge/cloud kiosks</span>
                             </div>
                         </a>
-                        <a href="#product" onclick="selectProductView('leave'); closeProductsDropdown();" class="dropdown-item" id="navSubmenuLeave">
+                        <a href="/leave-management-software" class="dropdown-item" id="navSubmenuLeave">
                             <div class="dropdown-icon" style="background: rgba(16, 185, 129, 0.12); color: var(--success-emerald);"><i class="fa-solid fa-calendar-check"></i></div>
                             <div class="dropdown-meta">
                                 <strong class="dropdown-title">Leave Management Software</strong>
                                 <span class="dropdown-subtext">CL/SL/PL ledgers, multi-tier approvals, auto-accruals &amp; holiday master</span>
                             </div>
                         </a>
-                        <a href="#product" onclick="selectProductView('payroll'); closeProductsDropdown();" class="dropdown-item" id="navSubmenuPayroll">
+                        <a href="/automated-payroll-software" class="dropdown-item" id="navSubmenuPayroll">
                             <div class="dropdown-icon" style="background: rgba(79, 70, 229, 0.12); color: var(--tech-indigo);"><i class="fa-solid fa-money-check-dollar"></i></div>
                             <div class="dropdown-meta">
                                 <strong class="dropdown-title">Payroll Management System</strong>
                                 <span class="dropdown-subtext">Attendance-synchronized salary computation, deductions &amp; PDF payslips</span>
+                            </div>
+                        </a>
+                        <a href="/compare-editions" class="dropdown-item" id="navSubmenuCompare">
+                            <div class="dropdown-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;"><i class="fa-solid fa-table-columns"></i></div>
+                            <div class="dropdown-meta">
+                                <strong class="dropdown-title">Compare Edition Specs</strong>
+                                <span class="dropdown-subtext">Full feature comparison matrix across Basic, Smart &amp; Pro editions</span>
                             </div>
                         </a>
                     </div>
@@ -192,7 +198,7 @@
                         </a>
                     </div>
                 </li>
-                <li><a href="javascript:void(0)" class="nav-link" id="navLinkOnboarding" onclick="openOnboardingModal(0); return false;">Quick Onboarding Guide</a></li>
+                <li><a href="/onboarding-guide" class="nav-link" id="navLinkOnboarding">Quick Onboarding Guide</a></li>
                 <li><a href="#contact" class="nav-link">Contact Us</a></li>
             </ul>
 
@@ -818,12 +824,12 @@
                 <div class="footer-col">
                     <h4>Products &amp; Solutions</h4>
                     <ul class="footer-links">
-                        <li><a href="#product" onclick="selectProductView('attendance')">Face based Attendance System</a></li>
-                        <li><a href="/cloud-face-recognition-attendance">Cloud Face Attendance</a></li>
+                        <li><a href="/cloud-face-recognition-attendance">Face based Attendance System</a></li>
                         <li><a href="/tablet-mobile-attendance-kiosk">Tablet &amp; Mobile Kiosk</a></li>
                         <li><a href="/zero-hardware-time-tracking">Zero-Hardware Time Tracking</a></li>
                         <li><a href="/leave-management-software">Leave Management Software</a></li>
                         <li><a href="/automated-payroll-software">Payroll Management System</a></li>
+                        <li><a href="/face-attendance-software-ahmedabad">Ahmedabad HR &amp; Attendance</a></li>
                         <li><a href="#about">About Us</a></li>
                         <li><a href="#contact">Contact Us</a></li>
                     </ul>
@@ -836,28 +842,29 @@
                         <li><a href="/tools/attendance-roi-calculator">Attendance ROI Calculator</a></li>
                         <li><a href="/resources/attendance-policy-template">Attendance Policy Template</a></li>
                         <li><a href="/resources/holiday-calendar-2026">2026 Holiday Calendar</a></li>
-                        <li><a href="#product">Role-Based Access Control</a></li>
-                        <li><a href="javascript:void(0)" onclick="openOnboardingModal(7)">Live Operational HUD</a></li>
+                        <li><a href="/compare-editions">Edition Comparison Matrix</a></li>
+                        <li><a href="/onboarding-guide">Quick Onboarding Guide</a></li>
                     </ul>
                 </div>
 
                 <div class="footer-col">
                     <h4>Product Editions</h4>
                     <ul class="footer-links">
-                        <li><a href="#product" onclick="openProductModal('attendance')">Basic Edition (Core Attendance)</a></li>
-                        <li><a href="#product" onclick="openProductModal('leave')">Smart Edition (Shifts &amp; GPS)</a></li>
-                        <li><a href="#product" onclick="openProductModal('payroll')">Pro Edition (Payroll System)</a></li>
+                        <li><a href="/compare-editions">Basic Edition (Core Attendance)</a></li>
+                        <li><a href="/compare-editions">Smart Edition (Shifts &amp; GPS)</a></li>
+                        <li><a href="/compare-editions">Pro Edition (Payroll System)</a></li>
                         <li><a href="javascript:void(0)" onclick="openFreeDemoModal()">7-Day Free Trial</a></li>
                         <li><a href="#faq">Frequently Asked Questions</a></li>
                     </ul>
                 </div>
 
                 <div class="footer-col">
-                    <h4>Portal Gateways</h4>
+                    <h4>Trust &amp; Governance</h4>
                     <ul class="footer-links">
                         <li><a href="/saas" target="_blank" rel="noopener noreferrer">SaaS Organization Sign-In</a></li>
-                        <li><a href="/login/demo-store" target="_blank" rel="noopener noreferrer">Demo Store Portal</a></li>
-                        <li><a href="/super-admin/login" target="_blank" rel="noopener noreferrer">Super Admin Console</a></li>
+                        <li><a href="/biometric-data-policy">Biometric Data &amp; DPDP Policy</a></li>
+                        <li><a href="/privacy-policy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms of Service</a></li>
                         <li><a href="#contact">Inquire for Deployment</a></li>
                         <li><a href="/sitemap.xml" target="_blank">XML Sitemap</a></li>
                     </ul>
@@ -870,7 +877,9 @@
                 </div>
                 <div style="display: flex; gap: 18px;">
                     <a href="/saas" target="_blank" rel="noopener noreferrer">SaaS Portal</a>
-                    <a href="/super-admin/login" target="_blank" rel="noopener noreferrer">Super Admin</a>
+                    <a href="/privacy-policy">Privacy</a>
+                    <a href="/terms">Terms</a>
+                    <a href="/biometric-data-policy">Biometrics &amp; DPDP</a>
                     <a href="#mainNav">Back to Top &uarr;</a>
                 </div>
             </div>
