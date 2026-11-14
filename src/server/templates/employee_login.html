@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <title>Employee Face Login - {{ branding.institution_name if branding else tenant.name }}</title>
+    <title>Employee Face Login - {{ branding.institution_name if branding else (tenant.name if tenant else 'Campus Hub') }}</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     
     <!-- Plus Jakarta Sans & Inter Google Fonts -->
@@ -57,7 +57,7 @@
         .portal-topbar {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border-color);
-            padding: 12px 24px;
+            padding: 12px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -77,7 +77,7 @@
             width: 38px;
             height: 38px;
             border-radius: var(--radius-sm);
-            background: var(--accent-gradient, linear-gradient(135deg, var(--accent-primary), #3b82f6));
+            background: var(--accent-gradient, linear-gradient(135deg, var(--accent-primary, #6366f1), #3b82f6));
             color: #ffffff;
             display: flex;
             align-items: center;
@@ -100,10 +100,9 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-top: 2px;
         }
 
-        /* Main Center Card */
+        /* Center Layout Container */
         .login-wrapper {
             flex: 1;
             display: flex;
@@ -113,54 +112,56 @@
         }
 
         .login-card {
-            width: 100%;
-            max-width: 440px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
+            border-radius: var(--radius-lg, 20px);
             padding: 28px 24px;
-            box-shadow: var(--shadow-lg, 0 12px 30px rgba(0, 0, 0, 0.08));
+            max-width: 440px;
+            width: 100%;
             text-align: center;
-            transition: all 0.3s ease;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+            position: relative;
+            box-sizing: border-box;
         }
 
+        /* Camera Viewport Wrapper */
         .camera-container {
             position: relative;
             width: 100%;
-            height: 310px;
-            background: #090d16;
-            border-radius: var(--radius-md);
+            height: 280px;
+            background: #000000;
+            border-radius: var(--radius-md, 16px);
             overflow: hidden;
-            border: 2px solid var(--border-color);
-            margin: 18px 0;
-            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+            margin: 18px 0 16px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
         }
 
-        #webcamVideo {
+        .camera-container video {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1);
         }
 
+        /* Biometric Reticle */
         .face-oval-guide {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 175px;
-            height: 225px;
-            border: 2.5px dashed var(--accent-primary);
+            width: 160px;
+            height: 210px;
+            border: 2px dashed rgba(255, 255, 255, 0.55);
             border-radius: 50%;
-            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45), 0 0 20px rgba(99, 102, 241, 0.3);
             pointer-events: none;
-            animation: pulseOval 2.4s infinite ease-in-out;
-            transition: all 0.3s ease;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+            transition: border-color 0.3s ease;
         }
 
-        @keyframes pulseOval {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
-            50% { transform: translate(-50%, -50%) scale(1.03); opacity: 0.7; }
+        .face-oval-guide.active {
+            border-color: #10b981;
+            border-style: solid;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35), 0 0 20px rgba(16, 185, 129, 0.4);
         }
 
         .scan-overlay-text {
@@ -168,162 +169,123 @@
             bottom: 12px;
             left: 12px;
             right: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #ffffff;
-            background: rgba(15, 23, 42, 0.75);
-            padding: 7px 12px;
-            border-radius: var(--radius-full);
+            background: rgba(0, 0, 0, 0.65);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .btn-scan-primary {
-            width: 100%;
-            padding: 14px;
-            font-size: 14.5px;
-            font-weight: 700;
-            border-radius: var(--radius-sm);
-            background: var(--accent-gradient, var(--accent-primary));
             color: #ffffff;
-            border: none;
-            cursor: pointer;
+            font-size: 11.5px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: var(--radius-full, 9999px);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        /* Scan Button */
+        .btn-scan-primary {
+            width: 100%;
+            padding: 13px 20px;
+            background: var(--accent-gradient, linear-gradient(135deg, var(--accent-primary, #6366f1) 0%, #4338ca 100%));
+            color: #ffffff;
+            border: none;
+            border-radius: var(--radius-md, 12px);
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
         }
 
         .btn-scan-primary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
-            filter: brightness(1.05);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
         }
 
         .btn-scan-primary:disabled {
-            opacity: 0.65;
+            opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
 
         .feedback-alert {
-            padding: 12px 14px;
-            border-radius: var(--radius-sm);
-            font-size: 12.5px;
             margin-top: 14px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm, 8px);
+            font-size: 12px;
+            font-weight: 600;
             display: none;
             text-align: left;
-            line-height: 1.45;
-            animation: fadeIn 0.25s ease-out;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .feedback-alert.success {
-            display: block;
-            background: rgba(16, 185, 129, 0.12);
-            border: 1px solid rgba(16, 185, 129, 0.35);
-            color: #059669;
-        }
-        [data-theme="dark"] .feedback-alert.success {
-            color: #34d399;
-        }
-
         .feedback-alert.error {
             display: block;
             background: rgba(239, 68, 68, 0.12);
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
         }
-        [data-theme="dark"] .feedback-alert.error {
-            color: #f87171;
+        .feedback-alert.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        .feedback-alert.info {
+            display: block;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--accent-primary, #6366f1);
+        }
+
+        /* Modal Overlay */
+        .tenant-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .tenant-modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            max-width: 400px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+            text-align: left;
+            animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         /* Footer */
         .portal-footer {
-            padding: 16px 24px;
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-muted);
+            padding: 16px 20px;
             border-top: 1px solid var(--border-color);
+            font-size: 11.5px;
+            color: var(--text-muted);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        /* Mobile-First Responsive Breakpoints */
-        @media (max-width: 640px) {
-            .portal-topbar {
-                padding: 10px 14px;
-            }
-            .portal-brand-avatar {
-                width: 32px;
-                height: 32px;
-                font-size: 0.95rem;
-            }
-            .portal-brand-title {
-                font-size: 0.9rem;
-                max-width: 180px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            .login-wrapper {
-                padding: 14px 12px;
-            }
-            .login-card {
-                padding: 20px 16px;
-                border-radius: var(--radius-md);
-            }
-            .camera-container {
-                height: 250px;
-                margin: 14px 0;
-            }
-            .face-oval-guide {
-                width: 140px;
-                height: 180px;
-            }
-            .btn-scan-primary {
-                padding: 12px;
-                font-size: 13.5px;
-                min-height: 46px;
-            }
-            .portal-footer {
-                padding: 12px 14px;
-                flex-direction: column;
-                gap: 6px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .portal-brand-title {
-                max-width: 130px;
-            }
-            .camera-container {
-                height: 220px;
-            }
-            .face-oval-guide {
-                width: 120px;
-                height: 160px;
-            }
+            justify-content: space-between;
+            background: var(--bg-card);
         }
     </style>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-98EBJYL682"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-98EBJYL682');
-    </script>
 </head>
 <body>
 
@@ -334,21 +296,27 @@
                 <img src="{{ branding.logo_url }}" alt="Logo" style="height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
             {% else %}
                 <div class="portal-brand-avatar">
-                    {{ tenant.name[0] if tenant else 'E' }}
+                    {{ tenant.name[0] if tenant else 'C' }}
                 </div>
             {% endif %}
             <div>
-                <div class="portal-brand-title">{{ branding.institution_name if branding else tenant.name }}</div>
+                <div class="portal-brand-title" id="topbarTenantName">{{ branding.institution_name if branding else (tenant.name if tenant else 'Select Organization') }}</div>
                 <div class="portal-brand-subtitle">
-                    <span><i class="fa-solid fa-face-smile" style="color: var(--accent-primary);"></i> Employee Face-Login Portal</span>
+                    <span><i class="fa-solid fa-face-smile" style="color: var(--accent-primary, #6366f1);"></i> Employee Biometric Login</span>
+                    {% if tenant %}
                     <span>&bull;</span>
                     <code>{{ tenant.slug }}</code>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
-            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;">
+            <button id="btnSwitchTenant" class="btn btn-secondary btn-sm" onclick="openTenantModal()" title="Switch Organization" style="font-size: 11px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-building-user"></i>
+                <span class="d-none-mobile">Switch Org</span>
+            </button>
+            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;">
                 <i class="fa-solid fa-moon"></i>
             </button>
         </div>
@@ -358,80 +326,226 @@
     <main class="login-wrapper">
         <div class="login-card">
             
-            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-full); font-size: 11.5px; font-weight: 700; background: var(--bg-subtle); color: var(--accent-primary); border: 1px solid var(--border-color); margin-bottom: 12px;">
+            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-full); font-size: 11.5px; font-weight: 700; background: var(--bg-subtle); color: var(--accent-primary, #6366f1); border: 1px solid var(--border-color); margin-bottom: 12px;">
                 <i class="fa-solid fa-shield-halved"></i> 1:N Biometric Access
             </div>
 
             <h2 style="margin: 0; font-size: 19px; font-weight: 800; color: var(--text-heading);">Employee Face Login</h2>
             <p style="font-size: 13px; color: var(--text-muted); margin: 6px 0 0; line-height: 1.45;">
-                Position your face within the guide for instant passwordless entry to your leave balances and payslips.
+                Position your face inside the circle and tap <strong>Scan Face</strong> for frictionless passwordless access.
             </p>
 
-            <!-- Live Camera Container -->
+            <!-- Live In-App Camera Viewport -->
             <div class="camera-container" id="cameraViewport">
                 <video id="webcamVideo" autoplay playsinline muted></video>
                 <canvas id="captureCanvas" style="display: none;"></canvas>
-                <div class="face-oval-guide"></div>
+                <div class="face-oval-guide" id="faceOvalGuide"></div>
                 <div class="scan-overlay-text" id="scanStatusOverlay">
-                    <i class="fa-solid fa-camera"></i> Initializing camera...
+                    <i class="fa-solid fa-camera"></i> Camera standby...
                 </div>
             </div>
 
-            <!-- Login Trigger Button -->
+            <!-- Login Trigger Button (Manual Scan Face) -->
             <button type="button" id="btnScanFace" class="btn-scan-primary" onclick="performFaceLogin()">
                 <i class="fa-solid fa-expand"></i>
-                <span>Scan Face to Log In</span>
+                <span id="btnScanLabel">Scan Face to Log In</span>
             </button>
 
             <!-- Feedback Alerts Container -->
             <div id="loginAlertBox" class="feedback-alert"></div>
 
-            <!-- Secondary HR Direct Login Link -->
+            <!-- Organization Context & HR Admin Link -->
             <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted);">
-                <span>Tenant: <strong>{{ tenant.name }}</strong></span>
-                <a href="/portal/{{ tenant.slug }}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">
-                    <i class="fa-solid fa-lock"></i> HR Admin Login
+                <span>
+                    Org: <strong id="cardTenantName">{{ tenant.name if tenant else 'None' }}</strong>
+                    <a href="javascript:void(0)" onclick="openTenantModal()" style="color: var(--accent-primary, #6366f1); text-decoration: underline; margin-left: 4px;">Change</a>
+                </span>
+                {% if tenant %}
+                <a href="/portal/{{ tenant.slug }}" style="color: var(--accent-primary, #6366f1); text-decoration: none; font-weight: 600;">
+                    <i class="fa-solid fa-lock"></i> HR Admin
                 </a>
+                {% endif %}
             </div>
         </div>
     </main>
 
+    <!-- Tenant Code Onboarding / Switcher Modal (Option A) -->
+    <div id="tenantSetupModal" class="tenant-modal-overlay">
+        <div class="tenant-modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(99, 102, 241, 0.15); color: var(--accent-primary, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 15px;">
+                        <i class="fa-solid fa-building-circle-check"></i>
+                    </div>
+                    <strong style="font-size: 16px; color: var(--text-heading);">Select Organization</strong>
+                </div>
+                {% if tenant %}
+                <button type="button" onclick="closeTenantModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">&times;</button>
+                {% endif %}
+            </div>
+
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 16px 0; line-height: 1.4;">
+                Enter your company code or campus slug (e.g., <code>pulin1</code>, <code>default</code>, <code>ssec</code>, <code>gecm</code>) to connect to your employee portal:
+            </p>
+
+            <form onsubmit="confirmTenantCode(event)">
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">Organization Code / Slug</label>
+                    <div style="position: relative;">
+                        <input type="text" id="tenantCodeInput" class="form-control" placeholder="e.g. pulin1" required style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 14px; font-weight: 600; text-transform: lowercase;">
+                    </div>
+                    <div id="tenantModalAlert" style="font-size: 11.5px; margin-top: 6px; display: none;"></div>
+                </div>
+
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    {% if tenant %}
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeTenantModal()">Cancel</button>
+                    {% endif %}
+                    <button type="submit" id="btnConfirmTenant" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 8px 16px;">
+                        <i class="fa-solid fa-arrow-right"></i> Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="portal-footer">
-        <div>&copy; 2026 {{ branding.institution_name if branding else tenant.name }}. All rights reserved.</div>
+        <div>&copy; 2026 {{ branding.institution_name if branding else (tenant.name if tenant else 'Campus Hub') }}. All rights reserved.</div>
         <div>
-            <span class="badge badge-sky" style="font-size: 11px;"><i class="fa-solid fa-bolt"></i> Fast Face Engine</span>
+            <span class="badge badge-sky" style="font-size: 11px;"><i class="fa-solid fa-bolt"></i> Biometric Engine Ready</span>
         </div>
     </footer>
 
     <script>
-        const tenantSlug = "{{ tenant_slug }}";
+        let tenantSlug = "{{ tenant_slug }}";
         let videoStream = null;
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             updateThemeIcon();
-            initCamera();
+
+            // 1. Initial Tenant Validation & LocalStorage Handshake
+            if (!tenantSlug) {
+                const storedSlug = localStorage.getItem("employee_tenant_slug");
+                if (storedSlug && storedSlug.trim()) {
+                    window.location.href = `/employee/${storedSlug.trim()}`;
+                    return;
+                } else {
+                    openTenantModal();
+                    updateCameraStatus("Please select your organization first.", "info");
+                    document.getElementById("btnScanFace").disabled = true;
+                    return;
+                }
+            } else {
+                localStorage.setItem("employee_tenant_slug", tenantSlug);
+            }
+
+            // 2. Persistent Authentication Check
+            await checkPersistentSession();
+
+            // 3. Initialize Front Camera Stream in Standby
+            await initCamera();
         });
 
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute("data-theme") || "light";
-            const next = (current === "dark") ? "light" : "dark";
-            document.documentElement.setAttribute("data-theme", next);
-            localStorage.setItem("app_theme", next);
-            updateThemeIcon();
-        }
-
-        function updateThemeIcon() {
-            const current = document.documentElement.getAttribute("data-theme") || "light";
-            const icon = document.querySelector("#themeToggleBtn i");
-            if (icon) {
-                icon.className = (current === "dark") ? "fa-solid fa-sun" : "fa-solid fa-moon";
+        // ----------------------------------------------------
+        // Tenant Onboarding & Switcher Modal Logic (Option A)
+        // ----------------------------------------------------
+        function openTenantModal() {
+            const modal = document.getElementById("tenantSetupModal");
+            const input = document.getElementById("tenantCodeInput");
+            if (modal) {
+                modal.style.display = "flex";
+                if (input) {
+                    input.value = tenantSlug || "";
+                    setTimeout(() => input.focus(), 100);
+                }
             }
         }
 
+        function closeTenantModal() {
+            const modal = document.getElementById("tenantSetupModal");
+            if (modal && tenantSlug) {
+                modal.style.display = "none";
+            }
+        }
+
+        async function confirmTenantCode(e) {
+            e.preventDefault();
+            const input = document.getElementById("tenantCodeInput");
+            const alertBox = document.getElementById("tenantModalAlert");
+            const btn = document.getElementById("btnConfirmTenant");
+
+            const code = input.value.trim().toLowerCase();
+            if (!code) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+            alertBox.style.display = "none";
+
+            try {
+                const res = await fetch(`/api/v1/tenants/resolve/${encodeURIComponent(code)}`);
+                const data = await res.json();
+
+                if (res.ok && data.status === "success" && data.tenant) {
+                    const resolvedSlug = data.tenant.slug;
+                    localStorage.setItem("employee_tenant_slug", resolvedSlug);
+                    alertBox.style.display = "block";
+                    alertBox.style.color = "#10b981";
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Connected to ${data.tenant.name}! Loading...`;
+                    setTimeout(() => {
+                        window.location.href = `/employee/${resolvedSlug}`;
+                    }, 400);
+                } else {
+                    alertBox.style.display = "block";
+                    alertBox.style.color = "#ef4444";
+                    alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Organization code not found.'}`;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Continue';
+                }
+            } catch (err) {
+                alertBox.style.display = "block";
+                alertBox.style.color = "#ef4444";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Connection failed. Check server connection.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Continue';
+            }
+        }
+
+        // ----------------------------------------------------
+        // Persistent Login Session Handshake
+        // ----------------------------------------------------
+        async function checkPersistentSession() {
+            try {
+                const storedToken = localStorage.getItem("employee_jwt_token");
+                const headers = {};
+                if (storedToken) {
+                    headers["Authorization"] = `Bearer ${storedToken}`;
+                }
+
+                const res = await fetch("/api/v1/employee/me", { headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.employee) {
+                        showAlert(`Active session detected for <strong>${data.employee.name}</strong>. Entering dashboard...`, "success");
+                        setTimeout(() => {
+                            window.location.href = `/employee/${tenantSlug}/dashboard`;
+                        }, 500);
+                    }
+                }
+            } catch (e) {
+                // Session not active, proceed with face scan
+            }
+        }
+
+        // ----------------------------------------------------
+        // Front-Facing In-App Camera Stream Management
+        // ----------------------------------------------------
         async function initCamera() {
+            if (!tenantSlug) return;
+
             const video = document.getElementById("webcamVideo");
             const statusOverlay = document.getElementById("scanStatusOverlay");
+            const btnScan = document.getElementById("btnScanFace");
 
             try {
                 const constraints = {
@@ -446,34 +560,85 @@
                 videoStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = videoStream;
                 await video.play();
-                if (statusOverlay) {
-                    statusOverlay.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Camera Ready. Tap Scan to Log In.';
+
+                if (btnScan) {
+                    btnScan.disabled = false;
                 }
+                startAutoCaptureCountdown();
             } catch (err) {
                 console.error("Camera access failed:", err);
                 if (statusOverlay) {
                     statusOverlay.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Camera permission required.';
                 }
-                showAlert("Could not access camera. Please grant camera permission in your browser settings.", "error");
+                showAlert("Could not access camera. Please allow camera permissions in your mobile browser settings.", "error");
             }
         }
 
+        let autoCaptureTimer = null;
+        let countdownSec = 2;
+
+        function startAutoCaptureCountdown() {
+            const statusOverlay = document.getElementById("scanStatusOverlay");
+            const btnScan = document.getElementById("btnScanFace");
+            countdownSec = 2;
+            if (autoCaptureTimer) clearInterval(autoCaptureTimer);
+
+            if (statusOverlay) {
+                statusOverlay.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: #6366f1;"></i> Auto-scanning face in ${countdownSec}s...`;
+            }
+
+            autoCaptureTimer = setInterval(() => {
+                countdownSec--;
+                if (countdownSec > 0) {
+                    if (statusOverlay) {
+                        statusOverlay.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: #6366f1;"></i> Auto-scanning face in ${countdownSec}s...`;
+                    }
+                } else {
+                    clearInterval(autoCaptureTimer);
+                    autoCaptureTimer = null;
+                    performFaceLogin();
+                }
+            }, 1000);
+        }
+
+        function updateCameraStatus(msg, type) {
+            const statusOverlay = document.getElementById("scanStatusOverlay");
+            if (statusOverlay) {
+                const color = type === "success" ? "#10b981" : (type === "error" ? "#ef4444" : "#6366f1");
+                statusOverlay.innerHTML = `<i class="fa-solid fa-info-circle" style="color: ${color};"></i> ${msg}`;
+            }
+        }
+
+        // ----------------------------------------------------
+        // Manual Scan Face Trigger
+        // ----------------------------------------------------
         async function performFaceLogin() {
+            if (autoCaptureTimer) {
+                clearInterval(autoCaptureTimer);
+                autoCaptureTimer = null;
+            }
+            if (!tenantSlug) {
+                openTenantModal();
+                return;
+            }
+
             const video = document.getElementById("webcamVideo");
             const canvas = document.getElementById("captureCanvas");
             const btn = document.getElementById("btnScanFace");
             const statusOverlay = document.getElementById("scanStatusOverlay");
+            const reticle = document.getElementById("faceOvalGuide");
 
             if (!video || !canvas || !videoStream) {
-                showAlert("Camera is not active. Please grant camera permissions and reload.", "error");
+                showAlert("Camera is not active. Please grant camera permission and reload.", "error");
                 return;
             }
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
             if (statusOverlay) {
-                statusOverlay.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Matching face vector...';
+                statusOverlay.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Matching biometric vectors...';
             }
+            if (reticle) reticle.classList.add("active");
 
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
@@ -494,90 +659,94 @@
 
                 const data = await res.json();
 
-                if (res.ok) {
+                if (res.ok && data.status === "success") {
+                    // Persist JWT token and session across app launches
+                    if (data.token) {
+                        localStorage.setItem("employee_jwt_token", data.token);
+                    }
+                    if (data.employee) {
+                        localStorage.setItem("employee_session", JSON.stringify(data.employee));
+                    }
+                    localStorage.setItem("employee_tenant_slug", tenantSlug);
+
                     if (statusOverlay) {
                         statusOverlay.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Verified: ${data.employee.name} (${data.confidence_pct}% Match)`;
                     }
-                    showAlert(`Welcome back, <strong>${data.employee.name}</strong>! Redirecting to your dashboard...`, "success");
+                    showAlert(`Welcome back, <strong>${data.employee.name}</strong>! Entering your portal...`, "success");
 
                     setTimeout(() => {
                         window.location.href = data.redirect_url || `/employee/${tenantSlug}/dashboard`;
-                    }, 700);
+                    }, 600);
                 } else {
-                    showAlert(data.detail || "Face not recognized. Please ensure clear lighting and try again.", "error");
+                    if (reticle) reticle.classList.remove("active");
+                    showAlert(data.detail || "Face not recognized. Please center your face in good lighting and try again.", "error");
                     if (statusOverlay) {
-                        statusOverlay.innerHTML = '<i class="fa-solid fa-xmark" style="color: #ef4444;"></i> Authentication Failed';
+                        statusOverlay.innerHTML = '<i class="fa-solid fa-xmark" style="color: #ef4444;"></i> Face Not Recognized';
                     }
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-expand"></i> Try Again';
                 }
             } catch (err) {
-                showAlert("Network error during face verification.", "error");
+                if (reticle) reticle.classList.remove("active");
+                showAlert("Network error during biometric verification.", "error");
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-expand"></i> Try Again';
             }
         }
 
+        // Visibility & Window Focus Lifecycle Listeners
         let isCameraPausedByVisibility = false;
 
         function stopCameraStream() {
             if (videoStream) {
-                videoStream.getTracks().forEach(track => {
-                    track.stop();
-                });
+                videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
             }
             const video = document.getElementById("webcamVideo");
-            if (video) {
-                video.srcObject = null;
-            }
-            const statusOverlay = document.getElementById("scanStatusOverlay");
-            if (statusOverlay) {
-                statusOverlay.innerHTML = '<i class="fa-solid fa-pause" style="color: var(--accent-amber, #f59e0b);"></i> Camera Paused (Window Inactive)';
-            }
+            if (video) video.srcObject = null;
             isCameraPausedByVisibility = true;
         }
 
         async function resumeCameraStream() {
-            if (isCameraPausedByVisibility && !document.hidden) {
+            if (isCameraPausedByVisibility && !document.hidden && tenantSlug) {
                 isCameraPausedByVisibility = false;
                 await initCamera();
             }
         }
 
-        // Visibility & Window Focus Lifecycle Listeners (Alt+Tab / Tab Switch Detection)
         document.addEventListener("visibilitychange", () => {
-            if (document.hidden) {
-                stopCameraStream();
-            } else {
-                resumeCameraStream();
-            }
+            if (document.hidden) stopCameraStream();
+            else resumeCameraStream();
         });
 
-        window.addEventListener("blur", () => {
-            stopCameraStream();
-        });
-
+        window.addEventListener("blur", () => stopCameraStream());
         window.addEventListener("focus", () => {
-            if (!document.hidden) {
-                resumeCameraStream();
-            }
+            if (!document.hidden) resumeCameraStream();
         });
-
-        window.addEventListener("pagehide", () => {
-            stopCameraStream();
-        });
-
-        window.addEventListener("beforeunload", () => {
-            stopCameraStream();
-        });
+        window.addEventListener("pagehide", () => stopCameraStream());
+        window.addEventListener("beforeunload", () => stopCameraStream());
 
         function showAlert(msg, type) {
             const box = document.getElementById("loginAlertBox");
             if (!box) return;
-
             box.className = `feedback-alert ${type}`;
             box.innerHTML = msg;
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const next = (current === "dark") ? "light" : "dark";
+            document.documentElement.setAttribute("data-theme", next);
+            localStorage.setItem("app_theme", next);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const current = document.documentElement.getAttribute("data-theme") || "light";
+            const icon = document.querySelector("#themeToggleBtn i");
+            if (icon) {
+                icon.className = (current === "dark") ? "fa-solid fa-sun" : "fa-solid fa-moon";
+            }
         }
     </script>
 

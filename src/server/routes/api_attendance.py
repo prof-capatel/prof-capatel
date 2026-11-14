@@ -15,7 +15,7 @@ from src.config import EXPORTS_DIR
 from src.core.attendance_manager import attendance_manager
 from src.core.camera_utils import decode_image_bytes
 from src.core.face_engine import face_engine
-from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant, WorkShift, LeaveRequest, AuditLog, User
+from src.database.models import AttendanceRecord, Student, NodeDevice, SystemBranding, Tenant, WorkShift, LeaveRequest, AuditLog, User, EmployeeGeofenceBreach
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant, resolve_tenant
 from src.server.rbac_middleware import check_tenant_operational_access, create_access_token, get_current_user_optional
@@ -1011,6 +1011,34 @@ async def live_stream_events():
     )
 
 
+@router.get("/geofence-breaches")
+def get_tenant_geofence_breaches(
+    date_str: Optional[str] = Query(None, description="Date filter YYYY-MM-DD"),
+    student_id: Optional[int] = Query(None, description="Filter by employee ID"),
+    status: Optional[str] = Query("ALL", description="Filter by breach status: ACTIVE, RESOLVED, ALL"),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Retrieves geofence out-of-bounds audit trail logs for tenant administrators."""
+    check_tenant_operational_access(current_tenant)
+    from src.services.attendance_service import AttendanceService
+    service = AttendanceService(db)
+    breaches = service.get_geofence_breaches(
+        tenant_id=current_tenant.id,
+        student_id=student_id,
+        breach_date=date_str,
+        status_filter=status,
+        limit=limit,
+    )
+    return {
+        "status": "success",
+        "success": True,
+        "count": len(breaches),
+        "breaches": breaches,
+    }
+
+
 @router.get("/self-config")
 @router.get("/geofence-config")
 def get_self_attendance_config(
@@ -1197,6 +1225,24 @@ async def self_mark_attendance(
             "student_roll": det.get("roll_number"),
             "distance_meters": dist_meters,
         }
+
+    # Resolve any active geofence breach on successful punch
+    now_ist = get_ist_now()
+    active_breach = (
+        db.query(EmployeeGeofenceBreach)
+        .filter(
+            EmployeeGeofenceBreach.tenant_id == target_tenant.id,
+            EmployeeGeofenceBreach.student_id == student_id,
+            EmployeeGeofenceBreach.breach_date == now_ist.date(),
+            EmployeeGeofenceBreach.status == "ACTIVE",
+        )
+        .first()
+    )
+    if active_breach:
+        active_breach.end_time = now_ist
+        active_breach.duration_seconds = max(1, int((now_ist - active_breach.start_time).total_seconds()))
+        active_breach.status = "RESOLVED"
+        db.commit()
 
     token = create_access_token(
         user_id=student_id,

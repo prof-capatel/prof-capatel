@@ -55,7 +55,7 @@ class User(Base):
     student_profile = relationship("Student", back_populates="user", uselist=False, foreign_keys="[Student.user_id]")
 
     def to_dict(self):
-        return {
+        d = {
             "id": self.id,
             "tenant_id": self.tenant_id,
             "tenant_name": self.tenant.name if self.tenant else "Global Platform",
@@ -63,11 +63,19 @@ class User(Base):
             "email": self.email,
             "role": self.role,
             "full_name": self.full_name,
+            "name": self.full_name,
             "phone_number": self.phone_number,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
         }
+        if self.student_profile:
+            d["student_id"] = self.student_profile.id
+            d["roll_number"] = self.student_profile.roll_number
+            d["department"] = self.student_profile.department
+            d["class_semester"] = self.student_profile.class_semester
+            d["division_name"] = self.student_profile.division_name
+        return d
 
 
 class Tenant(Base):
@@ -125,6 +133,7 @@ class Tenant(Base):
     salary_revision_histories = relationship("SalaryRevisionHistory", back_populates="tenant", cascade="all, delete-orphan")
     payroll_batches = relationship("PayrollBatch", back_populates="tenant", cascade="all, delete-orphan")
     payroll_payslips = relationship("PayrollPayslip", back_populates="tenant", cascade="all, delete-orphan")
+    geofence_breaches = relationship("EmployeeGeofenceBreach", back_populates="tenant", cascade="all, delete-orphan")
 
     @property
     def saas_edition(self) -> str:
@@ -492,6 +501,7 @@ class Student(Base):
     salary_structures = relationship("EmployeeSalaryStructure", back_populates="student", cascade="all, delete-orphan")
     salary_revisions = relationship("SalaryRevisionHistory", back_populates="student", cascade="all, delete-orphan")
     payslips = relationship("PayrollPayslip", back_populates="student", cascade="all, delete-orphan")
+    geofence_breaches = relationship("EmployeeGeofenceBreach", back_populates="student", cascade="all, delete-orphan")
 
     def to_dict(self):
         photos_list = []
@@ -809,6 +819,7 @@ class SystemBranding(Base):
     geo_radius_meters = Column(Float, default=150.0, nullable=False)
     max_gps_accuracy_meters = Column(Float, default=50.0, nullable=False)
     self_attendance_face_threshold = Column(Float, default=0.52, nullable=False)
+    mobile_require_face_verification = Column(Boolean, default=False, nullable=False)
     
     # Corporate Shift Configuration (Default: 10:30 AM Check-In, 6:00 PM Check-Out, 15m Grace)
     shift_check_in_time = Column(String(10), default="10:30", nullable=False)
@@ -866,6 +877,7 @@ class SystemBranding(Base):
             "geo_radius_meters": float(self.geo_radius_meters if self.geo_radius_meters is not None else 150.0),
             "max_gps_accuracy_meters": float(self.max_gps_accuracy_meters if self.max_gps_accuracy_meters is not None else 50.0),
             "self_attendance_face_threshold": float(self.self_attendance_face_threshold if self.self_attendance_face_threshold is not None else 0.52),
+            "mobile_require_face_verification": bool(self.mobile_require_face_verification if self.mobile_require_face_verification is not None else False),
             "shift_check_in_time": self.shift_check_in_time or "10:30",
             "shift_check_out_time": self.shift_check_out_time or "18:00",
             "shift_grace_minutes": self.shift_grace_minutes if self.shift_grace_minutes is not None else 15,
@@ -1755,6 +1767,60 @@ class PayrollPayslip(Base):
             "payment_date": self.payment_date.strftime("%Y-%m-%d") if self.payment_date else None,
             "breakdown": breakdown,
             "remarks": self.remarks or "",
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+        }
+
+
+class EmployeeGeofenceBreach(Base):
+    """
+    Tracks and logs when an active checked-in employee steps out of the institution's geofenced perimeter.
+    Maintains exact timestamps, coordinates, duration, and status for administrative audit trails.
+    """
+    __tablename__ = "employee_geofence_breaches"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    breach_date = Column(Date, nullable=False, index=True)
+    start_time = Column(DateTime, nullable=False, default=get_ist_now)
+    end_time = Column(DateTime, nullable=True)
+    duration_seconds = Column(Integer, default=0, nullable=False)
+    last_known_latitude = Column(Float, nullable=True)
+    last_known_longitude = Column(Float, nullable=True)
+    distance_meters = Column(Float, nullable=True)
+    geofence_radius_meters = Column(Float, nullable=True)
+    status = Column(String(20), default="ACTIVE", nullable=False, index=True)  # ACTIVE, RESOLVED
+    created_at = Column(DateTime, default=get_ist_now)
+
+    __table_args__ = (
+        Index("ix_breach_tenant_date", "tenant_id", "breach_date"),
+        Index("ix_breach_student_status", "student_id", "status"),
+    )
+
+    tenant = relationship("Tenant", back_populates="geofence_breaches")
+    student = relationship("Student", back_populates="geofence_breaches")
+
+    def to_dict(self):
+        dur_mins = round(self.duration_seconds / 60.0, 1)
+        dur_fmt = f"{int(self.duration_seconds // 3600)}h {int((self.duration_seconds % 3600) // 60)}m" if self.duration_seconds >= 3600 else f"{int(self.duration_seconds // 60)}m {int(self.duration_seconds % 60)}s"
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "student_id": self.student_id,
+            "student_name": self.student.name if self.student else "",
+            "roll_number": self.student.roll_number if self.student else "",
+            "department": self.student.department if self.student else "",
+            "breach_date": self.breach_date.strftime("%Y-%m-%d") if self.breach_date else None,
+            "start_time": self.start_time.strftime("%Y-%m-%d %H:%M:%S") if self.start_time else None,
+            "end_time": self.end_time.strftime("%Y-%m-%d %H:%M:%S") if self.end_time else None,
+            "duration_seconds": self.duration_seconds,
+            "duration_minutes": dur_mins,
+            "duration_formatted": dur_fmt,
+            "last_known_latitude": self.last_known_latitude,
+            "last_known_longitude": self.last_known_longitude,
+            "distance_meters": round(self.distance_meters, 1) if self.distance_meters is not None else None,
+            "geofence_radius_meters": self.geofence_radius_meters,
+            "status": self.status,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
         }
 

@@ -39,6 +39,7 @@ from src.database.models import (
     SalaryRevisionHistory,
     PayrollBatch,
     PayrollPayslip,
+    EmployeeGeofenceBreach,
 )
 from src.utils.auth_utils import hash_password
 
@@ -1238,6 +1239,12 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE salary_templates ADD COLUMN other_perks_fixed FLOAT DEFAULT 0.0 NOT NULL"))
                 logger.info("Migrated salary_templates table: added other_perks_fixed column.")
+
+            # 11. System Branding mobile_require_face_verification column
+            res = conn.execute(text("SHOW COLUMNS FROM system_branding LIKE 'mobile_require_face_verification'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE system_branding ADD COLUMN mobile_require_face_verification TINYINT(1) DEFAULT 0 NOT NULL"))
+                logger.info("Migrated system_branding table: added mobile_require_face_verification column.")
 
             # Seed default WorkShift for corporate tenants if none exist
             try:

@@ -406,8 +406,16 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btnSwitchTenant" class="btn btn-secondary btn-sm" onclick="switchOrganization()" title="Switch Organization" style="padding: 6px 11px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-building-user"></i>
+                <span class="d-none-mobile">Switch Org</span>
+            </button>
             <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Theme" style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;">
                 <i class="fa-solid fa-moon"></i>
+            </button>
+            <button onclick="openChangePasswordModal()" class="btn btn-secondary btn-sm" style="padding: 6px 11px; font-size: 11.5px; color: var(--text-main); border-color: var(--border-color);" title="Change / Set Password">
+                <i class="fa-solid fa-key" style="color: var(--accent-primary);"></i>
+                <span class="d-none-mobile" style="margin-left: 4px;">Password</span>
             </button>
             <button onclick="employeeLogout()" class="btn btn-secondary btn-sm" style="padding: 6px 11px; font-size: 11.5px; color: var(--accent-rose, #ef4444); border-color: var(--border-color);" title="Sign Out">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -471,6 +479,119 @@
                 <span>My Quotas</span>
             </button>
             {% endif %}
+        </div>
+
+        <!-- Geofence Self Check-In Card -->
+        <div class="clean-card" style="margin-bottom: 16px; border: 1px solid var(--border-color); background: var(--bg-card); box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px; min-width: 220px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+                        <i class="fa-solid fa-location-crosshairs"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 14.5px; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                            <span>Self Attendance</span>
+                            <span id="geoStatusBadge" class="badge badge-amber" style="font-size: 10px; padding: 2px 7px;">Locating...</span>
+                        </div>
+                        <div id="geoStatusDetail" style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                            Acquiring GPS location...
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <a href="/download/mobile-app" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;" title="Download Android APK (.apk)">
+                        <i class="fa-brands fa-android" style="color: #3DDC84;"></i>
+                        <span>Download APK</span>
+                    </a>
+                    <a href="/mobile/" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;" title="Open cross-platform mobile web app">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <span>Mobile App</span>
+                    </a>
+                    <button id="btnWebPunch" onclick="performWebPunch()" class="btn btn-primary btn-sm" style="font-size: 12px; font-weight: 700; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-fingerprint"></i>
+                        <span id="btnPunchLabel">Punch Attendance</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="punchFeedbackAlert" style="display: none; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 12px; font-weight: 600;"></div>
+        </div>
+
+        <!-- In-App Camera Punch Modal (Front Camera Stream & Verification) -->
+        <!-- Change / Set Password Modal -->
+        <div id="changePasswordModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); z-index: 210; display: none; align-items: center; justify-content: center; padding: 16px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; max-width: 420px; width: 100%; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(99, 102, 241, 0.15); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 15px;">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                        <strong style="font-size: 15.5px; color: var(--text-heading);" id="pwdModalTitle">Account Password</strong>
+                    </div>
+                    <button type="button" onclick="closeChangePasswordModal()" style="background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer;">&times;</button>
+                </div>
+                <div id="pwdModalAlert" style="display: none; padding: 10px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; font-weight: 600;"></div>
+                <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
+                    <div id="grpCurrentPwd" style="margin-bottom: 12px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">Current Password</label>
+                        <input type="password" id="inputCurrentPwd" class="form-control" placeholder="Enter current password" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 13px; box-sizing: border-box;">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">New Password (min 6 characters)</label>
+                        <input type="password" id="inputNewPwd" class="form-control" required minlength="6" placeholder="Enter new password" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 13px; box-sizing: border-box;">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">Confirm New Password</label>
+                        <input type="password" id="inputConfirmPwd" class="form-control" required minlength="6" placeholder="Re-enter new password" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 13px; box-sizing: border-box;">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; padding: 10px;" onclick="closeChangePasswordModal()">Cancel</button>
+                        <button type="submit" id="btnSubmitPwd" class="btn btn-primary btn-sm" style="flex: 2; padding: 10px; font-weight: 700;">Save Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="punchCameraModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; max-width: 440px; width: 100%; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); text-align: center; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(99, 102, 241, 0.15); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <strong style="font-size: 15.5px; color: var(--text-heading);" id="punchModalTitle">Attendance Verification</strong>
+                    </div>
+                    <button type="button" onclick="closePunchCameraModal()" style="background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer;">&times;</button>
+                </div>
+
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 14px 0;">
+                    Center your face in the front camera to verify identity with live GPS geofencing.
+                </p>
+
+                <!-- Embedded Live Camera Viewport -->
+                <div style="position: relative; width: 100%; height: 260px; background: #000; border-radius: 16px; overflow: hidden; margin-bottom: 14px; display: flex; align-items: center; justify-content: center;">
+                    <video id="punchWebcamVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                    <canvas id="punchCaptureCanvas" style="display: none;"></canvas>
+                    <div style="position: absolute; width: 150px; height: 190px; border: 2px dashed rgba(255, 255, 255, 0.6); border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);"></div>
+                    <div id="punchCameraOverlayText" style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); color: #fff; font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 9999px;">
+                        <i class="fa-solid fa-satellite-dish"></i> Verifying GPS & Camera...
+                    </div>
+                </div>
+
+                <!-- Feedback Alert -->
+                <div id="punchModalAlert" style="display: none; padding: 10px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; font-weight: 600;"></div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; padding: 10px;" onclick="closePunchCameraModal()">
+                        Cancel
+                    </button>
+                    <button type="button" id="btnConfirmPunch" class="btn btn-primary btn-sm" style="flex: 2; padding: 10px; font-weight: 700; font-size: 13.5px;" onclick="executeWebPunchWithPhoto()">
+                        <i class="fa-solid fa-fingerprint"></i> <span id="btnConfirmPunchLabel">Confirm Check-In</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- ========================================================= -->
@@ -710,7 +831,340 @@
     </footer>
 
     <script>
-        let myBalancesList = [];
+                let myBalancesList = [];
+        let userLat = null, userLon = null, userAccuracy = null;
+        let geofenceConfig = null;
+        let currentPunchAction = "CHECK_IN";
+        let punchVideoStream = null;
+
+        function getAuthHeaders() {
+            const headers = { "Content-Type": "application/json" };
+            const token = localStorage.getItem("employee_jwt_token");
+            if (token) {
+                headers["Authorization"] = "Bearer " + token;
+            }
+            return headers;
+        }
+
+        function calculateHaversineMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+        }
+
+        function updateGeofenceUI() {
+            const badge = document.getElementById("geoStatusBadge");
+            const detail = document.getElementById("geoStatusDetail");
+            const overlayText = document.getElementById("punchCameraOverlayText");
+
+            if (userLat === null || userLon === null) return;
+
+            if (!geofenceConfig || !geofenceConfig.geofence_enabled || geofenceConfig.center_latitude === null) {
+                if (badge) {
+                    badge.className = "badge badge-emerald";
+                    badge.innerText = "GPS Ready";
+                }
+                if (detail) {
+                    detail.innerText = `Location acquired (±${Math.round(userAccuracy || 10)}m). Geofence radius unrestricted.`;
+                }
+                if (overlayText) {
+                    overlayText.innerHTML = `<i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> GPS Active (±${Math.round(userAccuracy || 10)}m)`;
+                }
+                return;
+            }
+
+            const dist = calculateHaversineMeters(userLat, userLon, geofenceConfig.center_latitude, geofenceConfig.center_longitude);
+            const radius = geofenceConfig.radius_meters || 150;
+            const maxAcc = geofenceConfig.max_gps_accuracy_meters || 50;
+            const isAccOk = userAccuracy === null || userAccuracy <= maxAcc;
+            const isInside = dist <= (radius + Math.min(userAccuracy || 10, 30));
+
+            if (badge) {
+                if (isInside) {
+                    badge.className = "badge badge-emerald";
+                    badge.innerText = "Within Office Zone";
+                } else {
+                    badge.className = "badge badge-rose";
+                    badge.innerText = "Outside Geofence";
+                }
+            }
+
+            if (detail) {
+                detail.innerText = `${Math.round(dist)}m from workplace (radius: ${radius}m, GPS ±${Math.round(userAccuracy || 10)}m)`;
+            }
+
+            if (overlayText) {
+                if (isInside) {
+                    overlayText.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Geofence Verified (${Math.round(dist)}m / ${radius}m)`;
+                } else {
+                    overlayText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i> Warning: ${Math.round(dist)}m from zone`;
+                }
+            }
+        }
+
+        async function initGeofenceModule() {
+            const badge = document.getElementById("geoStatusBadge");
+            const detail = document.getElementById("geoStatusDetail");
+
+            try {
+                const res = await fetch("/api/v1/employee/geofence/config", {
+                    headers: getAuthHeaders(),
+                    credentials: "include"
+                });
+                if (res.ok) {
+                    geofenceConfig = await res.json();
+                    if (geofenceConfig.punch_status && geofenceConfig.punch_status.next_action) {
+                        setPunchAction(geofenceConfig.punch_status.next_action);
+                    }
+                }
+            } catch (e) {
+                console.warn("Geofence config load failed:", e);
+            }
+
+            if (!navigator.geolocation) {
+                if (badge) {
+                    badge.className = "badge badge-rose";
+                    badge.innerText = "GPS Unavailable";
+                }
+                if (detail) detail.innerText = "Geolocation is not supported by your browser/device.";
+                return;
+            }
+
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    userLat = pos.coords.latitude;
+                    userLon = pos.coords.longitude;
+                    userAccuracy = pos.coords.accuracy;
+                    updateGeofenceUI();
+                },
+                (err) => {
+                    console.warn("GPS tracking warning:", err.message);
+                    if (badge) {
+                        badge.className = "badge badge-amber";
+                        badge.innerText = "GPS Perms Needed";
+                    }
+                    if (detail) detail.innerText = "Please enable Location Services to confirm geofencing.";
+                },
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
+            );
+        }
+
+        function setPunchAction(action) {
+            currentPunchAction = action === "CHECK_OUT" ? "CHECK_OUT" : "CHECK_IN";
+            const label = document.getElementById("btnPunchLabel");
+            const punchBtn = document.getElementById("btnWebPunch");
+            const modalTitle = document.getElementById("punchModalTitle");
+            const confirmLabel = document.getElementById("btnConfirmPunchLabel");
+
+            if (currentPunchAction === "CHECK_OUT") {
+                if (label) label.innerText = "Tap to Check-Out";
+                if (punchBtn) {
+                    punchBtn.style.backgroundColor = "var(--accent-rose, #ef4444)";
+                    punchBtn.style.borderColor = "var(--accent-rose, #ef4444)";
+                    punchBtn.style.color = "#ffffff";
+                }
+                if (modalTitle) modalTitle.innerText = "Shift Check-Out Verification";
+                if (confirmLabel) confirmLabel.innerText = "Confirm Check-Out";
+            } else {
+                if (label) label.innerText = "Tap to Check-In";
+                if (punchBtn) {
+                    punchBtn.style.backgroundColor = "";
+                    punchBtn.style.borderColor = "";
+                    punchBtn.style.color = "";
+                }
+                if (modalTitle) modalTitle.innerText = "Shift Check-In Verification";
+                if (confirmLabel) confirmLabel.innerText = "Confirm Check-In";
+            }
+        }
+
+        function updatePunchButtonState(records) {
+            if (!records || records.length === 0) {
+                setPunchAction("CHECK_IN");
+                return;
+            }
+
+            const latest = records[0];
+            const todayStr = new Date().toISOString().split("T")[0];
+            const recDate = latest.timestamp ? latest.timestamp.split(" ")[0] : "";
+
+            if (recDate === todayStr) {
+                if (latest.check_in_short && (!latest.check_out_short || latest.check_out_short === "--")) {
+                    setPunchAction("CHECK_OUT");
+                } else {
+                    setPunchAction("CHECK_IN");
+                }
+            } else {
+                setPunchAction("CHECK_IN");
+            }
+        }
+
+        async function performWebPunch() {
+            const modal = document.getElementById("punchCameraModal");
+            const alertBox = document.getElementById("punchModalAlert");
+            if (alertBox) alertBox.style.display = "none";
+            if (modal) modal.style.display = "flex";
+
+            setPunchAction(currentPunchAction);
+            updateGeofenceUI();
+
+            const video = document.getElementById("punchWebcamVideo");
+            if (!video) return;
+
+            try {
+                if (punchVideoStream) {
+                    punchVideoStream.getTracks().forEach(t => t.stop());
+                }
+
+                const constraints = {
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: false
+                };
+
+                punchVideoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = punchVideoStream;
+                await video.play();
+            } catch (err) {
+                console.error("Camera access error:", err);
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(239, 68, 68, 0.12)";
+                    alertBox.style.border = "1px solid rgba(239, 68, 68, 0.35)";
+                    alertBox.style.color = "var(--accent-rose, #dc2626)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-camera-slash"></i> Front camera access denied or unavailable.';
+                }
+            }
+        }
+
+        function closePunchCameraModal() {
+            if (punchVideoStream) {
+                punchVideoStream.getTracks().forEach(t => t.stop());
+                punchVideoStream = null;
+            }
+            const modal = document.getElementById("punchCameraModal");
+            if (modal) modal.style.display = "none";
+        }
+
+        async function executeWebPunchWithPhoto() {
+            const video = document.getElementById("punchWebcamVideo");
+            const canvas = document.getElementById("punchCaptureCanvas");
+            const alertBox = document.getElementById("punchModalAlert");
+            const btn = document.getElementById("btnConfirmPunch");
+            const mainAlert = document.getElementById("punchFeedbackAlert");
+
+            if (!video || !canvas) return;
+
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const photoBase64 = canvas.toDataURL("image/jpeg", 0.85);
+
+            btn.disabled = true;
+            const originalLabel = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+
+            const payload = {
+                latitude: userLat !== null ? userLat : (geofenceConfig?.center_latitude || 0.0),
+                longitude: userLon !== null ? userLon : (geofenceConfig?.center_longitude || 0.0),
+                accuracy: userAccuracy !== null ? userAccuracy : 10.0,
+                photo_base64: photoBase64,
+                punch_type: currentPunchAction,
+                is_mock_location: false,
+                device_info: navigator.userAgent
+            };
+
+            try {
+                const res = await fetch("/api/v1/employee/check-in", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    credentials: "include",
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    if (data.status === "cooldown" || data.cooldown_active) {
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.style.background = "rgba(245, 158, 11, 0.12)";
+                            alertBox.style.border = "1px solid rgba(245, 158, 11, 0.35)";
+                            alertBox.style.color = "var(--accent-amber, #d97706)";
+                            alertBox.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> ${data.message || 'Cooldown interval active.'}`;
+                        }
+                        btn.disabled = false;
+                        btn.innerHTML = originalLabel;
+                        return;
+                    }
+
+                    if (alertBox) {
+                        alertBox.style.display = "block";
+                        alertBox.style.background = "rgba(16, 185, 129, 0.12)";
+                        alertBox.style.border = "1px solid rgba(16, 185, 129, 0.35)";
+                        alertBox.style.color = "var(--accent-emerald, #059669)";
+                        alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message || 'Attendance registered successfully!'}`;
+                    }
+
+                    if (mainAlert) {
+                        mainAlert.style.display = "block";
+                        mainAlert.style.background = "rgba(16, 185, 129, 0.12)";
+                        mainAlert.style.border = "1px solid rgba(16, 185, 129, 0.35)";
+                        mainAlert.style.color = "var(--accent-emerald, #059669)";
+                        mainAlert.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message || 'Attendance logged successfully.'}`;
+                        setTimeout(() => { mainAlert.style.display = "none"; }, 5000);
+                    }
+
+                    setPunchAction(currentPunchAction === "CHECK_IN" ? "CHECK_OUT" : "CHECK_IN");
+                    loadMyAttendance();
+
+                    setTimeout(() => {
+                        closePunchCameraModal();
+                        btn.disabled = false;
+                        btn.innerHTML = originalLabel;
+                    }, 1200);
+
+                } else {
+                    if (alertBox) {
+                        alertBox.style.display = "block";
+                        alertBox.style.background = "rgba(239, 68, 68, 0.12)";
+                        alertBox.style.border = "1px solid rgba(239, 68, 68, 0.35)";
+                        alertBox.style.color = "var(--accent-rose, #dc2626)";
+                        alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Verification failed.'}`;
+                    }
+                    btn.disabled = false;
+                    btn.innerHTML = originalLabel;
+                }
+            } catch (e) {
+                console.error("Web punch error:", e);
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(239, 68, 68, 0.12)";
+                    alertBox.style.border = "1px solid rgba(239, 68, 68, 0.35)";
+                    alertBox.style.color = "var(--accent-rose, #dc2626)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error during verification.';
+                }
+                btn.disabled = false;
+                btn.innerHTML = originalLabel;
+            }
+        }
+
+        function switchOrganization() {
+            localStorage.removeItem("employee_tenant_slug");
+            localStorage.removeItem("employee_jwt_token");
+            localStorage.removeItem("employee_session");
+            try {
+                fetch("/api/v1/employee/logout", { method: "POST", credentials: "include" });
+            } catch (e) {}
+            window.location.href = "/employee";
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
             updateThemeIcon();
@@ -724,6 +1178,7 @@
             if (startInput) startInput.value = tomStr;
             if (endInput) endInput.value = tomStr;
 
+            initGeofenceModule();
             loadMyAttendance();
             if (document.getElementById("sectionWages")) {
                 loadMyPayroll();
@@ -786,9 +1241,12 @@
             if (!container) return;
 
             try {
-                const res = await fetch("/api/v1/employee/attendance");
+                const res = await fetch("/api/v1/employee/attendance", { headers: getAuthHeaders(), credentials: "include" });
                 const data = await res.json();
 
+                if (res.ok && data.records) {
+                    updatePunchButtonState(data.records);
+                }
                 if (res.ok && data.records && data.records.length > 0) {
                     let html = "";
                     data.records.forEach(r => {
@@ -827,7 +1285,7 @@
             loadMyPayslips();
 
             try {
-                const res = await fetch("/api/v1/employee/payroll");
+                const res = await fetch("/api/v1/employee/payroll", { headers: getAuthHeaders(), credentials: "include" });
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById("wageTotalHours").innerText = `${data.total_punch_hours} hrs`;
@@ -842,7 +1300,7 @@
 
         async function loadMyCompensation() {
             try {
-                const res = await fetch("/api/v1/employee/compensation");
+                const res = await fetch("/api/v1/employee/compensation", { headers: getAuthHeaders(), credentials: "include" });
                 const data = await res.json();
                 if (res.ok && data.structure) {
                     const cur = data.currency || "₹";
@@ -872,7 +1330,7 @@
             if (!container) return;
 
             try {
-                const res = await fetch("/api/v1/employee/payslips");
+                const res = await fetch("/api/v1/employee/payslips", { headers: getAuthHeaders(), credentials: "include" });
                 const data = await res.json();
                 if (res.ok && data.payslips && data.payslips.length > 0) {
                     container.innerHTML = data.payslips.map(p => {
@@ -909,7 +1367,7 @@
             if (!grid) return;
 
             try {
-                const res = await fetch("/api/v1/employee/leave/balances");
+                const res = await fetch("/api/v1/employee/leave/balances", { headers: getAuthHeaders(), credentials: "include" });
                 const data = await res.json();
                 if (res.ok && data.balances) {
                     myBalancesList = data.balances;
@@ -940,7 +1398,7 @@
             if (!container) return;
 
             try {
-                const res = await fetch("/api/v1/employee/leave/requests");
+                const res = await fetch("/api/v1/employee/leave/requests", { headers: getAuthHeaders(), credentials: "include" });
                 const data = await res.json();
 
                 if (res.ok && data.requests && data.requests.length > 0) {
@@ -1067,7 +1525,8 @@
             try {
                 const res = await fetch("/api/v1/employee/leave/apply", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
+                    credentials: "include",
                     body: JSON.stringify({
                         leave_type_id: parseInt(typeId),
                         start_date: sDate,
@@ -1122,6 +1581,8 @@
             try {
                 const res = await fetch(`/api/v1/employee/leave/requests/${requestId}/cancel`, {
                     method: "POST",
+                    headers: getAuthHeaders(),
+                    credentials: "include",
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -1136,12 +1597,128 @@
         }
 
         async function employeeLogout() {
+            localStorage.removeItem("employee_jwt_token");
+            localStorage.removeItem("employee_session");
             try {
-                await fetch("/api/v1/employee/logout", { method: "POST" });
+                await fetch("/api/v1/employee/logout", { method: "POST", credentials: "include" });
             } catch (e) {}
             window.location.href = "/employee/{{ tenant.slug }}";
         }
-    </script>
+    
+        async function openChangePasswordModal() {
+            const modal = document.getElementById("changePasswordModal");
+            const alertBox = document.getElementById("pwdModalAlert");
+            if (alertBox) alertBox.style.display = "none";
+            document.getElementById("inputCurrentPwd").value = "";
+            document.getElementById("inputNewPwd").value = "";
+            document.getElementById("inputConfirmPwd").value = "";
+
+            try {
+                const res = await fetch("/api/v1/employee/has-password", { headers: getAuthHeaders(), credentials: "include" });
+                if (res.ok) {
+                    const data = await res.json();
+                    const grp = document.getElementById("grpCurrentPwd");
+                    const title = document.getElementById("pwdModalTitle");
+                    if (data.has_password) {
+                        if (grp) grp.style.display = "block";
+                        if (title) title.innerText = "Change Account Password";
+                    } else {
+                        if (grp) grp.style.display = "none";
+                        if (title) title.innerText = "Create Account Password";
+                    }
+                }
+            } catch (e) {}
+
+            if (modal) modal.style.display = "flex";
+        }
+
+        function closeChangePasswordModal() {
+            const modal = document.getElementById("changePasswordModal");
+            if (modal) modal.style.display = "none";
+        }
+
+        async function submitChangePassword(e) {
+            e.preventDefault();
+            const alertBox = document.getElementById("pwdModalAlert");
+            const btn = document.getElementById("btnSubmitPwd");
+            const curPwd = document.getElementById("inputCurrentPwd").value;
+            const newPwd = document.getElementById("inputNewPwd").value;
+            const confPwd = document.getElementById("inputConfirmPwd").value;
+
+            if (newPwd.length < 6) {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(239, 68, 68, 0.15)";
+                    alertBox.style.color = "#ef4444";
+                    alertBox.innerText = "New password must be at least 6 characters in length.";
+                }
+                return;
+            }
+
+            if (newPwd !== confPwd) {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(239, 68, 68, 0.15)";
+                    alertBox.style.color = "#ef4444";
+                    alertBox.innerText = "Passwords do not match. Please verify.";
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                const res = await fetch("/api/v1/employee/change-password", {
+                    method: "POST",
+                    headers: {
+                        ...getAuthHeaders(),
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        current_password: curPwd || null,
+                        new_password: newPwd,
+                        confirm_password: confPwd,
+                    }),
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    if (alertBox) {
+                        alertBox.style.display = "block";
+                        alertBox.style.background = "rgba(16, 185, 129, 0.15)";
+                        alertBox.style.color = "#10b981";
+                        alertBox.innerText = data.message || "Password updated successfully!";
+                    }
+                    setTimeout(() => {
+                        closeChangePasswordModal();
+                        btn.disabled = false;
+                        btn.innerText = "Save Password";
+                    }, 1400);
+                } else {
+                    if (alertBox) {
+                        alertBox.style.display = "block";
+                        alertBox.style.background = "rgba(239, 68, 68, 0.15)";
+                        alertBox.style.color = "#ef4444";
+                        alertBox.innerText = data.detail || "Could not update password.";
+                    }
+                    btn.disabled = false;
+                    btn.innerText = "Save Password";
+                }
+            } catch (err) {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(239, 68, 68, 0.15)";
+                    alertBox.style.color = "#ef4444";
+                    alertBox.innerText = "Network error. Please try again.";
+                }
+                btn.disabled = false;
+                btn.innerText = "Save Password";
+            }
+        }
+
+</script>
 
 </body>
 </html>

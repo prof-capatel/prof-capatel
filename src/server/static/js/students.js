@@ -178,6 +178,10 @@ function openEditModal(studentId) {
     const student = getStudentData(studentId);
     
     document.getElementById("editStudentId").value = studentId;
+    const editPwdInp = document.getElementById("editEmployeePasswordInput");
+    if (editPwdInp) editPwdInp.value = "";
+    const editPwdFb = document.getElementById("adminPasswordFeedback");
+    if (editPwdFb) editPwdFb.style.display = "none";
     
     const nameInput = document.getElementById("editStudentName");
     if (nameInput) nameInput.value = student ? student.name : "";
@@ -1404,3 +1408,95 @@ window.onOverrideStudentChanged = onOverrideStudentChanged;
 window.onOverridePunchTypeChanged = onOverridePunchTypeChanged;
 window.applyReasonPreset = applyReasonPreset;
 window.submitManualOverride = submitManualOverride;
+
+
+async function adminResetEmployeePassword() {
+    const studentId = document.getElementById("editStudentId")?.value;
+    if (!studentId) return;
+    const fb = document.getElementById("adminPasswordFeedback");
+    const pwdInput = document.getElementById("editEmployeePasswordInput");
+
+    try {
+        const res = await fetch(`/api/v1/enroll/student/${studentId}/reset-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (pwdInput) pwdInput.value = data.password;
+            if (fb) {
+                fb.style.display = "block";
+                fb.style.color = "var(--accent-emerald, #10b981)";
+                fb.innerHTML = `<i class="fa-solid fa-check"></i> Password generated: <strong>${data.password}</strong> (Username: <code>${data.username}</code>)`;
+            }
+            try { navigator.clipboard.writeText(data.password); } catch (e) {}
+            if (typeof showToast === "function") {
+                showToast(`Password generated: ${data.password} (Copied to clipboard)`, "success");
+            }
+        } else {
+            if (fb) {
+                fb.style.display = "block";
+                fb.style.color = "var(--accent-rose, #ef4444)";
+                fb.innerText = data.detail || "Failed to generate password.";
+            }
+        }
+    } catch (err) {
+        if (fb) {
+            fb.style.display = "block";
+            fb.style.color = "var(--accent-rose, #ef4444)";
+            fb.innerText = "Network error while resetting password.";
+        }
+    }
+}
+
+async function adminSaveEmployeePassword() {
+    const studentId = document.getElementById("editStudentId")?.value;
+    if (!studentId) return;
+    const pwdInput = document.getElementById("editEmployeePasswordInput");
+    const val = pwdInput ? pwdInput.value.trim() : "";
+    const fb = document.getElementById("adminPasswordFeedback");
+
+    if (!val || val.length < 6) {
+        if (fb) {
+            fb.style.display = "block";
+            fb.style.color = "var(--accent-rose, #ef4444)";
+            fb.innerText = "Please enter a password of at least 6 characters (or click Auto-Generate).";
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/v1/enroll/student/${studentId}/reset-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ new_password: val }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (fb) {
+                fb.style.display = "block";
+                fb.style.color = "var(--accent-emerald, #10b981)";
+                fb.innerHTML = `<i class="fa-solid fa-check"></i> Password set to: <strong>${data.password}</strong> (Username: <code>${data.username}</code>)`;
+            }
+            if (typeof showToast === "function") {
+                showToast(`Password updated for ${data.username}`, "success");
+            }
+        } else {
+            if (fb) {
+                fb.style.display = "block";
+                fb.style.color = "var(--accent-rose, #ef4444)";
+                fb.innerText = data.detail || "Failed to set password.";
+            }
+        }
+    } catch (err) {
+        if (fb) {
+            fb.style.display = "block";
+            fb.style.color = "var(--accent-rose, #ef4444)";
+            fb.innerText = "Network error while setting password.";
+        }
+    }
+}
+
+window.adminResetEmployeePassword = adminResetEmployeePassword;
+window.adminSaveEmployeePassword = adminSaveEmployeePassword;

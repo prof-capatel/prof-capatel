@@ -250,16 +250,12 @@ class AttendanceManager:
                 if custom_cooldown_seconds is not None:
                     min_interval_secs = max(0, int(custom_cooldown_seconds))
                 else:
-                    cd_mins = branding.cooldown_minutes if (branding and branding.cooldown_minutes is not None) else None
                     chk_mins = branding.min_checkout_interval_minutes if (branding and branding.min_checkout_interval_minutes is not None) else None
-                    if cd_mins is not None and chk_mins is not None:
-                        effective_mins = min(cd_mins, chk_mins)
-                    elif cd_mins is not None:
-                        effective_mins = cd_mins
-                    elif chk_mins is not None:
+                    if chk_mins is not None:
                         effective_mins = chk_mins
                     else:
-                        effective_mins = 15
+                        cd_mins = branding.cooldown_minutes if (branding and branding.cooldown_minutes is not None) else None
+                        effective_mins = cd_mins if cd_mins is not None else 15
                     min_interval_secs = max(0, int(effective_mins * 60))
 
                 min_checkout_interval = max(1, round(min_interval_secs / 60)) if min_interval_secs >= 60 else (round(min_interval_secs / 60.0, 2) if min_interval_secs > 0 else 0)

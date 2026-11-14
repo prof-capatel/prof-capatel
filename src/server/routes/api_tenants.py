@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from src.database.models import Tenant, SystemBranding, Student, AttendanceRecord, NodeDevice
 from src.database.session import get_db
-from src.server.tenant_middleware import get_current_tenant
+from src.server.tenant_middleware import get_current_tenant, resolve_tenant
 
 router = APIRouter(prefix="/api/v1/tenants", tags=["Tenant & SaaS Management"])
 
@@ -53,6 +53,28 @@ def get_active_tenant(current_tenant: Tenant = Depends(get_current_tenant)):
     return {
         "status": "success",
         "tenant": current_tenant.to_dict(),
+        "branding": branding.to_dict() if branding else None,
+    }
+
+
+@router.get("/resolve/{identifier}")
+def resolve_tenant_identifier(identifier: str, db: Session = Depends(get_db)):
+    """Resolves an institution tenant by slug, short code, UUID, or ID for employee mobile onboarding."""
+    clean_id = identifier.strip().lower()
+    target_tenant = resolve_tenant(db, clean_id)
+    if not target_tenant:
+        # Check by short_code in branding
+        branding_match = db.query(SystemBranding).filter(SystemBranding.short_code == identifier.strip().upper()).first()
+        if branding_match:
+            target_tenant = branding_match.tenant
+
+    if not target_tenant or not target_tenant.is_active or target_tenant.is_deleted:
+        raise HTTPException(status_code=404, detail=f"Organization '{identifier}' not found or inactive.")
+
+    branding = target_tenant.branding
+    return {
+        "status": "success",
+        "tenant": target_tenant.to_dict(),
         "branding": branding.to_dict() if branding else None,
     }
 

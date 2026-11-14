@@ -505,6 +505,8 @@ def calculate_employee_payroll(
     early_departures = 0
     daily_present_map: Dict[date, float] = {}
     daily_billed_mins_map: Dict[date, int] = {}
+    daily_regular_hours_map: Dict[date, float] = {}
+    daily_ot_hours_map: Dict[date, float] = {}
 
     for cal_date, day_recs in daily_records.items():
         day_mins = 0
@@ -549,17 +551,35 @@ def calculate_employee_payroll(
         daily_present_map[cal_date] = day_present
         present_days_count += day_present
 
-        # Overtime computation
+        # Overtime & Regular hours computation (Option A: Regular + Multiplied OT)
         if enable_overtime and day_hours > emp_std_hours:
             ot_h = round(day_hours - emp_std_hours, 2)
+            reg_h = round(emp_std_hours, 2)
             if is_holiday_shift:
                 total_holiday_ot_hours += ot_h
             else:
                 total_regular_ot_hours += ot_h
+        else:
+            ot_h = 0.0
+            reg_h = day_hours
+
+        daily_regular_hours_map[cal_date] = reg_h
+        daily_ot_hours_map[cal_date] = ot_h
 
     total_billed_hours = round(total_billed_minutes / 60.0, 2)
     calendar_days_count = (end_date - start_date).days + 1
-    absent_days_count = max(0.0, round(total_working_days - (present_days_count + paid_leave_days + unpaid_leave_days), 2))
+
+    # Option A: Standard 26-day basis for monthly salary pro-ration
+    if calendar_days_count >= 28 and (total_working_days is None or total_working_days >= calendar_days_count):
+        standard_work_days = 26.0
+    elif total_working_days and total_working_days > 0:
+        standard_work_days = float(total_working_days)
+    else:
+        standard_work_days = 26.0
+
+    work_denom = standard_work_days
+    cal_denom = float(calendar_days_count) if calendar_days_count > 0 else 30.0
+    absent_days_count = max(0.0, round(work_denom - (present_days_count + paid_leave_days + unpaid_leave_days), 2))
 
     # 5. Calculate Earnings across effective salary structure segments (Pro-Rata)
     structure_segments = get_effective_salary_structures(db, tenant.id, student, start_date, end_date)
@@ -576,9 +596,6 @@ def calculate_employee_payroll(
     primary_template_id = None
     primary_model = "STRUCTURED_SALARY"
 
-    work_denom = float(total_working_days) if total_working_days > 0 else 26.0
-    cal_denom = float(calendar_days_count) if calendar_days_count > 0 else 30.0
-
     for seg_start, seg_end, st, seg_total_days in structure_segments:
         primary_template_id = st.template_id
         primary_model = st.compensation_model
@@ -589,6 +606,8 @@ def calculate_employee_payroll(
         seg_present = 0.0
         seg_paid_leave = 0.0
         seg_unpaid_leave = 0.0
+        seg_regular_hours = 0.0
+        seg_ot_hours = 0.0
         seg_billed_hours = 0.0
 
         cur_d = seg_start
@@ -596,6 +615,8 @@ def calculate_employee_payroll(
             seg_present += daily_present_map.get(cur_d, 0.0)
             seg_paid_leave += daily_paid_leave_map.get(cur_d, 0.0)
             seg_unpaid_leave += daily_unpaid_leave_map.get(cur_d, 0.0)
+            seg_regular_hours += daily_regular_hours_map.get(cur_d, 0.0)
+            seg_ot_hours += daily_ot_hours_map.get(cur_d, 0.0)
             seg_billed_hours += daily_billed_mins_map.get(cur_d, 0) / 60.0
             cur_d += timedelta(days=1)
 
@@ -633,7 +654,9 @@ def calculate_employee_payroll(
 
         elif st.compensation_model == "HOURLY":
             h_rate = st.hourly_rate if st.hourly_rate > 0 else (student.hourly_rate or 15.0)
-            earned_basic += seg_billed_hours * h_rate
+            # Option A: Regular shift hours are paid at base rate; Overtime hours are paid via ot_multiplier
+            paid_regular_h = seg_regular_hours if enable_overtime else seg_billed_hours
+            earned_basic += paid_regular_h * h_rate
 
         elif st.compensation_model == "DAILY_WAGE":
             d_rate = st.daily_rate if st.daily_rate > 0 else (student.daily_rate or (student.monthly_base_salary / work_denom if student.monthly_base_salary else 500.0))
@@ -806,7 +829,7 @@ def calculate_employee_payroll(
         "parameters": structure_parameters,
         "currency_symbol": currency,
         "calendar_days": calendar_days_count,
-        "working_days": total_working_days,
+        "working_days": standard_work_days,
         "present_days": present_days_count,
         "paid_leave_days": paid_leave_days,
         "unpaid_leave_days": unpaid_leave_days,
@@ -865,7 +888,7 @@ def calculate_employee_payroll(
         "compensation_model": primary_model,
         "calendar_days": calendar_days_count,
         "calendar_days_count": calendar_days_count,
-        "working_days": total_working_days,
+        "working_days": standard_work_days,
         "present_days": present_days_count,
         "paid_leave_days": paid_leave_days,
         "unpaid_leave_days": unpaid_leave_days,

@@ -30,6 +30,7 @@ class LoginRequest(BaseModel):
     username: str
     password: str
     tenant_id: Optional[int] = None
+    tenant_identifier: Optional[str] = None
     role: Optional[str] = None
 
 
@@ -517,6 +518,12 @@ def login(
     username_clean = payload.username.strip().lower()
     role_requested = payload.role.strip().upper() if payload.role else None
 
+    target_tenant_id = payload.tenant_id
+    if not target_tenant_id and payload.tenant_identifier:
+        t = resolve_tenant(db, payload.tenant_identifier)
+        if t:
+            target_tenant_id = t.id
+
     user = None
     if role_requested == "TENANT_ADMIN":
         # Strictly restrict authentication exclusively to Tenant Administrators
@@ -525,8 +532,8 @@ def login(
             User.role == "TENANT_ADMIN",
             User.is_active == True,
         )
-        if payload.tenant_id:
-            query = query.filter(User.tenant_id == payload.tenant_id)
+        if target_tenant_id:
+            query = query.filter(User.tenant_id == target_tenant_id)
         user = query.first()
         if not user:
             user = db.query(User).filter(
@@ -540,23 +547,27 @@ def login(
         
         if not user:
             # Search by tenant-scoped username
-            tenant_id = payload.tenant_id or 1
+            if target_tenant_id:
+                query = db.query(User).filter(
+                    User.username == username_clean,
+                    User.tenant_id == target_tenant_id,
+                    User.is_active == True,
+                )
+                if role_requested:
+                    user = query.filter(User.role == role_requested).first()
+                if not user:
+                    user = query.first()
+
+        if not user:
+            # Fallback search across any active user if tenant_id wasn't specified
             query = db.query(User).filter(
                 User.username == username_clean,
-                User.tenant_id == tenant_id,
                 User.is_active == True,
             )
             if role_requested:
                 user = query.filter(User.role == role_requested).first()
             if not user:
                 user = query.first()
-
-        if not user:
-            # Fallback search across any active user if tenant_id wasn't specified
-            user = db.query(User).filter(
-                User.username == username_clean,
-                User.is_active == True,
-            ).first()
 
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -571,16 +582,20 @@ def login(
     user.last_login_at = get_ist_now()
     db.commit()
 
+    is_employee = (user.role == "EMPLOYEE" or bool(user.students))
+    token_lifetime = 604800 if is_employee else 86400  # 7-day rolling session for mobile/employee
+
     token = create_access_token(
         user_id=user.id,
         role=user.role,
         tenant_id=user.tenant_id,
         username=user.username,
+        expires_in_sec=token_lifetime,
     )
 
     # Set secure cookies for browser navigation
-    response.set_cookie("access_token", token, httponly=True, max_age=86400, path="/")
-    response.set_cookie("active_role", user.role, httponly=False, max_age=86400, path="/")
+    response.set_cookie("access_token", token, httponly=True, max_age=token_lifetime, path="/")
+    response.set_cookie("active_role", user.role, httponly=False, max_age=token_lifetime, path="/")
     if user.tenant_id:
         response.set_cookie("active_tenant_id", str(user.tenant_id), httponly=False, max_age=86400, path="/")
     else:

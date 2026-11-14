@@ -12,6 +12,7 @@ class GeofenceConfig {
   final double geoRadiusMeters;
   final double maxGpsAccuracyMeters;
   final double faceThreshold;
+  final bool mobileRequireFaceVerification;
 
   GeofenceConfig({
     required this.tenantId,
@@ -27,6 +28,7 @@ class GeofenceConfig {
     required this.geoRadiusMeters,
     required this.maxGpsAccuracyMeters,
     required this.faceThreshold,
+    this.mobileRequireFaceVerification = false,
   });
 
   factory GeofenceConfig.fromJson(Map<String, dynamic> json) {
@@ -38,12 +40,13 @@ class GeofenceConfig {
       logoUrl: json['logo_url'],
       primaryAccentColor: json['primary_accent_color'] ?? '#6366f1',
       enableSelfAttendance: json['enable_self_attendance'] ?? false,
-      isConfigured: json['is_configured'] ?? false,
+      isConfigured: json['is_configured'] ?? (json['geo_latitude'] != null && json['geo_longitude'] != null),
       geoLatitude: json['geo_latitude'] != null ? (json['geo_latitude'] as num).toDouble() : null,
       geoLongitude: json['geo_longitude'] != null ? (json['geo_longitude'] as num).toDouble() : null,
       geoRadiusMeters: (json['geo_radius_meters'] as num?)?.toDouble() ?? 150.0,
       maxGpsAccuracyMeters: (json['max_gps_accuracy_meters'] as num?)?.toDouble() ?? 50.0,
       faceThreshold: (json['face_threshold'] as num?)?.toDouble() ?? 0.52,
+      mobileRequireFaceVerification: json['mobile_require_face_verification'] ?? false,
     );
   }
 }

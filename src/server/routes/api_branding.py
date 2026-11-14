@@ -37,6 +37,7 @@ class BrandingUpdateRequest(BaseModel):
     geo_radius_meters: Optional[float] = 150.0
     max_gps_accuracy_meters: Optional[float] = 50.0
     self_attendance_face_threshold: Optional[float] = 0.52
+    mobile_require_face_verification: Optional[bool] = False
     shift_check_in_time: Optional[str] = "10:30"
     shift_check_out_time: Optional[str] = "18:00"
     shift_grace_minutes: Optional[int] = 15
@@ -148,10 +149,13 @@ def update_branding(
         branding.geo_radius_meters = max(10.0, min(50000.0, float(payload.geo_radius_meters)))
 
     if payload.max_gps_accuracy_meters is not None:
-        branding.max_gps_accuracy_meters = max(5.0, min(500.0, float(payload.max_gps_accuracy_meters)))
+        branding.max_gps_accuracy_meters = max(5.0, min(1000.0, float(payload.max_gps_accuracy_meters)))
 
     if payload.self_attendance_face_threshold is not None:
         branding.self_attendance_face_threshold = max(0.30, min(0.70, float(payload.self_attendance_face_threshold)))
+
+    if payload.mobile_require_face_verification is not None:
+        branding.mobile_require_face_verification = bool(payload.mobile_require_face_verification)
 
     if payload.shift_check_in_time is not None:
         branding.shift_check_in_time = payload.shift_check_in_time.strip()

@@ -25,6 +25,7 @@ from src.database.models import (
     SalaryRevisionHistory,
     PayrollBatch,
     PayrollPayslip,
+    EmployeeGeofenceBreach,
 )
 from src.utils.auth_utils import hash_password
 
@@ -77,6 +78,12 @@ def purge_test_records():
                 AttendanceRecord.student_id.in_(purged_student_ids)
             ).delete(synchronize_session=False)
             logger.info(f"Deleted {deleted_logs} attendance records for test students.")
+
+            # Delete geofence breaches for test students
+            deleted_breaches = db.query(EmployeeGeofenceBreach).filter(
+                EmployeeGeofenceBreach.student_id.in_(purged_student_ids)
+            ).delete(synchronize_session=False)
+            logger.info(f"Deleted {deleted_breaches} geofence breach records for test students.")
 
             # Delete leave requests and balances for test students
             deleted_reqs = db.query(LeaveRequest).filter(

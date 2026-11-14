@@ -19,6 +19,9 @@ class AttendanceRecordItem {
   final double? geoLongitude;
   final double? geoDistanceMeters;
   final bool isSelfAttendance;
+  final String punchType;
+  final String shiftStatus;
+  final String workDurationFormatted;
 
   AttendanceRecordItem({
     required this.id,
@@ -41,6 +44,9 @@ class AttendanceRecordItem {
     this.geoLongitude,
     this.geoDistanceMeters,
     required this.isSelfAttendance,
+    this.punchType = 'CHECK_IN',
+    this.shiftStatus = 'ON_TIME',
+    this.workDurationFormatted = '--',
   });
 
   factory AttendanceRecordItem.fromJson(Map<String, dynamic> json) {
@@ -65,6 +71,9 @@ class AttendanceRecordItem {
       geoLongitude: (json['geo_longitude'] as num?)?.toDouble(),
       geoDistanceMeters: (json['geo_distance_meters'] as num?)?.toDouble(),
       isSelfAttendance: json['is_self_attendance'] ?? false,
+      punchType: json['punch_type'] ?? 'CHECK_IN',
+      shiftStatus: json['shift_status'] ?? 'ON_TIME',
+      workDurationFormatted: json['work_duration_formatted'] ?? '--',
     );
   }
 }

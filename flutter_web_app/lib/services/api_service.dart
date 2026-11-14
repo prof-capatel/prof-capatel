@@ -20,51 +20,57 @@ class ApiService {
     }
   }
 
-  /// Face-Based Login: Ingests selfie frame, extracts 1:N vectors, and returns UserSession with token
+  /// Passwordless Face-Based Login for Employees
   static Future<UserSession> faceLogin({
     required Uint8List imageBytes,
     String tenantSlug = 'default',
   }) async {
     final uri = Uri.parse(ApiConfig.faceLoginUrl);
-    final request = http.MultipartRequest('POST', uri);
+    final base64Photo = base64Encode(imageBytes);
 
-    request.fields['tenant_slug'] = tenantSlug;
-    request.files.add(http.MultipartFile.fromBytes(
-      'frame',
-      imageBytes,
-      filename: 'face_login.jpg',
-    ));
-
-    final streamedResponse = await request.send();
-    final responseBody = await streamedResponse.stream.bytesToString();
-
-    if (streamedResponse.statusCode == 200) {
-      final json = jsonDecode(responseBody);
-      final token = json['access_token'] ?? '';
-      final userData = json['user'] ?? {};
-      return UserSession.fromJson(userData, token);
-    } else {
-      final json = _tryParseJson(responseBody);
-      final errorDetail = json?['detail'] ?? 'Face login failed ($responseBody)';
-      throw Exception(errorDetail);
-    }
-  }
-
-  /// Standard Password-Based Login
-  static Future<UserSession> passwordLogin({
-    required String username,
-    required String password,
-    int? tenantId,
-  }) async {
-    final uri = Uri.parse(ApiConfig.passwordLoginUrl);
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'username': username,
-        'password': password,
-        'tenant_id': tenantId ?? 1,
+        'tenant_identifier': tenantSlug,
+        'photo_base64': base64Photo,
       }),
+    );
+
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200 && json != null) {
+      final token = json['token'] ?? '';
+      final userData = json['employee'] ?? {};
+      return UserSession.fromJson(userData, token);
+    } else {
+      final errorDetail = json?['detail'] ?? 'Face login failed (${response.statusCode})';
+      throw Exception(errorDetail);
+    }
+  }
+
+  /// Standard Password-Based Login (Admin or Employee)
+  static Future<UserSession> passwordLogin({
+    required String username,
+    required String password,
+    String? tenantSlug,
+    int? tenantId,
+  }) async {
+    final uri = Uri.parse(ApiConfig.passwordLoginUrl);
+    final payload = <String, dynamic>{
+      'username': username,
+      'password': password,
+    };
+    if (tenantId != null) {
+      payload['tenant_id'] = tenantId;
+    }
+    if (tenantSlug != null && tenantSlug.isNotEmpty) {
+      payload['tenant_identifier'] = tenantSlug;
+    }
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
     );
 
     if (response.statusCode == 200) {
@@ -78,49 +84,122 @@ class ApiService {
     }
   }
 
-  /// Frictionless Self-Attendance Auto-Checkin (GPS + Camera Frame)
-  static Future<Map<String, dynamic>> submitSelfAttendance({
+  /// Dedicated Authenticated Employee Mobile Geofenced Check-In / Check-Out
+  static Future<Map<String, dynamic>> employeeMobileCheckIn({
+    required String token,
     required double latitude,
     required double longitude,
-    required double accuracy,
-    required Uint8List imageBytes,
-    String tenantSlug = 'default',
+    double accuracy = 10.0,
+    String? photoBase64,
+    String punchType = 'AUTO',
   }) async {
-    final uri = Uri.parse(ApiConfig.selfMarkUrl);
-    final request = http.MultipartRequest('POST', uri);
+    final uri = Uri.parse(ApiConfig.employeeCheckInUrl);
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'latitude': latitude,
+        'longitude': longitude,
+        'accuracy': accuracy,
+        'photo_base64': photoBase64,
+        'punch_type': punchType,
+      }),
+    );
 
-    request.fields['latitude'] = latitude.toString();
-    request.fields['longitude'] = longitude.toString();
-    request.fields['accuracy'] = accuracy.toString();
-    request.fields['tenant_slug'] = tenantSlug;
-
-    request.files.add(http.MultipartFile.fromBytes(
-      'frame',
-      imageBytes,
-      filename: 'self_mark.jpg',
-    ));
-
-    final streamedResponse = await request.send();
-    final responseBody = await streamedResponse.stream.bytesToString();
-    final json = _tryParseJson(responseBody);
-
-    if (streamedResponse.statusCode == 200) {
-      return json ?? {'status': 'success', 'message': 'Attendance marked successfully'};
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200) {
+      return json ?? {'status': 'success', 'message': 'Attendance registered'};
     } else {
-      final errorDetail = json?['detail'] ?? 'Attendance verification failed ($responseBody)';
-      throw Exception(errorDetail);
+      throw Exception(json?['detail'] ?? 'Mobile check-in failed (${response.statusCode})');
     }
   }
 
-  /// Fetches Personal Attendance Logs with Filtering
+  /// Periodic Background Geofence Heartbeat (Detects Out-of-Bounds During Active Shifts)
+  static Future<Map<String, dynamic>> sendGeofenceHeartbeat({
+    required String token,
+    required double latitude,
+    required double longitude,
+    double accuracy = 10.0,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeHeartbeatUrl);
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'latitude': latitude,
+        'longitude': longitude,
+        'accuracy': accuracy,
+      }),
+    );
+
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200) {
+      return json ?? {'status': 'in_bounds'};
+    } else {
+      throw Exception(json?['detail'] ?? 'Heartbeat sync failed');
+    }
+  }
+
+  /// Fetches Authenticated Employee Geofence Setup & Live Punch Status
+  static Future<Map<String, dynamic>> fetchEmployeeGeofenceConfig({
+    required String token,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeGeofenceConfigUrl);
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final json = _tryParseJson(response.body);
+      throw Exception(json?['detail'] ?? 'Failed to load geofencing status');
+    }
+  }
+
+  /// Fetches Personal Attendance Logs
   static Future<List<AttendanceRecordItem>> fetchAttendanceHistory({
     String? token,
     String? rollNumber,
     int? studentId,
     String? dateStr,
     String? status,
+    int? year,
+    int? month,
     int limit = 100,
   }) async {
+    // If authenticated employee token is provided, use the dedicated employee attendance endpoint
+    // which scopes records automatically to the employee's tenant and student profile,
+    // and supports month & year filtering.
+    if (token != null && token.isNotEmpty) {
+      var url = '${ApiConfig.employeeAttendanceUrl}?limit=$limit';
+      if (year != null) {
+        url += '&year=$year';
+      }
+      if (month != null) {
+        url += '&month=$month';
+      }
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        final List recordsJson = json['records'] ?? [];
+        return recordsJson.map((r) => AttendanceRecordItem.fromJson(r)).toList();
+      } else {
+        throw Exception('Failed to fetch employee attendance records: ${response.body}');
+      }
+    }
+
     var url = '${ApiConfig.attendanceRecordsUrl}?limit=$limit';
     if (rollNumber != null && rollNumber.isNotEmpty) {
       url += '&roll_number=${Uri.encodeComponent(rollNumber)}';
@@ -133,9 +212,6 @@ class ApiService {
     }
 
     final headers = <String, String>{};
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
 
     final response = await http.get(Uri.parse(url), headers: headers);
 
@@ -145,6 +221,206 @@ class ApiService {
       return recordsJson.map((r) => AttendanceRecordItem.fromJson(r)).toList();
     } else {
       throw Exception('Failed to fetch attendance records: ${response.body}');
+    }
+  }
+
+  /// Checks whether authenticated employee has a linked User account with a password set
+  static Future<bool> checkEmployeeHasPassword({required String token}) async {
+    try {
+      final uri = Uri.parse(ApiConfig.employeeHasPasswordUrl);
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        return json['has_password'] == true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Changes or sets employee portal password
+  static Future<Map<String, dynamic>> changeEmployeePassword({
+    required String token,
+    String? currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeChangePasswordUrl);
+    final payload = {
+      'new_password': newPassword,
+      'confirm_password': confirmPassword,
+    };
+    if (currentPassword != null && currentPassword.isNotEmpty) {
+      payload['current_password'] = currentPassword;
+    }
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(payload),
+    );
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200 && json != null) {
+      return json;
+    } else {
+      throw Exception(json?['detail'] ?? 'Failed to update password');
+    }
+  }
+
+  /// Fetches Employee Work Hours & Estimated Wages
+  static Future<Map<String, dynamic>> fetchEmployeePayroll({
+    required String token,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeePayrollUrl);
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      return {};
+    }
+  }
+
+  /// Fetches Employee Annual Leave Quotas & Balances
+  static Future<List<dynamic>> fetchEmployeeLeaveBalances({
+    required String token,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeLeaveBalancesUrl);
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json['balances'] ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  /// Resolves tenant identifier (slug, short code, ID, or UUID)
+  static Future<Map<String, dynamic>> resolveTenant(String identifier) async {
+    final uri = Uri.parse(ApiConfig.tenantResolveUrl(identifier));
+    final response = await http.get(uri);
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200 && json != null) {
+      return json;
+    } else {
+      throw Exception(json?['detail'] ?? 'Could not resolve organization code');
+    }
+  }
+
+  /// Fetches Employee Compensation & Structured CTC Model
+  static Future<Map<String, dynamic>> fetchEmployeeCompensation({
+    required String token,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeCompensationUrl);
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      return {};
+    }
+  }
+
+  /// Fetches Published Monthly Payslips
+  static Future<List<dynamic>> fetchEmployeePayslips({
+    required String token,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeePayslipsUrl);
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json['payslips'] ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  /// Fetches Submitted Leave Applications History
+  static Future<List<dynamic>> fetchEmployeeLeaveRequests({
+    required String token,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeLeaveRequestsUrl);
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json['requests'] ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  /// Cancels a Pending Leave Application
+  static Future<Map<String, dynamic>> cancelEmployeeLeaveRequest({
+    required String token,
+    required int requestId,
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeLeaveCancelUrl(requestId));
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200) {
+      return json ?? {'status': 'success', 'message': 'Leave application cancelled'};
+    } else {
+      throw Exception(json?['detail'] ?? 'Failed to cancel leave application');
+    }
+  }
+
+  /// Submits an Employee Leave Application
+  static Future<Map<String, dynamic>> applyEmployeeLeave({
+    required String token,
+    required int leaveTypeId,
+    required String startDate,
+    required String endDate,
+    required String reason,
+    bool isHalfDay = false,
+    String halfDayPeriod = "NONE",
+  }) async {
+    final uri = Uri.parse(ApiConfig.employeeLeaveApplyUrl);
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'leave_type_id': leaveTypeId,
+        'start_date': startDate,
+        'end_date': endDate,
+        'reason': reason,
+        'is_half_day': isHalfDay,
+        'half_day_period': isHalfDay ? halfDayPeriod : "NONE",
+      }),
+    );
+
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200) {
+      return json ?? {'status': 'success', 'message': 'Leave application submitted'};
+    } else {
+      throw Exception(json?['detail'] ?? 'Leave application failed');
     }
   }
 

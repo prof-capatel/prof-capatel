@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 import logging
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.config import DATA_DIR, FACES_DIR, SNAPSHOTS_DIR
@@ -122,6 +123,7 @@ PRIVATE_NOINDEX_PREFIXES = (
     "/check-in/",
     "/portal/",
     "/employee/",
+    "/mobile",
 )
 
 @app.middleware("http")
@@ -137,6 +139,9 @@ app.mount("/static", StaticFiles(directory="src/server/static"), name="static")
 app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")
 if os.path.exists("screenshots"):
     app.mount("/screenshots", StaticFiles(directory="screenshots"), name="screenshots")
+FLUTTER_WEB_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "flutter_web_app", "build", "web")
+if os.path.exists(FLUTTER_WEB_DIR):
+    app.mount("/mobile", StaticFiles(directory=FLUTTER_WEB_DIR, html=True), name="mobile_app")
 
 # Register Routers
 app.include_router(views_dashboard.router)
@@ -160,3 +165,21 @@ app.include_router(api_demo.router)
 def health_check():
     """Health check endpoint for node discovery."""
     return {"status": "healthy", "service": "Multi-Tenant Face Recognition Attendance SaaS"}
+
+
+@app.get("/download/mobile-app")
+def download_mobile_app():
+    """Directly download the compiled Android APK for the employee attendance mobile app."""
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "..", "..", "flutter_web_app", "build", "app", "outputs", "flutter-apk", "app-release.apk"),
+        os.path.join(os.path.dirname(__file__), "static", "attendance-app.apk"),
+    ]
+    for apk_path in candidates:
+        if os.path.exists(apk_path):
+            return FileResponse(
+                apk_path,
+                media_type="application/vnd.android.package-archive",
+                filename="CuriosityAttendance.apk"
+            )
+    raise HTTPException(status_code=404, detail="Mobile app APK is currently building or not yet published.")
+

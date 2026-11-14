@@ -653,7 +653,13 @@ class PayrollService:
     ) -> Dict[str, Any]:
         branding = tenant.branding
         currency = branding.currency_symbol if branding and branding.currency_symbol else "₹"
-        working_days = float((end_date - start_date).days + 1)
+        cal_days = (end_date - start_date).days + 1
+        # Option A: Standard 26-day basis for monthly cycles, or count business days (non-Sundays)
+        if cal_days >= 28:
+            working_days = 26.0
+        else:
+            working_days = float(sum(1 for d in (start_date + timedelta(n) for n in range(cal_days)) if d.weekday() != 6))
+            working_days = max(1.0, working_days)
         std_daily_hours = float(branding.standard_working_hours_per_day or 8.0) if branding else 8.0
         enable_ot = bool(branding.enable_overtime) if branding else True
         ot_mult = float(branding.overtime_rate_multiplier or 1.5) if branding else 1.5
@@ -748,12 +754,8 @@ class PayrollService:
             ot_pay = round(emp_ot_h * rate * ot_mult, 2) if enable_ot else 0.0
             gross_pay = round(std_pay + ot_pay, 2)
 
-            if res.get("compensation_model") == "STRUCTURED_SALARY" and float(emp.monthly_base_salary or 0.0) > 0:
-                final_gross = res.get("gross_earnings", gross_pay)
-                final_net = res.get("net_salary", gross_pay)
-            else:
-                final_gross = gross_pay
-                final_net = gross_pay
+            final_gross = res.get("gross_earnings", gross_pay)
+            final_net = res.get("net_salary", gross_pay)
 
             total_billed_hours += total_h
             total_ot_hours += emp_ot_h

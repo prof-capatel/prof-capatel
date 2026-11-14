@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -18,6 +20,7 @@ class _AutoCheckInScreenState extends State<AutoCheckInScreen> {
   final CameraWebService _cameraService = CameraWebService();
   bool _isCameraReady = false;
   bool _hasAutoTriggered = false;
+  Uint8List? _capturedImageBytes;
 
   @override
   void initState() {
@@ -41,8 +44,8 @@ class _AutoCheckInScreenState extends State<AutoCheckInScreen> {
       debugPrint('Camera init error: $e');
     }
 
-    // 3. Auto-trigger check-in once GPS confirmed inside geofence
-    if (attProvider.isInsideGeofence && _isCameraReady && !_hasAutoTriggered) {
+    // 3. Auto-trigger check-in once GPS confirmed inside geofence (Web only)
+    if (kIsWeb && attProvider.isInsideGeofence && _isCameraReady && !_hasAutoTriggered) {
       _hasAutoTriggered = true;
       await _executeCheckIn();
     }
@@ -56,6 +59,12 @@ class _AutoCheckInScreenState extends State<AutoCheckInScreen> {
       final frameBytes = await _cameraService.captureFrame();
       if (frameBytes == null) {
         return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _capturedImageBytes = frameBytes;
+        });
       }
 
       final result = await attProvider.performAutoCheckIn(frameBytes);
@@ -173,11 +182,73 @@ class _AutoCheckInScreenState extends State<AutoCheckInScreen> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        if (_isCameraReady)
-                          HtmlElementView(viewType: _cameraService.viewType)
+                        if (kIsWeb)
+                          if (_isCameraReady)
+                            HtmlElementView(viewType: _cameraService.viewType)
+                          else
+                            const Center(
+                              child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+                            )
+                        else if (_capturedImageBytes != null)
+                          Image.memory(
+                            _capturedImageBytes!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          )
                         else
-                          const Center(
-                            child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 72,
+                                  height: 72,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: (attProvider.isInsideGeofence
+                                            ? const Color(0xFF10B981)
+                                            : const Color(0xFF6366F1))
+                                        .withOpacity(0.15),
+                                    border: Border.all(
+                                      color: (attProvider.isInsideGeofence
+                                              ? const Color(0xFF10B981)
+                                              : const Color(0xFF6366F1))
+                                          .withOpacity(0.4),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 34,
+                                    color: attProvider.isInsideGeofence
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFF818CF8),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  attProvider.isInsideGeofence
+                                      ? 'Ready to check in'
+                                      : 'Outside geofence perimeter',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  attProvider.isInsideGeofence
+                                      ? 'Tap "Check In with Camera" below'
+                                      : 'Approach institution premises to check in',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.45),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
 
                         // Face reticle overlay

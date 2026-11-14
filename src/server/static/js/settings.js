@@ -637,6 +637,7 @@ async function saveBrandingDetails(e) {
                 geo_radius_meters: geoRadius,
                 max_gps_accuracy_meters: gpsAccuracy,
                 self_attendance_face_threshold: faceThreshold,
+                mobile_require_face_verification: document.getElementById('brandMobileRequireFaceToggle')?.checked || false,
                 shift_check_in_time: shiftCheckIn,
                 shift_check_out_time: shiftCheckOut,
                 shift_grace_minutes: shiftGrace,

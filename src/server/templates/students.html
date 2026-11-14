@@ -486,7 +486,29 @@
 
                 <div id="editResultAlert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px;"></div>
             </div>
-            <div class="modal-footer">
+                            <!-- Account & Login Security (Password Management) -->
+                <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-heading);">
+                            <i class="fa-solid fa-key" style="color: var(--accent-primary);"></i> Portal Sign-In Credentials
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="adminResetEmployeePassword()" style="padding: 4px 10px; font-size: 11px;">
+                            <i class="fa-solid fa-arrows-rotate"></i> Auto-Generate Password
+                        </button>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">Set Custom Password (or click Auto-Generate)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="editEmployeePasswordInput" class="form-control" placeholder="Leave blank to keep existing password" style="font-family: monospace; font-size: 12.5px;">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="adminSaveEmployeePassword()" style="white-space: nowrap; padding: 0 12px; font-size: 11px; font-weight: 700;">
+                                <i class="fa-solid fa-shield-halved"></i> Set Password
+                            </button>
+                        </div>
+                        <div id="adminPasswordFeedback" style="font-size: 11px; margin-top: 5px; display: none;"></div>
+                    </div>
+                </div>
+
+<div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
                 <button type="submit" id="btnSaveEdit" class="btn btn-primary">
                     <i class="fa-solid fa-floppy-disk"></i> Save Changes

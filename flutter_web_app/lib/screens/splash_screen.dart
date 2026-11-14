@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
-import 'auto_checkin_screen.dart';
+import 'employee_mobile_home_screen.dart';
 import 'face_login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,20 +21,25 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _bootstrap() async {
-    final attProvider = context.read<AttendanceProvider>();
-    final authProvider = context.read<AuthProvider>();
+    // 0. Load server host configuration
+    await ApiConfig.loadBaseUrl();
 
-    // 1. Fetch geofence configuration from backend
-    await attProvider.initConfig();
+    final authProvider = context.read<AuthProvider>();
+    // 1. Await full SharedPreferences session & tenant restoration
+    await authProvider.ensureInitialized();
+
+    final attProvider = context.read<AttendanceProvider>();
+    final token = authProvider.currentUser?.token;
+    await attProvider.initConfig(token: token, tenantSlug: authProvider.tenantSlug);
 
     // 2. Short splash delay for smooth visual transition
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 400));
 
     if (!mounted) return;
 
     if (authProvider.isAuthenticated) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AutoCheckInScreen()),
+        MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
       );
     } else {
       Navigator.of(context).pushReplacement(
@@ -76,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'FaceAttendance',
+              'Curiosity HUB',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 22,
@@ -86,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Frictionless Auto-Checkin & Geofence Client',
+              'Zero-Hardware Mobile Geofence & Attendance',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.6),
                 fontSize: 13,

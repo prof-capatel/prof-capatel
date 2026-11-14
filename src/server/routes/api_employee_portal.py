@@ -10,13 +10,14 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_, and_, func, extract
 
 from src.core.camera_utils import decode_image_bytes
 from src.core.face_engine import FaceEngine
 from src.database.models import (
     Tenant,
     Student,
+    User,
     FaceEncoding,
     AttendanceRecord,
     LeaveType,
@@ -29,7 +30,9 @@ from src.database.models import (
 from src.database.session import get_db, SessionLocal
 from src.server.tenant_middleware import resolve_tenant
 from src.server.routes.api_leave import get_or_create_leave_balance
-from src.core.payroll_engine import number_to_words_inr
+from src.core.payroll_engine import number_to_words_inr, calculate_employee_payroll
+from src.services.attendance_service import AttendanceService
+from src.utils.auth_utils import hash_password, verify_password
 from src.utils.timezone import get_ist_now
 
 logger = logging.getLogger("api_employee_portal")
@@ -149,6 +152,30 @@ class EmployeeLeaveApplyPayload(BaseModel):
     reason: str
 
 
+class EmployeeMobileCheckInPayload(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = 10.0
+    photo_base64: Optional[str] = None
+    punch_type: Optional[str] = "AUTO"
+    is_mock_location: Optional[bool] = False
+    device_info: Optional[str] = None
+
+
+class EmployeeGeofenceHeartbeatPayload(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = 10.0
+
+
+class EmployeeChangePasswordPayload(BaseModel):
+    current_password: Optional[str] = None
+    new_password: str
+    confirm_password: Optional[str] = None
+    is_mock_location: Optional[bool] = False
+    device_info: Optional[str] = None
+
+
 # --------------------------------------------------------------------------
 # Authentication Endpoints
 # --------------------------------------------------------------------------
@@ -243,13 +270,13 @@ async def employee_face_login(
         tenant_id=tenant.id,
         roll_number=best_match_student.roll_number,
         name=best_match_student.name,
-        expires_in_sec=86400,  # 24 hours
+        expires_in_sec=604800,  # 7-day extended session
     )
 
     response.set_cookie(
         key=EMP_COOKIE_NAME,
         value=token,
-        max_age=86400,
+        max_age=604800,  # 7-day persistence
         httponly=True,
         samesite="lax",
         secure=False,  # Allows local HTTP / LAN testing
@@ -303,22 +330,124 @@ def get_employee_profile(
     }
 
 
+@router.get("/has-password")
+def check_employee_has_password(
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """Checks whether the authenticated employee has an existing password configured."""
+    user = student.user
+    if not user and student.user_id:
+        user = db.query(User).filter(User.id == student.user_id).first()
+    has_pwd = bool(user and user.password_hash)
+    return {
+        "status": "success",
+        "has_password": has_pwd,
+        "username": student.roll_number,
+    }
+
+
+@router.post("/change-password")
+def change_employee_password(
+    payload: EmployeeChangePasswordPayload,
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """
+    Authenticated Employee Password Update:
+    Allows employees to set or update their account password for username/password login.
+    If the user has an existing password, current_password is required and validated.
+    If enrolled strictly via face recognition, allows setting their initial password without current_password.
+    """
+    new_pwd = payload.new_password.strip() if payload.new_password else ""
+    if len(new_pwd) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be at least 6 characters in length."
+        )
+    if payload.confirm_password and payload.confirm_password.strip() != new_pwd:
+        raise HTTPException(
+            status_code=400,
+            detail="New password and confirmation password do not match."
+        )
+
+    # Find or link User record for this employee
+    user = student.user
+    if not user and student.user_id:
+        user = db.query(User).filter(User.id == student.user_id).first()
+
+    if user and user.password_hash:
+        if not payload.current_password or not payload.current_password.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Current password is required to update your existing password."
+            )
+        if not verify_password(payload.current_password.strip(), user.password_hash):
+            raise HTTPException(
+                status_code=400,
+                detail="Incorrect current password. Please verify and try again."
+            )
+
+    hashed = hash_password(new_pwd)
+
+    if not user:
+        username_candidate = student.roll_number.strip().lower()
+        existing_u = db.query(User).filter(
+            User.username == username_candidate,
+            User.tenant_id == student.tenant_id,
+        ).first()
+        if existing_u:
+            user = existing_u
+            user.password_hash = hashed
+            user.is_active = True
+        else:
+            user = User(
+                tenant_id=student.tenant_id,
+                username=username_candidate,
+                email=student.email or f"{username_candidate}@tenant{student.tenant_id}.local",
+                password_hash=hashed,
+                role="EMPLOYEE",
+                full_name=student.name,
+                is_active=True,
+            )
+            db.add(user)
+            db.flush()
+        student.user_id = user.id
+    else:
+        user.password_hash = hashed
+        user.is_active = True
+
+    db.commit()
+    return {
+        "status": "success",
+        "message": "Password updated successfully. You can now use your Employee ID and password to sign in.",
+    }
+
+
 @router.get("/attendance")
 def get_employee_attendance_history(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    limit: int = 60,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    limit: int = 200,
     student: Student = Depends(get_current_employee),
     db: Session = Depends(get_db),
 ):
-    """Returns the authenticated employee's recent punch records and work hours."""
+    """Returns the authenticated employee's punch records with optional month and year filtering."""
     query = (
         db.query(AttendanceRecord)
         .filter(
             AttendanceRecord.tenant_id == student.tenant_id,
             AttendanceRecord.student_id == student.id,
+            AttendanceRecord.is_deleted == False,
         )
     )
+
+    if year:
+        query = query.filter(extract("year", AttendanceRecord.timestamp) == year)
+    if month:
+        query = query.filter(extract("month", AttendanceRecord.timestamp) == month)
 
     if start_date:
         try:
@@ -437,10 +566,20 @@ def get_employee_payroll_summary(
     paid_leave_days = sum(float(l.total_days or 0.0) for l in approved_leaves)
     paid_leave_hours = paid_leave_days * std_daily_hours
 
-    # 3. Calculate earnings
-    regular_earnings = (total_regular_hours + paid_leave_hours) * hourly_rate
-    overtime_earnings = total_overtime_hours * hourly_rate * ot_mult
-    total_gross_earnings = regular_earnings + overtime_earnings
+    # 3. Compute detailed payroll via central engine (supporting Structured, Hourly & Daily Wage)
+    payroll_res = calculate_employee_payroll(
+        db=db,
+        tenant=student.tenant,
+        student=student,
+        start_date=start_dt.date(),
+        end_date=end_dt.date(),
+        total_working_days=26.0,
+    )
+
+    regular_earnings = float(payroll_res.get("basic_earned", (total_regular_hours + paid_leave_hours) * hourly_rate))
+    overtime_earnings = float(payroll_res.get("ot_earnings", total_overtime_hours * hourly_rate * ot_mult))
+    total_gross_earnings = float(payroll_res.get("gross_earnings", regular_earnings + overtime_earnings))
+    net_salary = float(payroll_res.get("net_salary", total_gross_earnings))
 
     return {
         "status": "success",
@@ -452,6 +591,7 @@ def get_employee_payroll_summary(
         "currency_symbol": currency,
         "standard_working_hours_per_day": std_daily_hours,
         "overtime_multiplier": ot_mult,
+        "compensation_model": payroll_res.get("compensation_model", "STRUCTURED_SALARY"),
         "active_days_count": len(daily_minutes),
         "total_punch_hours": round(total_regular_hours + total_overtime_hours, 2),
         "regular_hours": round(total_regular_hours, 2),
@@ -462,6 +602,172 @@ def get_employee_payroll_summary(
         "regular_earnings": round(regular_earnings, 2),
         "overtime_earnings": round(overtime_earnings, 2),
         "gross_earnings": round(total_gross_earnings, 2),
+        "net_salary": round(net_salary, 2),
+        "structure": payroll_res.get("parameters", {}),
+        "breakdown": payroll_res.get("breakdown", {}),
+    }
+
+
+# --------------------------------------------------------------------------
+# Employee Mobile Geofenced Check-In & Background Tracking
+# --------------------------------------------------------------------------
+
+@router.post("/check-in")
+async def employee_mobile_checkin(
+    payload: EmployeeMobileCheckInPayload,
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """
+    Mobile Geofenced Self Check-In / Check-Out:
+    Validates employee session, verifies GPS coordinate proximity against tenant's configured geofence radius.
+    If tenant mandates selfie biometric verification, compares selfie against employee's enrolled face encodings.
+    Shares the exact same unified corporate attendance state machine as centralized webcam kiosks.
+    """
+    tenant = student.tenant
+    branding = tenant.branding if tenant else None
+
+    if payload.is_mock_location:
+        raise HTTPException(
+            status_code=403,
+            detail="Mock GPS location detected. Spoofed or simulated coordinates are prohibited.",
+        )
+
+    # Check if selfie face verification is mandated by tenant admin
+    frame_bgr = None
+    conf_dist = 0.0
+
+    require_face = bool(branding.mobile_require_face_verification if branding else False)
+    if require_face or payload.photo_base64:
+        if not payload.photo_base64 or not payload.photo_base64.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="A live selfie camera photo is required for mobile check-in by your organization's policy.",
+            )
+
+        raw_b64 = payload.photo_base64.strip()
+        if "," in raw_b64:
+            raw_b64 = raw_b64.split(",", 1)[1]
+
+        try:
+            img_bytes = base64.b64decode(raw_b64)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Malformed base64 camera image.")
+
+        frame_bgr = decode_image_bytes(img_bytes)
+        if frame_bgr is None:
+            raise HTTPException(status_code=400, detail="Could not decode mobile camera capture frame.")
+
+        vector, face_box, msg = FaceEngine.compute_single_face_vector(frame_bgr)
+        if vector is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Face not detected in camera frame. Please center your face in good lighting.",
+            )
+
+        # Retrieve employee's enrolled face encodings
+        enrolled_encs = (
+            db.query(FaceEncoding)
+            .filter(
+                FaceEncoding.tenant_id == student.tenant_id,
+                FaceEncoding.student_id == student.id,
+            )
+            .all()
+        )
+        if not enrolled_encs:
+            raise HTTPException(
+                status_code=400,
+                detail="No enrolled face template found for your account. Please contact your HR administrator.",
+            )
+
+        threshold = float(branding.self_attendance_face_threshold if (branding and branding.self_attendance_face_threshold) else 0.52)
+        min_dist = float("inf")
+        import numpy as np
+
+        for enc in enrolled_encs:
+            try:
+                sample_vec = enc.get_numpy_vector()
+                dist = float(np.linalg.norm(sample_vec - vector))
+                if dist < min_dist:
+                    min_dist = dist
+            except Exception:
+                pass
+
+        if min_dist > threshold:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Biometric facial verification failed (distance: {round(min_dist, 3)}, threshold: {threshold}). Please try again with clear lighting.",
+            )
+        conf_dist = round(min_dist, 3)
+
+    service = AttendanceService(db)
+    result = service.record_punch(
+        tenant_id=student.tenant_id,
+        student_id=student.id,
+        node_id="MOBILE-APP",
+        punch_type=payload.punch_type or "AUTO",
+        geo_latitude=payload.latitude,
+        geo_longitude=payload.longitude,
+        geo_accuracy=payload.accuracy,
+        frame_bgr=frame_bgr,
+        confidence_distance=conf_dist,
+        is_self_attendance=True,
+    )
+    if result.get("cooldown_active"):
+        return result
+    if not result.get("attendance_logged"):
+        raise HTTPException(status_code=400, detail=result.get("message", "Attendance could not be registered."))
+    return result
+
+
+@router.post("/geofence/heartbeat")
+def employee_geofence_heartbeat(
+    payload: EmployeeGeofenceHeartbeatPayload,
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """
+    Background Geolocation Heartbeat:
+    Dispatched periodically by mobile client while employee is in an active shift session.
+    Logs out-of-bounds events and breach duration for administrative audit trails.
+    """
+    service = AttendanceService(db)
+    return service.process_geofence_heartbeat(
+        tenant_id=student.tenant_id,
+        student_id=student.id,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        accuracy=payload.accuracy or 10.0,
+    )
+
+
+@router.get("/geofence/config")
+def get_employee_geofence_config(
+    student: Student = Depends(get_current_employee),
+    db: Session = Depends(get_db),
+):
+    """Returns the employee's organization geofencing parameters and current punch status."""
+    tenant = student.tenant
+    branding = tenant.branding if tenant else None
+    service = AttendanceService(db)
+    punch_status = service.get_employee_punch_status(student.tenant_id, student.id)
+
+    return {
+        "status": "success",
+        "geofence_enabled": bool(branding.enable_self_attendance if branding else False),
+        "center_latitude": float(branding.geo_latitude) if (branding and branding.geo_latitude is not None) else None,
+        "center_longitude": float(branding.geo_longitude) if (branding and branding.geo_longitude is not None) else None,
+        "radius_meters": int(branding.geo_radius_meters) if (branding and branding.geo_radius_meters is not None) else 150,
+        "tenant_id": student.tenant_id,
+        "tenant_name": tenant.name if tenant else "",
+        "institution_name": branding.institution_name if branding else (tenant.name if tenant else ""),
+        "geo_latitude": branding.geo_latitude if branding else None,
+        "geo_longitude": branding.geo_longitude if branding else None,
+        "geo_radius_meters": float(branding.geo_radius_meters if (branding and branding.geo_radius_meters) else 150.0),
+        "max_gps_accuracy_meters": float(branding.max_gps_accuracy_meters if (branding and branding.max_gps_accuracy_meters) else 50.0),
+        "mobile_require_face_verification": bool(branding.mobile_require_face_verification if branding else False),
+        "enable_self_attendance": bool(branding.enable_self_attendance if branding else False),
+        "punch_status": punch_status,
     }
 
 

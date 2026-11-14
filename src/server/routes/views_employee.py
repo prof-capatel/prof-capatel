@@ -167,6 +167,38 @@ def page_permanent_self_attendance(
     )
 
 
+@router.get("/employee", response_class=HTMLResponse)
+def page_employee_root(
+    request: Request,
+    db: Session = Depends(get_db),
+    fallback_tenant: Tenant = Depends(get_current_tenant),
+):
+    """
+    Root gateway for Employee Mobile App (PWA).
+    Checks for existing session cookie or stored tenant context; otherwise prompts for tenant code.
+    """
+    emp_token = request.cookies.get(EMP_COOKIE_NAME)
+    if emp_token:
+        payload = decode_employee_token(emp_token)
+        if payload and payload.get("tenant_id"):
+            session_tenant = db.query(Tenant).filter(Tenant.id == payload["tenant_id"], Tenant.is_active == True).first()
+            if session_tenant:
+                return RedirectResponse(url=f"/employee/{session_tenant.slug}/dashboard", status_code=303)
+
+    branding = get_branding_dict(db, fallback_tenant.id)
+    return render_template(
+        request,
+        "employee_login.html",
+        {
+            "page_title": "Employee Mobile Sign-In",
+            "branding": branding,
+            "tenant": None,
+            "tenant_slug": "",
+            "requires_tenant_setup": True,
+        },
+    )
+
+
 @router.get("/employee/{tenant_slug}", response_class=HTMLResponse)
 @router.get("/portal/{tenant_slug}/employee", response_class=HTMLResponse)
 def page_employee_face_login(

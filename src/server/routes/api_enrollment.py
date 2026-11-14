@@ -29,9 +29,14 @@ from src.database.models import (
 from src.database.session import get_db
 from src.server.tenant_middleware import get_current_tenant
 from src.server.rbac_middleware import check_tenant_operational_access, get_current_user_optional
+from src.utils.auth_utils import hash_password
 from src.utils.timezone import get_ist_now
 
 router = APIRouter(prefix="/api/v1/enroll", tags=["Student Enrollment"])
+
+
+class AdminResetEmployeePasswordPayload(BaseModel):
+    new_password: Optional[str] = None
 
 
 class StudentCreate(BaseModel):
@@ -1166,6 +1171,94 @@ def update_student_profile(
         "tenant_id": current_tenant.id,
         "message": f"Profile '{student.name}' updated successfully.",
         "student": student.to_dict(),
+    }
+
+
+@router.post("/student/{student_id}/reset-password")
+def reset_student_password(
+    student_id: int,
+    payload: Optional[AdminResetEmployeePasswordPayload] = None,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Tenant Admin Password Reset / Generation for an Employee:
+    Auto-generates a simple, memorable password or sets a specified custom password.
+    Creates or updates the linked User record so the employee can immediately log in via ID & Password.
+    """
+    check_tenant_operational_access(current_tenant)
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.tenant_id == current_tenant.id,
+    ).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Employee / Member not found in this organization.")
+
+    import random
+    import re
+
+    clean_pwd = payload.new_password.strip() if (payload and payload.new_password and payload.new_password.strip()) else ""
+    if not clean_pwd:
+        # Auto-generate a simple, memorable password
+        base_name = re.sub(r'[^a-zA-Z]', '', student.name.split()[0] if student.name else "Emp")
+        if len(base_name) < 3:
+            base_name = "Emp"
+        clean_pwd = f"{base_name.capitalize()}@{random.randint(100, 999)}"
+    elif len(clean_pwd) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters in length.")
+
+    hashed = hash_password(clean_pwd)
+
+    user = student.user
+    if not user and student.user_id:
+        user = db.query(User).filter(User.id == student.user_id).first()
+
+    username_candidate = student.roll_number.strip().lower()
+    if not user:
+        existing_u = db.query(User).filter(
+            User.username == username_candidate,
+            User.tenant_id == current_tenant.id,
+        ).first()
+        if existing_u:
+            user = existing_u
+            user.password_hash = hashed
+            user.is_active = True
+        else:
+            user = User(
+                tenant_id=current_tenant.id,
+                username=username_candidate,
+                email=student.email or f"{username_candidate}@tenant{current_tenant.id}.local",
+                password_hash=hashed,
+                role="EMPLOYEE",
+                full_name=student.name,
+                is_active=True,
+            )
+            db.add(user)
+            db.flush()
+        student.user_id = user.id
+    else:
+        user.password_hash = hashed
+        user.is_active = True
+
+    audit = AuditLog(
+        tenant_id=current_tenant.id,
+        user_id=current_user.id if current_user else None,
+        actor_name=current_user.full_name if current_user else "Tenant Admin",
+        actor_role=current_user.role if current_user else "TENANT_ADMIN",
+        action_type="EMPLOYEE_PASSWORD_RESET",
+        target_type="STUDENT",
+        target_id=str(student.id),
+        description=f"Password reset for employee '{student.name}' ({student.roll_number}).",
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Password reset successfully for {student.name}.",
+        "username": student.roll_number,
+        "password": clean_pwd,
     }
 
 

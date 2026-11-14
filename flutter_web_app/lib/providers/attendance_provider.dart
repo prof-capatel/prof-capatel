@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../models/geofence_config.dart';
@@ -29,9 +31,21 @@ class AttendanceProvider with ChangeNotifier {
   bool _isInsideGeofence = false;
   String? _geofenceStatusMessage;
 
+  // Punch State Machine
+  String _currentPunchStatus = 'NOT_CHECKED_IN';
+  String _nextPunchAction = 'CHECK_IN';
+  String? _lastCheckInShort;
+  String? _lastCheckOutShort;
+
   CheckInStatus _checkInStatus = CheckInStatus.idle;
   String? _statusDetail;
   Map<String, dynamic>? _lastCheckInResult;
+
+  // Background Heartbeat Monitoring
+  Timer? _heartbeatTimer;
+  bool _isMonitoringActive = false;
+  bool _hasActiveBreach = false;
+  String? _breachAlertMessage;
 
   List<AttendanceRecordItem> _historyRecords = [];
   bool _isLoadingHistory = false;
@@ -48,9 +62,20 @@ class AttendanceProvider with ChangeNotifier {
   double? get distanceToCampus => _distanceToCampus;
   bool get isInsideGeofence => _isInsideGeofence;
   String? get geofenceStatusMessage => _geofenceStatusMessage;
+
+  String get currentPunchStatus => _currentPunchStatus;
+  String get nextPunchAction => _nextPunchAction;
+  String? get lastCheckInShort => _lastCheckInShort;
+  String? get lastCheckOutShort => _lastCheckOutShort;
+
   CheckInStatus get checkInStatus => _checkInStatus;
   String? get statusDetail => _statusDetail;
   Map<String, dynamic>? get lastCheckInResult => _lastCheckInResult;
+
+  bool get isMonitoringActive => _isMonitoringActive;
+  bool get hasActiveBreach => _hasActiveBreach;
+  String? get breachAlertMessage => _breachAlertMessage;
+
   bool get isLoadingHistory => _isLoadingHistory;
   String? get historyError => _historyError;
   HistoryFilterTimeRange get selectedTimeRange => _selectedTimeRange;
@@ -60,7 +85,6 @@ class AttendanceProvider with ChangeNotifier {
   List<AttendanceRecordItem> get filteredRecords {
     var list = List<AttendanceRecordItem>.from(_historyRecords);
 
-    // 1. Time Range Filter
     final now = DateTime.now();
     if (_selectedTimeRange == HistoryFilterTimeRange.today) {
       final todayStr = "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -80,7 +104,6 @@ class AttendanceProvider with ChangeNotifier {
       list = list.where((r) => r.timestamp.startsWith(monthPrefix)).toList();
     }
 
-    // 2. Status Filter
     if (_selectedStatusFilter != null && _selectedStatusFilter != 'ALL') {
       list = list.where((r) {
         if (_selectedStatusFilter == 'SELF') return r.isSelfAttendance;
@@ -90,7 +113,6 @@ class AttendanceProvider with ChangeNotifier {
       }).toList();
     }
 
-    // 3. Search Query Filter
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       list = list.where((r) =>
@@ -106,19 +128,35 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   /// Initializes geofence configuration from backend
-  Future<void> initConfig({String tenantSlug = 'default'}) async {
+  Future<void> initConfig({String tenantSlug = 'default', String? token}) async {
     try {
-      _geofenceConfig = await ApiService.fetchGeofenceConfig(tenantSlug: tenantSlug);
+      if (token != null && token.isNotEmpty) {
+        final configJson = await ApiService.fetchEmployeeGeofenceConfig(token: token);
+        _geofenceConfig = GeofenceConfig.fromJson(configJson);
+
+        final pStatus = configJson['punch_status'] ?? {};
+        _currentPunchStatus = pStatus['status'] ?? 'NOT_CHECKED_IN';
+        _nextPunchAction = pStatus['next_action'] ?? 'CHECK_IN';
+        _lastCheckInShort = pStatus['check_in_time'];
+        _lastCheckOutShort = pStatus['check_out_time'];
+
+        if (_currentPunchStatus == 'CHECKED_IN') {
+          startHeartbeatMonitoring(token);
+        }
+      } else {
+        _geofenceConfig = await ApiService.fetchGeofenceConfig(tenantSlug: tenantSlug);
+      }
       notifyListeners();
+      await updateLocation();
     } catch (e) {
       debugPrint('Error fetching geofence config: $e');
     }
   }
 
-  /// Updates current browser GPS coordinates and computes campus radar distance
+  /// Updates current GPS coordinates and computes campus radar distance
   Future<void> updateLocation() async {
     _checkInStatus = CheckInStatus.locating;
-    _statusDetail = 'Acquiring high-accuracy HTML5 GPS coordinates...';
+    _statusDetail = 'Acquiring high-accuracy GPS coordinates...';
     notifyListeners();
 
     try {
@@ -146,11 +184,11 @@ class AttendanceProvider with ChangeNotifier {
         } else if (dist <= maxRadius) {
           _isInsideGeofence = true;
           _geofenceStatusMessage =
-              'Inside campus perimeter (${dist.toStringAsFixed(1)}m / ${maxRadius.toStringAsFixed(0)}m)';
+              'Inside office perimeter (${dist.toStringAsFixed(1)}m / ${maxRadius.toStringAsFixed(0)}m)';
         } else {
           _isInsideGeofence = false;
           _geofenceStatusMessage =
-              'Outside campus boundary (${dist.toStringAsFixed(1)}m away). Radius allowed: ${maxRadius.toStringAsFixed(0)}m.';
+              'Outside perimeter (${dist.toStringAsFixed(1)}m away). Radius allowed: ${maxRadius.toStringAsFixed(0)}m.';
         }
       }
 
@@ -159,42 +197,56 @@ class AttendanceProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _checkInStatus = CheckInStatus.error;
-      _statusDetail = e.toString();
-      _geofenceStatusMessage = 'Unable to get location: $e';
+      _statusDetail = e.toString().replaceAll('Exception:', '').trim();
+      _geofenceStatusMessage = 'GPS Error: $_statusDetail';
       notifyListeners();
     }
   }
 
-  /// Performs full auto-checkin: GPS + Camera Frame Capture
+  /// Mobile Geofenced Check-In / Check-Out Punch
   Future<Map<String, dynamic>?> performAutoCheckIn(Uint8List frameBytes, {String tenantSlug = 'default'}) async {
+    return performMobilePunch(token: '', frameBytes: frameBytes);
+  }
+
+  Future<Map<String, dynamic>?> performMobilePunch({
+    required String token,
+    Uint8List? frameBytes,
+    String? forcedAction,
+  }) async {
+    await updateLocation();
+
     if (_userCoordinates == null) {
-      await updateLocation();
-      if (_userCoordinates == null) {
-        _checkInStatus = CheckInStatus.error;
-        _statusDetail = 'GPS location unavailable. Please grant location permissions in Chrome.';
-        notifyListeners();
-        return null;
-      }
+      _checkInStatus = CheckInStatus.error;
+      _statusDetail = 'GPS location unavailable. Please grant location access.';
+      notifyListeners();
+      return null;
     }
 
     if (!_isInsideGeofence) {
       _checkInStatus = CheckInStatus.error;
-      _statusDetail = _geofenceStatusMessage ?? 'You must be on campus premises to mark attendance.';
+      _statusDetail = _geofenceStatusMessage ?? 'You are outside the authorized geofence perimeter.';
       notifyListeners();
       return null;
     }
 
     _checkInStatus = CheckInStatus.submitting;
-    _statusDetail = 'Verifying face biometrics and logging attendance...';
+    _statusDetail = 'Logging geofenced attendance punch...';
     notifyListeners();
 
     try {
-      final result = await ApiService.submitSelfAttendance(
+      String? photoB64;
+      if (frameBytes != null && frameBytes.isNotEmpty) {
+        photoB64 = base64Encode(frameBytes);
+      }
+
+      final action = forcedAction ?? _nextPunchAction;
+      final result = await ApiService.employeeMobileCheckIn(
+        token: token,
         latitude: _userCoordinates!.latitude,
         longitude: _userCoordinates!.longitude,
         accuracy: _userCoordinates!.accuracy,
-        imageBytes: frameBytes,
-        tenantSlug: tenantSlug,
+        photoBase64: photoB64,
+        punchType: action,
       );
 
       _lastCheckInResult = result;
@@ -203,9 +255,22 @@ class AttendanceProvider with ChangeNotifier {
       if (statusStr == 'success') {
         _checkInStatus = CheckInStatus.success;
         _statusDetail = result['message'] ?? 'Attendance marked successfully!';
+
+        final punchType = result['punch_type'] ?? 'CHECK_IN';
+        if (punchType == 'CHECK_IN') {
+          _currentPunchStatus = 'CHECKED_IN';
+          _nextPunchAction = 'CHECK_OUT';
+          _lastCheckInShort = result['check_in_short'] ?? 'Just now';
+          startHeartbeatMonitoring(token);
+        } else {
+          _currentPunchStatus = 'CHECKED_OUT';
+          _nextPunchAction = 'CHECK_IN';
+          _lastCheckOutShort = result['check_out_short'] ?? 'Just now';
+          stopHeartbeatMonitoring();
+        }
       } else if (statusStr == 'cooldown') {
         _checkInStatus = CheckInStatus.cooldown;
-        _statusDetail = result['message'] ?? 'Already checked in recently.';
+        _statusDetail = result['message'] ?? 'Cooldown active between punches.';
       }
 
       notifyListeners();
@@ -218,8 +283,64 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
+  /// Starts background periodic perimeter heartbeat monitoring while checked in
+  void startHeartbeatMonitoring(String token) {
+    stopHeartbeatMonitoring();
+    _isMonitoringActive = true;
+
+    // Send immediate heartbeat
+    _sendHeartbeat(token);
+
+    // Schedule every 60 seconds
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _sendHeartbeat(token);
+    });
+    notifyListeners();
+  }
+
+  void stopHeartbeatMonitoring() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _isMonitoringActive = false;
+    _hasActiveBreach = false;
+    _breachAlertMessage = null;
+    notifyListeners();
+  }
+
+  Future<void> _sendHeartbeat(String token) async {
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      _userCoordinates = coords;
+
+      final res = await ApiService.sendGeofenceHeartbeat(
+        token: token,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy,
+      );
+
+      final inBounds = res['in_bounds'] ?? true;
+      if (!inBounds) {
+        _hasActiveBreach = true;
+        _breachAlertMessage = res['message'] ?? 'Out of bounds detected.';
+      } else {
+        _hasActiveBreach = false;
+        _breachAlertMessage = null;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Heartbeat tick error: $e');
+    }
+  }
+
   /// Loads attendance history for a specific roll number or user
-  Future<void> loadHistory({String? token, String? rollNumber, int? studentId}) async {
+  Future<void> loadHistory({
+    String? token,
+    String? rollNumber,
+    int? studentId,
+    int? year,
+    int? month,
+  }) async {
     _isLoadingHistory = true;
     _historyError = null;
     notifyListeners();
@@ -229,6 +350,8 @@ class AttendanceProvider with ChangeNotifier {
         token: token,
         rollNumber: rollNumber,
         studentId: studentId,
+        year: year,
+        month: month,
       );
       _historyRecords = records;
       _isLoadingHistory = false;
@@ -259,5 +382,11 @@ class AttendanceProvider with ChangeNotifier {
     _checkInStatus = CheckInStatus.idle;
     _statusDetail = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _heartbeatTimer?.cancel();
+    super.dispose();
   }
 }

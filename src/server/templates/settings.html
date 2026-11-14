@@ -1140,7 +1140,7 @@
                         <div>
                             <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 4px;">Max GPS Inaccuracy Tolerance:</label>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="number" id="brandGpsAccuracy" class="form-control" style="font-weight: 700;" min="5" max="200" value="{{ branding.max_gps_accuracy_meters|round(0)|int if branding and branding.max_gps_accuracy_meters is not none else 50 }}">
+                                <input type="number" id="brandGpsAccuracy" class="form-control" style="font-weight: 700;" min="5" max="500" value="{{ branding.max_gps_accuracy_meters|round(0)|int if branding and branding.max_gps_accuracy_meters is not none else 50 }}">
                                 <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">± Meters</span>
                             </div>
                         </div>
@@ -1151,6 +1151,23 @@
                                 <span style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">(0.52 Balanced)</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Mobile Selfie Biometric Requirement Toggle -->
+                    <div style="background: var(--bg-card); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div>
+                            <div style="font-size: 12.5px; font-weight: 700; color: var(--text-heading);">
+                                <i class="fa-solid fa-camera" style="color: var(--accent-primary);"></i> Mandate Selfie Biometric Verification on Mobile Check-In
+                            </div>
+                            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                                When enabled, employees must take a live selfie alongside GPS to check in. When disabled, 1-tap GPS check-in is permitted.
+                            </div>
+                        </div>
+                        <label style="position: relative; display: inline-block; width: 42px; height: 22px; margin-bottom: 0; cursor: pointer; flex-shrink: 0;">
+                            <input type="checkbox" id="brandMobileRequireFaceToggle" {% if branding and branding.mobile_require_face_verification %}checked{% endif %} style="opacity: 0; width: 0; height: 0;" onchange="document.getElementById('mobileFaceToggleTrack').style.backgroundColor = this.checked ? 'var(--accent-emerald)' : 'var(--border-color)'; document.getElementById('mobileFaceToggleKnob').style.left = this.checked ? '22px' : '3px';">
+                            <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: {% if branding and branding.mobile_require_face_verification %}var(--accent-emerald){% else %}var(--border-color){% endif %}; transition: .25s; border-radius: 22px;" id="mobileFaceToggleTrack"></span>
+                            <span style="position: absolute; height: 16px; width: 16px; left: {% if branding and branding.mobile_require_face_verification %}22px{% else %}3px{% endif %}; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3);" id="mobileFaceToggleKnob"></span>
+                        </label>
                     </div>
 
                     <div style="margin-top: 16px;">

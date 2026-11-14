@@ -1,68 +1,95 @@
 import 'dart:async';
-import 'dart:html' as html;
-import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 
 class UserCoordinates {
   final double latitude;
   final double longitude;
   final double accuracy;
+  final bool isMocked;
 
   UserCoordinates({
     required this.latitude,
     required this.longitude,
     required this.accuracy,
+    this.isMocked = false,
   });
 }
 
 class LocationService {
-  /// Fetches current high-accuracy HTML5 GPS coordinates from Chrome browser
+  // Developer Mock GPS overrides for local device testing
+  static bool isMockModeEnabled = false;
+  static double? mockLatitude;
+  static double? mockLongitude;
+
+  /// Fetches current high-accuracy GPS coordinates (Cross-platform Android / iOS / Web)
   static Future<UserCoordinates> getCurrentLocation({
     Duration timeout = const Duration(seconds: 10),
   }) async {
-    final geolocation = html.window.navigator.geolocation;
-    final completer = Completer<UserCoordinates>();
-
-    try {
-      geolocation.getCurrentPosition(
-        enableHighAccuracy: true,
-        timeout: timeout,
-        maximumAge: const Duration(seconds: 2),
-      ).then((pos) {
-        final coords = pos.coords;
-        if (coords != null && coords.latitude != null && coords.longitude != null) {
-          completer.complete(UserCoordinates(
-            latitude: coords.latitude!.toDouble(),
-            longitude: coords.longitude!.toDouble(),
-            accuracy: (coords.accuracy ?? 10.0).toDouble(),
-          ));
-        } else {
-          completer.completeError('Unable to extract coordinates from browser.');
-        }
-      }).catchError((err) {
-        completer.completeError('Location access error: $err. Please ensure location permissions are granted in Chrome.');
-      });
-    } catch (e) {
-      completer.completeError('Geolocation API not supported or error: $e');
+    // 1. Check if mock mode is active for local testing
+    if (isMockModeEnabled && mockLatitude != null && mockLongitude != null) {
+      debugPrint('[MOCK-GPS] Using developer mock coordinates: $mockLatitude, $mockLongitude');
+      return UserCoordinates(
+        latitude: mockLatitude!,
+        longitude: mockLongitude!,
+        accuracy: 5.0,
+        isMocked: true,
+      );
     }
 
-    return completer.future.timeout(
-      timeout,
-      onTimeout: () => throw TimeoutException('Geolocation request timed out. Please check GPS settings.'),
-    );
+    // 2. Check and request location permissions
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled. Please turn on device GPS.');
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('Location permissions are denied. Please grant location access.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception('Location permissions are permanently denied. Please enable them in app settings.');
+    }
+
+    // 3. Acquire high-accuracy position
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      return UserCoordinates(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        isMocked: position.isMocked,
+      );
+    } catch (e) {
+      throw Exception('Failed to obtain GPS coordinates: $e');
+    }
   }
 
-  /// Calculates great-circle distance between two GPS coordinates in meters using Haversine formula
+  /// Calculates great-circle distance between two GPS coordinates in meters
   static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double R = 6371000.0; // Earth radius in meters
-    final double phi1 = lat1 * (math.pi / 180.0);
-    final double phi2 = lat2 * (math.pi / 180.0);
-    final double deltaPhi = (lat2 - lat1) * (math.pi / 180.0);
-    final double deltaLambda = (lon2 - lon1) * (math.pi / 180.0);
+    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+  }
 
-    final double a = math.sin(deltaPhi / 2.0) * math.sin(deltaPhi / 2.0) +
-        math.cos(phi1) * math.cos(phi2) * math.sin(deltaLambda / 2.0) * math.sin(deltaLambda / 2.0);
-    final double c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a));
-
-    return R * c;
+  /// Sets or clears developer mock coordinates
+  static void setMockCoordinates(double? lat, double? lon) {
+    if (lat != null && lon != null) {
+      isMockModeEnabled = true;
+      mockLatitude = lat;
+      mockLongitude = lon;
+    } else {
+      isMockModeEnabled = false;
+      mockLatitude = null;
+      mockLongitude = null;
+    }
   }
 }

@@ -1,9 +1,14 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
+import '../services/api_service.dart';
 import '../services/camera_web_service.dart';
-import 'auto_checkin_screen.dart';
+import 'employee_mobile_home_screen.dart';
 
 class FaceLoginScreen extends StatefulWidget {
   const FaceLoginScreen({Key? key}) : super(key: key);
@@ -17,6 +22,10 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
   bool _isCameraReady = false;
   bool _isAuthenticating = false;
   String? _errorMessage;
+  Uint8List? _capturedImageBytes;
+  int _countdownSeconds = 3;
+  Timer? _countdownTimer;
+  bool _isCountingDown = false;
 
   @override
   void initState() {
@@ -32,6 +41,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
           _isCameraReady = true;
           _errorMessage = null;
         });
+        _startAutoCaptureCountdown();
       }
     } catch (e) {
       if (mounted) {
@@ -42,7 +52,32 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     }
   }
 
+  void _startAutoCaptureCountdown() {
+    if (_isAuthenticating || !mounted) return;
+    _countdownTimer?.cancel();
+    setState(() {
+      _countdownSeconds = 3;
+      _isCountingDown = true;
+    });
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_countdownSeconds > 1) {
+        setState(() => _countdownSeconds--);
+      } else {
+        timer.cancel();
+        setState(() => _isCountingDown = false);
+        _handleFaceLogin();
+      }
+    });
+  }
+
   Future<void> _handleFaceLogin() async {
+    _countdownTimer?.cancel();
+    setState(() => _isCountingDown = false);
     if (_isAuthenticating) return;
 
     setState(() {
@@ -53,7 +88,19 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     try {
       final frameBytes = await _cameraService.captureFrame();
       if (frameBytes == null) {
-        throw Exception('Failed to capture camera frame. Please try again.');
+        // User dismissed camera or cancelled
+        if (mounted) {
+          setState(() {
+            _isAuthenticating = false;
+          });
+        }
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _capturedImageBytes = frameBytes;
+        });
       }
 
       final authProvider = context.read<AuthProvider>();
@@ -62,7 +109,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
       if (success && mounted) {
         _cameraService.dispose();
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AutoCheckInScreen()),
+          MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
         );
       } else if (mounted) {
         setState(() {
@@ -84,6 +131,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     final usernameCtrl = TextEditingController();
     final passwordCtrl = TextEditingController();
     bool isLoggingIn = false;
+    String? dialogError;
 
     showDialog(
       context: context,
@@ -131,6 +179,29 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
+              if (dialogError != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          dialogError!,
+                          style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           actions: [
@@ -142,20 +213,33 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
               onPressed: isLoggingIn
                   ? null
                   : () async {
-                      setDialogState(() => isLoggingIn = true);
+                      if (usernameCtrl.text.trim().isEmpty || passwordCtrl.text.trim().isEmpty) {
+                        setDialogState(() => dialogError = 'Please enter both username and password.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isLoggingIn = true;
+                        dialogError = null;
+                      });
                       final auth = context.read<AuthProvider>();
                       final ok = await auth.loginWithPassword(
                         usernameCtrl.text.trim(),
                         passwordCtrl.text.trim(),
+                        tenantSlug: auth.tenantSlug,
                       );
-                      setDialogState(() => isLoggingIn = false);
 
                       if (ok && mounted) {
                         Navigator.of(ctx).pop();
+                        _countdownTimer?.cancel();
                         _cameraService.dispose();
                         Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const AutoCheckInScreen()),
+                          MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
                         );
+                      } else if (mounted) {
+                        setDialogState(() {
+                          isLoggingIn = false;
+                          dialogError = auth.errorMessage ?? 'Invalid credentials. Please verify your username and password.';
+                        });
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -176,8 +260,178 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     );
   }
 
+  void _showServerConfigDialog() {
+    final urlCtrl = TextEditingController(text: ApiConfig.baseUrl);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.dns_rounded, color: Color(0xFF6366F1)),
+            SizedBox(width: 10),
+            Text(
+              'Server Connection',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Backend FastAPI host address:',
+              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: urlCtrl,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'http://10.192.19.168:8000',
+                filled: true,
+                fillColor: const Color(0xFF0D1117),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Default LAN: http://10.192.19.168:8000',
+              style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withOpacity(0.6))),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newUrl = urlCtrl.text.trim();
+              if (newUrl.isNotEmpty) {
+                await ApiConfig.setBaseUrl(newUrl);
+                if (mounted) {
+                  context.read<AttendanceProvider>().initConfig();
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Server updated to $newUrl')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6366F1)),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSwitchOrgDialog() {
+    final authProvider = context.read<AuthProvider>();
+    final orgCtrl = TextEditingController(text: authProvider.tenantSlug);
+    bool isValidating = false;
+    String? errorText;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF161B22),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.business_rounded, color: Color(0xFF6366F1)),
+              SizedBox(width: 10),
+              Text(
+                'Organization Code',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter your institution or corporate slug (e.g. pulin1, default):',
+                style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: orgCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  hintText: 'e.g. pulin1',
+                  filled: true,
+                  fillColor: const Color(0xFF0D1117),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  errorText: errorText,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancel', style: TextStyle(color: Colors.white.withOpacity(0.6))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6366F1)),
+              onPressed: isValidating
+                  ? null
+                  : () async {
+                      final code = orgCtrl.text.trim().toLowerCase();
+                      if (code.isEmpty) return;
+                      setDialogState(() {
+                        isValidating = true;
+                        errorText = null;
+                      });
+
+                      try {
+                        final res = await ApiService.resolveTenant(code);
+                        final tName = res['tenant']?['name'] ?? code;
+                        await authProvider.setTenant(code, name: tName);
+                        if (mounted) {
+                          context.read<AttendanceProvider>().initConfig(tenantSlug: code);
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Connected to $tName ($code)'),
+                              backgroundColor: const Color(0xFF10B981),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isValidating = false;
+                          errorText = e.toString().replaceAll('Exception:', '').trim();
+                        });
+                      }
+                    },
+              child: isValidating
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Connect Org'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _cameraService.dispose();
     super.dispose();
   }
@@ -188,10 +442,35 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          Consumer<AuthProvider>(
+            builder: (ctx, auth, _) => TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF818CF8),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              icon: const Icon(Icons.business_rounded, size: 16),
+              label: Text(
+                auth.tenantSlug.toUpperCase(),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              onPressed: _showSwitchOrgDialog,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.wifi_tethering_rounded, color: Colors.white70),
+            tooltip: 'Server Connection Settings',
+            onPressed: _showServerConfigDialog,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460),
               child: Column(
@@ -213,7 +492,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    branding?.institutionName ?? 'FaceAttendance Campus',
+                    branding?.institutionName ?? 'Curiosity HUB Attendance',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -227,6 +506,32 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.6),
                       fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: _showSwitchOrgDialog,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.35)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.business_rounded, color: Color(0xFF818CF8), size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Org: ${context.watch<AuthProvider>().tenantSlug.toUpperCase()}',
+                            style: const TextStyle(color: Color(0xFF818CF8), fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.swap_horiz_rounded, color: Color(0xFF818CF8), size: 16),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -256,8 +561,18 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
+                        // Live front camera viewport (CameraX on Android, HTML5 Video on Web)
                         if (_isCameraReady)
-                          HtmlElementView(viewType: _cameraService.viewType)
+                          Positioned.fill(
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: 400,
+                                height: 533,
+                                child: _cameraService.buildPreview(),
+                              ),
+                            ),
+                          )
                         else
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -265,30 +580,61 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                               const CircularProgressIndicator(color: Color(0xFF6366F1)),
                               const SizedBox(height: 12),
                               Text(
-                                'Starting camera feed...',
+                                'Starting front camera...',
                                 style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
                               ),
                             ],
                           ),
 
-                        // Face reticle circle overlay
-                        Container(
-                          width: 200,
-                          height: 200,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _isAuthenticating
-                                  ? const Color(0xFF6366F1)
-                                  : Colors.white.withOpacity(0.6),
-                              width: 2.5,
+                        // Face reticle oval overlay
+                        IgnorePointer(
+                          child: Container(
+                            width: 190,
+                            height: 240,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(95),
+                              border: Border.all(
+                                color: _isAuthenticating
+                                    ? const Color(0xFF10B981)
+                                    : (_isCountingDown ? const Color(0xFF6366F1) : Colors.white.withOpacity(0.4)),
+                                width: 2.5,
+                              ),
                             ),
                           ),
                         ),
 
+                        // Auto-Capture Floating Countdown Badge
+                        if (_isCountingDown && !_isAuthenticating)
+                          Positioned(
+                            bottom: 14,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.78),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFF818CF8)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(color: Color(0xFF818CF8), strokeWidth: 2),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Auto-capturing in $_countdownSeconds...',
+                                    style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
                         if (_isAuthenticating)
                           Container(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withOpacity(0.65),
                             child: const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -342,9 +688,11 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                     child: ElevatedButton.icon(
                       onPressed: (_isCameraReady && !_isAuthenticating) ? _handleFaceLogin : null,
                       icon: const Icon(Icons.camera_alt_rounded, size: 18),
-                      label: const Text(
-                        'Authenticate with Face',
-                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                      label: Text(
+                        _isCountingDown
+                            ? 'Capture Instantly ($_countdownSeconds)'
+                            : (_isAuthenticating ? 'Authenticating...' : 'Scan Face Now'),
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6366F1),
