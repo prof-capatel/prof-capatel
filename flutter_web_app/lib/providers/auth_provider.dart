@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_session.dart';
 import '../services/api_service.dart';
+import '../utils/error_formatter.dart';
 
 class AuthProvider with ChangeNotifier {
   UserSession? _currentUser;
@@ -12,6 +13,7 @@ class AuthProvider with ChangeNotifier {
   String? _errorMessage;
   String _tenantSlug = 'default';
   String _tenantName = '';
+  bool _isSetupCompleted = false;
   bool _isInitialized = false;
   Completer<void>? _initCompleter;
 
@@ -21,12 +23,14 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String get tenantSlug => _tenantSlug;
   String get tenantName => _tenantName;
+  bool get isSetupCompleted => _isSetupCompleted && _tenantSlug.isNotEmpty && _tenantSlug != 'default';
   bool get isInitialized => _isInitialized;
 
   static const String _storageKey = 'flutter_attendance_user_session';
   static const String _tenantKey = 'employee_tenant_slug';
   static const String _tenantNameKey = 'employee_tenant_name';
   static const String _lastActiveKey = 'employee_session_last_active';
+  static const String _setupCompletedKey = 'is_tenant_setup_completed';
 
   AuthProvider() {
     _initCompleter = Completer<void>();
@@ -52,6 +56,12 @@ class AuthProvider with ChangeNotifier {
       final savedName = prefs.getString(_tenantNameKey);
       if (savedName != null && savedName.trim().isNotEmpty) {
         _tenantName = savedName.trim();
+      }
+
+      final isSetup = prefs.getBool(_setupCompletedKey) ?? false;
+      _isSetupCompleted = isSetup;
+      if (_tenantSlug == 'default') {
+        _isSetupCompleted = false;
       }
 
       final storedData = prefs.getString(_storageKey);
@@ -95,15 +105,34 @@ class AuthProvider with ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<void> completeSetup({
+    required String tenantSlug,
+    required String tenantName,
+    required String serverUrl,
+  }) async {
+    _tenantSlug = tenantSlug.trim().toLowerCase();
+    _tenantName = tenantName.trim();
+    _isSetupCompleted = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tenantKey, _tenantSlug);
+      await prefs.setString(_tenantNameKey, _tenantName);
+      await prefs.setBool(_setupCompletedKey, true);
+    } catch (_) {}
+    notifyListeners();
+  }
+
   Future<void> setTenant(String slug, {String? name}) async {
     _tenantSlug = slug.trim().toLowerCase();
     if (name != null && name.trim().isNotEmpty) {
       _tenantName = name.trim();
     }
+    _isSetupCompleted = (_tenantSlug.isNotEmpty && _tenantSlug != 'default');
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tenantKey, _tenantSlug);
       if (name != null) await prefs.setString(_tenantNameKey, _tenantName);
+      await prefs.setBool(_setupCompletedKey, _isSetupCompleted);
     } catch (_) {}
     notifyListeners();
   }
@@ -112,12 +141,14 @@ class AuthProvider with ChangeNotifier {
     _currentUser = null;
     _tenantSlug = 'default';
     _tenantName = '';
+    _isSetupCompleted = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_storageKey);
       await prefs.remove(_lastActiveKey);
       await prefs.remove(_tenantKey);
       await prefs.remove(_tenantNameKey);
+      await prefs.remove(_setupCompletedKey);
     } catch (_) {}
     notifyListeners();
   }
@@ -165,7 +196,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _errorMessage = ErrorFormatter.format(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -219,7 +250,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _errorMessage = ErrorFormatter.format(e);
       _isLoading = false;
       notifyListeners();
       return false;

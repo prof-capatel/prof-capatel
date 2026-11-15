@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
 import 'employee_mobile_home_screen.dart';
 import 'face_login_screen.dart';
+import 'tenant_server_setup_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -40,6 +41,10 @@ class _SplashScreenState extends State<SplashScreen> {
     if (authProvider.isAuthenticated) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
+      );
+    } else if (!authProvider.isSetupCompleted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const TenantServerSetupScreen()),
       );
     } else {
       Navigator.of(context).pushReplacement(

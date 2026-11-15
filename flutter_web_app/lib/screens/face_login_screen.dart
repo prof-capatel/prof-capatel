@@ -8,7 +8,9 @@ import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
 import '../services/api_service.dart';
 import '../services/camera_web_service.dart';
+import '../utils/error_formatter.dart';
 import 'employee_mobile_home_screen.dart';
+import 'tenant_server_setup_screen.dart';
 
 class FaceLoginScreen extends StatefulWidget {
   const FaceLoginScreen({Key? key}) : super(key: key);
@@ -41,15 +43,25 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
           _isCameraReady = true;
           _errorMessage = null;
         });
-        _startAutoCaptureCountdown();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _errorMessage = ErrorFormatter.format(e);
         });
       }
     }
+  }
+
+  void _openSetupScreen() {
+    _countdownTimer?.cancel();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TenantServerSetupScreen(isEditing: true)),
+    ).then((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _startAutoCaptureCountdown() {
@@ -120,7 +132,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _errorMessage = ErrorFormatter.format(e);
           _isAuthenticating = false;
         });
       }
@@ -221,25 +233,34 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                         isLoggingIn = true;
                         dialogError = null;
                       });
-                      final auth = context.read<AuthProvider>();
-                      final ok = await auth.loginWithPassword(
-                        usernameCtrl.text.trim(),
-                        passwordCtrl.text.trim(),
-                        tenantSlug: auth.tenantSlug,
-                      );
-
-                      if (ok && mounted) {
-                        Navigator.of(ctx).pop();
-                        _countdownTimer?.cancel();
-                        _cameraService.dispose();
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
+                      try {
+                        final auth = context.read<AuthProvider>();
+                        final ok = await auth.loginWithPassword(
+                          usernameCtrl.text.trim(),
+                          passwordCtrl.text.trim(),
+                          tenantSlug: auth.tenantSlug,
                         );
-                      } else if (mounted) {
-                        setDialogState(() {
-                          isLoggingIn = false;
-                          dialogError = auth.errorMessage ?? 'Invalid credentials. Please verify your username and password.';
-                        });
+
+                        if (ok && mounted) {
+                          Navigator.of(ctx).pop();
+                          _countdownTimer?.cancel();
+                          _cameraService.dispose();
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
+                          );
+                        } else if (mounted) {
+                          setDialogState(() {
+                            isLoggingIn = false;
+                            dialogError = auth.errorMessage ?? 'Invalid credentials. Please verify your username and password.';
+                          });
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          setDialogState(() {
+                            isLoggingIn = false;
+                            dialogError = ErrorFormatter.format(e);
+                          });
+                        }
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -457,13 +478,13 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                 auth.tenantSlug.toUpperCase(),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
-              onPressed: _showSwitchOrgDialog,
+              onPressed: _openSetupScreen,
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.wifi_tethering_rounded, color: Colors.white70),
-            tooltip: 'Server Connection Settings',
-            onPressed: _showServerConfigDialog,
+            icon: const Icon(Icons.tune_rounded, color: Colors.white70),
+            tooltip: 'Server & Organization Settings',
+            onPressed: _openSetupScreen,
           ),
         ],
       ),
@@ -510,7 +531,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   InkWell(
-                    onTap: _showSwitchOrgDialog,
+                    onTap: _openSetupScreen,
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -687,11 +708,15 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                     height: 48,
                     child: ElevatedButton.icon(
                       onPressed: (_isCameraReady && !_isAuthenticating) ? _handleFaceLogin : null,
-                      icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                      icon: _isAuthenticating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.face_retouching_natural_rounded, size: 20),
                       label: Text(
-                        _isCountingDown
-                            ? 'Capture Instantly ($_countdownSeconds)'
-                            : (_isAuthenticating ? 'Authenticating...' : 'Scan Face Now'),
+                        _isAuthenticating ? 'Verifying Face Biometrics...' : 'Scan Face to Log In',
                         style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
                       ),
                       style: ElevatedButton.styleFrom(

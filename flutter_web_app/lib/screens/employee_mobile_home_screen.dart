@@ -10,8 +10,10 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../services/camera_web_service.dart';
 import '../services/location_service.dart';
+import '../utils/error_formatter.dart';
 import '../widgets/radar_gauge.dart';
 import 'face_login_screen.dart';
+import 'tenant_server_setup_screen.dart';
 
 class EmployeeMobileHomeScreen extends StatefulWidget {
   const EmployeeMobileHomeScreen({Key? key}) : super(key: key);
@@ -355,7 +357,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                           } catch (e) {
                             setDialogState(() {
                               isSubmitting = false;
-                              errorMessage = e.toString().replaceAll('Exception:', '').trim();
+                              errorMessage = ErrorFormatter.format(e);
                             });
                           }
                         },
@@ -743,7 +745,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                       setModalState(() => isSubmitting = false);
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text(e.toString().replaceAll('Exception:', '').trim()),
+                                          content: Text(ErrorFormatter.format(e)),
                                           backgroundColor: const Color(0xFFEF4444),
                                         ),
                                       );
@@ -804,7 +806,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(e.toString().replaceAll('Exception:', '').trim()),
+                    content: Text(ErrorFormatter.format(e)),
                     backgroundColor: const Color(0xFFEF4444),
                   ),
                 );
@@ -822,7 +824,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     await authProvider.switchOrganization();
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const FaceLoginScreen()),
+        MaterialPageRoute(builder: (_) => const TenantServerSetupScreen()),
         (route) => false,
       );
     }
@@ -867,10 +869,12 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                       ),
                       if (authProvider.tenantSlug.isNotEmpty) ...[
                         Text(' • ', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11)),
-                        Text(
-                          authProvider.tenantName,
-                          style: const TextStyle(color: Color(0xFF818CF8), fontSize: 11, fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis,
+                        Flexible(
+                          child: Text(
+                            authProvider.tenantName,
+                            style: const TextStyle(color: Color(0xFF818CF8), fontSize: 11, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ],
@@ -1138,20 +1142,22 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
           child: Row(
             children: [
               const Icon(Icons.filter_list_rounded, color: Color(0xFF818CF8), size: 18),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               // Month selector
               Expanded(
+                flex: 3,
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<int>(
                     value: _selectedPunchMonth,
                     isDense: true,
+                    isExpanded: true,
                     dropdownColor: const Color(0xFF161B22),
                     style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
                     icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
                     items: [
-                      const DropdownMenuItem(value: 0, child: Text('All Months')),
+                      const DropdownMenuItem(value: 0, child: Text('All Months', overflow: TextOverflow.ellipsis)),
                       for (int m = 1; m <= 12; m++)
-                        DropdownMenuItem(value: m, child: Text(_monthName(m))),
+                        DropdownMenuItem(value: m, child: Text(_monthName(m), overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (val) {
                       if (val != null) {
@@ -1164,23 +1170,27 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
               ),
               const SizedBox(width: 8),
               // Year selector
-              DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: _selectedPunchYear,
-                  isDense: true,
-                  dropdownColor: const Color(0xFF161B22),
-                  style: const TextStyle(color: Color(0xFF818CF8), fontSize: 13, fontWeight: FontWeight.bold),
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
-                  items: [
-                    for (int y = DateTime.now().year - 2; y <= DateTime.now().year + 1; y++)
-                      DropdownMenuItem(value: y, child: Text('$y')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _selectedPunchYear = val);
-                      _reloadAttendancePunches();
-                    }
-                  },
+              Expanded(
+                flex: 2,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _selectedPunchYear,
+                    isDense: true,
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF161B22),
+                    style: const TextStyle(color: Color(0xFF818CF8), fontSize: 13, fontWeight: FontWeight.bold),
+                    icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
+                    items: [
+                      for (int y = DateTime.now().year - 2; y <= DateTime.now().year + 1; y++)
+                        DropdownMenuItem(value: y, child: Text('$y')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedPunchYear = val);
+                        _reloadAttendancePunches();
+                      }
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1278,24 +1288,27 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                               ),
                                             ),
                                             const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: isLate
-                                                    ? const Color(0xFFEF4444).withOpacity(0.2)
-                                                    : const Color(0xFF10B981).withOpacity(0.15),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                rec.shiftStatus,
-                                                style: TextStyle(
-                                                  color: isLate ? const Color(0xFFF87171) : const Color(0xFF34D399),
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
+                                            Flexible(
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: isLate
+                                                      ? const Color(0xFFEF4444).withOpacity(0.2)
+                                                      : const Color(0xFF10B981).withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  rec.shiftStatus,
+                                                  style: TextStyle(
+                                                    color: isLate ? const Color(0xFFF87171) : const Color(0xFF34D399),
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ),
-                                            const Spacer(),
+                                            const SizedBox(width: 6),
                                             if (rec.workDurationFormatted != '--')
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -1894,7 +1907,7 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
         _maybeStartAutoPunch();
       }
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = 'Camera access error: $e');
+      if (mounted) setState(() => _errorMessage = ErrorFormatter.format(e));
     }
   }
 
@@ -1999,7 +2012,7 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _errorMessage = ErrorFormatter.format(e);
         });
       }
     }
@@ -2022,40 +2035,46 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
         top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header Bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isCheckIn ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFEA580C).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      isCheckIn ? Icons.login_rounded : Icons.logout_rounded,
-                      color: isCheckIn ? const Color(0xFF10B981) : const Color(0xFFEA580C),
-                      size: 20,
-                    ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header Bar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isCheckIn ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFEA580C).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          isCheckIn ? Icons.login_rounded : Icons.logout_rounded,
+                          color: isCheckIn ? const Color(0xFF10B981) : const Color(0xFFEA580C),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          isCheckIn ? 'Facial Verification Check-In' : 'Facial Verification Check-Out',
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    isCheckIn ? 'Facial Verification Check-In' : 'Facial Verification Check-Out',
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white54),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
           const SizedBox(height: 12),
 
           // Geofence Distance Pill
@@ -2281,6 +2300,7 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

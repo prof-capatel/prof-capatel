@@ -1,8 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
-  // Default base URL points to the host machine LAN IP for mobile testing
-  static const String defaultBaseUrl = 'http://10.192.19.168:8000';
+  // Default base URL points to the production cloud server out-of-the-box
+  static const String defaultBaseUrl = 'https://curiosityhub.co.in';
   static String baseUrl = defaultBaseUrl;
 
   static const String _storageKey = 'custom_api_base_url';
@@ -12,7 +12,7 @@ class ApiConfig {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_storageKey);
       if (saved != null && saved.trim().isNotEmpty) {
-        baseUrl = saved.trim();
+        baseUrl = saved.trim().replaceAll(RegExp(r'/+$'), '');
       } else {
         baseUrl = defaultBaseUrl;
       }
@@ -22,7 +22,7 @@ class ApiConfig {
   }
 
   static Future<void> setBaseUrl(String newUrl) async {
-    baseUrl = newUrl.trim();
+    baseUrl = newUrl.trim().replaceAll(RegExp(r'/+$'), '');
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, baseUrl);
