@@ -9,6 +9,8 @@ import '../providers/attendance_provider.dart';
 import '../services/api_service.dart';
 import '../services/camera_web_service.dart';
 import '../utils/error_formatter.dart';
+import '../providers/theme_provider.dart';
+import '../widgets/theme_dialog.dart';
 import 'employee_mobile_home_screen.dart';
 import 'tenant_server_setup_screen.dart';
 
@@ -460,13 +462,22 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
   @override
   Widget build(BuildContext context) {
     final branding = context.watch<AttendanceProvider>().geofenceConfig;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          // Theme Switcher 3-Way Action (Light / Dark / System Default)
+          Consumer<ThemeProvider>(
+            builder: (ctx, themeProv, _) => IconButton(
+              icon: Icon(themeProv.themeIcon, color: isDark ? Colors.white70 : const Color(0xFF0F172A), size: 20),
+              tooltip: 'Theme: ${themeProv.themeDisplayName}',
+              onPressed: () => showThemeSelectionDialog(context),
+            ),
+          ),
           Consumer<AuthProvider>(
             builder: (ctx, auth, _) => TextButton.icon(
               style: TextButton.styleFrom(
@@ -482,7 +493,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.tune_rounded, color: Colors.white70),
+            icon: Icon(Icons.tune_rounded, color: isDark ? Colors.white70 : const Color(0xFF0F172A)),
             tooltip: 'Server & Organization Settings',
             onPressed: _openSetupScreen,
           ),
@@ -514,8 +525,8 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                   const SizedBox(height: 14),
                   Text(
                     branding?.institutionName ?? 'Curiosity HUB Attendance',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
@@ -525,7 +536,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                   Text(
                     'Biometric Face Sign In',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
                       fontSize: 13,
                     ),
                   ),

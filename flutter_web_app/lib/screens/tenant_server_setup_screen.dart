@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../utils/error_formatter.dart';
+import '../widgets/theme_dialog.dart';
 import 'face_login_screen.dart';
 
 class TenantServerSetupScreen extends StatefulWidget {
@@ -102,22 +104,37 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
-      appBar: widget.isEditing
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              title: const Text(
-                'Server & Organization',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          widget.isEditing ? 'Server & Organization' : 'Initial Setup',
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: widget.isEditing
+            ? IconButton(
+                icon: Icon(Icons.arrow_back_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                 onPressed: () => Navigator.of(context).pop(),
-              ),
-            )
-          : null,
+              )
+            : null,
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (ctx, themeProv, _) => IconButton(
+              icon: Icon(themeProv.themeIcon, color: isDark ? Colors.white70 : const Color(0xFF0F172A), size: 20),
+              tooltip: 'Theme: ${themeProv.themeDisplayName}',
+              onPressed: () => showThemeSelectionDialog(context),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -160,11 +177,11 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                     const SizedBox(height: 20),
 
                     // App Title
-                    const Text(
+                    Text(
                       'Curiosity HUB',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -175,7 +192,7 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                       'Enterprise Attendance & Payroll Onboarding',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
                         fontSize: 13,
                       ),
                     ),
@@ -185,12 +202,12 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF161B22),
+                        color: isDark ? const Color(0xFF161B22) : Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.08)),
+                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -199,14 +216,14 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.tune_rounded, color: Color(0xFF818CF8), size: 18),
-                              SizedBox(width: 8),
+                              const Icon(Icons.tune_rounded, color: Color(0xFF818CF8), size: 18),
+                              const SizedBox(width: 8),
                               Text(
                                 'Organization & Server Setup',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -217,17 +234,17 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                           Text(
                             'Configure your organization credentials to connect this device with your enterprise workspace.',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.55),
+                              color: isDark ? Colors.white55 : const Color(0xFF64748B),
                               fontSize: 12,
                             ),
                           ),
                           const SizedBox(height: 20),
 
                           // Tenant Code Field
-                          const Text(
+                          Text(
                             'Organization Code / Identifier',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -235,20 +252,20 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _orgCtrl,
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                             decoration: InputDecoration(
                               hintText: 'e.g. pulin1, ssec, gecm',
-                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                              hintStyle: TextStyle(color: isDark ? Colors.white30 : const Color(0xFF94A3B8)),
                               prefixIcon: const Icon(Icons.business_rounded, color: Color(0xFF818CF8), size: 20),
                               filled: true,
-                              fillColor: const Color(0xFF0D1117),
+                              fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
+                                borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFE2E8F0)),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
+                                borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFE2E8F0)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -266,10 +283,10 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                           const SizedBox(height: 16),
 
                           // Server URL Field
-                          const Text(
+                          Text(
                             'Server Endpoint URL',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -278,20 +295,20 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                           TextFormField(
                             controller: _urlCtrl,
                             keyboardType: TextInputType.url,
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                             decoration: InputDecoration(
                               hintText: 'https://curiosityhub.co.in',
-                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                              hintStyle: TextStyle(color: isDark ? Colors.white30 : const Color(0xFF94A3B8)),
                               prefixIcon: const Icon(Icons.dns_rounded, color: Color(0xFF818CF8), size: 20),
                               filled: true,
-                              fillColor: const Color(0xFF0D1117),
+                              fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
+                                borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFE2E8F0)),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
+                                borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFE2E8F0)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -314,7 +331,7 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                           Text(
                             'Default: https://curiosityhub.co.in',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.4),
+                              color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                               fontSize: 11,
                             ),
                           ),

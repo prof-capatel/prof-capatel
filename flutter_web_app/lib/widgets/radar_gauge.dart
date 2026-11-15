@@ -31,13 +31,15 @@ class RadarGaugeCard extends StatelessWidget {
       statusIcon = Icons.cancel_rounded;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: statusColor.withOpacity(0.35),
+          color: statusColor.withOpacity(isDark ? 0.35 : 0.45),
           width: 1.5,
         ),
         boxShadow: [
@@ -58,10 +60,10 @@ class RadarGaugeCard extends StatelessWidget {
                 children: [
                   Icon(Icons.radar_rounded, color: statusColor, size: 20),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Campus Geofence Radar',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                       fontWeight: FontWeight.w700,
                       fontSize: 14.5,
                     ),
@@ -98,18 +100,20 @@ class RadarGaugeCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildMetricTile(
+                  isDark: isDark,
                   label: 'CAMPUS DISTANCE',
                   value: dist != null ? '${dist.toStringAsFixed(1)} m' : '-- m',
                   subLabel: 'Max allowed: ${maxRadius.toStringAsFixed(0)}m',
-                  valueColor: isInside ? const Color(0xFF10B981) : Colors.white,
+                  valueColor: isInside ? const Color(0xFF10B981) : (isDark ? Colors.white : const Color(0xFF0F172A)),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildMetricTile(
+                  isDark: isDark,
                   label: 'GPS ACCURACY',
                   value: accuracy != null ? '± ${accuracy.toStringAsFixed(1)} m' : '± -- m',
-                  subLabel: 'HTML5 High Accuracy',
+                  subLabel: 'Native Hardware GPS',
                   valueColor: (accuracy != null && accuracy <= 50.0)
                       ? const Color(0xFF10B981)
                       : const Color(0xFFF59E0B),
@@ -122,7 +126,7 @@ class RadarGaugeCard extends StatelessWidget {
             Text(
               attProvider.geofenceStatusMessage!,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+                color: isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF475569),
                 fontSize: 12,
                 height: 1.3,
               ),
@@ -134,6 +138,7 @@ class RadarGaugeCard extends StatelessWidget {
   }
 
   Widget _buildMetricTile({
+    required bool isDark,
     required String label,
     required String value,
     required String subLabel,
@@ -142,9 +147,9 @@ class RadarGaugeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1117),
+        color: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,7 +157,7 @@ class RadarGaugeCard extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
+              color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B),
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
@@ -171,7 +176,7 @@ class RadarGaugeCard extends StatelessWidget {
           Text(
             subLabel,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.4),
+              color: isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8),
               fontSize: 10.5,
             ),
           ),

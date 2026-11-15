@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,11 +6,12 @@ import 'package:provider/provider.dart';
 
 import '../providers/attendance_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../services/camera_web_service.dart';
-import '../services/location_service.dart';
 import '../utils/error_formatter.dart';
 import '../widgets/radar_gauge.dart';
+import '../widgets/theme_dialog.dart';
 import 'face_login_screen.dart';
 import 'tenant_server_setup_screen.dart';
 
@@ -173,11 +173,12 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
             return AlertDialog(
-              backgroundColor: const Color(0xFF161B22),
+              backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFF30363D)),
+                side: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0)),
               ),
               title: Row(
                 children: [
@@ -193,7 +194,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                   Expanded(
                     child: Text(
                       hasPassword ? 'Change Password' : 'Set Account Password',
-                      style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 17, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -216,14 +217,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: const Color(0xFF0D9488).withOpacity(0.3)),
                             ),
-                            child: const Row(
+                            child: Row(
                               children: [
-                                Icon(Icons.info_outline, color: Color(0xFF14B8A6), size: 18),
-                                SizedBox(width: 10),
+                                const Icon(Icons.info_outline, color: Color(0xFF14B8A6), size: 18),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     'You were registered via Face Recognition. Create your initial portal password below.',
-                                    style: TextStyle(color: Color(0xFFCCFBF1), fontSize: 12),
+                                    style: TextStyle(color: isDark ? const Color(0xFFCCFBF1) : const Color(0xFF0F766E), fontSize: 12),
                                   ),
                                 ),
                               ],
@@ -233,19 +234,19 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                           TextFormField(
                             controller: currentPasswordController,
                             obscureText: obscureCurrent,
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                             decoration: InputDecoration(
                               labelText: 'Current Password',
-                              labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
-                              prefixIcon: const Icon(Icons.lock_outline, color: Colors.white54, size: 20),
+                              labelStyle: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 13),
+                              prefixIcon: Icon(Icons.lock_outline, color: isDark ? Colors.white54 : const Color(0xFF64748B), size: 20),
                               suffixIcon: IconButton(
-                                icon: Icon(obscureCurrent ? Icons.visibility_off : Icons.visibility, color: Colors.white54, size: 18),
+                                icon: Icon(obscureCurrent ? Icons.visibility_off : Icons.visibility, color: isDark ? Colors.white54 : const Color(0xFF64748B), size: 18),
                                 onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
                               ),
                               filled: true,
-                              fillColor: const Color(0xFF0D1117),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF30363D))),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                              fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF10B981))),
                             ),
                             validator: (v) {
@@ -260,19 +261,19 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                         TextFormField(
                           controller: newPasswordController,
                           obscureText: obscureNew,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                           decoration: InputDecoration(
                             labelText: 'New Password (min 6 chars)',
-                            labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
-                            prefixIcon: const Icon(Icons.password_rounded, color: Colors.white54, size: 20),
+                            labelStyle: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 13),
+                            prefixIcon: Icon(Icons.password_rounded, color: isDark ? Colors.white54 : const Color(0xFF64748B), size: 20),
                             suffixIcon: IconButton(
-                              icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility, color: Colors.white54, size: 18),
+                              icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility, color: isDark ? Colors.white54 : const Color(0xFF64748B), size: 18),
                               onPressed: () => setDialogState(() => obscureNew = !obscureNew),
                             ),
                             filled: true,
-                            fillColor: const Color(0xFF0D1117),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF30363D))),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                            fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF10B981))),
                           ),
                           validator: (v) {
@@ -286,19 +287,19 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                         TextFormField(
                           controller: confirmPasswordController,
                           obscureText: obscureConfirm,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                           decoration: InputDecoration(
                             labelText: 'Confirm New Password',
-                            labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
-                            prefixIcon: const Icon(Icons.check_circle_outline, color: Colors.white54, size: 20),
+                            labelStyle: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 13),
+                            prefixIcon: Icon(Icons.check_circle_outline, color: isDark ? Colors.white54 : const Color(0xFF64748B), size: 20),
                             suffixIcon: IconButton(
-                              icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility, color: Colors.white54, size: 18),
+                              icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility, color: isDark ? Colors.white54 : const Color(0xFF64748B), size: 18),
                               onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
                             ),
                             filled: true,
-                            fillColor: const Color(0xFF0D1117),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF30363D))),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                            fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF10B981))),
                           ),
                           validator: (v) {
@@ -323,7 +324,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
               actions: [
                 TextButton(
                   onPressed: isSubmitting ? null : () => Navigator.of(ctx).pop(),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+                  child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white60 : const Color(0xFF64748B))),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -397,97 +398,6 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     );
   }
 
-  void _showMockGpsDialog() {
-    final attProvider = context.read<AttendanceProvider>();
-    final config = attProvider.geofenceConfig;
-    final officeLat = config?.geoLatitude ?? 19.076090;
-    final officeLon = config?.geoLongitude ?? 72.877426;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF161B22),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.developer_mode_rounded, color: Color(0xFF6366F1), size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Developer Mock-GPS Tool',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Simulate physical device location inside or outside the office perimeter for testing:',
-                    style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    tileColor: const Color(0xFF0D1117),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.domain_rounded, color: Color(0xFF10B981)),
-                    title: const Text('Simulate INSIDE Office Perimeter', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                    subtitle: Text('Lat: $officeLat, Lon: $officeLon (0m from Center)', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
-                    onTap: () {
-                      LocationService.setMockCoordinates(officeLat, officeLon);
-                      attProvider.updateLocation();
-                      Navigator.pop(ctx);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    tileColor: const Color(0xFF0D1117),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.outbond_rounded, color: Color(0xFFEF4444)),
-                    title: const Text('Simulate OUTSIDE Office Perimeter (Breach)', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                    subtitle: Text('Lat: ${officeLat + 0.005}, Lon: ${officeLon + 0.005} (~550m Away)', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
-                    onTap: () {
-                      LocationService.setMockCoordinates(officeLat + 0.005, officeLon + 0.005);
-                      attProvider.updateLocation();
-                      Navigator.pop(ctx);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    tileColor: const Color(0xFF0D1117),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.gps_fixed_rounded, color: Color(0xFF6366F1)),
-                    title: const Text('Reset to Real Device Hardware GPS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Disables developer override', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                    onTap: () {
-                      LocationService.setMockCoordinates(null, null);
-                      attProvider.updateLocation();
-                      Navigator.pop(ctx);
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _showApplyLeaveModal() {
     final formKey = GlobalKey<FormState>();
     int? selectedTypeId = _leaveBalances.isNotEmpty ? _leaveBalances.first['leave_type_id'] : null;
@@ -498,10 +408,12 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     String halfDayPeriod = "FIRST_HALF";
     bool isSubmitting = false;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF161B22),
+      backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -528,9 +440,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Apply for Leave', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text('Apply for Leave', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
                           IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
+                            icon: Icon(Icons.close_rounded, color: isDark ? Colors.white54 : const Color(0xFF64748B), size: 20),
                             onPressed: () => Navigator.pop(ctx),
                           ),
                         ],
@@ -539,14 +451,15 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
 
                       // Leave Category
                       DropdownButtonFormField<int>(
-                        dropdownColor: const Color(0xFF0D1117),
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        dropdownColor: isDark ? const Color(0xFF0D1117) : Colors.white,
+                        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                         decoration: InputDecoration(
                           labelText: 'Leave Category',
-                          labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                          labelStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 12),
                           filled: true,
-                          fillColor: const Color(0xFF0D1117),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                         ),
                         value: selectedTypeId,
                         items: _leaveBalances.map<DropdownMenuItem<int>>((b) {
@@ -582,14 +495,15 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                               child: InputDecorator(
                                 decoration: InputDecoration(
                                   labelText: 'Start Date',
-                                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                                  labelStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 12),
                                   filled: true,
-                                  fillColor: const Color(0xFF0D1117),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                                 ),
                                 child: Text(
                                   DateFormat('yyyy-MM-dd').format(startDate),
-                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                                 ),
                               ),
                             ),
@@ -611,14 +525,15 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                               child: InputDecorator(
                                 decoration: InputDecoration(
                                   labelText: 'End Date',
-                                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                                  labelStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 12),
                                   filled: true,
-                                  fillColor: const Color(0xFF0D1117),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                                 ),
                                 child: Text(
                                   DateFormat('yyyy-MM-dd').format(endDate),
-                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                                 ),
                               ),
                             ),
@@ -630,10 +545,10 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                       // Half Day Toggle
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Half-Day Leave', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                        title: Text('Half-Day Leave', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600)),
                         subtitle: Text(
                           isHalfDay ? 'Applicable for single day leave only (0.5 day deduction)' : 'Full day leave allocation',
-                          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                          style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 11),
                         ),
                         value: isHalfDay,
                         activeColor: const Color(0xFF6366F1),
@@ -649,14 +564,15 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                       if (isHalfDay) ...[
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          dropdownColor: const Color(0xFF0D1117),
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          dropdownColor: isDark ? const Color(0xFF0D1117) : Colors.white,
+                          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                           decoration: InputDecoration(
                             labelText: 'Half-Day Session',
-                            labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                            labelStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 12),
                             filled: true,
-                            fillColor: const Color(0xFF0D1117),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                           ),
                           value: halfDayPeriod,
                           items: const [
@@ -692,14 +608,15 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                       // Reason Field
                       TextFormField(
                         controller: reasonController,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                         maxLines: 2,
                         decoration: InputDecoration(
                           labelText: 'Reason for Leave',
-                          labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                          labelStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 12),
                           filled: true,
-                          fillColor: const Color(0xFF0D1117),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1))),
                         ),
                         validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter justification' : null,
                       ),
@@ -769,20 +686,24 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
   }
 
   void _showCancelLeaveDialog(int requestId) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF161B22),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Cancel Leave Application', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-        content: const Text(
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0)),
+        ),
+        title: Text('Cancel Leave Application', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Text(
           'Are you sure you want to cancel this pending leave application? Your reserved quota will be restored immediately.',
-          style: TextStyle(color: Colors.white70, fontSize: 13),
+          style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF475569), fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Back', style: TextStyle(color: Colors.white54)),
+            child: Text('Back', style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -835,11 +756,12 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     final authProvider = context.watch<AuthProvider>();
     final attProvider = context.watch<AttendanceProvider>();
     final user = authProvider.currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161B22),
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         title: Row(
           children: [
@@ -858,21 +780,35 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 children: [
                   Text(
                     user?.name ?? 'Employee Hub',
-                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Row(
                     children: [
                       Text(
                         user?.rollNumber != null ? 'ID: ${user!.rollNumber}' : 'Workforce',
-                        style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                        style: TextStyle(
+                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                          fontSize: 11,
+                        ),
                       ),
                       if (authProvider.tenantSlug.isNotEmpty) ...[
-                        Text(' • ', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11)),
+                        Text(
+                          ' • ',
+                          style: TextStyle(color: isDark ? Colors.white30 : const Color(0xFF94A3B8), fontSize: 11),
+                        ),
                         Flexible(
                           child: Text(
                             authProvider.tenantName,
-                            style: const TextStyle(color: Color(0xFF818CF8), fontSize: 11, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -885,6 +821,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
           ],
         ),
         actions: [
+          // Theme Switcher 3-Way Action (Light / Dark / System Default)
+          Consumer<ThemeProvider>(
+            builder: (ctx, themeProv, _) => IconButton(
+              icon: Icon(themeProv.themeIcon, color: isDark ? Colors.white70 : const Color(0xFF0F172A), size: 20),
+              tooltip: 'Theme: ${themeProv.themeDisplayName}',
+              onPressed: () => showThemeSelectionDialog(context),
+            ),
+          ),
           // Change Password action
           IconButton(
             icon: const Icon(Icons.key_rounded, color: Color(0xFF10B981), size: 20),
@@ -897,18 +841,8 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
             tooltip: 'Switch Organization',
             onPressed: _handleSwitchOrganization,
           ),
-          // Developer Mock GPS badge / trigger
           IconButton(
-            icon: Icon(
-              LocationService.isMockModeEnabled ? Icons.developer_mode_rounded : Icons.satellite_alt_rounded,
-              color: LocationService.isMockModeEnabled ? const Color(0xFFF59E0B) : Colors.white70,
-              size: 20,
-            ),
-            tooltip: 'Developer Mock-GPS Tool',
-            onPressed: _showMockGpsDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white70, size: 20),
+            icon: Icon(Icons.logout_rounded, color: isDark ? Colors.white70 : const Color(0xFF64748B), size: 20),
             tooltip: 'Sign Out',
             onPressed: () {
               authProvider.logout();
@@ -933,9 +867,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentTabIndex,
         onTap: (idx) => setState(() => _currentTabIndex = idx),
-        backgroundColor: const Color(0xFF161B22),
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         selectedItemColor: const Color(0xFF6366F1),
-        unselectedItemColor: Colors.white38,
+        unselectedItemColor: isDark ? Colors.white38 : const Color(0xFF94A3B8),
         type: BottomNavigationBarType.fixed,
         selectedFontSize: 11,
         unselectedFontSize: 10,
@@ -954,6 +888,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
   // --------------------------------------------------------------------------
   Widget _buildPresenceTab(AttendanceProvider attProvider) {
     final isCheckedIn = attProvider.currentPunchStatus == 'CHECKED_IN';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -985,41 +920,10 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                             const SizedBox(height: 2),
                             Text(
                               attProvider.breachAlertMessage ?? 'You are currently outside the authorized campus perimeter. An audit event is being logged.',
-                              style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11),
+                              style: TextStyle(color: isDark ? Colors.white.withOpacity(0.85) : const Color(0xFF7F1D1D), fontSize: 11),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Mock GPS Active Notification
-              if (LocationService.isMockModeEnabled)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFF59E0B)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.developer_mode_rounded, color: Color(0xFFF59E0B), size: 16),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Developer Mock GPS Mode Active (Testing)',
-                          style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          LocationService.setMockCoordinates(null, null);
-                          attProvider.updateLocation();
-                        },
-                        child: const Text('Reset', style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11)),
                       ),
                     ],
                   ),
@@ -1033,27 +937,27 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF161B22),
+                  color: isDark ? const Color(0xFF161B22) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0)),
                 ),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Today Shift Status', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text('Today Shift Status', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isCheckedIn ? const Color(0xFF10B981).withOpacity(0.2) : Colors.white.withOpacity(0.08),
+                            color: isCheckedIn ? const Color(0xFF10B981).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF1F5F9)),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isCheckedIn ? const Color(0xFF10B981) : Colors.white24),
+                            border: Border.all(color: isCheckedIn ? const Color(0xFF10B981) : (isDark ? Colors.white24 : const Color(0xFFCBD5E1))),
                           ),
                           child: Text(
                             isCheckedIn ? 'ACTIVE (CHECKED IN)' : (attProvider.currentPunchStatus == 'CHECKED_OUT' ? 'COMPLETED' : 'NOT CHECKED IN'),
                             style: TextStyle(
-                              color: isCheckedIn ? const Color(0xFF10B981) : Colors.white70,
+                              color: isCheckedIn ? const Color(0xFF10B981) : (isDark ? Colors.white70 : const Color(0xFF64748B)),
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1061,15 +965,15 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                         ),
                       ],
                     ),
-                    const Divider(color: Colors.white12, height: 24),
+                    Divider(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0), height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatColumn('Check-In Time', attProvider.lastCheckInShort ?? '--:--'),
-                        Container(width: 1, height: 28, color: Colors.white12),
-                        _buildStatColumn('Check-Out Time', attProvider.lastCheckOutShort ?? '--:--'),
-                        Container(width: 1, height: 28, color: Colors.white12),
-                        _buildStatColumn('Perimeter Watch', isCheckedIn ? 'Active' : 'Standby'),
+                        _buildStatColumn('Check-In Time', attProvider.lastCheckInShort ?? '--:--', isDark),
+                        Container(width: 1, height: 28, color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                        _buildStatColumn('Check-Out Time', attProvider.lastCheckOutShort ?? '--:--', isDark),
+                        Container(width: 1, height: 28, color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                        _buildStatColumn('Perimeter Watch', isCheckedIn ? 'Active' : 'Standby', isDark),
                       ],
                     ),
                   ],
@@ -1101,7 +1005,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                   attProvider.geofenceConfig?.mobileRequireFaceVerification == true
                       ? 'Policy: Live Front-Facing Camera Biometric + Strict GPS Geofence'
                       : 'Policy: Strict GPS Geofence + Live Biometric Face Verification',
-                  style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                  style: TextStyle(color: isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8), fontSize: 11),
                 ),
               ),
             ],
@@ -1111,12 +1015,12 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     );
   }
 
-  Widget _buildStatColumn(String label, String value) {
+  Widget _buildStatColumn(String label, String value, bool isDark) {
     return Column(
       children: [
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+        Text(label, style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 11)),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+        Text(value, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -1127,6 +1031,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
   Widget _buildTimelineTab(AttendanceProvider attProvider) {
     final records = attProvider.filteredRecords;
     final isLoading = attProvider.isLoadingHistory;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [
@@ -1135,9 +1040,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF161B22),
+            color: isDark ? const Color(0xFF161B22) : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF30363D)),
+            border: Border.all(color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0)),
           ),
           child: Row(
             children: [
@@ -1151,9 +1056,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                     value: _selectedPunchMonth,
                     isDense: true,
                     isExpanded: true,
-                    dropdownColor: const Color(0xFF161B22),
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
+                    dropdownColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600),
+                    icon: Icon(Icons.arrow_drop_down, color: isDark ? Colors.white70 : const Color(0xFF64748B), size: 20),
                     items: [
                       const DropdownMenuItem(value: 0, child: Text('All Months', overflow: TextOverflow.ellipsis)),
                       for (int m = 1; m <= 12; m++)
@@ -1177,9 +1082,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                     value: _selectedPunchYear,
                     isDense: true,
                     isExpanded: true,
-                    dropdownColor: const Color(0xFF161B22),
+                    dropdownColor: isDark ? const Color(0xFF161B22) : Colors.white,
                     style: const TextStyle(color: Color(0xFF818CF8), fontSize: 13, fontWeight: FontWeight.bold),
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
+                    icon: Icon(Icons.arrow_drop_down, color: isDark ? Colors.white70 : const Color(0xFF64748B), size: 20),
                     items: [
                       for (int y = DateTime.now().year - 2; y <= DateTime.now().year + 1; y++)
                         DropdownMenuItem(value: y, child: Text('$y')),
@@ -1196,7 +1101,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
               const SizedBox(width: 8),
               // Refresh button
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 19),
+                icon: Icon(Icons.refresh_rounded, color: isDark ? Colors.white70 : const Color(0xFF64748B), size: 19),
                 tooltip: 'Refresh Punches',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -1219,18 +1124,18 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.history_rounded, size: 48, color: Colors.white.withOpacity(0.2)),
+                              Icon(Icons.history_rounded, size: 48, color: isDark ? Colors.white.withOpacity(0.2) : const Color(0xFFCBD5E1)),
                               const SizedBox(height: 12),
                               Text(
                                 _selectedPunchMonth == 0
                                     ? 'No attendance punches found for $_selectedPunchYear.'
                                     : 'No punches for ${_monthName(_selectedPunchMonth)} $_selectedPunchYear.',
-                                style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
+                                style: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 13),
                               ),
                               const SizedBox(height: 6),
                               Text(
                                 'Punches appear here automatically after check-in/out.',
-                                style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 11),
+                                style: TextStyle(color: isDark ? Colors.white.withOpacity(0.35) : const Color(0xFF94A3B8), fontSize: 11),
                               ),
                             ],
                           ),
@@ -1245,14 +1150,15 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                           final isLate = rec.shiftStatus.toUpperCase().contains('LATE');
 
                           return Card(
-                            color: const Color(0xFF161B22),
+                            color: isDark ? const Color(0xFF161B22) : Colors.white,
+                            elevation: isDark ? 1 : 0,
                             margin: const EdgeInsets.only(bottom: 10),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(
-                                color: isCheckOut
-                                    ? const Color(0xFFEA580C).withOpacity(0.3)
-                                    : const Color(0xFF10B981).withOpacity(0.3),
+                                color: isDark
+                                    ? (isCheckOut ? const Color(0xFFEA580C).withOpacity(0.3) : const Color(0xFF10B981).withOpacity(0.3))
+                                    : const Color(0xFFE2E8F0),
                               ),
                             ),
                             child: Padding(
@@ -1281,7 +1187,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                             Text(
                                               isCheckOut ? 'CHECK OUT' : 'CHECK IN',
                                               style: TextStyle(
-                                                color: isCheckOut ? const Color(0xFFFB923C) : const Color(0xFF34D399),
+                                                color: isCheckOut ? const Color(0xFFFB923C) : const Color(0xFF10B981),
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 13,
                                                 letterSpacing: 0.5,
@@ -1300,7 +1206,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                                 child: Text(
                                                   rec.shiftStatus,
                                                   style: TextStyle(
-                                                    color: isLate ? const Color(0xFFF87171) : const Color(0xFF34D399),
+                                                    color: isLate ? const Color(0xFFEF4444) : const Color(0xFF10B981),
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w600,
                                                   ),
@@ -1319,7 +1225,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                                 child: Text(
                                                   rec.workDurationFormatted,
                                                   style: const TextStyle(
-                                                    color: Color(0xFF818CF8),
+                                                    color: Color(0xFF6366F1),
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 11,
                                                   ),
@@ -1330,7 +1236,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                         const SizedBox(height: 6),
                                         Text(
                                           rec.timestamp,
-                                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                                          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.w500),
                                         ),
                                         const SizedBox(height: 4),
                                         Row(
@@ -1338,7 +1244,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                             Icon(
                                               rec.geoLatitude != null ? Icons.location_on_rounded : Icons.devices_rounded,
                                               size: 13,
-                                              color: Colors.white38,
+                                              color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                                             ),
                                             const SizedBox(width: 4),
                                             Expanded(
@@ -1346,7 +1252,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                                                 rec.geoDistanceMeters != null
                                                     ? 'Geofence (${rec.geoDistanceMeters!.round()}m) • Node: ${rec.nodeId}'
                                                     : 'Node: ${rec.nodeId}',
-                                                style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                                                style: TextStyle(color: isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF64748B), fontSize: 11),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -1375,6 +1281,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final p = _payrollData ?? {};
     final currency = p['currency_symbol'] ?? '₹';
     final gross = p['gross_earnings'] ?? 0.0;
@@ -1447,9 +1354,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 // Metrics Row (Punch Hours & Overtime)
                 Row(
                   children: [
-                    Expanded(child: _buildMetricCard('Shift Hours', '$punchHours hrs', Icons.timelapse_rounded, const Color(0xFF38BDF8))),
+                    Expanded(child: _buildMetricCard('Shift Hours', '$punchHours hrs', Icons.timelapse_rounded, const Color(0xFF38BDF8), isDark)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildMetricCard('Overtime Hours', '$otHours hrs', Icons.more_time_rounded, const Color(0xFFF59E0B))),
+                    Expanded(child: _buildMetricCard('Overtime Hours', '$otHours hrs', Icons.more_time_rounded, const Color(0xFFF59E0B), isDark)),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -1458,9 +1365,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF161B22),
+                    color: isDark ? const Color(0xFF161B22) : Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1469,45 +1376,45 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                         children: [
                           const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF6366F1), size: 18),
                           const SizedBox(width: 8),
-                          const Text('Active Compensation & CTC Structure', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                          Text('Active Compensation & CTC Structure', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.bold)),
                         ],
                       ),
-                      const Divider(color: Colors.white12, height: 20),
+                      Divider(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0), height: 20),
                       if (structure.isNotEmpty) ...[
-                        _buildCompRow('Compensation Model', structure['compensation_model']?.toString().replaceAll('_', ' ') ?? model),
+                        _buildCompRow('Compensation Model', structure['compensation_model']?.toString().replaceAll('_', ' ') ?? model, isDark: isDark),
                         if (structure['hourly_rate'] != null && (structure['hourly_rate'] as num) > 0)
-                          _buildCompRow('Standard Hourly Rate', '$currency${structure['hourly_rate']} / hr'),
+                          _buildCompRow('Standard Hourly Rate', '$currency${structure['hourly_rate']} / hr', isDark: isDark),
                         if (structure['monthly_gross'] != null)
-                          _buildCompRow('Monthly Gross Pay', '$currency${structure['monthly_gross']}'),
+                          _buildCompRow('Monthly Gross Pay', '$currency${structure['monthly_gross']}', isDark: isDark),
                         if (structure['annual_ctc'] != null)
-                          _buildCompRow('Annual CTC', '$currency${structure['annual_ctc']}'),
+                          _buildCompRow('Annual CTC', '$currency${structure['annual_ctc']}', isDark: isDark),
                         if (structure['basic_salary'] != null && (structure['basic_salary'] as num) > 0)
-                          _buildCompRow('Basic Salary', '$currency${structure['basic_salary']}'),
+                          _buildCompRow('Basic Salary', '$currency${structure['basic_salary']}', isDark: isDark),
                         if (structure['hra'] != null && (structure['hra'] as num) > 0)
-                          _buildCompRow('House Rent Allowance (HRA)', '$currency${structure['hra']}'),
+                          _buildCompRow('House Rent Allowance (HRA)', '$currency${structure['hra']}', isDark: isDark),
                         if (structure['special_allowance'] != null && (structure['special_allowance'] as num) > 0)
-                          _buildCompRow('Special Allowance', '$currency${structure['special_allowance']}'),
+                          _buildCompRow('Special Allowance', '$currency${structure['special_allowance']}', isDark: isDark),
                         if (structure['epf_employee'] != null && (structure['epf_employee'] as num) > 0)
-                          _buildCompRow('Provident Fund (EPF)', '- $currency${structure['epf_employee']}', isDeduction: true),
+                          _buildCompRow('Provident Fund (EPF)', '- $currency${structure['epf_employee']}', isDeduction: true, isDark: isDark),
                         if (structure['esi_employee'] != null && (structure['esi_employee'] as num) > 0)
-                          _buildCompRow('ESI Contribution', '- $currency${structure['esi_employee']}', isDeduction: true),
+                          _buildCompRow('ESI Contribution', '- $currency${structure['esi_employee']}', isDeduction: true, isDark: isDark),
                         if (structure['professional_tax'] != null && (structure['professional_tax'] as num) > 0)
-                          _buildCompRow('Professional Tax (PT)', '- $currency${structure['professional_tax']}', isDeduction: true),
+                          _buildCompRow('Professional Tax (PT)', '- $currency${structure['professional_tax']}', isDeduction: true, isDark: isDark),
                       ] else ...[
-                        Text('Compensation configured at standard base tier.', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                        Text('Compensation configured at standard base tier.', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 12)),
                       ],
 
                       // Statutory & Bank Details
                       if (employeeInfo['pan_number']?.toString().isNotEmpty == true || employeeInfo['bank_account_number']?.toString().isNotEmpty == true) ...[
-                        const Divider(color: Colors.white12, height: 20),
+                        Divider(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0), height: 20),
                         if (employeeInfo['pan_number']?.toString().isNotEmpty == true)
-                          _buildCompRow('PAN Number', employeeInfo['pan_number']),
+                          _buildCompRow('PAN Number', employeeInfo['pan_number'], isDark: isDark),
                         if (employeeInfo['uan_number']?.toString().isNotEmpty == true)
-                          _buildCompRow('PF UAN Number', employeeInfo['uan_number']),
+                          _buildCompRow('PF UAN Number', employeeInfo['uan_number'], isDark: isDark),
                         if (employeeInfo['bank_name']?.toString().isNotEmpty == true)
-                          _buildCompRow('Bank Name', employeeInfo['bank_name']),
+                          _buildCompRow('Bank Name', employeeInfo['bank_name'], isDark: isDark),
                         if (employeeInfo['bank_account_number']?.toString().isNotEmpty == true)
-                          _buildCompRow('Bank Account', employeeInfo['bank_account_number']),
+                          _buildCompRow('Bank Account', employeeInfo['bank_account_number'], isDark: isDark),
                       ],
                     ],
                   ),
@@ -1518,8 +1425,8 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Monthly Payslips', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                    Text('${_payslips.length} published', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+                    Text('Monthly Payslips', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text('${_payslips.length} published', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 12)),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -1528,13 +1435,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF161B22),
+                      color: isDark ? const Color(0xFF161B22) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      border: isDark ? null : Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Center(
                       child: Text(
                         'No published payslips found for this year.',
-                        style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                        style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 12),
                       ),
                     ),
                   )
@@ -1547,9 +1455,13 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                     final sDays = slip['total_working_days'] ?? slip['present_days'] ?? 0;
 
                     return Card(
-                      color: const Color(0xFF161B22),
+                      color: isDark ? const Color(0xFF161B22) : Colors.white,
+                      elevation: isDark ? 1 : 0,
                       margin: const EdgeInsets.only(bottom: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0)),
+                      ),
                       child: ListTile(
                         leading: Container(
                           padding: const EdgeInsets.all(10),
@@ -1559,14 +1471,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                           ),
                           child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF818CF8), size: 20),
                         ),
-                        title: Text('$monthName $year', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text('$sDays days • Gross: $currency$sGross', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+                        title: Text('$monthName $year', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13)),
+                        subtitle: Text('$sDays days • Gross: $currency$sGross', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 11)),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text('$currency$sNet', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 14)),
-                            Text('Net Salary', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10)),
+                            Text('Net Salary', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF64748B), fontSize: 10)),
                           ],
                         ),
                       ),
@@ -1580,17 +1492,17 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     );
   }
 
-  Widget _buildCompRow(String label, String value, {bool isDeduction = false}) {
+  Widget _buildCompRow(String label, String value, {bool isDeduction = false, bool isDark = true}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+          Text(label, style: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B), fontSize: 12)),
           Text(
             value,
             style: TextStyle(
-              color: isDeduction ? const Color(0xFFF87171) : Colors.white,
+              color: isDeduction ? const Color(0xFFEF4444) : (isDark ? Colors.white : const Color(0xFF0F172A)),
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -1608,22 +1520,22 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     return 'Month';
   }
 
-  Widget _buildMetricCard(String title, String val, IconData icon, Color color) {
+  Widget _buildMetricCard(String title, String val, IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(height: 10),
-          Text(val, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(val, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 2),
-          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+          Text(title, style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 11)),
         ],
       ),
     );
@@ -1633,6 +1545,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
   // Tab 4: Leaves (Quotas & Application History)
   // --------------------------------------------------------------------------
   Widget _buildLeavesTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton.extended(
@@ -1654,14 +1567,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: _leavesSubTabIndex == 0 ? const Color(0xFF6366F1) : const Color(0xFF161B22),
+                        color: _leavesSubTabIndex == 0 ? const Color(0xFF6366F1) : (isDark ? const Color(0xFF161B22) : const Color(0xFFE2E8F0)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         'Leave Quotas (${_leaveBalances.length})',
                         style: TextStyle(
-                          color: _leavesSubTabIndex == 0 ? Colors.white : Colors.white70,
+                          color: _leavesSubTabIndex == 0 ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF64748B)),
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1676,14 +1589,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: _leavesSubTabIndex == 1 ? const Color(0xFF6366F1) : const Color(0xFF161B22),
+                        color: _leavesSubTabIndex == 1 ? const Color(0xFF6366F1) : (isDark ? const Color(0xFF161B22) : const Color(0xFFE2E8F0)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         'My Applications (${_leaveRequests.length})',
                         style: TextStyle(
-                          color: _leavesSubTabIndex == 1 ? Colors.white : Colors.white70,
+                          color: _leavesSubTabIndex == 1 ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF64748B)),
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1704,7 +1617,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                   _loadLeaveRequests(),
                 ]);
               },
-              child: _leavesSubTabIndex == 0 ? _buildLeaveQuotasView() : _buildLeaveRequestsView(),
+              child: _leavesSubTabIndex == 0 ? _buildLeaveQuotasView(isDark) : _buildLeaveRequestsView(isDark),
             ),
           ),
         ],
@@ -1712,14 +1625,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     );
   }
 
-  Widget _buildLeaveQuotasView() {
+  Widget _buildLeaveQuotasView(bool isDark) {
     if (_isLoadingLeaves) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
     }
 
     if (_leaveBalances.isEmpty) {
       return Center(
-        child: Text('No leave quotas configured for current year.', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+        child: Text('No leave quotas configured for current year.', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B))),
       );
     }
 
@@ -1735,9 +1648,13 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
         final pending = b['pending_days'] ?? 0.0;
 
         return Card(
-          color: const Color(0xFF161B22),
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          elevation: isDark ? 1 : 0,
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0)),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -1746,14 +1663,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(name, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 14)),
                     Text('$remaining days left', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
                 const SizedBox(height: 10),
                 LinearProgressIndicator(
                   value: total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0,
-                  backgroundColor: Colors.white10,
+                  backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                   color: const Color(0xFF6366F1),
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(3),
@@ -1762,8 +1679,8 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Allocated: ${total}d', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
-                    Text('Used: ${used}d', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+                    Text('Allocated: ${total}d', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 11)),
+                    Text('Used: ${used}d', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B), fontSize: 11)),
                     if (pending > 0)
                       Text('Pending: ${pending}d', style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
@@ -1776,14 +1693,14 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     );
   }
 
-  Widget _buildLeaveRequestsView() {
+  Widget _buildLeaveRequestsView(bool isDark) {
     if (_isLoadingRequests) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
     }
 
     if (_leaveRequests.isEmpty) {
       return Center(
-        child: Text('No leave applications submitted yet.', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+        child: Text('No leave applications submitted yet.', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B))),
       );
     }
 
@@ -1805,12 +1722,16 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
         Color statusColor = const Color(0xFFF59E0B);
         if (status == 'APPROVED') statusColor = const Color(0xFF10B981);
         if (status == 'REJECTED') statusColor = const Color(0xFFEF4444);
-        if (status == 'CANCELLED') statusColor = Colors.white38;
+        if (status == 'CANCELLED') statusColor = isDark ? Colors.white38 : const Color(0xFF94A3B8);
 
         return Card(
-          color: const Color(0xFF161B22),
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          elevation: isDark ? 1 : 0,
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0)),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -1819,7 +1740,7 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(typeName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(typeName, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 14)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -1837,10 +1758,10 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
                 const SizedBox(height: 6),
                 Text(
                   '$startDate to $endDate (${totalDays}d${isHalfDay ? " - ${halfDayPeriod.replaceAll('_', ' ')}" : ""})',
-                  style: const TextStyle(color: Color(0xFF818CF8), fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5), fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
-                Text('Reason: $reason', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                Text('Reason: $reason', style: TextStyle(color: isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF475569), fontSize: 12)),
                 if (status == 'PENDING' && id != null) ...[
                   const SizedBox(height: 10),
                   Align(
@@ -2023,11 +1944,12 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
     final attProvider = context.watch<AttendanceProvider>();
     final isCheckIn = widget.punchAction == 'CHECK_IN';
     final isInside = attProvider.isInsideGeofence;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF161B22),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF161B22) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.only(
         left: 20,
@@ -2062,7 +1984,7 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
                       Expanded(
                         child: Text(
                           isCheckIn ? 'Facial Verification Check-In' : 'Facial Verification Check-Out',
-                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 15, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2070,7 +1992,7 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white54 : const Color(0xFF64748B)),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -2265,8 +2187,8 @@ class _PunchCameraModalState extends State<_PunchCameraModal> {
                   height: 46,
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: const BorderSide(color: Colors.white24),
+                      foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
+                      side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: () => Navigator.pop(context),

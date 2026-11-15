@@ -92,6 +92,7 @@ class ApiService {
     double accuracy = 10.0,
     String? photoBase64,
     String punchType = 'AUTO',
+    bool isMockLocation = false,
   }) async {
     final uri = Uri.parse(ApiConfig.employeeCheckInUrl);
     final response = await http.post(
@@ -106,6 +107,7 @@ class ApiService {
         'accuracy': accuracy,
         'photo_base64': photoBase64,
         'punch_type': punchType,
+        'is_mock_location': isMockLocation,
       }),
     );
 
@@ -123,6 +125,7 @@ class ApiService {
     required double latitude,
     required double longitude,
     double accuracy = 10.0,
+    bool isMockLocation = false,
   }) async {
     final uri = Uri.parse(ApiConfig.employeeHeartbeatUrl);
     final response = await http.post(
@@ -135,6 +138,7 @@ class ApiService {
         'latitude': latitude,
         'longitude': longitude,
         'accuracy': accuracy,
+        'is_mock_location': isMockLocation,
       }),
     );
 

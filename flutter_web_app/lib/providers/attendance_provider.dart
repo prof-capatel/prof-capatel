@@ -177,7 +177,11 @@ class AttendanceProvider with ChangeNotifier {
         final maxRadius = _geofenceConfig!.geoRadiusMeters;
         final maxAccuracy = _geofenceConfig!.maxGpsAccuracyMeters;
 
-        if (coords.accuracy > maxAccuracy) {
+        if (coords.isMocked) {
+          _isInsideGeofence = false;
+          _geofenceStatusMessage =
+              'Mock location / GPS spoofing application detected. Real hardware GPS required.';
+        } else if (coords.accuracy > maxAccuracy) {
           _isInsideGeofence = false;
           _geofenceStatusMessage =
               'GPS accuracy (±${coords.accuracy.toStringAsFixed(1)}m) exceeds threshold (±${maxAccuracy.toStringAsFixed(0)}m).';
@@ -222,6 +226,30 @@ class AttendanceProvider with ChangeNotifier {
       return null;
     }
 
+    if (_userCoordinates!.isMocked) {
+      _checkInStatus = CheckInStatus.error;
+      _statusDetail = 'Mock location or GPS spoofing application detected. Real hardware GPS is required. This security breach has been logged.';
+      notifyListeners();
+
+      try {
+        String? photoB64;
+        if (frameBytes != null && frameBytes.isNotEmpty) {
+          photoB64 = base64Encode(frameBytes);
+        }
+        await ApiService.employeeMobileCheckIn(
+          token: token,
+          latitude: _userCoordinates!.latitude,
+          longitude: _userCoordinates!.longitude,
+          accuracy: _userCoordinates!.accuracy,
+          photoBase64: photoB64,
+          punchType: forcedAction ?? _nextPunchAction,
+          isMockLocation: true,
+        );
+      } catch (_) {}
+
+      return {'status': 'error', 'message': _statusDetail};
+    }
+
     if (!_isInsideGeofence) {
       _checkInStatus = CheckInStatus.error;
       _statusDetail = _geofenceStatusMessage ?? 'You are outside the authorized geofence perimeter.';
@@ -247,6 +275,7 @@ class AttendanceProvider with ChangeNotifier {
         accuracy: _userCoordinates!.accuracy,
         photoBase64: photoB64,
         punchType: action,
+        isMockLocation: _userCoordinates!.isMocked,
       );
 
       _lastCheckInResult = result;
@@ -317,12 +346,15 @@ class AttendanceProvider with ChangeNotifier {
         latitude: coords.latitude,
         longitude: coords.longitude,
         accuracy: coords.accuracy,
+        isMockLocation: coords.isMocked,
       );
 
       final inBounds = res['in_bounds'] ?? true;
-      if (!inBounds) {
+      if (!inBounds || coords.isMocked) {
         _hasActiveBreach = true;
-        _breachAlertMessage = res['message'] ?? 'Out of bounds detected.';
+        _breachAlertMessage = coords.isMocked
+            ? 'Mock location / GPS spoofing detected.'
+            : (res['message'] ?? 'Out of bounds detected.');
       } else {
         _hasActiveBreach = false;
         _breachAlertMessage = null;

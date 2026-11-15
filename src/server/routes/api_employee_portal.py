@@ -26,6 +26,8 @@ from src.database.models import (
     SystemBranding,
     PayrollPayslip,
     EmployeeSalaryStructure,
+    AuditLog,
+    EmployeeGeofenceBreach,
 )
 from src.database.session import get_db, SessionLocal
 from src.server.tenant_middleware import resolve_tenant
@@ -628,9 +630,40 @@ async def employee_mobile_checkin(
     branding = tenant.branding if tenant else None
 
     if payload.is_mock_location:
+        now_ist = get_ist_now()
+        # 1. Log immutable security audit trail
+        db.add(
+            AuditLog(
+                tenant_id=tenant.id if tenant else None,
+                user_id=None,
+                actor_name=student.name,
+                actor_role="EMPLOYEE",
+                action_type="GEOFENCE_BREACH_MOCK_GPS",
+                target_type="STUDENT",
+                target_id=str(student.id),
+                description=f"Mock GPS or location spoofing application detected for employee '{student.name}' (Roll: {student.roll_number}). Coordinates: ({payload.latitude}, {payload.longitude}). Action blocked.",
+            )
+        )
+        # 2. Record geofence breach entry for tenant admin audit
+        breach = EmployeeGeofenceBreach(
+            tenant_id=tenant.id,
+            student_id=student.id,
+            breach_date=now_ist.date(),
+            start_time=now_ist,
+            end_time=now_ist,
+            duration_seconds=0,
+            last_known_latitude=payload.latitude,
+            last_known_longitude=payload.longitude,
+            distance_meters=0.0,
+            geofence_radius_meters=branding.geofence_radius_meters if branding else 100.0,
+            status="MOCK_GPS_SPOOF",
+        )
+        db.add(breach)
+        db.commit()
+
         raise HTTPException(
             status_code=403,
-            detail="Mock GPS location detected. Spoofed or simulated coordinates are prohibited.",
+            detail="Mock location or GPS spoofing application detected. Real hardware GPS is required. This security breach has been logged.",
         )
 
     # Check if selfie face verification is mandated by tenant admin
@@ -731,6 +764,26 @@ def employee_geofence_heartbeat(
     Dispatched periodically by mobile client while employee is in an active shift session.
     Logs out-of-bounds events and breach duration for administrative audit trails.
     """
+    if payload.is_mock_location:
+        now_ist = get_ist_now()
+        db.add(
+            AuditLog(
+                tenant_id=student.tenant_id,
+                user_id=None,
+                actor_name=student.name,
+                actor_role="EMPLOYEE",
+                action_type="GEOFENCE_BREACH_MOCK_GPS",
+                target_type="STUDENT",
+                target_id=str(student.id),
+                description=f"Mock GPS or location spoofing detected during heartbeat sync for employee '{student.name}'.",
+            )
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="Mock location or GPS spoofing application detected. Real hardware GPS is required. This security breach has been logged.",
+        )
+
     service = AttendanceService(db)
     return service.process_geofence_heartbeat(
         tenant_id=student.tenant_id,
