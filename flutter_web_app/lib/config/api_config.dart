@@ -55,4 +55,9 @@ class ApiConfig {
 
   // Admin Geofence Breach Audit Trail
   static String get geofenceBreachesUrl => '$baseUrl/api/v1/attendance/geofence-breaches';
+
+  // Public Employee Self-Registration & Onboarding Endpoints
+  static String get onboardRegisterUrl => '$baseUrl/api/v1/enroll/onboard/register';
+  static String get onboardCaptureSampleUrl => '$baseUrl/api/v1/enroll/onboard/capture-sample';
+  static String onboardInfoUrl(String tenantUuid, String token) => '$baseUrl/api/v1/enroll/onboard/info/$tenantUuid/$token';
 }

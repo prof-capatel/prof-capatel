@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +11,7 @@ import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../services/camera_web_service.dart';
 import '../utils/error_formatter.dart';
+import '../widgets/exit_dialog.dart';
 import '../widgets/radar_gauge.dart';
 import '../widgets/theme_dialog.dart';
 import 'face_login_screen.dart';
@@ -740,15 +742,10 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     );
   }
 
-  void _handleSwitchOrganization() async {
-    final authProvider = context.read<AuthProvider>();
-    await authProvider.switchOrganization();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const TenantServerSetupScreen()),
-        (route) => false,
-      );
-    }
+  void _handleSwitchOrganization() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TenantServerSetupScreen(isEditing: true)),
+    );
   }
 
   @override
@@ -758,8 +755,21 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
     final user = authProvider.currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_currentTabIndex != 0) {
+          setState(() => _currentTabIndex = 0);
+          return;
+        }
+        final shouldExit = await showExitConfirmationDialog(context);
+        if (shouldExit == true) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
@@ -880,8 +890,9 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.beach_access_rounded), label: 'Leaves'),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // --------------------------------------------------------------------------
   // Tab 1: Presence & Biometric Punch

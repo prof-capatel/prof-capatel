@@ -60,6 +60,8 @@ class StudentCreate(BaseModel):
     designation_id: Optional[int] = None
     designation: Optional[str] = None
     salary_template_id: Optional[int] = None
+    is_active: Optional[bool] = None
+    employment_status: Optional[str] = None
 
 
 class StudentUpdate(BaseModel):
@@ -83,6 +85,8 @@ class StudentUpdate(BaseModel):
     designation_id: Optional[int] = None
     designation: Optional[str] = None
     salary_template_id: Optional[int] = None
+    is_active: Optional[bool] = None
+    employment_status: Optional[str] = None
 
 
 class StudentDepartmentTransferPayload(BaseModel):
@@ -1160,6 +1164,12 @@ def update_student_profile(
                 )
                 db.add(new_struct)
 
+    if "is_active" in fields_set or payload.is_active is not None:
+        student.is_active = bool(payload.is_active)
+    if "employment_status" in fields_set or payload.employment_status is not None:
+        if payload.employment_status:
+            student.employment_status = payload.employment_status.strip().upper()
+
     db.commit()
     db.refresh(student)
 
@@ -1170,6 +1180,40 @@ def update_student_profile(
         "status": "success",
         "tenant_id": current_tenant.id,
         "message": f"Profile '{student.name}' updated successfully.",
+        "student": student.to_dict(),
+    }
+
+
+@router.post("/student/{student_id}/approve")
+def approve_pending_student(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """
+    Administrator endpoint to approve and activate a self-registered employee profile.
+    Activates the employee in the roster and reloads face vector cache.
+    """
+    check_tenant_operational_access(current_tenant)
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.tenant_id == current_tenant.id,
+    ).first()
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Employee profile not found.")
+
+    student.is_active = True
+    student.employment_status = "ACTIVE"
+    db.commit()
+    db.refresh(student)
+
+    # Reload cache so webcam recognition and kiosks immediately recognise the employee
+    face_engine.reload_cache(db, tenant_id=current_tenant.id)
+
+    return {
+        "status": "success",
+        "message": f"Employee '{student.name}' approved and activated successfully.",
         "student": student.to_dict(),
     }
 
@@ -1679,6 +1723,9 @@ def onboard_register_employee(
         existing.department = dept_name
         existing.email = payload.email.strip() if payload.email else existing.email
         existing.user_role = chosen_role
+        if existing.employment_status == "PENDING_APPROVAL" or not existing.is_active:
+            existing.employment_status = "PENDING_APPROVAL"
+            existing.is_active = False
         db.commit()
         db.refresh(existing)
         student = existing
@@ -1695,6 +1742,8 @@ def onboard_register_employee(
             academic_year_id=None,
             email=payload.email.strip() if payload.email else None,
             user_role=chosen_role,
+            is_active=False,
+            employment_status="PENDING_APPROVAL",
         )
         db.add(student)
         db.commit()
@@ -1710,6 +1759,35 @@ def onboard_register_employee(
         "message": f"Profile '{student.name}' registered successfully. Proceed to face capture.",
         "student": student.to_dict(),
         "checkin_url": checkin_url,
+    }
+
+
+@router.get("/onboard/info/{tenant_uuid}/{onboarding_token}")
+def get_onboard_tenant_info(
+    tenant_uuid: str,
+    onboarding_token: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Public endpoint for employee self-registration clients to fetch tenant info,
+    departments list, and auto-generated candidate employee code.
+    """
+    import random
+    tenant = resolve_onboarding_tenant(db, tenant_uuid.strip(), onboarding_token.strip())
+    departments = db.query(Department).filter(Department.tenant_id == tenant.id).order_by(Department.name.asc()).all()
+    is_corporate = (getattr(tenant, "tenant_type", "educational") == "corporate")
+
+    candidate_code = f"EMP-{random.randint(1000, 9999)}"
+
+    return {
+        "status": "success",
+        "tenant_id": tenant.id,
+        "tenant_name": tenant.name,
+        "tenant_slug": tenant.slug,
+        "tenant_uuid": tenant.uuid,
+        "is_corporate": is_corporate,
+        "departments": [{"id": d.id, "name": d.name} for d in departments],
+        "suggested_code": candidate_code,
     }
 
 

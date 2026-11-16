@@ -13,6 +13,8 @@ class AuthProvider with ChangeNotifier {
   String? _errorMessage;
   String _tenantSlug = 'default';
   String _tenantName = '';
+  String _tenantUuid = '';
+  String _onboardingToken = '';
   bool _isSetupCompleted = false;
   bool _isInitialized = false;
   Completer<void>? _initCompleter;
@@ -23,6 +25,8 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String get tenantSlug => _tenantSlug;
   String get tenantName => _tenantName;
+  String get tenantUuid => _tenantUuid;
+  String get onboardingToken => _onboardingToken;
   bool get isSetupCompleted => _isSetupCompleted && _tenantSlug.isNotEmpty && _tenantSlug != 'default';
   bool get isInitialized => _isInitialized;
 
@@ -56,6 +60,16 @@ class AuthProvider with ChangeNotifier {
       final savedName = prefs.getString(_tenantNameKey);
       if (savedName != null && savedName.trim().isNotEmpty) {
         _tenantName = savedName.trim();
+      }
+
+      final savedUuid = prefs.getString('employee_tenant_uuid');
+      if (savedUuid != null && savedUuid.trim().isNotEmpty) {
+        _tenantUuid = savedUuid.trim();
+      }
+
+      final savedToken = prefs.getString('employee_onboarding_token');
+      if (savedToken != null && savedToken.trim().isNotEmpty) {
+        _onboardingToken = savedToken.trim();
       }
 
       final isSetup = prefs.getBool(_setupCompletedKey) ?? false;
@@ -109,29 +123,47 @@ class AuthProvider with ChangeNotifier {
     required String tenantSlug,
     required String tenantName,
     required String serverUrl,
+    String? tenantUuid,
+    String? onboardingToken,
   }) async {
     _tenantSlug = tenantSlug.trim().toLowerCase();
     _tenantName = tenantName.trim();
+    if (tenantUuid != null && tenantUuid.trim().isNotEmpty) {
+      _tenantUuid = tenantUuid.trim();
+    }
+    if (onboardingToken != null && onboardingToken.trim().isNotEmpty) {
+      _onboardingToken = onboardingToken.trim();
+    }
     _isSetupCompleted = true;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tenantKey, _tenantSlug);
       await prefs.setString(_tenantNameKey, _tenantName);
+      if (_tenantUuid.isNotEmpty) await prefs.setString('employee_tenant_uuid', _tenantUuid);
+      if (_onboardingToken.isNotEmpty) await prefs.setString('employee_onboarding_token', _onboardingToken);
       await prefs.setBool(_setupCompletedKey, true);
     } catch (_) {}
     notifyListeners();
   }
 
-  Future<void> setTenant(String slug, {String? name}) async {
+  Future<void> setTenant(String slug, {String? name, String? uuid, String? onboardingToken}) async {
     _tenantSlug = slug.trim().toLowerCase();
     if (name != null && name.trim().isNotEmpty) {
       _tenantName = name.trim();
+    }
+    if (uuid != null && uuid.trim().isNotEmpty) {
+      _tenantUuid = uuid.trim();
+    }
+    if (onboardingToken != null && onboardingToken.trim().isNotEmpty) {
+      _onboardingToken = onboardingToken.trim();
     }
     _isSetupCompleted = (_tenantSlug.isNotEmpty && _tenantSlug != 'default');
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tenantKey, _tenantSlug);
       if (name != null) await prefs.setString(_tenantNameKey, _tenantName);
+      if (_tenantUuid.isNotEmpty) await prefs.setString('employee_tenant_uuid', _tenantUuid);
+      if (_onboardingToken.isNotEmpty) await prefs.setString('employee_onboarding_token', _onboardingToken);
       await prefs.setBool(_setupCompletedKey, _isSetupCompleted);
     } catch (_) {}
     notifyListeners();
@@ -141,6 +173,8 @@ class AuthProvider with ChangeNotifier {
     _currentUser = null;
     _tenantSlug = 'default';
     _tenantName = '';
+    _tenantUuid = '';
+    _onboardingToken = '';
     _isSetupCompleted = false;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -148,6 +182,8 @@ class AuthProvider with ChangeNotifier {
       await prefs.remove(_lastActiveKey);
       await prefs.remove(_tenantKey);
       await prefs.remove(_tenantNameKey);
+      await prefs.remove('employee_tenant_uuid');
+      await prefs.remove('employee_onboarding_token');
       await prefs.remove(_setupCompletedKey);
     } catch (_) {}
     notifyListeners();

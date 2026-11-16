@@ -579,6 +579,16 @@ def login(
     if user.tenant_id and user.tenant:
         check_tenant_login_access(user.tenant)
 
+    # If employee user, check if student profile is pending approval
+    if user.student_profile and (
+        user.student_profile.employment_status == "PENDING_APPROVAL"
+        or (not user.student_profile.is_active and user.student_profile.employment_status not in ["RELIEVED", "TERMINATED"])
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your registration is pending administrator approval. Please contact HR/Admin.",
+        )
+
     user.last_login_at = get_ist_now()
     db.commit()
 

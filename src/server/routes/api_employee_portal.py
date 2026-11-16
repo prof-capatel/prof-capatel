@@ -223,6 +223,10 @@ async def employee_face_login(
         )
 
     # 3. Retrieve Enrolled Face Encodings for this Tenant (Active Employees only)
+    branding = tenant.branding
+    threshold = float(branding.self_attendance_face_threshold if branding and branding.self_attendance_face_threshold else 0.52)
+    import numpy as np
+
     encodings = (
         db.query(FaceEncoding)
         .join(Student, FaceEncoding.student_id == Student.id)
@@ -235,19 +239,41 @@ async def employee_face_login(
     )
 
     if not encodings:
+        # Check if user is a pending self-registered employee
+        pending_encodings = (
+            db.query(FaceEncoding)
+            .join(Student, FaceEncoding.student_id == Student.id)
+            .filter(
+                FaceEncoding.tenant_id == tenant.id,
+                or_(
+                    Student.employment_status == "PENDING_APPROVAL",
+                    and_(Student.is_active == False, Student.employment_status != "RELIEVED", Student.employment_status != "TERMINATED"),
+                ),
+            )
+            .all()
+        )
+        for p_enc in pending_encodings:
+            try:
+                p_vec = p_enc.get_numpy_vector()
+                p_dist = float(np.linalg.norm(p_vec - vector))
+                if p_dist <= threshold:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Your registration is pending administrator approval. Please contact HR/Admin.",
+                    )
+            except HTTPException:
+                raise
+            except Exception:
+                pass
+
         raise HTTPException(
             status_code=404,
             detail="No enrolled face profiles found for this organization. Please contact your HR administrator.",
         )
 
     # 4. Compare Euclidean Distance
-    branding = tenant.branding
-    threshold = float(branding.self_attendance_face_threshold if branding and branding.self_attendance_face_threshold else 0.52)
-
     best_match_student = None
     min_dist = float("inf")
-
-    import numpy as np
 
     for enc in encodings:
         try:
@@ -261,6 +287,33 @@ async def employee_face_login(
             logger.debug(f"Vector comparison note: {e}")
 
     if not best_match_student:
+        # Check if the face matches a pending self-registered employee
+        pending_encodings = (
+            db.query(FaceEncoding)
+            .join(Student, FaceEncoding.student_id == Student.id)
+            .filter(
+                FaceEncoding.tenant_id == tenant.id,
+                or_(
+                    Student.employment_status == "PENDING_APPROVAL",
+                    and_(Student.is_active == False, Student.employment_status != "RELIEVED", Student.employment_status != "TERMINATED"),
+                ),
+            )
+            .all()
+        )
+        for p_enc in pending_encodings:
+            try:
+                p_vec = p_enc.get_numpy_vector()
+                p_dist = float(np.linalg.norm(p_vec - vector))
+                if p_dist <= threshold:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Your registration is pending administrator approval. Please contact HR/Admin.",
+                    )
+            except HTTPException:
+                raise
+            except Exception:
+                pass
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Face not recognized (distance: {round(min_dist, 3)}, threshold: {threshold}). Please try again with clear lighting or contact HR.",

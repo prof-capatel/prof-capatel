@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
@@ -6,6 +7,7 @@ import '../providers/attendance_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../utils/error_formatter.dart';
+import '../widgets/exit_dialog.dart';
 import '../widgets/theme_dialog.dart';
 import 'face_login_screen.dart';
 
@@ -63,14 +65,26 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
       final res = await ApiService.resolveTenant(enteredOrg);
       final tenantData = res['tenant'] ?? {};
       final resolvedName = tenantData['name'] ?? enteredOrg;
+      final resolvedUuid = tenantData['uuid'] ?? enteredOrg;
+      final resolvedToken = tenantData['onboarding_token'] ?? '';
 
       if (!mounted) return;
 
       final auth = context.read<AuthProvider>();
+      final oldSlug = auth.tenantSlug;
+      final wasAuthenticated = auth.isAuthenticated;
+
+      // If user switched organization while logged in, clear session cleanly
+      if (wasAuthenticated && oldSlug != enteredOrg) {
+        auth.logout();
+      }
+
       await auth.completeSetup(
         tenantSlug: enteredOrg,
         tenantName: resolvedName,
         serverUrl: enteredUrl,
+        tenantUuid: resolvedUuid,
+        onboardingToken: resolvedToken,
       );
 
       final attProvider = context.read<AttendanceProvider>();
@@ -86,7 +100,15 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
       );
 
       if (widget.isEditing) {
-        Navigator.of(context).pop();
+        if (wasAuthenticated && oldSlug != enteredOrg) {
+          // Switched to a different tenant -> fresh root FaceLoginScreen
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const FaceLoginScreen()),
+            (route) => false,
+          );
+        } else {
+          Navigator.of(context).pop();
+        }
       } else {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const FaceLoginScreen()),
@@ -106,8 +128,17 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+    return PopScope(
+      canPop: widget.isEditing,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldExit = await showExitConfirmationDialog(context);
+        if (shouldExit == true) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -234,7 +265,7 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                           Text(
                             'Configure your organization credentials to connect this device with your enterprise workspace.',
                             style: TextStyle(
-                              color: isDark ? Colors.white55 : const Color(0xFF64748B),
+                              color: isDark ? Colors.white54 : const Color(0xFF64748B),
                               fontSize: 12,
                             ),
                           ),
@@ -402,6 +433,32 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
                               ),
                             ),
                           ),
+
+                          // Cancel & Keep Current Organization Button (when editing)
+                          if (widget.isEditing) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: OutlinedButton.icon(
+                                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.close_rounded, size: 18),
+                                label: const Text(
+                                  'Cancel & Keep Current Organization',
+                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                  side: BorderSide(
+                                    color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -412,6 +469,7 @@ class _TenantServerSetupScreenState extends State<TenantServerSetupScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

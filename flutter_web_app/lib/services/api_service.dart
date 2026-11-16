@@ -428,6 +428,89 @@ class ApiService {
     }
   }
 
+  /// Fetches tenant metadata, departments, and auto-suggested code for employee self-onboarding
+  static Future<Map<String, dynamic>> getOnboardInfo({
+    required String tenantUuid,
+    required String onboardingToken,
+  }) async {
+    final uri = Uri.parse(ApiConfig.onboardInfoUrl(tenantUuid, onboardingToken));
+    final response = await http.get(uri);
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200 && json != null) {
+      return json;
+    } else {
+      throw Exception(json?['detail'] ?? 'Could not fetch organization onboarding details.');
+    }
+  }
+
+  /// Registers new employee profile via public tokenized onboarding endpoint
+  static Future<Map<String, dynamic>> registerEmployeeOnboard({
+    required String tenantUuid,
+    required String onboardingToken,
+    required String name,
+    required String rollNumber,
+    String? email,
+    int? departmentId,
+    String? department,
+  }) async {
+    final uri = Uri.parse(ApiConfig.onboardRegisterUrl);
+    final body = jsonEncode({
+      'tenant_uuid': tenantUuid,
+      'onboarding_token': onboardingToken,
+      'name': name.trim(),
+      'roll_number': rollNumber.trim().toUpperCase(),
+      'email': (email != null && email.trim().isNotEmpty) ? email.trim() : null,
+      'department_id': departmentId,
+      'department': (department != null && department.trim().isNotEmpty) ? department.trim() : 'General',
+      'role': 'employee',
+    });
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+    final json = _tryParseJson(response.body);
+    if (response.statusCode == 200 && json != null) {
+      return json;
+    } else {
+      throw Exception(json?['detail'] ?? 'Employee registration failed. Please try again.');
+    }
+  }
+
+  /// Uploads single multi-angle face sample for registered employee
+  static Future<Map<String, dynamic>> uploadOnboardFaceSample({
+    required String tenantUuid,
+    required String onboardingToken,
+    required int studentId,
+    required String sampleAngle,
+    required Uint8List imageBytes,
+  }) async {
+    final uri = Uri.parse(ApiConfig.onboardCaptureSampleUrl);
+    final request = http.MultipartRequest('POST', uri);
+    request.fields['tenant_uuid'] = tenantUuid;
+    request.fields['onboarding_token'] = onboardingToken;
+    request.fields['student_id'] = studentId.toString();
+    request.fields['sample_angle'] = sampleAngle;
+
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'image',
+        imageBytes,
+        filename: 'sample_${sampleAngle}.jpg',
+      ),
+    );
+
+    final streamedRes = await request.send();
+    final res = await http.Response.fromStream(streamedRes);
+    final json = _tryParseJson(res.body);
+    if (res.statusCode == 200 && json != null) {
+      return json;
+    } else {
+      throw Exception(json?['detail'] ?? 'Biometric capture failed for $sampleAngle angle.');
+    }
+  }
+
   static Map<String, dynamic>? _tryParseJson(String text) {
     try {
       return jsonDecode(text) as Map<String, dynamic>;

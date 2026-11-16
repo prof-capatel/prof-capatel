@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
@@ -10,8 +11,10 @@ import '../services/api_service.dart';
 import '../services/camera_web_service.dart';
 import '../utils/error_formatter.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/exit_dialog.dart';
 import '../widgets/theme_dialog.dart';
 import 'employee_mobile_home_screen.dart';
+import 'employee_registration_screen.dart';
 import 'tenant_server_setup_screen.dart';
 
 class FaceLoginScreen extends StatefulWidget {
@@ -55,15 +58,34 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     }
   }
 
-  void _openSetupScreen() {
+  Future<void> _openSetupScreen() async {
     _countdownTimer?.cancel();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const TenantServerSetupScreen(isEditing: true)),
-    ).then((_) {
-      if (mounted) {
-        setState(() {});
-      }
+    setState(() {
+      _isCountingDown = false;
+      _isCameraReady = false;
     });
+    _cameraService.dispose();
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TenantServerSetupScreen(isEditing: true)),
+    );
+    if (mounted) {
+      _initCamera();
+    }
+  }
+
+  Future<void> _openRegistrationScreen() async {
+    _countdownTimer?.cancel();
+    setState(() {
+      _isCountingDown = false;
+      _isCameraReady = false;
+    });
+    _cameraService.dispose();
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EmployeeRegistrationScreen()),
+    );
+    if (mounted) {
+      _initCamera();
+    }
   }
 
   void _startAutoCaptureCountdown() {
@@ -464,8 +486,17 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     final branding = context.watch<AttendanceProvider>().geofenceConfig;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldExit = await showExitConfirmationDialog(context);
+        if (shouldExit == true) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -749,12 +780,35 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                       style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12.5),
                     ),
                   ),
+
+                  const SizedBox(height: 10),
+
+                  // Employee Self-Registration (Only available when logged out)
+                  Container(
+                    width: double.infinity,
+                    height: 44,
+                    margin: const EdgeInsets.only(top: 4),
+                    child: OutlinedButton.icon(
+                      onPressed: _openRegistrationScreen,
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                      label: const Text(
+                        'New Employee? Register Here',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF818CF8),
+                        side: BorderSide(color: const Color(0xFF6366F1).withOpacity(0.4)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
