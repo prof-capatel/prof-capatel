@@ -654,8 +654,8 @@ def calculate_employee_payroll(
 
         elif st.compensation_model == "HOURLY":
             h_rate = st.hourly_rate if st.hourly_rate > 0 else (student.hourly_rate or 15.0)
-            # Option A: Regular shift hours are paid at base rate; Overtime hours are paid via ot_multiplier
-            paid_regular_h = seg_regular_hours if enable_overtime else seg_billed_hours
+            # Regular shift hours + paid leave hours are paid at base rate; Overtime hours are paid via ot_multiplier
+            paid_regular_h = (seg_regular_hours if enable_overtime else seg_billed_hours) + (seg_paid_leave * emp_std_hours)
             earned_basic += paid_regular_h * h_rate
 
         elif st.compensation_model == "DAILY_WAGE":

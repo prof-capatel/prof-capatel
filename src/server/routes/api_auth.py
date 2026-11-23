@@ -20,7 +20,7 @@ from src.server.rbac_middleware import (
 from src.server.routes.api_employee_portal import create_employee_token
 from src.utils.auth_utils import verify_password, hash_password
 from src.utils.timezone import get_ist_now
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 
 logger = logging.getLogger("api_auth")
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication & RBAC"])
@@ -549,7 +549,7 @@ def login(
             # Search by tenant-scoped username
             if target_tenant_id:
                 query = db.query(User).filter(
-                    User.username == username_clean,
+                    func.lower(User.username) == username_clean,
                     User.tenant_id == target_tenant_id,
                     User.is_active == True,
                 )
@@ -558,10 +558,35 @@ def login(
                 if not user:
                     user = query.first()
 
+                # Also search by Student roll_number / Employee ID within tenant
+                if not user:
+                    student_match = db.query(Student).filter(
+                        func.lower(Student.roll_number) == username_clean,
+                        Student.tenant_id == target_tenant_id,
+                        Student.is_active == True,
+                    ).first()
+                    if student_match:
+                        if student_match.user_id:
+                            user = db.query(User).filter(
+                                User.id == student_match.user_id,
+                                User.is_active == True,
+                            ).first()
+                        if not user:
+                            # Check if User exists by lowercase roll_number
+                            candidate_username = student_match.roll_number.strip().lower()
+                            user = db.query(User).filter(
+                                func.lower(User.username) == candidate_username,
+                                User.tenant_id == target_tenant_id,
+                                User.is_active == True,
+                            ).first()
+                            if user and not student_match.user_id:
+                                student_match.user_id = user.id
+                                db.commit()
+
         if not user:
             # Fallback search across any active user if tenant_id wasn't specified
             query = db.query(User).filter(
-                User.username == username_clean,
+                func.lower(User.username) == username_clean,
                 User.is_active == True,
             )
             if role_requested:
@@ -592,16 +617,27 @@ def login(
     user.last_login_at = get_ist_now()
     db.commit()
 
-    is_employee = (user.role == "EMPLOYEE" or bool(user.students))
+    is_employee = (user.role == "EMPLOYEE" or bool(user.student_profile))
     token_lifetime = 604800 if is_employee else 86400  # 7-day rolling session for mobile/employee
 
-    token = create_access_token(
-        user_id=user.id,
-        role=user.role,
-        tenant_id=user.tenant_id,
-        username=user.username,
-        expires_in_sec=token_lifetime,
-    )
+    # For employees, issue employee JWT session token for seamless mobile self-service
+    if user.student_profile:
+        token = create_employee_token(
+            student_id=user.student_profile.id,
+            tenant_id=user.tenant_id,
+            roll_number=user.student_profile.roll_number,
+            name=user.full_name,
+            expires_in_sec=token_lifetime,
+        )
+        response.set_cookie("emp_session_token", token, httponly=True, max_age=token_lifetime, path="/")
+    else:
+        token = create_access_token(
+            user_id=user.id,
+            role=user.role,
+            tenant_id=user.tenant_id,
+            username=user.username,
+            expires_in_sec=token_lifetime,
+        )
 
     # Set secure cookies for browser navigation
     response.set_cookie("access_token", token, httponly=True, max_age=token_lifetime, path="/")

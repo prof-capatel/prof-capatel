@@ -211,18 +211,18 @@
                 </button>
             </div>
 
-            <!-- Discrete Fallback Toggle for Admin Password Login -->
-            <div style="margin-top: 20px; text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
-                <button type="button" onclick="togglePasswordFallback()" id="btnTogglePassword" style="background: none; border: none; font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; transition: color 0.2s;">
+            <!-- Visible High-Contrast Fallback Toggle for Password Login -->
+            <div style="margin-top: 20px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <button type="button" onclick="togglePasswordFallback()" id="btnTogglePassword" style="background: var(--bg-subtle, #f1f5f9); border: 1.5px solid var(--border-color, #cbd5e1); font-size: 12.5px; font-weight: 700; color: var(--accent-primary, #6366f1); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 18px; border-radius: var(--radius-full, 9999px); transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
                     <i class="fa-solid fa-key"></i>
-                    <span>Switch to Password Sign In</span>
+                    <span id="btnTogglePasswordText">Sign in with username/password</span>
                 </button>
             </div>
 
             <!-- Collapsible Password Login Form (Fallback for Admins) -->
             <div id="passwordFallbackCard" style="display: none; margin-top: 14px; background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 11.5px; font-weight: 700; color: var(--text-heading); text-transform: uppercase;">Admin Credential Sign In</span>
+                    <span style="font-size: 11.5px; font-weight: 700; color: var(--text-heading); text-transform: uppercase;">Credential Sign In</span>
                     <button type="button" onclick="togglePasswordFallback()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px;">&times; Close</button>
                 </div>
 
@@ -232,7 +232,7 @@
                     <input type="hidden" id="loginTenantSlug" value="{{ tenant.slug }}">
 
                     <div class="form-group" style="margin-bottom: 10px;">
-                        <label class="form-label" style="font-size: 11.5px;">Admin Username</label>
+                        <label class="form-label" style="font-size: 11.5px;">Username</label>
                         <input type="text" id="loginUsername" class="form-control" placeholder="admin or {{ tenant.slug }}" required style="font-size: 12.5px;">
                     </div>
 
@@ -243,8 +243,8 @@
 
                     <div id="loginAlert" style="display: none; margin-bottom: 12px; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 11.5px;"></div>
 
-                    <button type="submit" id="btnLogin" class="btn btn-secondary" style="width: 100%; padding: 10px; font-weight: 700; font-size: 12.5px;">
-                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In with Credentials
+                    <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 700; font-size: 13.5px; background: var(--accent-gradient, #6366f1); color: #ffffff !important; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-sm, 8px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Login
                     </button>
                 </form>
             </div>
@@ -550,7 +550,7 @@
                 card.scrollIntoView({ behavior: "smooth" });
             } else {
                 card.style.display = "none";
-                btn.innerHTML = '<i class="fa-solid fa-key"></i> <span>Switch to Password Sign In</span>';
+                btn.innerHTML = '<i class="fa-solid fa-key"></i> <span>Sign in with username/password</span>';
             }
         }
 

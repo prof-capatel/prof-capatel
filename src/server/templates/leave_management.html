@@ -4,17 +4,47 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <!-- Header Actions Bar -->
-    <div class="portal-card" style="margin-bottom: 20px; padding: 12px 18px;">
-        <div style="display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <button onclick="openLeaveMasterModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
-                <span>Leave Master Settings</span>
-            </button>
-            <button onclick="loadLeaveRequests()" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px; background: #6366f1;">
-                <i class="fa-solid fa-rotate"></i>
-                <span>Refresh</span>
-            </button>
+    <!-- Header Actions Bar with FY Controls & Tab Switcher -->
+    <div class="portal-card" style="margin-bottom: 20px; padding: 14px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <!-- Tab Switcher -->
+            <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-subtle); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary active-leave-tab" id="tabBtnRequests" onclick="switchLeaveTab('requests')" style="padding: 6px 14px; font-size: 12.5px; font-weight: 700; border-radius: 6px; background: #6366f1; color: #fff; border: none;">
+                    <i class="fa-solid fa-list-check" style="margin-right: 6px;"></i> Leave Applications
+                </button>
+                <button type="button" class="btn btn-secondary" id="tabBtnBalances" onclick="switchLeaveTab('balances')" style="padding: 6px 14px; font-size: 12.5px; font-weight: 700; border-radius: 6px; background: transparent; color: var(--text-muted); border: none;">
+                    <i class="fa-solid fa-wallet" style="margin-right: 6px;"></i> FY Balances & Carry-Forward
+                </button>
+            </div>
+
+            <!-- Right Controls: FY Dropdown & Action Buttons -->
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">FY Cycle:</span>
+                    <select id="globalFYSelect" class="form-control" onchange="onGlobalFYChange()" style="font-size: 12.5px; font-weight: 700; min-width: 170px; padding: 6px 10px; border-color: #6366f1;">
+                        {% for fy in available_financial_years %}
+                        <option value="{{ fy.fy_code }}" {% if fy.is_current %}selected{% endif %}>
+                            {{ fy.fy_label }}{% if fy.is_current %} (Current){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button onclick="openFYTransitionModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px; font-size: 12.5px;" title="Rollover balances from previous FY">
+                    <i class="fa-solid fa-arrows-spin" style="color: #10b981;"></i>
+                    <span>Run FY Rollover</span>
+                </button>
+
+                <button onclick="openLeaveMasterModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px; font-size: 12.5px;">
+                    <i class="fa-solid fa-sliders" style="color: #6366f1;"></i>
+                    <span>Leave Master Policy</span>
+                </button>
+
+                <button onclick="refreshActiveTab()" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px; background: #6366f1; font-size: 12.5px;">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span>Refresh</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -53,103 +83,170 @@
         <!-- KPI 4: Total Leave Days Taken -->
         <div class="stat-card" style="border-left: 4px solid #8b5cf6;">
             <div class="stat-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <span class="stat-title" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Days Taken (Year)</span>
-                <span class="badge badge-purple" style="font-size: 11px;"><i class="fa-solid fa-chart-pie"></i> Annual Total</span>
+                <span class="stat-title" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Days Taken</span>
+                <span class="badge badge-purple" style="font-size: 11px;"><i class="fa-solid fa-chart-pie"></i> <span id="kpiFYBadgeLabel">{{ current_financial_year.fy_label }}</span></span>
             </div>
             <div class="stat-value" id="kpiTotalDaysYear" style="font-size: 28px; font-weight: 800; color: #8b5cf6; margin: 8px 0 4px;">--</div>
-            <div class="stat-footer" style="font-size: 11.5px; color: var(--text-muted);">Total approved leave days in {{ branding.year or '2026' }}</div>
+            <div class="stat-footer" style="font-size: 11.5px; color: var(--text-muted);">Approved leave days in selected Financial Year</div>
         </div>
     </div>
 
-    <!-- Filter Toolbar -->
-    <div class="portal-card" style="margin-bottom: 20px;">
-        <!-- Status Filter Pills -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-weight: 700; font-size: 12.5px; color: var(--text-primary); margin-right: 4px;">Status Filter:</span>
-                <button type="button" class="btn btn-secondary leave-status-pill active" id="pillLeavePending" onclick="filterLeaveStatus('PENDING')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
-                    <i class="fa-solid fa-hourglass-half" style="color: #f59e0b;"></i> Pending Review
-                </button>
-                <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveApproved" onclick="filterLeaveStatus('APPROVED')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
-                    <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Approved
-                </button>
-                <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveRejected" onclick="filterLeaveStatus('REJECTED')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
-                    <i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i> Rejected
-                </button>
-                <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveCancelled" onclick="filterLeaveStatus('CANCELLED')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
-                    <i class="fa-solid fa-ban" style="color: #94a3b8;"></i> Cancelled
-                </button>
-                <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveAll" onclick="filterLeaveStatus('ALL')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
-                    All Applications
-                </button>
+    <!-- ========================================================= -->
+    <!-- TAB 1: LEAVE REQUESTS & APPROVALS VIEW                    -->
+    <!-- ========================================================= -->
+    <div id="requestsViewContainer">
+        <!-- Filter Toolbar -->
+        <div class="portal-card" style="margin-bottom: 20px;">
+            <!-- Status Filter Pills -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 700; font-size: 12.5px; color: var(--text-primary); margin-right: 4px;">Status Filter:</span>
+                    <button type="button" class="btn btn-secondary leave-status-pill active" id="pillLeavePending" onclick="filterLeaveStatus('PENDING')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
+                        <i class="fa-solid fa-hourglass-half" style="color: #f59e0b;"></i> Pending Review
+                    </button>
+                    <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveApproved" onclick="filterLeaveStatus('APPROVED')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
+                        <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Approved
+                    </button>
+                    <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveRejected" onclick="filterLeaveStatus('REJECTED')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
+                        <i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i> Rejected
+                    </button>
+                    <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveCancelled" onclick="filterLeaveStatus('CANCELLED')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
+                        <i class="fa-solid fa-ban" style="color: #94a3b8;"></i> Cancelled
+                    </button>
+                    <button type="button" class="btn btn-secondary leave-status-pill" id="pillLeaveAll" onclick="filterLeaveStatus('ALL')" style="padding: 4px 12px; font-size: 11.5px; border-radius: 20px;">
+                        All Applications
+                    </button>
+                </div>
+                <span id="leaveTableCountLabel" style="font-size: 12px; color: var(--text-muted);">Loading requests...</span>
             </div>
-            <span id="leaveTableCountLabel" style="font-size: 12px; color: var(--text-muted);">Loading requests...</span>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                <!-- Search Employee -->
+                <div style="flex: 1.5; min-width: 200px;">
+                    <label class="form-label" style="font-size: 12px;">Search Employee</label>
+                    <input type="text" id="leaveSearchInput" class="form-control" placeholder="Search by name, employee code..." oninput="onLeaveSearchInput()">
+                </div>
+
+                <!-- Department Filter -->
+                <div style="flex: 1; min-width: 160px;">
+                    <label class="form-label" style="font-size: 12px;">Department</label>
+                    <select id="leaveDeptFilter" class="form-control" onchange="loadLeaveRequests()">
+                        <option value="">All Departments</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Date Range From -->
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label" style="font-size: 12px;">From Date</label>
+                    <input type="date" id="leaveStartDate" class="form-control" onchange="loadLeaveRequests()">
+                </div>
+
+                <!-- Date Range To -->
+                <div style="flex: 1; min-width: 140px;">
+                    <label class="form-label" style="font-size: 12px;">To Date</label>
+                    <input type="date" id="leaveEndDate" class="form-control" onchange="loadLeaveRequests()">
+                </div>
+
+                <div>
+                    <button onclick="resetLeaveFilters()" class="btn btn-secondary" style="padding: 10px 14px;" title="Reset Filters">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
-            <!-- Search Employee -->
-            <div style="flex: 1.5; min-width: 200px;">
-                <label class="form-label" style="font-size: 12px;">Search Employee</label>
-                <input type="text" id="leaveSearchInput" class="form-control" placeholder="Search by name, employee code..." oninput="onLeaveSearchInput()">
-            </div>
-
-            <!-- Department Filter -->
-            <div style="flex: 1; min-width: 160px;">
-                <label class="form-label" style="font-size: 12px;">Department</label>
-                <select id="leaveDeptFilter" class="form-control" onchange="loadLeaveRequests()">
-                    <option value="">All Departments</option>
-                    {% for d in departments %}
-                    <option value="{{ d.id }}">{{ d.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- Date Range From -->
-            <div style="flex: 1; min-width: 140px;">
-                <label class="form-label" style="font-size: 12px;">From Date</label>
-                <input type="date" id="leaveStartDate" class="form-control" onchange="loadLeaveRequests()">
-            </div>
-
-            <!-- Date Range To -->
-            <div style="flex: 1; min-width: 140px;">
-                <label class="form-label" style="font-size: 12px;">To Date</label>
-                <input type="date" id="leaveEndDate" class="form-control" onchange="loadLeaveRequests()">
-            </div>
-
-            <div>
-                <button onclick="resetLeaveFilters()" class="btn btn-secondary" style="padding: 10px 14px;" title="Reset Filters">
-                    <i class="fa-solid fa-rotate-left"></i> Reset
-                </button>
+        <!-- Leave Requests Table Container -->
+        <div class="portal-card">
+            <div class="table-container">
+                <table class="custom-table" id="leaveRequestsTable">
+                    <thead>
+                        <tr>
+                            <th>Req #</th>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Leave Type</th>
+                            <th>Duration / Dates</th>
+                            <th>Reason</th>
+                            <th>FY Balance</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaveRequestsTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; color: #6366f1; margin-bottom: 8px;"></i>
+                                <p>Loading leave applications...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Leave Requests Table Container -->
-    <div class="portal-card">
-        <div class="table-container">
-            <table class="custom-table" id="leaveRequestsTable">
-                <thead>
-                    <tr>
-                        <th>Req #</th>
-                        <th>Employee</th>
-                        <th>Department</th>
-                        <th>Leave Type</th>
-                        <th>Duration / Dates</th>
-                        <th>Reason</th>
-                        <th>Leave Balance</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="leaveRequestsTableBody">
-                    <tr>
-                        <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; color: #6366f1; margin-bottom: 8px;"></i>
-                            <p>Loading leave applications...</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- ========================================================= -->
+    <!-- TAB 2: EMPLOYEE FY BALANCES & CARRY-FORWARD LEDGER        -->
+    <!-- ========================================================= -->
+    <div id="balancesViewContainer" style="display: none;">
+        <!-- Balances Filter & Actions Bar -->
+        <div class="portal-card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; flex: 1;">
+                    <div style="flex: 1.5; min-width: 220px;">
+                        <label class="form-label" style="font-size: 12px;">Search Employee</label>
+                        <input type="text" id="balanceSearchInput" class="form-control" placeholder="Search by name, employee code..." oninput="onBalanceSearchInput()">
+                    </div>
+                    <div style="flex: 1; min-width: 180px;">
+                        <label class="form-label" style="font-size: 12px;">Department</label>
+                        <select id="balanceDeptFilter" class="form-control" onchange="loadEmployeeBalances()">
+                            <option value="">All Departments</option>
+                            {% for d in departments %}
+                            <option value="{{ d.id }}">{{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="balancesTableCountLabel" style="font-size: 12px; color: var(--text-muted);">Loading balances...</span>
+                    <button onclick="loadEmployeeBalances()" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;">
+                        <i class="fa-solid fa-rotate"></i> Refresh Ledger
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Balances Table Container -->
+        <div class="portal-card">
+            <div class="table-responsive">
+                <table class="custom-table" id="employeeBalancesTable">
+                    <thead>
+                        <tr style="background: var(--bg-subtle); font-size: 12px;">
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Category</th>
+                            <th>Annual Quota</th>
+                            <th>Carried Forward</th>
+                            <th>Consumed (FIFO)</th>
+                            <th>Pending</th>
+                            <th>Lapsed Excess</th>
+                            <th>Net Available</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeBalancesTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; color: #6366f1; margin-bottom: 8px;"></i>
+                                <p>Loading employee leave balances...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -236,27 +333,50 @@
     </div>
 </div>
 
-<!-- Modal 2: Leave Master & Quota Configuration Modal -->
+<!-- ========================================================= -->
+<!-- MODAL: LEAVE MASTER & QUOTA CONFIGURATION MODAL           -->
+<!-- ========================================================= -->
 <div class="modal-overlay" id="leaveMasterModal">
-    <div class="modal-content" style="max-width: 840px;">
+    <div class="modal-content" style="max-width: 900px;">
         <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(99, 102, 241, 0.12); color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 16px;">
                     <i class="fa-solid fa-sliders"></i>
                 </div>
                 <div>
-                    <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--text-heading);">Leave Master & Quota Policy</h3>
-                    <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">Configure leave categories, pay structure, and default annual allowances.</p>
+                    <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--text-heading);">Leave Master & Carry-Forward Policy</h3>
+                    <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">Configure leave categories, pay structure, FY boundaries, and carry-forward rules.</p>
                 </div>
             </div>
             <button type="button" class="modal-close" onclick="closeLeaveMasterModal()">&times;</button>
         </div>
 
-        <div class="modal-body" style="padding: 16px 20px; max-height: 70vh; overflow-y: auto;">
+        <div class="modal-body" style="padding: 16px 20px; max-height: 75vh; overflow-y: auto;">
+            <!-- Tenant Financial Year Boundary Settings Bar -->
+            <div style="background: rgba(99, 102, 241, 0.05); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <strong style="font-size: 13px; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-calendar-days" style="color: #6366f1;"></i> Organization Financial Year Cycle
+                    </strong>
+                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                        Defines annual quota boundary and the date on which unutilized leaves rollover or lapse.
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <select id="tenantFYStartMonthSelect" class="form-control" onchange="updateTenantFYStartMonth(this.value)" style="font-size: 12px; font-weight: 700; width: auto; padding: 6px 10px;">
+                        <option value="4" {% if current_tenant.financial_year_start_month == 4 %}selected{% endif %}>April 1 – March 31 (Indian Standard FY)</option>
+                        <option value="1" {% if current_tenant.financial_year_start_month == 1 %}selected{% endif %}>January 1 – December 31 (Calendar Year)</option>
+                        <option value="7" {% if current_tenant.financial_year_start_month == 7 %}selected{% endif %}>July 1 – June 30 (Academic / Fiscal)</option>
+                        <option value="10" {% if current_tenant.financial_year_start_month == 10 %}selected{% endif %}>October 1 – September 30 (Custom)</option>
+                    </select>
+                    <span id="fySaveSpinner" style="display: none; color: #6366f1;"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                </div>
+            </div>
+
             <!-- Master Actions Bar -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                 <div>
-                    <span style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Configured Leave Types</span>
+                    <span style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Configured Categories</span>
                     <span id="masterTypeCountBadge" class="badge badge-sky" style="margin-left: 6px; font-size: 11px;">Loading...</span>
                 </div>
                 <button type="button" class="btn btn-primary" onclick="showAddLeaveTypeForm()" style="font-size: 12px; padding: 6px 14px; background: #6366f1; display: flex; align-items: center; gap: 6px;">
@@ -273,14 +393,15 @@
                             <th>Code</th>
                             <th>Category Name</th>
                             <th>Pay Type</th>
-                            <th>Default Quota</th>
+                            <th>Annual Quota</th>
+                            <th>Carry-Forward Policy</th>
                             <th>Status</th>
                             <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="leaveMasterTableBody">
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 25px; color: var(--text-muted);">Loading leave types...</td>
+                            <td colspan="7" style="text-align: center; padding: 25px; color: var(--text-muted);">Loading leave categories...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -330,6 +451,35 @@
                         </div>
                     </div>
 
+                    <!-- Carry-Forward Configuration Section -->
+                    <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <label style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                                <input type="checkbox" id="formLeaveTypeAllowCarryForward" onchange="toggleCarryForwardInput()" style="width: 16px; height: 16px; accent-color: #6366f1;">
+                                <span>Allow Carry-Forward to Next Financial Year</span>
+                            </label>
+                            <span class="badge badge-emerald" style="font-size: 11px;"><i class="fa-solid fa-arrows-spin"></i> FY Rollover</span>
+                        </div>
+                        <p style="margin: 0 0 10px; font-size: 11.5px; color: var(--text-muted);">
+                            When checked, unutilized balances at year-end carry forward into the next FY. Days exceeding the cap will lapse automatically.
+                        </p>
+                        <div id="carryForwardFieldsRow" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 11.5px;">Max Carry-Forward Days (0 = Unlimited)</label>
+                                <input type="number" step="0.5" min="0" id="formLeaveTypeMaxCarryForward" class="form-control" placeholder="0 (Unlimited)" style="font-weight: 700;">
+                                <small style="color: var(--text-muted); font-size: 10.5px;">Enter 0 or leave blank for unlimited rollover.</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 11.5px;">Lapse Policy for Excess Days</label>
+                                <select id="formLeaveTypeLapsePolicy" class="form-control" style="font-weight: 600;">
+                                    <option value="LAPSE_EXCESS">Lapse Excess Quota (Standard)</option>
+                                    <option value="LAPSE_ALL">Lapse All (Disallow Rollover)</option>
+                                </select>
+                                <small style="color: var(--text-muted); font-size: 10.5px;">Applied to unutilized leaves above max cap.</small>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group" style="margin-bottom: 14px;">
                         <label class="form-label" style="font-size: 12px;">Description / Policy Notes</label>
                         <input type="text" id="formLeaveTypeDesc" class="form-control" placeholder="Brief description of when this leave category applies...">
@@ -352,18 +502,104 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================================= -->
+<!-- MODAL: TRIGGER FY ROLLOVER / TRANSITION                   -->
+<!-- ========================================================= -->
+<div id="fyTransitionModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <h3>
+                <i class="fa-solid fa-arrows-spin" style="color: #10b981;"></i>
+                <span>Financial Year Rollover & Accrual</span>
+            </h3>
+            <button class="modal-close" onclick="closeFYTransitionModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 13px; color: var(--text-primary); line-height: 1.5; margin-bottom: 14px;">
+                This process evaluates previous Financial Year balances across all active employees, applies carry-forward limits per category policy, lapses excess days, and allocates fresh annual quotas for the target FY.
+            </p>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label" style="font-size: 12px;">Target Financial Year to Initialize</label>
+                <select id="modalTargetFYSelect" class="form-control" style="font-weight: 700;">
+                    {% for fy in available_financial_years %}
+                    <option value="{{ fy.fy_code }}" {% if fy.is_current %}selected{% endif %}>
+                        {{ fy.fy_label }}{% if fy.is_current %} (Current FY){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="rolloverResultAlert" style="display: none; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px; line-height: 1.4;"></div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn btn-secondary" onclick="closeFYTransitionModal()">Close</button>
+            <button type="button" class="btn btn-primary" id="btnExecuteRollover" onclick="executeFYRollover()" style="background: #10b981;">
+                <i class="fa-solid fa-check-double"></i> Run Rollover
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    let activeTab = "requests"; // "requests" | "balances"
     let activeLeaveStatus = "PENDING";
     let allLeaveRequests = [];
+    let allEmployeeBalances = [];
     let currentReviewItem = null;
+    let cachedLeaveTypes = [];
 
     document.addEventListener("DOMContentLoaded", () => {
         loadLeaveSummaryStats();
         loadLeaveRequests();
     });
+
+    function switchLeaveTab(tab) {
+        activeTab = tab;
+        const reqBtn = document.getElementById("tabBtnRequests");
+        const balBtn = document.getElementById("tabBtnBalances");
+        const reqView = document.getElementById("requestsViewContainer");
+        const balView = document.getElementById("balancesViewContainer");
+
+        if (tab === "requests") {
+            reqBtn.style.background = "#6366f1";
+            reqBtn.style.color = "#fff";
+            balBtn.style.background = "transparent";
+            balBtn.style.color = "var(--text-muted)";
+            reqView.style.display = "block";
+            balView.style.display = "none";
+            loadLeaveRequests();
+        } else {
+            balBtn.style.background = "#6366f1";
+            balBtn.style.color = "#fff";
+            reqBtn.style.background = "transparent";
+            reqBtn.style.color = "var(--text-muted)";
+            reqView.style.display = "none";
+            balView.style.display = "block";
+            loadEmployeeBalances();
+        }
+    }
+
+    function refreshActiveTab() {
+        loadLeaveSummaryStats();
+        if (activeTab === "requests") {
+            loadLeaveRequests();
+        } else {
+            loadEmployeeBalances();
+        }
+    }
+
+    function onGlobalFYChange() {
+        const selectedFY = document.getElementById("globalFYSelect")?.value;
+        const labelElem = document.getElementById("kpiFYBadgeLabel");
+        if (labelElem && selectedFY) {
+            labelElem.innerText = `FY ${selectedFY}`;
+        }
+        refreshActiveTab();
+    }
 
     async function loadLeaveSummaryStats() {
         try {
@@ -380,6 +616,9 @@
         }
     }
 
+    /* ==========================================================================
+       TAB 1: LEAVE REQUESTS CONTROLLER
+       ========================================================================== */
     function filterLeaveStatus(statusVal) {
         activeLeaveStatus = statusVal;
         
@@ -400,11 +639,13 @@
         const deptId = document.getElementById("leaveDeptFilter")?.value || "";
         const startDate = document.getElementById("leaveStartDate")?.value || "";
         const endDate = document.getElementById("leaveEndDate")?.value || "";
+        const fyVal = document.getElementById("globalFYSelect")?.value || "";
 
         let url = `/api/v1/leave/requests?status=${activeLeaveStatus}`;
         if (deptId) url += `&department_id=${deptId}`;
         if (startDate) url += `&start_date=${startDate}`;
         if (endDate) url += `&end_date=${endDate}`;
+        if (fyVal) url += `&financial_year=${encodeURIComponent(fyVal)}`;
 
         try {
             const res = await fetch(url);
@@ -476,7 +717,10 @@
             if (req.current_balances && req.current_balances.length > 0) {
                 const matchB = req.current_balances.find(b => b.leave_type_id === req.leave_type_id);
                 if (matchB) {
-                    balanceText = `${matchB.remaining_days} / ${matchB.total_allocated} days`;
+                    balanceText = `${matchB.remaining_days} / ${matchB.total_allocated}d`;
+                    if (matchB.carried_forward_days > 0) {
+                        balanceText += ` <span style="font-size: 10.5px; color: #10b981;" title="Includes ${matchB.carried_forward_days}d carried forward">(+${matchB.carried_forward_days} CF)</span>`;
+                    }
                 }
             }
 
@@ -552,6 +796,121 @@
         filterLeaveStatus("PENDING");
     }
 
+    /* ==========================================================================
+       TAB 2: EMPLOYEE FY BALANCES LEDGER CONTROLLER
+       ========================================================================== */
+    async function loadEmployeeBalances() {
+        const tbody = document.getElementById("employeeBalancesTableBody");
+        const countLabel = document.getElementById("balancesTableCountLabel");
+        if (!tbody) return;
+
+        const deptId = document.getElementById("balanceDeptFilter")?.value || "";
+        const fyVal = document.getElementById("globalFYSelect")?.value || "";
+
+        let url = `/api/v1/leave/balances?`;
+        if (deptId) url += `&department_id=${deptId}`;
+        if (fyVal) url += `&financial_year=${encodeURIComponent(fyVal)}`;
+
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (res.ok) {
+                allEmployeeBalances = data.balances || [];
+                if (countLabel) countLabel.innerText = `${allEmployeeBalances.length} balance entries (${data.financial_year_label || fyVal})`;
+                renderEmployeeBalancesTable(allEmployeeBalances);
+            } else {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--accent-rose); padding: 30px;">Error loading balances: ${data.detail || 'Failed'}</td></tr>`;
+            }
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--accent-rose); padding: 30px;">Network error loading balances ledger.</td></tr>`;
+        }
+    }
+
+    function onBalanceSearchInput() {
+        const searchVal = (document.getElementById("balanceSearchInput")?.value || "").toLowerCase().trim();
+        if (!searchVal) {
+            renderEmployeeBalancesTable(allEmployeeBalances);
+            return;
+        }
+
+        const filtered = allEmployeeBalances.filter(b =>
+            (b.student_name && b.student_name.toLowerCase().includes(searchVal)) ||
+            (b.roll_number && b.roll_number.toLowerCase().includes(searchVal)) ||
+            (b.department && b.department.toLowerCase().includes(searchVal)) ||
+            (b.leave_type_name && b.leave_type_name.toLowerCase().includes(searchVal)) ||
+            (b.leave_type_code && b.leave_type_code.toLowerCase().includes(searchVal))
+        );
+        renderEmployeeBalancesTable(filtered);
+    }
+
+    function renderEmployeeBalancesTable(items) {
+        const tbody = document.getElementById("employeeBalancesTableBody");
+        if (!tbody) return;
+
+        if (items.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                        <i class="fa-solid fa-wallet" style="font-size: 32px; margin-bottom: 8px; color: var(--text-light);"></i>
+                        <p style="font-weight: 600;">No balance records found for this Financial Year</p>
+                        <p style="font-size: 12px;">Click "Run FY Rollover" above to initialize leave quotas.</p>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        let html = "";
+        items.forEach(b => {
+            const cfBadge = b.carried_forward_days > 0
+                ? `<span class="badge badge-emerald" style="font-size: 11px;">+${b.carried_forward_days}d</span>`
+                : `<span style="color: var(--text-muted); font-size: 11.5px;">0.0d</span>`;
+
+            const lapsedBadge = b.lapsed_days > 0
+                ? `<span class="badge badge-rose" style="font-size: 11px;">${b.lapsed_days}d</span>`
+                : `<span style="color: var(--text-muted); font-size: 11.5px;">--</span>`;
+
+            const usedDetail = b.carried_forward_used > 0
+                ? `<strong>${b.used_days}d</strong> <small style="color: var(--text-muted); font-size: 10.5px;">(${b.carried_forward_used}d CF)</small>`
+                : `<strong>${b.used_days}d</strong>`;
+
+            html += `
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="feed-avatar" style="width: 30px; height: 30px; font-size: 12px;">
+                                <span>${(b.student_name || 'E')[0]}</span>
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-heading); font-size: 13px;">${b.student_name}</strong>
+                                <div style="font-size: 11px; color: var(--text-muted);"><code>${b.roll_number}</code></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span style="font-size: 12px; color: var(--text-primary); font-weight: 600;">${b.department || 'N/A'}</span></td>
+                    <td>
+                        <span class="badge badge-indigo" style="font-size: 11px;">${b.leave_type_name} (${b.leave_type_code})</span>
+                    </td>
+                    <td><span style="font-weight: 700; color: var(--text-primary);">${b.annual_quota}d</span></td>
+                    <td>${cfBadge}</td>
+                    <td>${usedDetail}</td>
+                    <td><span style="color: #f59e0b; font-weight: 700;">${b.pending_days}d</span></td>
+                    <td>${lapsedBadge}</td>
+                    <td>
+                        <span style="font-size: 14px; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 4px;">
+                            ${b.remaining_days}d
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    /* ==========================================================================
+       REVIEW MODAL CONTROLLER
+       ========================================================================== */
     function openReviewModal(requestId) {
         const item = allLeaveRequests.find(r => r.id === requestId);
         if (!item) return;
@@ -565,12 +924,11 @@
         document.getElementById("reviewDatesLabel").innerText = (item.start_date === item.end_date) ? item.start_date : `${item.start_date} to ${item.end_date}`;
         document.getElementById("reviewReasonBox").innerText = item.reason;
         
-        // Populate balance
         let bText = "Remaining balance details unavailable";
         if (item.current_balances && item.current_balances.length > 0) {
             const matchB = item.current_balances.find(b => b.leave_type_id === item.leave_type_id);
             if (matchB) {
-                bText = `Available Balance: <strong>${matchB.remaining_days}</strong> / ${matchB.total_allocated} days remaining (Pending: ${matchB.pending_days}d, Used: ${matchB.used_days}d)`;
+                bText = `Available: <strong>${matchB.remaining_days}</strong> / ${matchB.total_allocated} days (${matchB.annual_quota} annual quota + ${matchB.carried_forward_days} carried forward)`;
             }
         }
         document.getElementById("reviewBalanceGauge").innerHTML = bText;
@@ -589,51 +947,52 @@
         currentReviewItem = null;
     }
 
-    async function triggerReviewDecision(decisionStatus) {
-        if (!currentReviewItem) return;
-        const requestId = currentReviewItem.id;
-        const remarks = document.getElementById("reviewAdminRemarks")?.value || "";
+    function triggerReviewDecision(decision) {
+        document.getElementById("reviewActionStatus").value = decision;
+        document.getElementById("reviewLeaveForm").requestSubmit();
+    }
+
+    async function submitLeaveReview(e) {
+        e.preventDefault();
+        const reqId = document.getElementById("reviewRequestId").value;
+        const statusVal = document.getElementById("reviewActionStatus").value;
+        const remarksVal = document.getElementById("reviewAdminRemarks").value.trim();
         const alertBox = document.getElementById("reviewResultAlert");
 
-        if (decisionStatus === "REJECTED" && !remarks.trim()) {
-            if (!confirm("Are you sure you want to reject this leave application without remarks?")) {
-                return;
-            }
-        }
+        if (!statusVal) return;
 
         try {
-            const res = await fetch(`/api/v1/leave/requests/${requestId}/review`, {
+            const res = await fetch(`/api/v1/leave/requests/${reqId}/review`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    status: decisionStatus,
-                    admin_remarks: remarks,
-                }),
+                    status: statusVal,
+                    admin_remarks: remarksVal
+                })
             });
-
             const data = await res.json();
+
             if (res.ok) {
                 if (alertBox) {
                     alertBox.style.display = "block";
-                    alertBox.style.background = (decisionStatus === "APPROVED") ? "var(--badge-emerald-bg)" : "var(--badge-rose-bg)";
-                    alertBox.style.color = (decisionStatus === "APPROVED") ? "var(--badge-emerald-text)" : "var(--badge-rose-text)";
-                    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Application has been ${decisionStatus.toLowerCase()} successfully!`;
+                    alertBox.style.background = statusVal === "APPROVED" ? "var(--badge-emerald-bg)" : "var(--badge-rose-bg)";
+                    alertBox.style.color = statusVal === "APPROVED" ? "var(--badge-emerald-text)" : "var(--badge-rose-text)";
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Application has been ${statusVal.toLowerCase()}!`;
                 }
-
                 setTimeout(() => {
                     closeReviewModal();
-                    loadLeaveSummaryStats();
                     loadLeaveRequests();
-                }, 750);
+                    loadLeaveSummaryStats();
+                }, 800);
             } else {
                 if (alertBox) {
                     alertBox.style.display = "block";
                     alertBox.style.background = "var(--badge-rose-bg)";
                     alertBox.style.color = "var(--badge-rose-text)";
-                    alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Review failed.'}`;
+                    alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.detail || 'Review failed'}`;
                 }
             }
-        } catch (e) {
+        } catch (err) {
             if (alertBox) {
                 alertBox.style.display = "block";
                 alertBox.style.background = "var(--badge-rose-bg)";
@@ -646,14 +1005,12 @@
     function openReviewDetails(requestId) {
         const item = allLeaveRequests.find(r => r.id === requestId);
         if (!item) return;
-        alert(`Application #${item.id} - ${item.student_name}\nStatus: ${item.status}\nReviewed By: ${item.reviewer_name || 'Admin'}\nDate: ${item.reviewed_at || 'N/A'}\nRemarks: ${item.admin_remarks || 'None'}`);
+        alert(`Application #${item.id} - ${item.student_name}\nStatus: ${item.status}\nFinancial Year: ${item.financial_year || 'N/A'}\nReviewed By: ${item.reviewer_name || 'Admin'}\nDate: ${item.reviewed_at || 'N/A'}\nRemarks: ${item.admin_remarks || 'None'}`);
     }
 
     /* ==========================================================================
-       LEAVE MASTER & QUOTA JS CONTROLLERS
+       LEAVE MASTER & CARRY-FORWARD POLICY JS CONTROLLERS
        ========================================================================== */
-    let cachedLeaveTypes = [];
-
     function openLeaveMasterModal() {
         const modal = document.getElementById("leaveMasterModal");
         if (modal) modal.classList.add("active");
@@ -664,6 +1021,38 @@
     function closeLeaveMasterModal() {
         const modal = document.getElementById("leaveMasterModal");
         if (modal) modal.classList.remove("active");
+    }
+
+    function toggleCarryForwardInput() {
+        const isChecked = document.getElementById("formLeaveTypeAllowCarryForward").checked;
+        const row = document.getElementById("carryForwardFieldsRow");
+        if (row) {
+            row.style.display = isChecked ? "grid" : "none";
+        }
+    }
+
+    async function updateTenantFYStartMonth(val) {
+        const spinner = document.getElementById("fySaveSpinner");
+        if (spinner) spinner.style.display = "inline-block";
+
+        try {
+            const res = await fetch("/api/v1/leave/settings/financial-year", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ start_month: parseInt(val) })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Financial Year cycle updated! Current active FY is: ${data.current_financial_year?.fy_label}`);
+                window.location.reload();
+            } else {
+                alert(`Failed to update FY cycle: ${data.detail || 'Error'}`);
+            }
+        } catch (e) {
+            alert("Network error updating financial year cycle.");
+        } finally {
+            if (spinner) spinner.style.display = "none";
+        }
     }
 
     async function loadLeaveMasterTypes() {
@@ -679,10 +1068,10 @@
                 if (badge) badge.innerText = `${cachedLeaveTypes.length} Categories`;
                 renderLeaveMasterTable(cachedLeaveTypes);
             } else {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-rose); padding: 20px;">Failed to load leave types: ${data.detail || 'Error'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-rose); padding: 20px;">Failed to load leave types: ${data.detail || 'Error'}</td></tr>`;
             }
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-rose); padding: 20px;">Network error loading leave master.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-rose); padding: 20px;">Network error loading leave master.</td></tr>`;
         }
     }
 
@@ -691,7 +1080,7 @@
         if (!tbody) return;
 
         if (types.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">No leave categories configured. Click "+ Add Leave Category" above.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">No leave categories configured. Click "+ Add Leave Category" above.</td></tr>`;
             return;
         }
 
@@ -705,6 +1094,10 @@
                 ? `<span class="badge badge-present" style="font-size: 11px;">Active</span>`
                 : `<span class="badge badge-unknown" style="font-size: 11px;">Archived</span>`;
 
+            const cfBadge = t.allow_carry_forward 
+                ? `<span class="badge badge-emerald" style="font-size: 11px;"><i class="fa-solid fa-arrows-spin"></i> Rollover (${t.max_carry_forward_days > 0 ? 'Max ' + t.max_carry_forward_days + 'd' : 'Unlimited'})</span>`
+                : `<span class="badge" style="background: rgba(148,163,184,0.15); color: #64748b; font-size: 11px;"><i class="fa-solid fa-ban"></i> Lapses at Year-End</span>`;
+
             html += `
                 <tr>
                     <td><code style="font-weight: 700; color: #6366f1;">${t.code}</code></td>
@@ -714,9 +1107,10 @@
                     </td>
                     <td>${payBadge}</td>
                     <td><strong style="font-size: 13px; color: var(--text-primary);">${t.default_days_per_year}</strong> <span style="font-size: 11px; color: var(--text-muted);">days/yr</span></td>
+                    <td>${cfBadge}</td>
                     <td>${activeBadge}</td>
                     <td style="text-align: right; white-space: nowrap;">
-                        <button type="button" class="btn btn-secondary" onclick="editLeaveType(${t.id})" style="padding: 4px 8px; font-size: 11px; margin-right: 4px;" title="Edit Quota">
+                        <button type="button" class="btn btn-secondary" onclick="editLeaveType(${t.id})" style="padding: 4px 8px; font-size: 11px; margin-right: 4px;" title="Edit Quota & Rollover Rules">
                             <i class="fa-solid fa-pen-to-square"></i> Edit
                         </button>
                         <button type="button" class="btn btn-danger" onclick="deleteLeaveType(${t.id}, '${t.name.replace(/'/g, "\\'")}')" style="padding: 4px 8px; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);" title="Delete / Deactivate">
@@ -738,7 +1132,11 @@
         document.getElementById("formLeaveTypeIsPaid").value = "true";
         document.getElementById("formLeaveTypeDefaultDays").value = "12";
         document.getElementById("formLeaveTypeIsActive").value = "true";
+        document.getElementById("formLeaveTypeAllowCarryForward").checked = false;
+        document.getElementById("formLeaveTypeMaxCarryForward").value = "0";
+        document.getElementById("formLeaveTypeLapsePolicy").value = "LAPSE_EXCESS";
         document.getElementById("formLeaveTypeDesc").value = "";
+        toggleCarryForwardInput();
 
         document.getElementById("leaveTypeFormTitle").innerHTML = `<i class="fa-solid fa-plus" style="color: #6366f1;"></i> Add New Leave Category`;
         document.getElementById("leaveTypeFormCard").style.display = "block";
@@ -758,11 +1156,15 @@
         document.getElementById("formLeaveTypeId").value = item.id;
         document.getElementById("formLeaveTypeName").value = item.name;
         document.getElementById("formLeaveTypeCode").value = item.code;
-        document.getElementById("formLeaveTypeCode").readOnly = true; // Immutable code
+        document.getElementById("formLeaveTypeCode").readOnly = true;
         document.getElementById("formLeaveTypeIsPaid").value = item.is_paid ? "true" : "false";
         document.getElementById("formLeaveTypeDefaultDays").value = item.default_days_per_year;
         document.getElementById("formLeaveTypeIsActive").value = item.is_active ? "true" : "false";
+        document.getElementById("formLeaveTypeAllowCarryForward").checked = Boolean(item.allow_carry_forward);
+        document.getElementById("formLeaveTypeMaxCarryForward").value = item.max_carry_forward_days || "0";
+        document.getElementById("formLeaveTypeLapsePolicy").value = item.lapse_policy || "LAPSE_EXCESS";
         document.getElementById("formLeaveTypeDesc").value = item.description || "";
+        toggleCarryForwardInput();
 
         document.getElementById("leaveTypeFormTitle").innerHTML = `<i class="fa-solid fa-pen-to-square" style="color: #6366f1;"></i> Edit ${item.name} (${item.code})`;
         document.getElementById("leaveTypeFormCard").style.display = "block";
@@ -779,6 +1181,9 @@
         const isPaidVal = document.getElementById("formLeaveTypeIsPaid").value === "true";
         const defaultDaysVal = parseFloat(document.getElementById("formLeaveTypeDefaultDays").value) || 0;
         const isActiveVal = document.getElementById("formLeaveTypeIsActive").value === "true";
+        const allowCFVal = document.getElementById("formLeaveTypeAllowCarryForward").checked;
+        const maxCFVal = parseFloat(document.getElementById("formLeaveTypeMaxCarryForward").value) || 0;
+        const lapsePolicyVal = document.getElementById("formLeaveTypeLapsePolicy").value;
         const descVal = document.getElementById("formLeaveTypeDesc").value.trim();
 
         const payload = {
@@ -788,6 +1193,9 @@
             description: descVal,
             is_paid: isPaidVal,
             default_days_per_year: defaultDaysVal,
+            allow_carry_forward: allowCFVal,
+            max_carry_forward_days: maxCFVal,
+            lapse_policy: lapsePolicyVal,
             is_active: isActiveVal,
         };
 
@@ -828,7 +1236,7 @@
     }
 
     async function deleteLeaveType(typeId, typeName) {
-        if (!confirm(`Are you sure you want to deactivate/delete '${typeName}'? Existing balances and past applications will remain intact.`)) {
+        if (!confirm(`Are you sure you want to deactivate/archive '${typeName}'? Existing balances and past applications will remain intact.`)) {
             return;
         }
 
@@ -844,6 +1252,74 @@
             }
         } catch (e) {
             alert("Network error deleting leave type.");
+        }
+    }
+
+    /* ==========================================================================
+       FY TRANSITION / ROLLOVER MODAL CONTROLLER
+       ========================================================================== */
+    function openFYTransitionModal() {
+        const modal = document.getElementById("fyTransitionModal");
+        const alertBox = document.getElementById("rolloverResultAlert");
+        if (alertBox) alertBox.style.display = "none";
+        if (modal) modal.classList.add("active");
+    }
+
+    function closeFYTransitionModal() {
+        const modal = document.getElementById("fyTransitionModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    async function executeFYRollover() {
+        const btn = document.getElementById("btnExecuteRollover");
+        const targetFY = document.getElementById("modalTargetFYSelect")?.value;
+        const alertBox = document.getElementById("rolloverResultAlert");
+
+        if (!targetFY) return;
+
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+
+        try {
+            const res = await fetch(`/api/v1/leave/balances/transition-fy?financial_year=${encodeURIComponent(targetFY)}`, {
+                method: "POST"
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-emerald-bg)";
+                    alertBox.style.color = "var(--badge-emerald-text)";
+                    alertBox.innerHTML = `
+                        <strong><i class="fa-solid fa-circle-check"></i> ${data.financial_year_label} Rollover Complete!</strong><br>
+                        &bull; Employees processed: <strong>${data.employees_processed}</strong><br>
+                        &bull; Balances initialized / synced: <strong>${data.balances_initialized}</strong><br>
+                        &bull; Total leaves carried forward: <strong>${data.total_carried_forward_days} days</strong><br>
+                        &bull; Total excess leaves lapsed: <strong>${data.total_lapsed_days} days</strong>
+                    `;
+                }
+                setTimeout(() => {
+                    refreshActiveTab();
+                }, 1000);
+            } else {
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Rollover failed: ${data.detail || 'Error'}`;
+                }
+            }
+        } catch (e) {
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Network error executing rollover.`;
+            }
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-check-double"></i> Run Rollover`;
         }
     }
 </script>

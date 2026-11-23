@@ -1013,9 +1013,13 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
               const SizedBox(height: 10),
               Center(
                 child: Text(
-                  attProvider.geofenceConfig?.mobileRequireFaceVerification == true
-                      ? 'Policy: Live Front-Facing Camera Biometric + Strict GPS Geofence'
-                      : 'Policy: Strict GPS Geofence + Live Biometric Face Verification',
+                  attProvider.geofenceConfig?.enableSelfAttendance == false
+                      ? (attProvider.geofenceConfig?.mobileRequireFaceVerification == true
+                          ? 'Policy: Live Front-Facing Camera Biometric (Any Location Allowed)'
+                          : 'Policy: Flexible Mobile Attendance (Any Location Allowed)')
+                      : (attProvider.geofenceConfig?.mobileRequireFaceVerification == true
+                          ? 'Policy: Live Front-Facing Camera Biometric + Strict GPS Geofence'
+                          : 'Policy: Strict GPS Geofence + Live Biometric Face Verification'),
                   style: TextStyle(color: isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8), fontSize: 11),
                 ),
               ),

@@ -58,7 +58,7 @@ def purge_test_records():
 
         # 3. Identify test students to purge in core tenants
         test_students = db.query(Student).filter(
-            Student.name.ilike("%test%") | Student.name.ilike("Alice%") | Student.name.ilike("Bob%") | Student.name.ilike("Jane%") | Student.name.ilike("Charles%") | Student.name.ilike("Alex%") | Student.name.ilike("%Xavier%") | Student.name.ilike("Temporary%") | Student.name.in_(["a", "b", "c", "temp"]),
+            Student.name.ilike("%test%") | Student.name.ilike("Alice%") | Student.name.ilike("Bob%") | Student.name.ilike("Jane%") | Student.name.ilike("Charles%") | Student.name.ilike("Alex%") | Student.name.ilike("%Xavier%") | Student.name.ilike("Temporary%") | Student.name.ilike("David%") | Student.roll_number.ilike("FY_TEST_%") | Student.roll_number.ilike("EMP_LEAVE_%") | Student.name.in_(["a", "b", "c", "temp"]),
         ).all()
 
         purged_student_ids = []
@@ -134,6 +134,14 @@ def purge_test_records():
         for tl in test_locs:
             logger.info(f"Deleting test location #{tl.id}: '{tl.name}'")
             db.delete(tl)
+
+        # 4b. Clean up test leave types
+        test_ltypes = db.query(LeaveType).filter(
+            LeaveType.code.ilike("%_TEST") | LeaveType.code.ilike("TEST_%") | LeaveType.name.ilike("%Test%")
+        ).all()
+        for lt in test_ltypes:
+            logger.info(f"Deleting test leave category #{lt.id}: '{lt.name}' ({lt.code})")
+            db.delete(lt)
 
         db.flush()
 

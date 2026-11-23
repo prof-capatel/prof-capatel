@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "in.co.curiosityhub.flutter_attendance_web"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -15,9 +15,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.curiosityhub.attendance"
+        applicationId = "com.curiosityhub.app"
         minSdk = flutter.minSdkVersion
-        targetSdk = 34
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

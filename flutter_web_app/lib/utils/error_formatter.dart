@@ -40,10 +40,23 @@ class ErrorFormatter {
       return 'Unexpected response from the server. Please check your connection or contact support.';
     }
 
-    // 7. HTTP Status Code patterns
-    if (raw.contains('401') || raw.toLowerCase().contains('unauthorized')) {
+    // 7. HTTP Status Code and Auth patterns
+    if (raw.toLowerCase().contains('pending approval') || raw.toLowerCase().contains('pending administrator approval')) {
+      return 'Your registration is pending administrator approval. Please contact HR/Admin.';
+    }
+
+    if (raw.toLowerCase().contains('credentials have not been configured') ||
+        raw.toLowerCase().contains('not been configured yet')) {
+      return 'Employee credentials have not been configured yet. Please ask your administrator to set up your password.';
+    }
+
+    if (raw.contains('401') ||
+        raw.toLowerCase().contains('unauthorized') ||
+        raw.toLowerCase().contains('invalid username or password') ||
+        raw.toLowerCase().contains('invalid credentials')) {
       if (raw.toLowerCase().contains('invalid username or password') ||
-          raw.toLowerCase().contains('invalid credentials')) {
+          raw.toLowerCase().contains('invalid credentials') ||
+          raw.toLowerCase().contains('incorrect')) {
         return 'Invalid username or password. Please verify your credentials and try again.';
       }
       return 'Authentication failed. Please verify your credentials or organization code.';

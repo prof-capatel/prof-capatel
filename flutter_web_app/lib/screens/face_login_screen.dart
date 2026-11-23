@@ -168,138 +168,192 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
     final passwordCtrl = TextEditingController();
     bool isLoggingIn = false;
     String? dialogError;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF161B22),
+          scrollable: true,
+          backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withOpacity(0.1)),
+            side: BorderSide(color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFE2E8F0)),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.lock_outline_rounded, color: Color(0xFF6366F1)),
-              SizedBox(width: 10),
+              const Icon(Icons.lock_outline_rounded, color: Color(0xFF6366F1)),
+              const SizedBox(width: 10),
               Text(
                 'Password Sign In',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: usernameCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Username or Roll Number',
-                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                  filled: true,
-                  fillColor: const Color(0xFF0D1117),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: passwordCtrl,
-                obscureText: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                  filled: true,
-                  fillColor: const Color(0xFF0D1117),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              if (dialogError != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: usernameCtrl,
+                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    labelText: 'Username or Roll Number',
+                    labelStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.15) : const Color(0xFFCBD5E1)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.15) : const Color(0xFFCBD5E1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          dialogError!,
-                          style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordCtrl,
+                  obscureText: true,
+                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    labelStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.15) : const Color(0xFFCBD5E1)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.15) : const Color(0xFFCBD5E1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                    ),
+                  ),
+                ),
+                if (dialogError != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            dialogError!,
+                            style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                // Dedicated High-Contrast Full-Width "Login" Button Inside Content
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: isLoggingIn
+                        ? null
+                        : () async {
+                            if (usernameCtrl.text.trim().isEmpty || passwordCtrl.text.trim().isEmpty) {
+                              setDialogState(() => dialogError = 'Please enter both username and password.');
+                              return;
+                            }
+                            setDialogState(() {
+                              isLoggingIn = true;
+                              dialogError = null;
+                            });
+                            try {
+                              final auth = context.read<AuthProvider>();
+                              final ok = await auth.loginWithPassword(
+                                usernameCtrl.text.trim(),
+                                passwordCtrl.text.trim(),
+                                tenantSlug: auth.tenantSlug,
+                              );
+
+                              if (ok && mounted) {
+                                Navigator.of(ctx).pop();
+                                _countdownTimer?.cancel();
+                                _cameraService.dispose();
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
+                                );
+                              } else if (mounted) {
+                                setDialogState(() {
+                                  isLoggingIn = false;
+                                  dialogError = auth.errorMessage ?? 'Invalid credentials. Please verify your username and password.';
+                                });
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                setDialogState(() {
+                                  isLoggingIn = false;
+                                  dialogError = ErrorFormatter.format(e);
+                                });
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 2,
+                    ),
+                    child: isLoggingIn
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text(
+                            'Login',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B),
+                        fontSize: 13,
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
-            ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('Cancel', style: TextStyle(color: Colors.white.withOpacity(0.6))),
-            ),
-            ElevatedButton(
-              onPressed: isLoggingIn
-                  ? null
-                  : () async {
-                      if (usernameCtrl.text.trim().isEmpty || passwordCtrl.text.trim().isEmpty) {
-                        setDialogState(() => dialogError = 'Please enter both username and password.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isLoggingIn = true;
-                        dialogError = null;
-                      });
-                      try {
-                        final auth = context.read<AuthProvider>();
-                        final ok = await auth.loginWithPassword(
-                          usernameCtrl.text.trim(),
-                          passwordCtrl.text.trim(),
-                          tenantSlug: auth.tenantSlug,
-                        );
-
-                        if (ok && mounted) {
-                          Navigator.of(ctx).pop();
-                          _countdownTimer?.cancel();
-                          _cameraService.dispose();
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (_) => const EmployeeMobileHomeScreen()),
-                          );
-                        } else if (mounted) {
-                          setDialogState(() {
-                            isLoggingIn = false;
-                            dialogError = auth.errorMessage ?? 'Invalid credentials. Please verify your username and password.';
-                          });
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          setDialogState(() {
-                            isLoggingIn = false;
-                            dialogError = ErrorFormatter.format(e);
-                          });
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: isLoggingIn
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('Sign In'),
-            ),
-          ],
         ),
       ),
     );
@@ -772,12 +826,33 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                   const SizedBox(height: 12),
 
                   // Password login fallback
-                  TextButton.icon(
-                    onPressed: _showPasswordLoginDialog,
-                    icon: Icon(Icons.key_rounded, size: 16, color: Colors.white.withOpacity(0.7)),
-                    label: Text(
-                      'Use Username & Password instead',
-                      style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12.5),
+                  Container(
+                    width: double.infinity,
+                    height: 44,
+                    margin: const EdgeInsets.only(top: 4, bottom: 4),
+                    child: OutlinedButton.icon(
+                      onPressed: _showPasswordLoginDialog,
+                      icon: Icon(
+                        Icons.key_rounded,
+                        size: 17,
+                        color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                      ),
+                      label: Text(
+                        'Sign in with username/password',
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFFC7D2FE) : const Color(0xFF3730A3),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF6366F1).withOpacity(0.4) : const Color(0xFF6366F1).withOpacity(0.4),
+                          width: 1.2,
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
 

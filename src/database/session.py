@@ -188,6 +188,8 @@ def seed_default_leave_types(db: Session, tenant_id: int):
                 "default_days_per_year": 15.0,
                 "accrual_frequency": "ANNUAL",
                 "requires_document": False,
+                "allow_carry_forward": True,
+                "max_carry_forward_days": 15.0,
             },
             {
                 "name": "Leave Without Pay",
@@ -197,6 +199,8 @@ def seed_default_leave_types(db: Session, tenant_id: int):
                 "default_days_per_year": 0.0,
                 "accrual_frequency": "ANNUAL",
                 "requires_document": False,
+                "allow_carry_forward": False,
+                "max_carry_forward_days": 0.0,
             },
         ]
         for item in defaults:
@@ -209,6 +213,8 @@ def seed_default_leave_types(db: Session, tenant_id: int):
                 default_days_per_year=item["default_days_per_year"],
                 accrual_frequency=item["accrual_frequency"],
                 requires_document=item["requires_document"],
+                allow_carry_forward=item.get("allow_carry_forward", False),
+                max_carry_forward_days=item.get("max_carry_forward_days", 0.0),
                 is_active=True,
             )
             db.add(lt)
@@ -1245,6 +1251,80 @@ def run_schema_migrations():
             if not res:
                 conn.execute(text("ALTER TABLE system_branding ADD COLUMN mobile_require_face_verification TINYINT(1) DEFAULT 0 NOT NULL"))
                 logger.info("Migrated system_branding table: added mobile_require_face_verification column.")
+
+            # 12. Financial Year Leave Management & Carry-Forward Schema Migrations
+            # 12a. tenants.financial_year_start_month
+            res = conn.execute(text("SHOW COLUMNS FROM tenants LIKE 'financial_year_start_month'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN financial_year_start_month INT DEFAULT 4 NOT NULL"))
+                logger.info("Migrated tenants table: added financial_year_start_month column.")
+
+            # 12b. leave_types carry-forward policy columns
+            res = conn.execute(text("SHOW COLUMNS FROM leave_types LIKE 'allow_carry_forward'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_types ADD COLUMN allow_carry_forward TINYINT(1) DEFAULT 0 NOT NULL"))
+                logger.info("Migrated leave_types table: added allow_carry_forward column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM leave_types LIKE 'max_carry_forward_days'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_types ADD COLUMN max_carry_forward_days FLOAT DEFAULT 0.0 NOT NULL"))
+                logger.info("Migrated leave_types table: added max_carry_forward_days column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM leave_types LIKE 'lapse_policy'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_types ADD COLUMN lapse_policy VARCHAR(50) DEFAULT 'LAPSE_EXCESS' NOT NULL"))
+                logger.info("Migrated leave_types table: added lapse_policy column.")
+
+            # Set default carry-forward policy for EL (Earned Leave)
+            conn.execute(text("UPDATE leave_types SET allow_carry_forward = 1, max_carry_forward_days = 15.0 WHERE code = 'EL' AND allow_carry_forward = 0"))
+
+            # 12c. leave_balances FY breakdown columns
+            res = conn.execute(text("SHOW COLUMNS FROM leave_balances LIKE 'financial_year'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_balances ADD COLUMN financial_year VARCHAR(20) NULL"))
+                conn.execute(text("CREATE INDEX ix_leave_balances_financial_year ON leave_balances (financial_year)"))
+                logger.info("Migrated leave_balances table: added financial_year column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM leave_balances LIKE 'annual_quota'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_balances ADD COLUMN annual_quota FLOAT DEFAULT 0.0 NOT NULL"))
+                logger.info("Migrated leave_balances table: added annual_quota column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM leave_balances LIKE 'carried_forward_days'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_balances ADD COLUMN carried_forward_days FLOAT DEFAULT 0.0 NOT NULL"))
+                logger.info("Migrated leave_balances table: added carried_forward_days column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM leave_balances LIKE 'carried_forward_used'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_balances ADD COLUMN carried_forward_used FLOAT DEFAULT 0.0 NOT NULL"))
+                logger.info("Migrated leave_balances table: added carried_forward_used column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM leave_balances LIKE 'lapsed_days'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_balances ADD COLUMN lapsed_days FLOAT DEFAULT 0.0 NOT NULL"))
+                logger.info("Migrated leave_balances table: added lapsed_days column.")
+
+            # Backfill existing leave_balances
+            conn.execute(text("UPDATE leave_balances SET financial_year = CONCAT(year, '-', year + 1) WHERE financial_year IS NULL"))
+            conn.execute(text("UPDATE leave_balances SET annual_quota = total_allocated WHERE annual_quota = 0.0 AND total_allocated > 0.0"))
+
+            # 12d. leave_requests.financial_year
+            res = conn.execute(text("SHOW COLUMNS FROM leave_requests LIKE 'financial_year'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE leave_requests ADD COLUMN financial_year VARCHAR(20) NULL"))
+                conn.execute(text("CREATE INDEX ix_leave_requests_financial_year ON leave_requests (financial_year)"))
+                logger.info("Migrated leave_requests table: added financial_year column.")
+
+            # Backfill existing leave_requests financial_year based on start_date
+            conn.execute(text("""
+                UPDATE leave_requests
+                SET financial_year = CASE
+                    WHEN MONTH(start_date) >= 4 THEN CONCAT(YEAR(start_date), '-', YEAR(start_date) + 1)
+                    ELSE CONCAT(YEAR(start_date) - 1, '-', YEAR(start_date))
+                END
+                WHERE financial_year IS NULL AND start_date IS NOT NULL
+            """))
 
             # Seed default WorkShift for corporate tenants if none exist
             try:

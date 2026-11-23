@@ -163,7 +163,15 @@ class AttendanceProvider with ChangeNotifier {
       final coords = await LocationService.getCurrentLocation();
       _userCoordinates = coords;
 
-      if (_geofenceConfig != null &&
+      final isGeofenceEnabled = _geofenceConfig?.enableSelfAttendance ?? false;
+
+      if (!isGeofenceEnabled) {
+        // Geofencing is disabled for this organization:
+        // Employees can check in/out from any location without geofence perimeter boundaries!
+        _isInsideGeofence = true;
+        _geofenceStatusMessage = 'Geofencing Bypassed (Any Location Allowed)';
+        _distanceToCampus = null;
+      } else if (_geofenceConfig != null &&
           _geofenceConfig!.geoLatitude != null &&
           _geofenceConfig!.geoLongitude != null) {
         final dist = LocationService.calculateDistance(
@@ -194,6 +202,9 @@ class AttendanceProvider with ChangeNotifier {
           _geofenceStatusMessage =
               'Outside perimeter (${dist.toStringAsFixed(1)}m away). Radius allowed: ${maxRadius.toStringAsFixed(0)}m.';
         }
+      } else {
+        _isInsideGeofence = true;
+        _geofenceStatusMessage = 'Geofence coordinates pending admin setup';
       }
 
       _checkInStatus = CheckInStatus.idle;
@@ -250,7 +261,8 @@ class AttendanceProvider with ChangeNotifier {
       return {'status': 'error', 'message': _statusDetail};
     }
 
-    if (!_isInsideGeofence) {
+    final isGeofenceEnabled = _geofenceConfig?.enableSelfAttendance ?? false;
+    if (isGeofenceEnabled && !_isInsideGeofence) {
       _checkInStatus = CheckInStatus.error;
       _statusDetail = _geofenceStatusMessage ?? 'You are outside the authorized geofence perimeter.';
       notifyListeners();

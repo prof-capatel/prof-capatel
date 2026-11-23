@@ -72,9 +72,9 @@ class User(Base):
         if self.student_profile:
             d["student_id"] = self.student_profile.id
             d["roll_number"] = self.student_profile.roll_number
-            d["department"] = self.student_profile.department
-            d["class_semester"] = self.student_profile.class_semester
-            d["division_name"] = self.student_profile.division_name
+            d["department"] = self.student_profile.department_rel.name if self.student_profile.department_rel else (self.student_profile.department or "")
+            d["class_semester"] = self.student_profile.class_obj.name if self.student_profile.class_obj else (self.student_profile.class_semester or "")
+            d["division_name"] = self.student_profile.division_obj.name if self.student_profile.division_obj else "N/A"
         return d
 
 
@@ -97,6 +97,7 @@ class Tenant(Base):
     max_face_encodings = Column(Integer, default=500, nullable=False)
     max_nodes = Column(Integer, default=10, nullable=False)
     subscription_expires_at = Column(DateTime, nullable=True)
+    financial_year_start_month = Column(Integer, default=4, nullable=False) # 4 = April (Indian Standard FY), 1 = January, 7 = July
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=get_ist_now)
@@ -176,6 +177,7 @@ class Tenant(Base):
             "saas_edition": self.saas_edition,
             "has_leave_module": self.has_leave_module,
             "has_payroll_module": self.has_payroll_module,
+            "financial_year_start_month": self.financial_year_start_month or 4,
             "subscription_status": self.subscription_status or "ACTIVE",
             "max_face_encodings": self.max_face_encodings or 500,
             "max_nodes": self.max_nodes or 10,
@@ -994,6 +996,9 @@ class LeaveType(Base):
     default_days_per_year = Column(Float, default=12.0, nullable=False)
     accrual_frequency = Column(String(20), default="ANNUAL", nullable=False) # ANNUAL, MONTHLY
     requires_document = Column(Boolean, default=False, nullable=False)
+    allow_carry_forward = Column(Boolean, default=False, nullable=False)
+    max_carry_forward_days = Column(Float, default=0.0, nullable=True) # 0.0 or None means unlimited when allow_carry_forward is True
+    lapse_policy = Column(String(50), default="LAPSE_EXCESS", nullable=False) # LAPSE_EXCESS, LAPSE_ALL
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=get_ist_now)
 
@@ -1017,6 +1022,9 @@ class LeaveType(Base):
             "default_days_per_year": float(self.default_days_per_year if self.default_days_per_year is not None else 12.0),
             "accrual_frequency": self.accrual_frequency or "ANNUAL",
             "requires_document": bool(self.requires_document),
+            "allow_carry_forward": bool(self.allow_carry_forward),
+            "max_carry_forward_days": float(self.max_carry_forward_days or 0.0),
+            "lapse_policy": self.lapse_policy or "LAPSE_EXCESS",
             "is_active": bool(self.is_active),
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
         }
@@ -1032,7 +1040,12 @@ class LeaveBalance(Base):
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
     leave_type_id = Column(Integer, ForeignKey("leave_types.id", ondelete="CASCADE"), nullable=False, index=True)
-    year = Column(Integer, nullable=False)               # e.g. 2026
+    year = Column(Integer, nullable=False)               # Starting year of FY (e.g. 2026)
+    financial_year = Column(String(20), nullable=True, index=True) # e.g. "2026-2027"
+    annual_quota = Column(Float, default=0.0, nullable=False)
+    carried_forward_days = Column(Float, default=0.0, nullable=False)
+    carried_forward_used = Column(Float, default=0.0, nullable=False)
+    lapsed_days = Column(Float, default=0.0, nullable=False)
     total_allocated = Column(Float, default=0.0, nullable=False)
     used_days = Column(Float, default=0.0, nullable=False)
     pending_days = Column(Float, default=0.0, nullable=False)
@@ -1061,6 +1074,11 @@ class LeaveBalance(Base):
             "leave_type_code": self.leave_type.code if self.leave_type else "",
             "is_paid": bool(self.leave_type.is_paid) if self.leave_type else True,
             "year": self.year,
+            "financial_year": self.financial_year or f"{self.year}-{self.year+1}",
+            "annual_quota": float(self.annual_quota if self.annual_quota is not None else self.total_allocated),
+            "carried_forward_days": float(self.carried_forward_days or 0.0),
+            "carried_forward_used": float(self.carried_forward_used or 0.0),
+            "lapsed_days": float(self.lapsed_days or 0.0),
             "total_allocated": float(self.total_allocated if self.total_allocated is not None else 0.0),
             "used_days": float(self.used_days if self.used_days is not None else 0.0),
             "pending_days": float(self.pending_days if self.pending_days is not None else 0.0),
@@ -1084,6 +1102,7 @@ class LeaveRequest(Base):
     is_half_day = Column(Boolean, default=False, nullable=False)
     half_day_period = Column(String(20), default="NONE", nullable=False) # NONE, FIRST_HALF, SECOND_HALF
     total_days = Column(Float, default=1.0, nullable=False)
+    financial_year = Column(String(20), nullable=True, index=True)       # e.g. "2026-2027"
     reason = Column(Text, nullable=False)
     status = Column(String(30), default="PENDING", nullable=False)       # PENDING, APPROVED, REJECTED, CANCELLED
     reviewed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -1118,6 +1137,7 @@ class LeaveRequest(Base):
             "is_half_day": bool(self.is_half_day),
             "half_day_period": self.half_day_period or "NONE",
             "total_days": float(self.total_days if self.total_days is not None else 1.0),
+            "financial_year": self.financial_year or "",
             "reason": self.reason or "",
             "status": self.status or "PENDING",
             "reviewed_by_user_id": self.reviewed_by_user_id,

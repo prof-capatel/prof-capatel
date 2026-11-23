@@ -36,6 +36,7 @@ from src.core.payroll_engine import number_to_words_inr, calculate_employee_payr
 from src.services.attendance_service import AttendanceService
 from src.utils.auth_utils import hash_password, verify_password
 from src.utils.timezone import get_ist_now
+from src.utils.financial_year import get_financial_year_info, parse_financial_year_code
 
 logger = logging.getLogger("api_employee_portal")
 
@@ -102,30 +103,42 @@ def get_current_employee(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Employee authentication required. Please scan your face to log in.",
+            detail="Employee authentication required. Please scan your face or sign in with credentials.",
         )
 
+    student = None
     payload = decode_employee_token(token)
-    if not payload:
+    if payload:
+        student_id = payload.get("student_id")
+        tenant_id = payload.get("tenant_id")
+        student = (
+            db.query(Student)
+            .filter(
+                Student.id == student_id,
+                Student.tenant_id == tenant_id,
+            )
+            .first()
+        )
+    else:
+        # Fallback: attempt decoding as standard RBAC access token
+        from src.server.rbac_middleware import decode_access_token
+        access_payload = decode_access_token(token)
+        if access_payload and access_payload.get("user_id"):
+            user = db.query(User).filter(User.id == access_payload["user_id"]).first()
+            if user:
+                if user.student_profile:
+                    student = user.student_profile
+                elif user.tenant_id:
+                    student = db.query(Student).filter(
+                        Student.user_id == user.id,
+                        Student.tenant_id == user.tenant_id,
+                    ).first()
+
+    if not student:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Employee session has expired or is invalid. Please re-authenticate.",
         )
-
-    student_id = payload.get("student_id")
-    tenant_id = payload.get("tenant_id")
-
-    student = (
-        db.query(Student)
-        .filter(
-            Student.id == student_id,
-            Student.tenant_id == tenant_id,
-        )
-        .first()
-    )
-
-    if not student:
-        raise HTTPException(status_code=404, detail="Employee record not found.")
 
     if not student.is_active or (student.employment_status and student.employment_status.upper() in ["RELIEVED", "TERMINATED", "RESIGNED"]):
         raise HTTPException(
@@ -168,6 +181,8 @@ class EmployeeGeofenceHeartbeatPayload(BaseModel):
     latitude: float
     longitude: float
     accuracy: Optional[float] = 10.0
+    is_mock_location: Optional[bool] = False
+    device_info: Optional[str] = None
 
 
 class EmployeeChangePasswordPayload(BaseModel):
@@ -708,7 +723,7 @@ async def employee_mobile_checkin(
             last_known_latitude=payload.latitude,
             last_known_longitude=payload.longitude,
             distance_meters=0.0,
-            geofence_radius_meters=branding.geofence_radius_meters if branding else 100.0,
+            geofence_radius_meters=branding.geo_radius_meters if branding else 100.0,
             status="MOCK_GPS_SPOOF",
         )
         db.add(breach)
@@ -716,7 +731,7 @@ async def employee_mobile_checkin(
 
         raise HTTPException(
             status_code=403,
-            detail="Mock location or GPS spoofing application detected. Real hardware GPS is required. This security breach has been logged.",
+            detail="Mock GPS or location spoofing application detected. Real hardware GPS is required. This security breach has been logged.",
         )
 
     # Check if selfie face verification is mandated by tenant admin
@@ -800,7 +815,7 @@ async def employee_mobile_checkin(
         is_self_attendance=True,
     )
     if result.get("cooldown_active"):
-        return result
+        raise HTTPException(status_code=400, detail=result.get("message", "Punch cooldown is currently active. Please wait."))
     if not result.get("attendance_logged"):
         raise HTTPException(status_code=400, detail=result.get("message", "Attendance could not be registered."))
     return result
@@ -834,7 +849,7 @@ def employee_geofence_heartbeat(
         db.commit()
         raise HTTPException(
             status_code=403,
-            detail="Mock location or GPS spoofing application detected. Real hardware GPS is required. This security breach has been logged.",
+            detail="Mock GPS or location spoofing application detected. Real hardware GPS is required. This security breach has been logged.",
         )
 
     service = AttendanceService(db)
@@ -886,26 +901,36 @@ def get_my_leave_balances(
     student: Student = Depends(get_current_employee),
     db: Session = Depends(get_db),
 ):
-    """Returns the employee's current annual leave balances and category quotas."""
+    """Returns the employee's current annual leave balances and category quotas per Financial Year."""
     if not student.tenant or not student.tenant.has_leave_module:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Leave Management is not enabled for your organization's subscription edition.",
         )
 
-    current_year = get_ist_now().year
+    start_m = student.tenant.financial_year_start_month if (student.tenant and student.tenant.financial_year_start_month) else 4
+    fy_info = get_financial_year_info(get_ist_now(), start_month=start_m)
     leave_types = db.query(LeaveType).filter(LeaveType.tenant_id == student.tenant_id, LeaveType.is_active == True).all()
 
     balances = []
     for lt in leave_types:
-        bal = get_or_create_leave_balance(db, student.tenant_id, student, lt, current_year)
+        bal = get_or_create_leave_balance(
+            db,
+            student.tenant_id,
+            student,
+            lt,
+            year=fy_info["start_year"],
+            financial_year=fy_info["fy_code"],
+        )
         balances.append(bal.to_dict())
 
     db.commit()
 
     return {
         "status": "success",
-        "year": current_year,
+        "year": fy_info["start_year"],
+        "financial_year": fy_info["fy_code"],
+        "financial_year_label": fy_info["fy_label"],
         "balances": balances,
     }
 
@@ -981,15 +1006,23 @@ def apply_for_leave(
     if not leave_type:
         raise HTTPException(status_code=404, detail="Leave category not found or inactive.")
 
-    # Check live balance
+    # Check live balance for Financial Year
     now_ist = get_ist_now()
-    req_year = s_date.year
-    balance = get_or_create_leave_balance(db, student.tenant_id, student, leave_type, req_year)
+    start_m = student.tenant.financial_year_start_month if (student.tenant and student.tenant.financial_year_start_month) else 4
+    fy_info = get_financial_year_info(s_date, start_month=start_m)
+    balance = get_or_create_leave_balance(
+        db,
+        student.tenant_id,
+        student,
+        leave_type,
+        year=fy_info["start_year"],
+        financial_year=fy_info["fy_code"],
+    )
 
     if leave_type.is_paid and balance.remaining_days < total_days:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient leave balance. You requested {total_days} day(s), but only have {balance.remaining_days} day(s) remaining for {leave_type.name}.",
+            detail=f"Insufficient leave balance. You requested {total_days} day(s), but only have {balance.remaining_days} day(s) remaining for {leave_type.name} in {fy_info['fy_label']}.",
         )
 
     # Create Leave Request
@@ -1002,6 +1035,7 @@ def apply_for_leave(
         is_half_day=bool(payload.is_half_day),
         half_day_period=payload.half_day_period or "NONE",
         total_days=total_days,
+        financial_year=fy_info["fy_code"],
         reason=payload.reason.strip(),
         status="PENDING",
         created_at=now_ist,
@@ -1059,15 +1093,24 @@ def cancel_pending_leave_request(
         )
 
     now_ist = get_ist_now()
-    req_year = req.start_date.year if req.start_date else now_ist.year
+    start_m = student.tenant.financial_year_start_month if (student.tenant and student.tenant.financial_year_start_month) else 4
+    req_date = req.start_date if req.start_date else now_ist.date()
+    fy_info = get_financial_year_info(req_date, start_month=start_m)
 
     # Release pending days from balance
     leave_type = db.query(LeaveType).filter(LeaveType.id == req.leave_type_id).first()
     balance = None
     if leave_type:
-        balance = get_or_create_leave_balance(db, student.tenant_id, student, leave_type, req_year)
-        balance.pending_days = max(0.0, balance.pending_days - req.total_days)
-        balance.remaining_days = max(0.0, balance.total_allocated - balance.used_days - balance.pending_days)
+        balance = get_or_create_leave_balance(
+            db,
+            student.tenant_id,
+            student,
+            leave_type,
+            year=fy_info["start_year"],
+            financial_year=fy_info["fy_code"],
+        )
+        balance.pending_days = max(0.0, round(balance.pending_days - req.total_days, 2))
+        balance.remaining_days = max(0.0, round(balance.total_allocated - balance.used_days - balance.pending_days, 2))
         balance.updated_at = now_ist
 
     req.status = "CANCELLED"

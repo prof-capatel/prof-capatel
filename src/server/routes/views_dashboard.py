@@ -43,6 +43,7 @@ from src.server.services.view_service import (
 )
 from src.core.payroll_engine import number_to_words_inr
 from src.utils.timezone import get_ist_now
+from src.utils.financial_year import get_financial_year_info, list_tenant_financial_years
 
 router = APIRouter(include_in_schema=False)
 
@@ -880,6 +881,9 @@ def page_leave_management(
     branding = get_branding_dict(db, current_tenant.id)
     departments = db.query(Department).filter(Department.tenant_id == current_tenant.id).order_by(Department.name.asc()).all()
     leave_types = db.query(LeaveType).filter(LeaveType.tenant_id == current_tenant.id, LeaveType.is_active == True).order_by(LeaveType.id.asc()).all()
+    start_m = current_tenant.financial_year_start_month or 4
+    current_fy = get_financial_year_info(get_ist_now(), start_month=start_m)
+    available_fys = list_tenant_financial_years(start_month=start_m, count_past=3, count_future=1)
 
     return render_template(
         request,
@@ -893,5 +897,7 @@ def page_leave_management(
             "current_user": current_user.to_dict(),
             "departments": [d.to_dict() for d in departments],
             "leave_types": [lt.to_dict() for lt in leave_types],
+            "current_financial_year": current_fy,
+            "available_financial_years": available_fys,
         },
     )

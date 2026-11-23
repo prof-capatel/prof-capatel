@@ -17,10 +17,16 @@ class RadarGaugeCard extends StatelessWidget {
     String statusText;
     IconData statusIcon;
 
+    final isGeofenceEnabled = attProvider.geofenceConfig?.enableSelfAttendance ?? false;
+
     if (attProvider.userCoordinates == null) {
       statusColor = Colors.amber;
       statusText = 'Locating GPS...';
       statusIcon = Icons.satellite_alt_rounded;
+    } else if (!isGeofenceEnabled) {
+      statusColor = const Color(0xFF10B981);
+      statusText = 'Geofencing Bypassed (Any Location Allowed)';
+      statusIcon = Icons.public_rounded;
     } else if (isInside) {
       statusColor = const Color(0xFF10B981);
       statusText = 'Inside Campus Perimeter';

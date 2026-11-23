@@ -80,7 +80,18 @@ class ApiService {
       return UserSession.fromJson(userData, token);
     } else {
       final json = _tryParseJson(response.body);
-      throw Exception(json?['detail'] ?? 'Login failed (${response.statusCode})');
+      final detail = json?['detail'];
+      if (response.statusCode == 401) {
+        throw Exception(detail ?? 'Invalid credentials (401)');
+      } else if (response.statusCode == 403) {
+        throw Exception(detail ?? 'Access restricted (403)');
+      } else if (response.statusCode == 404) {
+        throw Exception(detail ?? 'Target organization or account not found (404)');
+      } else if (response.statusCode >= 500) {
+        throw Exception('The attendance server encountered a temporary error (${response.statusCode})');
+      } else {
+        throw Exception(detail ?? 'Login failed (${response.statusCode})');
+      }
     }
   }
 

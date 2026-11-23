@@ -269,31 +269,48 @@ class AttendanceService:
         branding = tenant.branding
         dist_meters = None
 
-        # Geofence Validation if GPS is provided or self-attendance is requested
-        if geo_latitude is not None and geo_longitude is not None:
-            if not branding or branding.geo_latitude is None or branding.geo_longitude is None:
-                raise HTTPException(status_code=400, detail="Institution geofence coordinates are not configured by administrator.")
+        is_mobile_app = (node_id == "MOBILE-APP")
+        geofence_enabled = bool(branding.enable_self_attendance if branding else False)
 
-            max_radius = float(branding.geo_radius_meters if branding.geo_radius_meters is not None else 150.0)
-            max_acc = float(branding.max_gps_accuracy_meters if branding.max_gps_accuracy_meters is not None else 50.0)
-            user_acc = float(geo_accuracy) if geo_accuracy is not None else 10.0
+        if not geofence_enabled:
+            # When geofencing is disabled by administrator:
+            # - Mobile app: Allowed to check-in/out from ANY location without geofence perimeter restrictions.
+            # - Web portal self-attendance: Blocked (requires geofencing/self-attendance to be enabled).
+            if not is_mobile_app and is_self_attendance:
+                raise HTTPException(status_code=403, detail="Self-attendance via web portal is disabled by organization administrator.")
 
-            is_valid_geo, dist_meters, geo_err = validate_geofence(
-                user_lat=float(geo_latitude),
-                user_lon=float(geo_longitude),
-                user_accuracy=user_acc,
-                target_lat=float(branding.geo_latitude),
-                target_lon=float(branding.geo_longitude),
-                max_radius_meters=max_radius,
-                max_accuracy_meters=max_acc,
-            )
+            # Calculate distance for audit purposes if coordinates are provided, but do not block
+            if geo_latitude is not None and geo_longitude is not None and branding and branding.geo_latitude is not None and branding.geo_longitude is not None:
+                try:
+                    dist_meters = haversine_distance(float(geo_latitude), float(geo_longitude), float(branding.geo_latitude), float(branding.geo_longitude))
+                except Exception:
+                    dist_meters = None
+        else:
+            # Geofencing is ENABLED: Enforce strict perimeter radius check
+            if geo_latitude is not None and geo_longitude is not None:
+                if not branding or branding.geo_latitude is None or branding.geo_longitude is None:
+                    raise HTTPException(status_code=400, detail="Institution geofence coordinates are not configured by administrator.")
 
-            if not is_valid_geo:
-                err_msg = f"Outside geofenced perimeter. {geo_err}" if geo_err else f"Outside geofenced perimeter ({dist_meters}m from center, radius: {max_radius}m)."
-                raise HTTPException(status_code=403, detail=err_msg)
-        elif is_self_attendance:
-            if branding and branding.geo_latitude is not None and branding.geo_longitude is not None:
-                raise HTTPException(status_code=400, detail="GPS location coordinates are required for self-attendance check-in.")
+                max_radius = float(branding.geo_radius_meters if branding.geo_radius_meters is not None else 150.0)
+                max_acc = float(branding.max_gps_accuracy_meters if branding.max_gps_accuracy_meters is not None else 50.0)
+                user_acc = float(geo_accuracy) if geo_accuracy is not None else 10.0
+
+                is_valid_geo, dist_meters, geo_err = validate_geofence(
+                    user_lat=float(geo_latitude),
+                    user_lon=float(geo_longitude),
+                    user_accuracy=user_acc,
+                    target_lat=float(branding.geo_latitude),
+                    target_lon=float(branding.geo_longitude),
+                    max_radius_meters=max_radius,
+                    max_accuracy_meters=max_acc,
+                )
+
+                if not is_valid_geo:
+                    err_msg = f"Outside geofenced perimeter. {geo_err}" if geo_err else f"Outside geofenced perimeter ({dist_meters}m from center, radius: {max_radius}m)."
+                    raise HTTPException(status_code=403, detail=err_msg)
+            elif is_self_attendance:
+                if branding and branding.geo_latitude is not None and branding.geo_longitude is not None:
+                    raise HTTPException(status_code=400, detail="GPS location coordinates are required for self-attendance check-in.")
 
         # Delegate to AttendanceManager for unified corporate dual-punch state machine & shift reconciliation
         mark_res = attendance_manager.mark_attendance(
@@ -405,7 +422,14 @@ class AttendanceService:
 
         tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id).first()
         branding = tenant.branding if tenant else None
-        if not branding or branding.geo_latitude is None or branding.geo_longitude is None:
+        if not branding or not branding.enable_self_attendance:
+            return {
+                "status": "bypassed",
+                "in_bounds": True,
+                "message": "Campus geofencing is disabled by administrator (any location allowed).",
+                "is_checked_in": True,
+            }
+        if branding.geo_latitude is None or branding.geo_longitude is None:
             return {
                 "status": "unconfigured",
                 "in_bounds": True,
