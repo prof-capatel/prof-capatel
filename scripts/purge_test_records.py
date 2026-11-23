@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging
 from sqlalchemy.orm import Session
-from src.database.session import SessionLocal
+from src.database.session import SessionLocal, init_db
 from src.database.models import (
     Tenant,
     User,
@@ -37,6 +37,7 @@ CORE_USERNAMES = ["superadmin", "admin", "teacher1", "student1", "ssec", "gecm",
 
 
 def purge_test_records():
+    init_db()
     db: Session = SessionLocal()
     try:
         logger.info("Starting safe test record cleanup...")
