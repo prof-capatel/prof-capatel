@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 from src.database.session import init_db, get_db_context
-from src.database.models import Tenant, Student, SystemBranding, AttendanceRecord, EmployeeGeofenceBreach
+from src.database.models import Tenant, Student, SystemBranding, AttendanceRecord, EmployeeGeofenceBreach, CompanyLocation
 from src.server.app import app
 from src.server.routes.api_employee_portal import create_employee_token
 
@@ -58,12 +58,37 @@ class TestGeofenceConditionalBypass(unittest.TestCase):
                 db.delete(stale)
                 db.commit()
 
+            loc = db.query(CompanyLocation).filter(
+                CompanyLocation.tenant_id == self.tenant_id,
+                CompanyLocation.name == "SSEC Main Campus",
+            ).first()
+            if not loc:
+                loc = CompanyLocation(
+                    tenant_id=self.tenant_id,
+                    name="SSEC Main Campus",
+                    code="SSEC-HQ",
+                    latitude=21.764500,
+                    longitude=72.151900,
+                    radius_meters=150.0,
+                    self_attendance_geofencing_enabled=False,
+                    is_active=True,
+                )
+                db.add(loc)
+                db.flush()
+            else:
+                loc.self_attendance_geofencing_enabled = False
+                loc.latitude = 21.764500
+                loc.longitude = 72.151900
+                loc.radius_meters = 150.0
+                db.flush()
+
             emp = Student(
                 tenant_id=self.tenant_id,
                 name="Bypass Test Employee",
                 roll_number=self.test_roll,
                 department="Mobile Dev",
                 designation="Field Engineer",
+                location_id=loc.id,
                 is_active=True,
                 employment_status="ACTIVE",
             )
@@ -156,6 +181,12 @@ class TestGeofenceConditionalBypass(unittest.TestCase):
     def test_mobile_checkin_enforces_geofence_when_enabled(self):
         # Enable Geofencing
         with get_db_context() as db:
+            loc = db.query(CompanyLocation).filter(
+                CompanyLocation.tenant_id == self.tenant_id,
+                CompanyLocation.name == "SSEC Main Campus",
+            ).first()
+            if loc:
+                loc.self_attendance_geofencing_enabled = True
             branding = db.query(SystemBranding).filter(SystemBranding.tenant_id == self.tenant_id).first()
             branding.enable_self_attendance = True
             db.commit()

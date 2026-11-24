@@ -270,47 +270,66 @@ class AttendanceService:
         dist_meters = None
 
         is_mobile_app = (node_id == "MOBILE-APP")
-        geofence_enabled = bool(branding.enable_self_attendance if branding else False)
+
+        # Multi-Office Location Geofence Resolution
+        assigned_location = student.location if (student and student.location and student.location.is_active) else None
+
+        if assigned_location:
+            geofence_enabled = bool(assigned_location.self_attendance_geofencing_enabled)
+            target_lat = assigned_location.latitude
+            target_lon = assigned_location.longitude
+            max_radius = float(assigned_location.radius_meters if assigned_location.radius_meters is not None else 150.0)
+            max_acc = float(branding.max_gps_accuracy_meters if (branding and branding.max_gps_accuracy_meters is not None) else 50.0)
+            location_label = f"assigned office '{assigned_location.name}'"
+        else:
+            # Per policy: treat geofencing as disabled by default until an office is explicitly assigned
+            geofence_enabled = False
+            target_lat = float(branding.geo_latitude) if (branding and branding.geo_latitude is not None) else None
+            target_lon = float(branding.geo_longitude) if (branding and branding.geo_longitude is not None) else None
+            max_radius = float(branding.geo_radius_meters if (branding and branding.geo_radius_meters is not None) else 150.0)
+            max_acc = float(branding.max_gps_accuracy_meters if (branding and branding.max_gps_accuracy_meters is not None) else 50.0)
+            location_label = "unassigned office"
 
         if not geofence_enabled:
-            # When geofencing is disabled by administrator:
+            # When geofencing is disabled for the employee's location (or employee has no assigned office):
             # - Mobile app: Allowed to check-in/out from ANY location without geofence perimeter restrictions.
             # - Web portal self-attendance: Blocked (requires geofencing/self-attendance to be enabled).
             if not is_mobile_app and is_self_attendance:
                 raise HTTPException(status_code=403, detail="Self-attendance via web portal is disabled by organization administrator.")
 
             # Calculate distance for audit purposes if coordinates are provided, but do not block
-            if geo_latitude is not None and geo_longitude is not None and branding and branding.geo_latitude is not None and branding.geo_longitude is not None:
+            if geo_latitude is not None and geo_longitude is not None and target_lat is not None and target_lon is not None:
                 try:
-                    dist_meters = haversine_distance(float(geo_latitude), float(geo_longitude), float(branding.geo_latitude), float(branding.geo_longitude))
+                    dist_meters = haversine_distance(float(geo_latitude), float(geo_longitude), float(target_lat), float(target_lon))
                 except Exception:
                     dist_meters = None
         else:
-            # Geofencing is ENABLED: Enforce strict perimeter radius check
+            # Geofencing is ENABLED for this office: Enforce strict perimeter radius check
             if geo_latitude is not None and geo_longitude is not None:
-                if not branding or branding.geo_latitude is None or branding.geo_longitude is None:
-                    raise HTTPException(status_code=400, detail="Institution geofence coordinates are not configured by administrator.")
+                if target_lat is None or target_lon is None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Geofence coordinates for {location_label} are not configured by administrator."
+                    )
 
-                max_radius = float(branding.geo_radius_meters if branding.geo_radius_meters is not None else 150.0)
-                max_acc = float(branding.max_gps_accuracy_meters if branding.max_gps_accuracy_meters is not None else 50.0)
                 user_acc = float(geo_accuracy) if geo_accuracy is not None else 10.0
 
                 is_valid_geo, dist_meters, geo_err = validate_geofence(
                     user_lat=float(geo_latitude),
                     user_lon=float(geo_longitude),
                     user_accuracy=user_acc,
-                    target_lat=float(branding.geo_latitude),
-                    target_lon=float(branding.geo_longitude),
+                    target_lat=float(target_lat),
+                    target_lon=float(target_lon),
                     max_radius_meters=max_radius,
                     max_accuracy_meters=max_acc,
                 )
 
                 if not is_valid_geo:
-                    err_msg = f"Outside geofenced perimeter. {geo_err}" if geo_err else f"Outside geofenced perimeter ({dist_meters}m from center, radius: {max_radius}m)."
+                    err_msg = f"Outside geofenced perimeter for {location_label}. {geo_err}" if geo_err else f"Outside geofenced perimeter for {location_label} ({dist_meters}m from center, radius: {max_radius}m)."
                     raise HTTPException(status_code=403, detail=err_msg)
             elif is_self_attendance:
-                if branding and branding.geo_latitude is not None and branding.geo_longitude is not None:
-                    raise HTTPException(status_code=400, detail="GPS location coordinates are required for self-attendance check-in.")
+                if target_lat is not None and target_lon is not None:
+                    raise HTTPException(status_code=400, detail=f"GPS location coordinates are required for self-attendance check-in at {location_label}.")
 
         # Delegate to AttendanceManager for unified corporate dual-punch state machine & shift reconciliation
         mark_res = attendance_manager.mark_attendance(
@@ -422,23 +441,40 @@ class AttendanceService:
 
         tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id).first()
         branding = tenant.branding if tenant else None
-        if not branding or not branding.enable_self_attendance:
+        student = self.db.query(Student).filter(Student.id == student_id, Student.tenant_id == tenant_id).first()
+        assigned_location = student.location if (student and student.location and student.location.is_active) else None
+
+        if assigned_location:
+            geofence_enabled = bool(assigned_location.self_attendance_geofencing_enabled)
+            target_lat = assigned_location.latitude
+            target_lon = assigned_location.longitude
+            max_radius = float(assigned_location.radius_meters if assigned_location.radius_meters is not None else 150.0)
+            location_name = assigned_location.name
+        else:
+            # Geofencing is treated as disabled by default until an office is assigned
+            geofence_enabled = False
+            target_lat = float(branding.geo_latitude) if (branding and branding.geo_latitude is not None) else None
+            target_lon = float(branding.geo_longitude) if (branding and branding.geo_longitude is not None) else None
+            max_radius = float(branding.geo_radius_meters if (branding and branding.geo_radius_meters is not None) else 150.0)
+            location_name = "Assigned Campus"
+
+        if not geofence_enabled:
             return {
                 "status": "bypassed",
                 "in_bounds": True,
-                "message": "Campus geofencing is disabled by administrator (any location allowed).",
+                "message": f"Geofencing is disabled for {location_name} (any location allowed).",
                 "is_checked_in": True,
             }
-        if branding.geo_latitude is None or branding.geo_longitude is None:
+        if target_lat is None or target_lon is None:
             return {
                 "status": "unconfigured",
                 "in_bounds": True,
-                "message": "Tenant geofence perimeter is not configured.",
+                "message": f"Geofence perimeter for {location_name} is not configured.",
                 "is_checked_in": True,
             }
 
-        target_lat = float(branding.geo_latitude)
-        target_lon = float(branding.geo_longitude)
+        target_lat = float(target_lat)
+        target_lon = float(target_lon)
         max_radius = float(branding.geo_radius_meters if branding.geo_radius_meters is not None else 150.0)
 
         dist = haversine_distance(latitude, longitude, target_lat, target_lon)

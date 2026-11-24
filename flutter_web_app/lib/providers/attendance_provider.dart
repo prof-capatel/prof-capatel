@@ -164,12 +164,15 @@ class AttendanceProvider with ChangeNotifier {
       _userCoordinates = coords;
 
       final isGeofenceEnabled = _geofenceConfig?.enableSelfAttendance ?? false;
+      final officeName = _geofenceConfig?.locationName;
 
       if (!isGeofenceEnabled) {
-        // Geofencing is disabled for this organization:
+        // Geofencing is disabled for this location/organization:
         // Employees can check in/out from any location without geofence perimeter boundaries!
         _isInsideGeofence = true;
-        _geofenceStatusMessage = 'Geofencing Bypassed (Any Location Allowed)';
+        _geofenceStatusMessage = officeName != null
+            ? 'Geofencing Bypassed for $officeName (Any Location Allowed)'
+            : 'Geofencing Bypassed (Any Location Allowed)';
         _distanceToCampus = null;
       } else if (_geofenceConfig != null &&
           _geofenceConfig!.geoLatitude != null &&
@@ -184,6 +187,7 @@ class AttendanceProvider with ChangeNotifier {
 
         final maxRadius = _geofenceConfig!.geoRadiusMeters;
         final maxAccuracy = _geofenceConfig!.maxGpsAccuracyMeters;
+        final locTitle = officeName ?? 'office';
 
         if (coords.isMocked) {
           _isInsideGeofence = false;
@@ -196,15 +200,17 @@ class AttendanceProvider with ChangeNotifier {
         } else if (dist <= maxRadius) {
           _isInsideGeofence = true;
           _geofenceStatusMessage =
-              'Inside office perimeter (${dist.toStringAsFixed(1)}m / ${maxRadius.toStringAsFixed(0)}m)';
+              'Inside $locTitle perimeter (${dist.toStringAsFixed(1)}m / ${maxRadius.toStringAsFixed(0)}m)';
         } else {
           _isInsideGeofence = false;
           _geofenceStatusMessage =
-              'Outside perimeter (${dist.toStringAsFixed(1)}m away). Radius allowed: ${maxRadius.toStringAsFixed(0)}m.';
+              'Outside $locTitle perimeter (${dist.toStringAsFixed(1)}m away). Radius allowed: ${maxRadius.toStringAsFixed(0)}m.';
         }
       } else {
         _isInsideGeofence = true;
-        _geofenceStatusMessage = 'Geofence coordinates pending admin setup';
+        _geofenceStatusMessage = officeName != null
+            ? 'Geofence coordinates pending setup for $officeName'
+            : 'Geofence coordinates pending admin setup';
       }
 
       _checkInStatus = CheckInStatus.idle;

@@ -70,6 +70,10 @@ class OrganizationService:
             state=payload.state.strip() if payload.state else "Maharashtra",
             address=payload.address.strip() if payload.address else None,
             contact_number=payload.contact_number.strip() if payload.contact_number else None,
+            latitude=payload.latitude if getattr(payload, "latitude", None) is not None else None,
+            longitude=payload.longitude if getattr(payload, "longitude", None) is not None else None,
+            radius_meters=float(payload.radius_meters) if getattr(payload, "radius_meters", None) is not None else 150.0,
+            self_attendance_geofencing_enabled=bool(payload.self_attendance_geofencing_enabled) if getattr(payload, "self_attendance_geofencing_enabled", None) is not None else True,
             is_active=payload.is_active if payload.is_active is not None else True,
         )
         self.db.add(loc)
@@ -98,6 +102,14 @@ class OrganizationService:
             loc.address = payload.address.strip()
         if payload.contact_number is not None:
             loc.contact_number = payload.contact_number.strip()
+        if getattr(payload, "latitude", None) is not None:
+            loc.latitude = payload.latitude
+        if getattr(payload, "longitude", None) is not None:
+            loc.longitude = payload.longitude
+        if getattr(payload, "radius_meters", None) is not None:
+            loc.radius_meters = float(payload.radius_meters)
+        if getattr(payload, "self_attendance_geofencing_enabled", None) is not None:
+            loc.self_attendance_geofencing_enabled = bool(payload.self_attendance_geofencing_enabled)
         if payload.is_active is not None:
             loc.is_active = payload.is_active
 

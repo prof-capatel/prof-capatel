@@ -1326,6 +1326,27 @@ def run_schema_migrations():
                 WHERE financial_year IS NULL AND start_date IS NOT NULL
             """))
 
+            # 13. Company Locations Multi-Office Geofencing Columns
+            res = conn.execute(text("SHOW COLUMNS FROM company_locations LIKE 'latitude'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE company_locations ADD COLUMN latitude FLOAT NULL"))
+                logger.info("Migrated company_locations table: added latitude column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM company_locations LIKE 'longitude'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE company_locations ADD COLUMN longitude FLOAT NULL"))
+                logger.info("Migrated company_locations table: added longitude column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM company_locations LIKE 'radius_meters'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE company_locations ADD COLUMN radius_meters FLOAT DEFAULT 150.0 NOT NULL"))
+                logger.info("Migrated company_locations table: added radius_meters column.")
+
+            res = conn.execute(text("SHOW COLUMNS FROM company_locations LIKE 'self_attendance_geofencing_enabled'")).fetchall()
+            if not res:
+                conn.execute(text("ALTER TABLE company_locations ADD COLUMN self_attendance_geofencing_enabled TINYINT(1) DEFAULT 1 NOT NULL"))
+                logger.info("Migrated company_locations table: added self_attendance_geofencing_enabled column.")
+
             # Seed default WorkShift for corporate tenants if none exist
             try:
                 corp_tenants = conn.execute(text("SELECT id, name FROM tenants WHERE tenant_type = 'corporate' AND is_deleted = 0")).fetchall()

@@ -61,6 +61,10 @@ class LocationCreateRequest(BaseModel):
     state: Optional[str] = "Maharashtra"
     address: Optional[str] = None
     contact_number: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    radius_meters: Optional[float] = 150.0
+    self_attendance_geofencing_enabled: Optional[bool] = True
     is_active: Optional[bool] = True
 
 
@@ -71,6 +75,10 @@ class LocationUpdateRequest(BaseModel):
     state: Optional[str] = None
     address: Optional[str] = None
     contact_number: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    radius_meters: Optional[float] = None
+    self_attendance_geofencing_enabled: Optional[bool] = None
     is_active: Optional[bool] = None
 
 

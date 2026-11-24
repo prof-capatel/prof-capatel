@@ -18,6 +18,7 @@ class RadarGaugeCard extends StatelessWidget {
     IconData statusIcon;
 
     final isGeofenceEnabled = attProvider.geofenceConfig?.enableSelfAttendance ?? false;
+    final officeName = attProvider.geofenceConfig?.locationName;
 
     if (attProvider.userCoordinates == null) {
       statusColor = Colors.amber;
@@ -25,15 +26,15 @@ class RadarGaugeCard extends StatelessWidget {
       statusIcon = Icons.satellite_alt_rounded;
     } else if (!isGeofenceEnabled) {
       statusColor = const Color(0xFF10B981);
-      statusText = 'Geofencing Bypassed (Any Location Allowed)';
+      statusText = officeName != null ? 'Bypassed ($officeName)' : 'Geofencing Bypassed (Any Location Allowed)';
       statusIcon = Icons.public_rounded;
     } else if (isInside) {
       statusColor = const Color(0xFF10B981);
-      statusText = 'Inside Campus Perimeter';
+      statusText = officeName != null ? 'Inside $officeName Perimeter' : 'Inside Campus Perimeter';
       statusIcon = Icons.check_circle_rounded;
     } else {
       statusColor = const Color(0xFFEF4444);
-      statusText = 'Outside Campus Perimeter';
+      statusText = officeName != null ? 'Outside $officeName Perimeter' : 'Outside Campus Perimeter';
       statusIcon = Icons.cancel_rounded;
     }
 

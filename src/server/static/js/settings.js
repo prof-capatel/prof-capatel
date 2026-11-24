@@ -1236,12 +1236,55 @@ async function deleteSettingsDesignation(desigId, title) {
 // =========================================================================
 // OFFICE LOCATIONS & BRANCHES HANDLERS (Organization Settings)
 // =========================================================================
+function toggleLocGeofenceFields(isEnabled) {
+    const track = document.getElementById("locGeofenceTrack");
+    const knob = document.getElementById("locGeofenceKnob");
+    const container = document.getElementById("locGeofenceCoordsContainer");
+    if (track) track.style.background = isEnabled ? "var(--accent-emerald)" : "var(--border-color)";
+    if (knob) knob.style.left = isEnabled ? "19px" : "3px";
+    if (container) {
+        container.style.opacity = isEnabled ? "1" : "0.5";
+        container.style.pointerEvents = isEnabled ? "auto" : "none";
+    }
+}
+
+function detectLocModalCoords() {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+    }
+    const latInput = document.getElementById("modalSettingsLocLat");
+    const lngInput = document.getElementById("modalSettingsLocLng");
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            if (latInput) latInput.value = pos.coords.latitude.toFixed(6);
+            if (lngInput) lngInput.value = pos.coords.longitude.toFixed(6);
+        },
+        (err) => {
+            alert("Could not detect GPS location: " + err.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
+
 function openAddLocationModal() {
     document.getElementById("modalSettingsLocId").value = "";
     document.getElementById("settingsLocModalTitle").innerHTML = '<i class="fa-solid fa-map-location-dot" style="color: var(--accent-primary);"></i> <span>Add Office Location</span>';
     document.getElementById("settingsLocModalForm").reset();
     document.getElementById("modalSettingsLocState").value = "Maharashtra";
     document.getElementById("modalSettingsLocIsActive").value = "true";
+    const geofenceToggle = document.getElementById("modalSettingsLocGeofenceEnabled");
+    if (geofenceToggle) {
+        geofenceToggle.checked = true;
+        toggleLocGeofenceFields(true);
+    }
+    const radiusInput = document.getElementById("modalSettingsLocRadius");
+    if (radiusInput) radiusInput.value = "150";
+    const latInput = document.getElementById("modalSettingsLocLat");
+    if (latInput) latInput.value = "";
+    const lngInput = document.getElementById("modalSettingsLocLng");
+    if (lngInput) lngInput.value = "";
+
     const alertBox = document.getElementById("settingsLocModalAlert");
     if (alertBox) alertBox.style.display = "none";
     const modal = document.getElementById("settingsLocationModal");
@@ -1266,6 +1309,20 @@ function openEditLocationModal(locId) {
                 document.getElementById("modalSettingsLocContact").value = loc.contact_number || "";
                 document.getElementById("modalSettingsLocAddress").value = loc.address || "";
                 document.getElementById("modalSettingsLocIsActive").value = loc.is_active ? "true" : "false";
+
+                const isGeo = loc.self_attendance_geofencing_enabled !== false;
+                const geofenceToggle = document.getElementById("modalSettingsLocGeofenceEnabled");
+                if (geofenceToggle) {
+                    geofenceToggle.checked = isGeo;
+                    toggleLocGeofenceFields(isGeo);
+                }
+                const latInput = document.getElementById("modalSettingsLocLat");
+                if (latInput) latInput.value = loc.latitude !== null && loc.latitude !== undefined ? loc.latitude : "";
+                const lngInput = document.getElementById("modalSettingsLocLng");
+                if (lngInput) lngInput.value = loc.longitude !== null && loc.longitude !== undefined ? loc.longitude : "";
+                const radiusInput = document.getElementById("modalSettingsLocRadius");
+                if (radiusInput) radiusInput.value = loc.radius_meters || 150;
+
                 const modal = document.getElementById("settingsLocationModal");
                 if (modal) modal.style.display = "flex";
             }
@@ -1291,6 +1348,11 @@ async function saveSettingsLocationModal(e) {
     const address = document.getElementById("modalSettingsLocAddress").value.trim();
     const isActive = document.getElementById("modalSettingsLocIsActive").value === "true";
 
+    const geofenceEnabled = document.getElementById("modalSettingsLocGeofenceEnabled") ? document.getElementById("modalSettingsLocGeofenceEnabled").checked : true;
+    const rawLat = parseFloat(document.getElementById("modalSettingsLocLat") ? document.getElementById("modalSettingsLocLat").value : "");
+    const rawLng = parseFloat(document.getElementById("modalSettingsLocLng") ? document.getElementById("modalSettingsLocLng").value : "");
+    const rawRadius = parseFloat(document.getElementById("modalSettingsLocRadius") ? document.getElementById("modalSettingsLocRadius").value : "") || 150;
+
     const saveBtn = document.getElementById("btnSaveSettingsLocModal");
     const alertBox = document.getElementById("settingsLocModalAlert");
 
@@ -1304,6 +1366,10 @@ async function saveSettingsLocationModal(e) {
         state: state || "Maharashtra",
         contact_number: contact || null,
         address: address || null,
+        latitude: !isNaN(rawLat) ? rawLat : null,
+        longitude: !isNaN(rawLng) ? rawLng : null,
+        radius_meters: rawRadius,
+        self_attendance_geofencing_enabled: geofenceEnabled,
         is_active: isActive
     };
 
@@ -1343,6 +1409,9 @@ async function saveSettingsLocationModal(e) {
         alertBox.style.color = "var(--badge-rose-text)";
         alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network error connecting to server.';
         saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Location';
+    }
+}
         saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Location';
     }
 }

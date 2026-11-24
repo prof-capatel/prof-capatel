@@ -13,6 +13,9 @@ class GeofenceConfig {
   final double maxGpsAccuracyMeters;
   final double faceThreshold;
   final bool mobileRequireFaceVerification;
+  final int? locationId;
+  final String? locationName;
+  final bool isLocationAssigned;
 
   GeofenceConfig({
     required this.tenantId,
@@ -29,6 +32,9 @@ class GeofenceConfig {
     required this.maxGpsAccuracyMeters,
     required this.faceThreshold,
     this.mobileRequireFaceVerification = false,
+    this.locationId,
+    this.locationName,
+    this.isLocationAssigned = false,
   });
 
   factory GeofenceConfig.fromJson(Map<String, dynamic> json) {
@@ -39,14 +45,17 @@ class GeofenceConfig {
       shortCode: json['short_code'] ?? 'FA-HUB',
       logoUrl: json['logo_url'],
       primaryAccentColor: json['primary_accent_color'] ?? '#6366f1',
-      enableSelfAttendance: json['enable_self_attendance'] ?? false,
+      enableSelfAttendance: json['geofence_enabled'] ?? json['enable_self_attendance'] ?? false,
       isConfigured: json['is_configured'] ?? (json['geo_latitude'] != null && json['geo_longitude'] != null),
-      geoLatitude: json['geo_latitude'] != null ? (json['geo_latitude'] as num).toDouble() : null,
-      geoLongitude: json['geo_longitude'] != null ? (json['geo_longitude'] as num).toDouble() : null,
-      geoRadiusMeters: (json['geo_radius_meters'] as num?)?.toDouble() ?? 150.0,
+      geoLatitude: json['geo_latitude'] != null ? (json['geo_latitude'] as num).toDouble() : (json['center_latitude'] != null ? (json['center_latitude'] as num).toDouble() : null),
+      geoLongitude: json['geo_longitude'] != null ? (json['geo_longitude'] as num).toDouble() : (json['center_longitude'] != null ? (json['center_longitude'] as num).toDouble() : null),
+      geoRadiusMeters: (json['geo_radius_meters'] as num?)?.toDouble() ?? (json['radius_meters'] as num?)?.toDouble() ?? 150.0,
       maxGpsAccuracyMeters: (json['max_gps_accuracy_meters'] as num?)?.toDouble() ?? 50.0,
       faceThreshold: (json['face_threshold'] as num?)?.toDouble() ?? 0.52,
       mobileRequireFaceVerification: json['mobile_require_face_verification'] ?? false,
+      locationId: json['location_id'],
+      locationName: json['location_name'],
+      isLocationAssigned: json['is_location_assigned'] ?? (json['location_id'] != null),
     );
   }
 }

@@ -1013,13 +1013,19 @@ class _EmployeeMobileHomeScreenState extends State<EmployeeMobileHomeScreen> {
               const SizedBox(height: 10),
               Center(
                 child: Text(
-                  attProvider.geofenceConfig?.enableSelfAttendance == false
-                      ? (attProvider.geofenceConfig?.mobileRequireFaceVerification == true
-                          ? 'Policy: Live Front-Facing Camera Biometric (Any Location Allowed)'
-                          : 'Policy: Flexible Mobile Attendance (Any Location Allowed)')
-                      : (attProvider.geofenceConfig?.mobileRequireFaceVerification == true
-                          ? 'Policy: Live Front-Facing Camera Biometric + Strict GPS Geofence'
-                          : 'Policy: Strict GPS Geofence + Live Biometric Face Verification'),
+                  () {
+                    final officeName = attProvider.geofenceConfig?.locationName;
+                    final prefix = officeName != null ? 'Branch: $officeName • Policy: ' : 'Policy: ';
+                    if (attProvider.geofenceConfig?.enableSelfAttendance == false) {
+                      return attProvider.geofenceConfig?.mobileRequireFaceVerification == true
+                          ? '${prefix}Live Front-Facing Camera Biometric (Any Location Allowed)'
+                          : '${prefix}Flexible Mobile Attendance (Any Location Allowed)';
+                    } else {
+                      return attProvider.geofenceConfig?.mobileRequireFaceVerification == true
+                          ? '${prefix}Live Front-Facing Camera Biometric + Strict GPS Geofence'
+                          : '${prefix}Strict GPS Geofence + Live Biometric Face Verification';
+                    }
+                  }(),
                   style: TextStyle(color: isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8), fontSize: 11),
                 ),
               ),

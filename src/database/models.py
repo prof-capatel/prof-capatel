@@ -1251,6 +1251,10 @@ class CompanyLocation(Base):
     state = Column(String(50), nullable=True, default="Maharashtra")
     address = Column(Text, nullable=True)
     contact_number = Column(String(30), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    radius_meters = Column(Float, default=150.0, nullable=False)
+    self_attendance_geofencing_enabled = Column(Boolean, default=True, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=get_ist_now)
 
@@ -1273,6 +1277,10 @@ class CompanyLocation(Base):
             "state": self.state or "Maharashtra",
             "address": self.address or "",
             "contact_number": self.contact_number or "",
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "radius_meters": float(self.radius_meters if self.radius_meters is not None else 150.0),
+            "self_attendance_geofencing_enabled": bool(self.self_attendance_geofencing_enabled if self.self_attendance_geofencing_enabled is not None else True),
             "is_active": bool(self.is_active),
             "assigned_employees_count": active_emp_count,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,

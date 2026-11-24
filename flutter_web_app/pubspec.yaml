@@ -1,7 +1,7 @@
 name: flutter_attendance_web
 description: Lightweight Flutter Web Application for Chrome Testing (Auto-Check-In and History)
 publish_to: 'none'
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

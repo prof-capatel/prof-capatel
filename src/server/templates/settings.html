@@ -232,6 +232,7 @@
                                 <th style="padding: 10px 12px;">Code</th>
                                 <th style="padding: 10px 12px;">City / State</th>
                                 <th style="padding: 10px 12px;">Contact & Address</th>
+                                <th style="padding: 10px 12px;">Campus Geofence</th>
                                 <th style="padding: 10px 12px;">Workforce</th>
                                 <th style="padding: 10px 12px;">Status</th>
                                 <th style="padding: 10px 12px; text-align: right;">Actions</th>
@@ -263,6 +264,26 @@
                                         {% if not loc.contact_number and not loc.address %}—{% endif %}
                                     </td>
                                     <td style="padding: 12px;">
+                                        {% if loc.self_attendance_geofencing_enabled %}
+                                        <span class="badge badge-indigo" style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-location-crosshairs"></i> Radius: {{ loc.radius_meters|round(0)|int if loc.radius_meters else 150 }}m
+                                        </span>
+                                        {% if loc.latitude and loc.longitude %}
+                                        <div style="font-size: 10.5px; font-family: monospace; color: var(--text-muted); margin-top: 3px;">
+                                            {{ "%.4f"|format(loc.latitude) }}, {{ "%.4f"|format(loc.longitude) }}
+                                        </div>
+                                        {% else %}
+                                        <div style="font-size: 10.5px; color: var(--accent-amber); margin-top: 3px;">
+                                            <i class="fa-solid fa-triangle-exclamation"></i> Coords missing
+                                        </div>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="badge badge-warning" style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-globe"></i> Bypassed (Any Location)
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 12px;">
                                         <span class="badge {{ 'badge-indigo' if loc.employee_count and loc.employee_count > 0 else 'badge-node' }}" style="font-size: 11px;">
                                             <i class="fa-solid fa-users"></i> {{ loc.employee_count or 0 }} Employees
                                         </span>
@@ -288,7 +309,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr id="emptyLocationsRow">
-                                    <td colspan="7" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+                                    <td colspan="8" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
                                         <i class="fa-solid fa-map-location-dot" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
                                         <p style="font-weight: 600; margin: 0; color: var(--text-heading);">No office locations configured yet.</p>
                                         <span style="font-size: 12px;">Click "Add Location" above to register company branches.</span>
@@ -1283,6 +1304,49 @@
                 <div class="form-group" style="margin-bottom: 14px;">
                     <label class="form-label" style="font-size: 12px; font-weight: 600;">Address (Optional)</label>
                     <textarea id="modalSettingsLocAddress" class="form-control" rows="2" placeholder="Full office address or landmark..."></textarea>
+                </div>
+
+                <!-- Self-Attendance & Campus Geofencing Configuration for this Office -->
+                <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                        <div>
+                            <label style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px; margin: 0;">
+                                <i class="fa-solid fa-location-crosshairs" style="color: var(--accent-primary);"></i>
+                                <span>Self-Attendance & Campus Geofencing</span>
+                            </label>
+                            <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0;">
+                                When enabled, employees assigned to this office must check in/out within permissible radius.
+                            </p>
+                        </div>
+                        <label class="switch-toggle" style="position: relative; display: inline-block; width: 38px; height: 22px; cursor: pointer;">
+                            <input type="checkbox" id="modalSettingsLocGeofenceEnabled" checked onchange="toggleLocGeofenceFields(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                            <span id="locGeofenceTrack" style="position: absolute; cursor: pointer; inset: 0; background: var(--accent-emerald); border-radius: 20px; transition: 0.2s;">
+                                <span id="locGeofenceKnob" style="position: absolute; height: 16px; width: 16px; left: 19px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div id="locGeofenceCoordsContainer" style="display: block; transition: all 0.2s;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div>
+                                <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Office Latitude</label>
+                                <input type="number" step="0.0000001" id="modalSettingsLocLat" class="form-control" placeholder="e.g. 18.520430" style="font-size: 12px; font-family: monospace;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Office Longitude</label>
+                                <input type="number" step="0.0000001" id="modalSettingsLocLng" class="form-control" placeholder="e.g. 73.856743" style="font-size: 12px; font-family: monospace;">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: flex-end;">
+                            <div>
+                                <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Allowed Radius (Meters)</label>
+                                <input type="number" id="modalSettingsLocRadius" class="form-control" value="150" min="20" max="5000" placeholder="150" style="font-size: 12px;">
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="detectLocModalCoords()" style="font-size: 11.5px; padding: 7px 11px; white-space: nowrap; height: 35px; display: flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-location-arrow"></i> Detect GPS
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">

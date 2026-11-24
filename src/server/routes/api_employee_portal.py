@@ -873,21 +873,44 @@ def get_employee_geofence_config(
     service = AttendanceService(db)
     punch_status = service.get_employee_punch_status(student.tenant_id, student.id)
 
+    # Multi-Office Location Geofence Resolution
+    assigned_loc = student.location if (student and student.location and student.location.is_active) else None
+    if assigned_loc:
+        geofence_enabled = bool(assigned_loc.self_attendance_geofencing_enabled)
+        target_lat = assigned_loc.latitude
+        target_lon = assigned_loc.longitude
+        radius = int(assigned_loc.radius_meters if assigned_loc.radius_meters is not None else 150)
+        loc_id = assigned_loc.id
+        loc_name = assigned_loc.name
+        is_assigned = True
+    else:
+        # Per policy: treat geofencing as disabled by default until an office is explicitly assigned
+        geofence_enabled = False
+        target_lat = float(branding.geo_latitude) if (branding and branding.geo_latitude is not None) else None
+        target_lon = float(branding.geo_longitude) if (branding and branding.geo_longitude is not None) else None
+        radius = int(branding.geo_radius_meters if (branding and branding.geo_radius_meters is not None) else 150)
+        loc_id = None
+        loc_name = "Unassigned Branch"
+        is_assigned = False
+
     return {
         "status": "success",
-        "geofence_enabled": bool(branding.enable_self_attendance if branding else False),
-        "center_latitude": float(branding.geo_latitude) if (branding and branding.geo_latitude is not None) else None,
-        "center_longitude": float(branding.geo_longitude) if (branding and branding.geo_longitude is not None) else None,
-        "radius_meters": int(branding.geo_radius_meters) if (branding and branding.geo_radius_meters is not None) else 150,
+        "geofence_enabled": geofence_enabled,
+        "center_latitude": target_lat,
+        "center_longitude": target_lon,
+        "radius_meters": radius,
+        "location_id": loc_id,
+        "location_name": loc_name,
+        "is_location_assigned": is_assigned,
         "tenant_id": student.tenant_id,
         "tenant_name": tenant.name if tenant else "",
         "institution_name": branding.institution_name if branding else (tenant.name if tenant else ""),
-        "geo_latitude": branding.geo_latitude if branding else None,
-        "geo_longitude": branding.geo_longitude if branding else None,
-        "geo_radius_meters": float(branding.geo_radius_meters if (branding and branding.geo_radius_meters) else 150.0),
+        "geo_latitude": target_lat,
+        "geo_longitude": target_lon,
+        "geo_radius_meters": float(radius),
         "max_gps_accuracy_meters": float(branding.max_gps_accuracy_meters if (branding and branding.max_gps_accuracy_meters) else 50.0),
         "mobile_require_face_verification": bool(branding.mobile_require_face_verification if branding else False),
-        "enable_self_attendance": bool(branding.enable_self_attendance if branding else False),
+        "enable_self_attendance": geofence_enabled,
         "punch_status": punch_status,
     }
 
