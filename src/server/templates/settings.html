@@ -1307,10 +1307,10 @@
                 </div>
 
                 <!-- Self-Attendance & Campus Geofencing Configuration for this Office -->
-                <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <div>
-                            <label style="font-size: 12.5px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px; margin: 0;">
+                <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="font-size: 13px; font-weight: 700; color: var(--text-heading); display: flex; align-items: center; gap: 6px; margin: 0;">
                                 <i class="fa-solid fa-location-crosshairs" style="color: var(--accent-primary);"></i>
                                 <span>Self-Attendance & Campus Geofencing</span>
                             </label>
@@ -1318,12 +1318,18 @@
                                 When enabled, employees assigned to this office must check in/out within permissible radius.
                             </p>
                         </div>
-                        <label class="switch-toggle" style="position: relative; display: inline-block; width: 38px; height: 22px; cursor: pointer;">
-                            <input type="checkbox" id="modalSettingsLocGeofenceEnabled" checked onchange="toggleLocGeofenceFields(this.checked)" style="opacity: 0; width: 0; height: 0;">
-                            <span id="locGeofenceTrack" style="position: absolute; cursor: pointer; inset: 0; background: var(--accent-emerald); border-radius: 20px; transition: 0.2s;">
-                                <span id="locGeofenceKnob" style="position: absolute; height: 16px; width: 16px; left: 19px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
-                            </span>
-                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="locGeofenceStatusBadge" class="badge badge-present" style="font-size: 11px; cursor: pointer; user-select: none;" onclick="toggleLocGeofenceDirectly()">ENABLED</span>
+                            <label style="position: relative; display: inline-block; width: 44px; height: 24px; margin-bottom: 0; cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="modalSettingsLocGeofenceEnabled" checked onchange="toggleLocGeofenceFields(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute; margin: 0;">
+                                <span id="locGeofenceTrack" style="position: absolute; cursor: pointer; inset: 0; background-color: #10b981; transition: .25s; border-radius: 24px; pointer-events: none;"></span>
+                                <span id="locGeofenceKnob" style="position: absolute; height: 18px; width: 18px; left: 23px; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3); pointer-events: none;"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="locGeofenceBypassedNote" style="display: none; margin-bottom: 10px; padding: 8px 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-xs); font-size: 11.5px; color: #10b981; font-weight: 600;">
+                        <i class="fa-solid fa-circle-check"></i> Geofencing is disabled for this office: employees can check in/out from ANY location without radius restrictions.
                     </div>
 
                     <div id="locGeofenceCoordsContainer" style="display: block; transition: all 0.2s;">
@@ -1342,8 +1348,8 @@
                                 <label class="form-label" style="font-size: 11.5px; font-weight: 600;">Allowed Radius (Meters)</label>
                                 <input type="number" id="modalSettingsLocRadius" class="form-control" value="150" min="20" max="5000" placeholder="150" style="font-size: 12px;">
                             </div>
-                            <button type="button" class="btn btn-secondary" onclick="detectLocModalCoords()" style="font-size: 11.5px; padding: 7px 11px; white-space: nowrap; height: 35px; display: flex; align-items: center; gap: 5px;">
-                                <i class="fa-solid fa-location-arrow"></i> Detect GPS
+                            <button type="button" id="btnDetectLocGPS" class="btn btn-secondary" onclick="detectLocModalCoords(event)" style="font-size: 11.5px; padding: 7px 12px; white-space: nowrap; height: 36px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-location-arrow"></i> <span>Detect GPS</span>
                             </button>
                         </div>
                     </div>
@@ -1379,7 +1385,121 @@
     window.allTenantDesignations = {{ designations|tojson|safe }};
     window.allTenantShifts = {{ work_shifts|tojson|safe }};
     window.currentTenantSlug = "{{ current_tenant.slug if current_tenant else 'default' }}";
+
+    function toggleLocGeofenceFields(isEnabled) {
+        const cb = document.getElementById("modalSettingsLocGeofenceEnabled");
+        if (cb && cb.checked !== isEnabled) {
+            cb.checked = isEnabled;
+        }
+        const isChecked = cb ? cb.checked : isEnabled;
+        const track = document.getElementById("locGeofenceTrack");
+        const knob = document.getElementById("locGeofenceKnob");
+        const badge = document.getElementById("locGeofenceStatusBadge");
+        const container = document.getElementById("locGeofenceCoordsContainer");
+        const note = document.getElementById("locGeofenceBypassedNote");
+
+        if (track) track.style.backgroundColor = isChecked ? "#10b981" : "#cbd5e1";
+        if (knob) knob.style.left = isChecked ? "23px" : "3px";
+        if (badge) {
+            badge.className = isChecked ? "badge badge-present" : "badge badge-unknown";
+            badge.textContent = isChecked ? "ENABLED" : "DISABLED";
+        }
+        if (container) {
+            container.style.opacity = isChecked ? "1" : "0.45";
+            container.style.pointerEvents = isChecked ? "auto" : "none";
+        }
+        if (note) note.style.display = isChecked ? "none" : "block";
+    }
+
+    function toggleLocGeofenceDirectly(e) {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        const cb = document.getElementById("modalSettingsLocGeofenceEnabled");
+        if (cb) {
+            cb.checked = !cb.checked;
+            toggleLocGeofenceFields(cb.checked);
+        }
+    }
+
+    function onLocGeofenceTrackClick(e) {
+        toggleLocGeofenceDirectly(e);
+    }
+
+    function detectLocModalCoords(e) {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        const btn = document.getElementById("btnDetectLocGPS");
+        const latInput = document.getElementById("modalSettingsLocLat");
+        const lngInput = document.getElementById("modalSettingsLocLng");
+        const alertBox = document.getElementById("settingsLocModalAlert");
+
+        if (!navigator.geolocation) {
+            const msg = "Geolocation is not supported by your browser or requires HTTPS.";
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.border = "1px solid var(--badge-rose-border)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + msg;
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Detecting...';
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                const lat = pos.coords.latitude.toFixed(6);
+                const lng = pos.coords.longitude.toFixed(6);
+                if (latInput) latInput.value = lat;
+                if (lngInput) lngInput.value = lng;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i> Detected!';
+                    setTimeout(() => {
+                        if (btn) btn.innerHTML = '<i class="fa-solid fa-location-arrow"></i> Detect GPS';
+                    }, 2500);
+                }
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "rgba(16, 185, 129, 0.15)";
+                    alertBox.style.border = "1px solid rgba(16, 185, 129, 0.4)";
+                    alertBox.style.color = "#10b981";
+                    alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Detected GPS coordinates: ' + lat + ', ' + lng;
+                }
+            },
+            function(err) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-location-arrow"></i> Detect GPS';
+                }
+                let reason = "Could not detect GPS location: ";
+                if (err.code === 1) {
+                    reason = "Location access denied. Please allow location permissions in your browser address bar.";
+                } else if (err.code === 2) {
+                    reason = "Position unavailable. Please ensure your device GPS / Location service is turned ON.";
+                } else if (err.code === 3) {
+                    reason = "Location request timed out. Please try again.";
+                } else {
+                    reason += (err.message || "Unknown error");
+                }
+                if (alertBox) {
+                    alertBox.style.display = "block";
+                    alertBox.style.background = "var(--badge-rose-bg)";
+                    alertBox.style.border = "1px solid var(--badge-rose-border)";
+                    alertBox.style.color = "var(--badge-rose-text)";
+                    alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + reason;
+                } else {
+                    alert(reason);
+                }
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    }
 </script>
-<script src="/static/js/settings.js?v=2.2"></script>
+<script src="/static/js/settings.js?v=2.5"></script>
 {% endblock %}
 

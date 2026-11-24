@@ -1237,33 +1237,116 @@ async function deleteSettingsDesignation(desigId, title) {
 // OFFICE LOCATIONS & BRANCHES HANDLERS (Organization Settings)
 // =========================================================================
 function toggleLocGeofenceFields(isEnabled) {
+    const cb = document.getElementById("modalSettingsLocGeofenceEnabled");
+    if (cb && cb.checked !== isEnabled) {
+        cb.checked = isEnabled;
+    }
+    const isChecked = cb ? cb.checked : isEnabled;
     const track = document.getElementById("locGeofenceTrack");
     const knob = document.getElementById("locGeofenceKnob");
+    const badge = document.getElementById("locGeofenceStatusBadge");
     const container = document.getElementById("locGeofenceCoordsContainer");
-    if (track) track.style.background = isEnabled ? "var(--accent-emerald)" : "var(--border-color)";
-    if (knob) knob.style.left = isEnabled ? "19px" : "3px";
+    const note = document.getElementById("locGeofenceBypassedNote");
+
+    if (track) track.style.backgroundColor = isChecked ? "#10b981" : "#cbd5e1";
+    if (knob) knob.style.left = isChecked ? "23px" : "3px";
+    if (badge) {
+        badge.className = isChecked ? "badge badge-present" : "badge badge-unknown";
+        badge.textContent = isChecked ? "ENABLED" : "DISABLED";
+    }
     if (container) {
-        container.style.opacity = isEnabled ? "1" : "0.5";
-        container.style.pointerEvents = isEnabled ? "auto" : "none";
+        container.style.opacity = isChecked ? "1" : "0.45";
+        container.style.pointerEvents = isChecked ? "auto" : "none";
+    }
+    if (note) note.style.display = isChecked ? "none" : "block";
+}
+
+function toggleLocGeofenceDirectly(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const cb = document.getElementById("modalSettingsLocGeofenceEnabled");
+    if (cb) {
+        cb.checked = !cb.checked;
+        toggleLocGeofenceFields(cb.checked);
     }
 }
 
-function detectLocModalCoords() {
-    if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
-        return;
-    }
+function onLocGeofenceTrackClick(e) {
+    toggleLocGeofenceDirectly(e);
+}
+
+function detectLocModalCoords(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const btn = document.getElementById("btnDetectLocGPS");
     const latInput = document.getElementById("modalSettingsLocLat");
     const lngInput = document.getElementById("modalSettingsLocLng");
+    const alertBox = document.getElementById("settingsLocModalAlert");
+
+    if (!navigator.geolocation) {
+        const msg = "Geolocation is not supported by your browser or requires HTTPS.";
+        if (alertBox) {
+            alertBox.style.display = "block";
+            alertBox.style.background = "var(--badge-rose-bg)";
+            alertBox.style.border = "1px solid var(--badge-rose-border)";
+            alertBox.style.color = "var(--badge-rose-text)";
+            alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + msg;
+        } else {
+            alert(msg);
+        }
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Detecting...';
+    }
+
     navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            if (latInput) latInput.value = pos.coords.latitude.toFixed(6);
-            if (lngInput) lngInput.value = pos.coords.longitude.toFixed(6);
+        function(pos) {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            if (latInput) latInput.value = lat;
+            if (lngInput) lngInput.value = lng;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i> Detected!';
+                setTimeout(() => {
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-location-arrow"></i> Detect GPS';
+                }, 2500);
+            }
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "rgba(16, 185, 129, 0.15)";
+                alertBox.style.border = "1px solid rgba(16, 185, 129, 0.4)";
+                alertBox.style.color = "#10b981";
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Detected GPS coordinates: ' + lat + ', ' + lng;
+            }
         },
-        (err) => {
-            alert("Could not detect GPS location: " + err.message);
+        function(err) {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-location-arrow"></i> Detect GPS';
+            }
+            let reason = "Could not detect GPS location: ";
+            if (err.code === 1) {
+                reason = "Location access denied. Please allow location permissions in your browser address bar.";
+            } else if (err.code === 2) {
+                reason = "Position unavailable. Please ensure your device GPS / Location service is turned ON.";
+            } else if (err.code === 3) {
+                reason = "Location request timed out. Please try again.";
+            } else {
+                reason += (err.message || "Unknown error");
+            }
+            if (alertBox) {
+                alertBox.style.display = "block";
+                alertBox.style.background = "var(--badge-rose-bg)";
+                alertBox.style.border = "1px solid var(--badge-rose-border)";
+                alertBox.style.color = "var(--badge-rose-text)";
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + reason;
+            } else {
+                alert(reason);
+            }
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
 }
 
@@ -1412,9 +1495,6 @@ async function saveSettingsLocationModal(e) {
         saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Location';
     }
 }
-        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Location';
-    }
-}
 
 async function deleteSettingsLocation(locId, name) {
     if (!confirm(`Are you sure you want to delete office location "${name}"?`)) return;
@@ -1455,10 +1535,14 @@ window.copyEmployeeOnboardLink = copyEmployeeOnboardLink;
 window.initOfficeMap = initOfficeMap;
 window.searchMapLocation = searchMapLocation;
 window.fetchAdminGpsLocation = fetchAdminGpsLocation;
+window.toggleLocGeofenceFields = toggleLocGeofenceFields;
+window.toggleLocGeofenceDirectly = toggleLocGeofenceDirectly;
+window.onLocGeofenceTrackClick = onLocGeofenceTrackClick;
+window.detectLocModalCoords = detectLocModalCoords;
 window.openAddLocationModal = openAddLocationModal;
 window.openEditLocationModal = openEditLocationModal;
 window.closeSettingsLocationModal = closeSettingsLocationModal;
-window.submitSettingsLocationModal = submitSettingsLocationModal;
+window.saveSettingsLocationModal = saveSettingsLocationModal;
 window.deleteSettingsLocation = deleteSettingsLocation;
 window.openAddDepartmentModal = openAddDepartmentModal;
 window.openEditDeptModal = openEditDeptModal;
