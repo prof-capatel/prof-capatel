@@ -1205,6 +1205,8 @@ def approve_pending_student(
 
     student.is_active = True
     student.employment_status = "ACTIVE"
+    if student.user:
+        student.user.is_active = True
     db.commit()
     db.refresh(student)
 
@@ -1649,6 +1651,7 @@ class OnboardRegisterRequest(BaseModel):
     onboarding_token: str
     name: str
     roll_number: str  # Employee ID / Roll Number
+    password: Optional[str] = None
     email: Optional[str] = None
     department_id: Optional[int] = None
     department: Optional[str] = None
@@ -1723,8 +1726,8 @@ def onboard_register_employee(
         existing.department = dept_name
         existing.email = payload.email.strip() if payload.email else existing.email
         existing.user_role = chosen_role
-        if existing.employment_status == "PENDING_APPROVAL" or not existing.is_active:
-            existing.employment_status = "PENDING_APPROVAL"
+        if existing.employment_status in ["PENDING_APPROVAL", "INACTIVE", "RELIEVED"] or not existing.is_active:
+            existing.employment_status = "INACTIVE"
             existing.is_active = False
         db.commit()
         db.refresh(existing)
@@ -1743,11 +1746,38 @@ def onboard_register_employee(
             email=payload.email.strip() if payload.email else None,
             user_role=chosen_role,
             is_active=False,
-            employment_status="PENDING_APPROVAL",
+            employment_status="INACTIVE",
         )
         db.add(student)
         db.commit()
         db.refresh(student)
+
+    # If password is provided, provision or update associated User account (inactive until admin activation)
+    if payload.password and payload.password.strip():
+        hashed_pwd = hash_password(payload.password.strip())
+        username_candidate = clean_roll.lower()
+        user_account = db.query(User).filter(
+            User.tenant_id == tenant.id,
+            User.username == username_candidate,
+        ).first()
+        if not user_account:
+            user_account = User(
+                tenant_id=tenant.id,
+                username=username_candidate,
+                email=student.email or f"{username_candidate}@tenant{tenant.id}.local",
+                password_hash=hashed_pwd,
+                role="EMPLOYEE",
+                full_name=student.name,
+                is_active=False,
+            )
+            db.add(user_account)
+            db.flush()
+        else:
+            user_account.password_hash = hashed_pwd
+            user_account.full_name = student.name
+            user_account.is_active = False
+        student.user_id = user_account.id
+        db.commit()
 
     t_uuid = tenant.uuid or tenant.slug
     checkin_url = f"/check-in/{t_uuid}/{tenant.attendance_slug}" if tenant.attendance_slug else f"/self-attendance/{tenant.slug}"

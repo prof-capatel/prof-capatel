@@ -599,13 +599,13 @@ async function saveBrandingDetails(e) {
     const audioChime = document.getElementById("brandAudioChime").checked;
     const hapticFeedback = document.getElementById("brandHapticFeedback").checked;
     const enableSelfAttendance = document.getElementById("brandSelfAttendanceToggle").checked;
-    const rawLat = document.getElementById("brandGeoLatitude").value.trim();
-    const rawLon = document.getElementById("brandGeoLongitude").value.trim();
+    const rawLat = document.getElementById("brandGeoLatitude") ? document.getElementById("brandGeoLatitude").value.trim() : "";
+    const rawLon = document.getElementById("brandGeoLongitude") ? document.getElementById("brandGeoLongitude").value.trim() : "";
     const geoLat = rawLat ? parseFloat(rawLat) : null;
     const geoLon = rawLon ? parseFloat(rawLon) : null;
-    const geoRadius = parseFloat(document.getElementById("brandGeoRadius").value) || 150.0;
-    const gpsAccuracy = parseFloat(document.getElementById("brandGpsAccuracy").value) || 50.0;
-    const faceThreshold = parseFloat(document.getElementById("brandFaceThreshold").value) || 0.52;
+    const geoRadius = document.getElementById("brandGeoRadius") ? parseFloat(document.getElementById("brandGeoRadius").value) || 150.0 : 150.0;
+    const gpsAccuracy = document.getElementById("brandGpsAccuracy") ? parseFloat(document.getElementById("brandGpsAccuracy").value) || 50.0 : 50.0;
+    const faceThreshold = document.getElementById("brandFaceThreshold") ? parseFloat(document.getElementById("brandFaceThreshold").value) || 0.52 : 0.52;
 
     const shiftCheckIn = document.getElementById("brandShiftCheckIn") ? document.getElementById("brandShiftCheckIn").value.trim() : "10:30";
     const shiftCheckOut = document.getElementById("brandShiftCheckOut") ? document.getElementById("brandShiftCheckOut").value.trim() : "18:00";

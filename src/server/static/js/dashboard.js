@@ -595,14 +595,11 @@
             try {
                 captureMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
             } catch (deviceErr) {
-                if (deviceId) {
-                    console.warn("[Camera] Specific deviceId capture failed, falling back to default camera:", deviceErr);
-                    captureMediaStream = await navigator.mediaDevices.getUserMedia({
-                        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-                        audio: false
-                    });
-                } else {
-                    throw deviceErr;
+                console.warn("[Camera] Primary constraints failed, falling back to simple video constraint:", deviceErr);
+                try {
+                    captureMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                } catch (fallbackErr) {
+                    throw fallbackErr;
                 }
             }
             video.srcObject = captureMediaStream;
@@ -693,6 +690,8 @@
             formData.append("node_id", "DASHBOARD-CAMERA");
             formData.append("location", "Live Terminal");
             if (isSingleShot) formData.append("is_single_shot", "true");
+            const activeTenantSlug = window.currentTenantSlug || localStorage.getItem("active_tenant_slug") || "";
+            if (activeTenantSlug) formData.append("tenant_id", activeTenantSlug);
 
             try {
                 const res = await fetch("/api/v1/nodes/frame", {

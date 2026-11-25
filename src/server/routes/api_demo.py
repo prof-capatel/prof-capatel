@@ -268,48 +268,6 @@ def verify_otp_and_provision(
     db.add(branding)
 
     # 3. Seed Corporate Master Structures
-    # Work Shifts
-    default_shifts = [
-        WorkShift(
-            tenant_id=new_tenant.id,
-            name="General Shift",
-            code="GEN",
-            start_time="09:00",
-            end_time="18:00",
-            grace_period_minutes=15,
-            break_duration_minutes=60,
-            half_day_hours=4.0,
-            is_default=True,
-            is_active=True,
-        ),
-        WorkShift(
-            tenant_id=new_tenant.id,
-            name="Morning Shift",
-            code="MORN",
-            start_time="08:00",
-            end_time="17:00",
-            grace_period_minutes=15,
-            break_duration_minutes=60,
-            half_day_hours=4.0,
-            is_default=False,
-            is_active=True,
-        ),
-        WorkShift(
-            tenant_id=new_tenant.id,
-            name="Evening Shift",
-            code="EVE",
-            start_time="14:00",
-            end_time="23:00",
-            grace_period_minutes=15,
-            break_duration_minutes=60,
-            half_day_hours=4.0,
-            is_default=False,
-            is_active=True,
-        ),
-    ]
-    for s in default_shifts:
-        db.add(s)
-
     # Primary Branch Location
     primary_location = CompanyLocation(
         tenant_id=new_tenant.id,
@@ -322,25 +280,6 @@ def verify_otp_and_provision(
         is_active=True,
     )
     db.add(primary_location)
-
-    # Core Departments
-    default_depts = ["Operations", "Sales & Marketing", "Human Resources", "Finance & Accounts", "Engineering"]
-    for d_name in default_depts:
-        db.add(Department(
-            tenant_id=new_tenant.id,
-            name=d_name,
-            code=d_name[:4].upper().replace("&", "").strip(),
-        ))
-
-    # Core Designations
-    default_desigs = ["Director / Managing Partner", "General Manager", "Team Lead / Supervisor", "Senior Executive", "Executive / Staff", "Intern / Trainee"]
-    for desig_title in default_desigs:
-        db.add(DesignationMaster(
-            tenant_id=new_tenant.id,
-            title=desig_title,
-            code=desig_title[:4].upper(),
-            is_active=True,
-        ))
 
     # Master Leave Types & Indian Salary Components
     seed_default_leave_types(db, new_tenant.id)

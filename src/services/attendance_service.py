@@ -139,9 +139,18 @@ class AttendanceService:
                     detail=f"Cannot record Check-Out for '{student.name}': No active Check-In record found for today."
                 )
             should_checkout = True
+        elif requested_punch == "CHECK_IN":
+            if is_corporate and latest_today_rec and latest_today_rec.check_in_time and not latest_today_rec.check_out_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot record Check-In for '{student.name}': Employee is already checked in at {latest_today_rec.check_in_time.strftime('%I:%M %p')}. Please record Check-Out first."
+                )
+            should_checkout = False
         elif requested_punch == "AUTO":
             if is_corporate and latest_today_rec and latest_today_rec.check_in_time and not latest_today_rec.check_out_time:
                 should_checkout = True
+            else:
+                should_checkout = False
 
         if should_checkout and is_corporate:
             if latest_today_rec and not latest_today_rec.check_out_time:
@@ -344,10 +353,14 @@ class AttendanceService:
             geo_longitude=geo_longitude,
             geo_distance_meters=dist_meters,
             is_self_attendance=is_self_attendance,
+            requested_punch_type=punch_type,
         )
 
         if mark_res is None:
             raise HTTPException(status_code=500, detail="Failed to process attendance record.")
+
+        if mark_res.get("error"):
+            raise HTTPException(status_code=400, detail=mark_res.get("message", "Invalid attendance punch sequence."))
 
         if mark_res.get("cooldown_active"):
             return {

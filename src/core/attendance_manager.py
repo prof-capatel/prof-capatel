@@ -185,6 +185,7 @@ class AttendanceManager:
         geo_distance_meters: Optional[float] = None,
         is_self_attendance: bool = False,
         now_dt: Optional[datetime] = None,
+        requested_punch_type: str = "AUTO",
     ) -> Optional[Dict[str, Any]]:
         """
         Processes a recognized face:
@@ -216,8 +217,8 @@ class AttendanceManager:
                         last_logged_time = latest_record[0].timestamp()
                         self._last_logged_cache[cache_key] = last_logged_time
 
-            # In-memory sliding debounce: suppress duplicate hits within debounce window for live cameras
-            if now_dt is None and (custom_cooldown_seconds is None or custom_cooldown_seconds > 0):
+            # In-memory sliding debounce: suppress duplicate hits within debounce window for live edge cameras
+            if node_id != "MOBILE-APP" and not is_self_attendance and now_dt is None and (custom_cooldown_seconds is None or custom_cooldown_seconds > 0):
                 debounce_limit = 10.0
                 if custom_cooldown_seconds is not None and custom_cooldown_seconds > 0:
                     debounce_limit = min(10.0, float(custom_cooldown_seconds) / 2.0)
@@ -339,23 +340,39 @@ class AttendanceManager:
                         .first()
                     )
 
-                    if active_record is not None:
-                        # STATE 1: EMPLOYEE HAS AN ACTIVE CHECK-IN -> ATTEMPT CHECK-OUT
-                        ref_time = active_record.check_in_time or active_record.timestamp
-                        elapsed_secs = (now - ref_time).total_seconds()
+                    req_punch = (requested_punch_type or "AUTO").upper().strip()
 
-                        if min_interval_secs > 0 and elapsed_secs < min_interval_secs:
-                            # Too soon after check-in -> suppress double punch
-                            remaining_secs = max(1, int(min_interval_secs - elapsed_secs))
-                            time_str = f"{remaining_secs}s" if remaining_secs < 60 else f"{max(1, remaining_secs // 60)} min(s)"
+                    if active_record is not None:
+                        # STATE 1: EMPLOYEE HAS AN ACTIVE OPEN CHECK-IN -> NEXT VALID ACTION IS CHECK-OUT
+                        ref_time = active_record.check_in_time or active_record.timestamp
+                        elapsed_secs = max(0.0, (now - ref_time).total_seconds())
+
+                        # Strict sequence enforcement: cannot check in again if already checked in
+                        if req_punch == "CHECK_IN":
+                            return {
+                                "attendance_logged": False,
+                                "punch_type": "CHECK_IN",
+                                "cooldown_active": False,
+                                "error": True,
+                                "message": f"Already checked in at {ref_time.strftime('%I:%M %p')}. Please check out before checking in again.",
+                                "student_name": student.name,
+                                "roll_number": student.roll_number,
+                            }
+
+                        # Debounce buffer between check-in and checkout (prevents rapid double-taps for edge cameras)
+                        effective_out_debounce = 0
+                        if node_id != "MOBILE-APP" and not is_self_attendance and (custom_cooldown_seconds is None or custom_cooldown_seconds > 0):
+                            effective_out_debounce = min(30, min_interval_secs) if min_interval_secs > 0 else 0
+                        if effective_out_debounce > 0 and elapsed_secs < effective_out_debounce:
+                            remaining_secs = max(1, int(effective_out_debounce - elapsed_secs))
                             return {
                                 "attendance_logged": False,
                                 "punch_type": "CHECK_IN",
                                 "cooldown_active": True,
                                 "cooldown_remaining_seconds": remaining_secs,
                                 "cooldown_remaining_minutes": round(remaining_secs / 60, 1),
-                                "cooldown_window_minutes": min_checkout_interval,
-                                "message": f"Check-In already logged at {ref_time.strftime('%I:%M %p')}. Checkout enabled in {time_str}.",
+                                "cooldown_window_minutes": round(effective_out_debounce / 60, 2),
+                                "message": f"Check-In recorded at {ref_time.strftime('%I:%M %p')}. Checkout enabled in {remaining_secs}s.",
                             }
 
                         # Buffer elapsed: Execute Valid Check-Out Punch
@@ -415,21 +432,35 @@ class AttendanceManager:
                         }
 
                     else:
-                        # STATE 0: EMPLOYEE NOT CURRENTLY CHECKED IN -> ONLY VALID ACTION IS CHECK-IN (CHECK-OUT IS IMPOSSIBLE)
+                        # STATE 0: EMPLOYEE NOT CURRENTLY CHECKED IN -> NEXT VALID ACTION IS CHECK-IN
+                        # Strict sequence enforcement: cannot check out without prior check-in
+                        if req_punch == "CHECK_OUT":
+                            return {
+                                "attendance_logged": False,
+                                "punch_type": "CHECK_OUT",
+                                "cooldown_active": False,
+                                "error": True,
+                                "message": f"Cannot Check-Out for '{student.name}': No active Check-In found. Please check in first.",
+                                "student_name": student.name,
+                                "roll_number": student.roll_number,
+                            }
+
+                        # Debounce buffer between previous checkout and next check-in (prevents rapid double-taps, e.g. 15-30s)
                         if completed_record is not None and completed_record.check_out_time is not None:
-                            # Cooldown check since last checkout
-                            elapsed_since_out = (now - completed_record.check_out_time).total_seconds()
-                            if min_interval_secs > 0 and elapsed_since_out < min_interval_secs:
-                                remaining_secs = max(1, int(min_interval_secs - elapsed_since_out))
-                                time_str = f"{remaining_secs}s" if remaining_secs < 60 else f"{max(1, remaining_secs // 60)} min(s)"
+                            elapsed_since_out = max(0.0, (now - completed_record.check_out_time).total_seconds())
+                            effective_in_debounce = 0
+                            if node_id != "MOBILE-APP" and not is_self_attendance and (custom_cooldown_seconds is None or custom_cooldown_seconds > 0):
+                                effective_in_debounce = min(30, min_interval_secs) if min_interval_secs > 0 else 0
+                            if effective_in_debounce > 0 and elapsed_since_out < effective_in_debounce:
+                                remaining_secs = max(1, int(effective_in_debounce - elapsed_since_out))
                                 return {
                                     "attendance_logged": False,
                                     "punch_type": "CHECK_IN",
                                     "cooldown_active": True,
                                     "cooldown_remaining_seconds": remaining_secs,
                                     "cooldown_remaining_minutes": round(remaining_secs / 60, 1),
-                                    "cooldown_window_minutes": min_checkout_interval,
-                                    "message": f"Check-Out already logged at {completed_record.check_out_time.strftime('%I:%M %p')}. Next Check-In enabled in {time_str}.",
+                                    "cooldown_window_minutes": round(effective_in_debounce / 60, 2),
+                                    "message": f"Check-Out already logged at {completed_record.check_out_time.strftime('%I:%M %p')}. Next Check-In enabled in {remaining_secs}s.",
                                 }
 
                         # Check-in allowed: Evaluate shift on-time vs late check-in

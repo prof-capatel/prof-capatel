@@ -1096,64 +1096,22 @@
                 <!-- Geofencing Configuration Container -->
                 <div id="selfAttendanceConfigContainer" style="transition: all 0.25s; {% if not branding or not branding.enable_self_attendance %}opacity: 0.45; pointer-events: none;{% endif %}">
                     
-                    <!-- Interactive Map Location Picker -->
-                    <div style="margin-bottom: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                            <label class="form-label" style="font-size: 12.5px; font-weight: 700; margin-bottom: 0;">
-                                <i class="fa-solid fa-map-location-dot" style="color: var(--accent-emerald);"></i> Interactive Office Geofence Pin & Radar
-                            </label>
-                            <span id="mapPinStatusBadge" class="badge badge-subtle" style="font-size: 11px; font-weight: 600;">
-                                <i class="fa-solid fa-satellite-dish"></i> Initializing GPS...
-                            </span>
-                        </div>
-
-                        <!-- Map Address Search -->
-                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                            <div style="position: relative; flex: 1;">
-                                <input type="text" id="mapSearchInput" class="form-control" placeholder="Search office address, landmark, or city..." style="padding-left: 32px; font-size: 12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchMapLocation();}">
-                                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-muted);"></i>
+                    <!-- Multi-Office Geofencing Notice -->
+                    <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-primary); font-size: 17px; flex-shrink: 0;">
+                                <i class="fa-solid fa-map-location-dot"></i>
                             </div>
-                            <button type="button" class="btn btn-secondary" style="width: auto; font-size: 11.5px; padding: 0 14px;" onclick="searchMapLocation()">
-                                <i class="fa-solid fa-search"></i> Search
-                            </button>
+                            <div>
+                                <div style="font-size: 13px; font-weight: 700; color: var(--text-heading);">Branch-Level Geofencing Active</div>
+                                <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                                    Office coordinates, permissible radius, and geofence bypass rules are configured individually per branch or office location.
+                                </div>
+                            </div>
                         </div>
-
-                        <!-- Map Container -->
-                        <div id="officeMapPicker" style="height: 280px; width: 100%; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); background: var(--bg-base); position: relative; z-index: 1;"></div>
-                    </div>
-
-                    <!-- GPS Coordinates Center Manual Entry -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Latitude (Center)</label>
-                            <input type="number" step="0.000001" id="brandGeoLatitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_latitude if branding and branding.geo_latitude is not none else '' }}" placeholder="e.g. 19.076090" oninput="onManualCoordinateChange()">
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size: 12px; font-weight: 600;">Office Longitude (Center)</label>
-                            <input type="number" step="0.000001" id="brandGeoLongitude" class="form-control" style="font-family: monospace; font-size: 13px;" value="{{ branding.geo_longitude if branding and branding.geo_longitude is not none else '' }}" placeholder="e.g. 72.877426" oninput="onManualCoordinateChange()">
-                        </div>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
-                        <button type="button" class="btn btn-secondary" style="font-size: 11.5px; padding: 6px 12px;" onclick="fetchAdminGpsLocation()">
-                            <i class="fa-solid fa-crosshairs" style="color: var(--accent-primary);"></i> Auto-Detect My Current GPS Location
+                        <button type="button" class="btn btn-secondary" onclick="switchSettingsTab('branding'); window.location.hash='branding';" style="font-size: 11.5px; padding: 6px 14px; white-space: nowrap;">
+                            <i class="fa-solid fa-building"></i> Manage Office Locations
                         </button>
-                        <span id="gpsDetectStatus" style="font-size: 11px; color: var(--text-muted);"></span>
-                    </div>
-
-                    <!-- Geofence Radius Slider -->
-                    <div style="margin-bottom: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Allowed Geofencing Radius (Live Radar Circle):</label>
-                            <span id="geoRadiusBadge" class="badge badge-sky" style="font-size: 11px; font-weight: 700;">
-                                {{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }} Meters
-                            </span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 14px;">
-                            <input type="range" id="geoRadiusSlider" min="10" max="2000" step="10" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" style="flex: 1; accent-color: var(--accent-primary);" oninput="updateGeoRadiusDisplay(this.value)">
-                            <input type="number" id="brandGeoRadius" class="form-control" style="width: 80px; text-align: center; font-weight: 700;" min="10" max="50000" value="{{ branding.geo_radius_meters|round(0)|int if branding and branding.geo_radius_meters is not none else 150 }}" oninput="updateGeoRadiusFromInput(this.value)">
-                            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">M</span>
-                        </div>
                     </div>
 
                     <!-- GPS Accuracy Gate & Face Confidence Slider -->

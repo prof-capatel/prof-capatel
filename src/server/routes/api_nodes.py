@@ -84,9 +84,14 @@ async def ingest_node_frame(
         raise HTTPException(status_code=500, detail=f"Face recognition error: {str(e)}")
 
     # Compute active tenant cooldown in seconds
+    is_corporate = (getattr(target_tenant, "tenant_type", "educational") == "corporate")
     custom_cooldown_secs = None
-    if target_tenant.branding and target_tenant.branding.cooldown_minutes is not None:
-        custom_cooldown_secs = max(0, int(target_tenant.branding.cooldown_minutes * 60))
+    if not is_corporate:
+        if target_tenant.branding and target_tenant.branding.cooldown_minutes is not None:
+            custom_cooldown_secs = max(0, int(target_tenant.branding.cooldown_minutes * 60))
+    else:
+        # Corporate multi-punch tenants: short 15-second debounce between punches
+        custom_cooldown_secs = 15
 
     seen_student_ids = set()
     processed_detections = []
